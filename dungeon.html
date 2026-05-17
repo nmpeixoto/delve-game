@@ -578,23 +578,30 @@ function renderSellPanel(){
 }
 
 function sellItem(id, equippedSlot){
+  // Prevent double-sell: mark item as selling immediately
   let item, isEquipped=false;
-  if(equippedSlot==='weapon'&&G.player.weapon?.id==id){
+  if(equippedSlot==='weapon' && G.player.weapon && String(G.player.weapon.id)===String(id)){
     item=G.player.weapon; isEquipped=true;
-  } else if(equippedSlot==='armor'&&G.player.armor?.id==id){
+  } else if(equippedSlot==='armor' && G.player.armor && String(G.player.armor.id)===String(id)){
     item=G.player.armor; isEquipped=true;
   } else {
-    item=G.items.find(i=>i.id==id&&i.carried);
+    item=G.items.find(i=>String(i.id)===String(id) && i.carried && !i._selling);
+    if(item) item._selling=true; // lock immediately to block double-tap
   }
   if(!item) return;
+
   let sellPrice=Math.max(1,Math.floor((item.price||10)/2));
   G.player.gold+=sellPrice;
+
   if(isEquipped){
     if(equippedSlot==='weapon') G.player.weapon=null;
     else if(equippedSlot==='armor') G.player.armor=null;
+    // Also purge any ghost copy of this item from G.items
+    G.items=G.items.filter(i=>String(i.id)!==String(id));
   } else {
-    G.items=G.items.filter(i=>i.id!==id);
+    G.items=G.items.filter(i=>String(i.id)!==String(id));
   }
+
   addLog(`Sold ${item.name} for ${sellPrice}💰`, 'log-shop');
   floatText(`+${sellPrice}💰`, G.player.x, G.player.y, '#fbbf24');
   document.getElementById('shop-gold-val').textContent=G.player.gold;
@@ -848,15 +855,27 @@ function autoEquip(it){
   if(it.type==='weapon'){
     let prev=G.player.weapon;
     if(!prev||it.atk>prev.atk){
-      if(prev){prev.carried=true;prev.x=prev.y=undefined;}
-      G.player.weapon=it;it.carried=false;
+      if(prev){
+        // Put old weapon back in bag as carried, remove any existing copy first
+        G.items=G.items.filter(i=>i.id!==prev.id);
+        prev.carried=true; prev.x=undefined; prev.y=undefined;
+        G.items.push(prev);
+      }
+      G.player.weapon=it; it.carried=false;
+      // Remove from G.items since it's now equipped
+      G.items=G.items.filter(i=>i.id!==it.id);
       addLog(`Equipped ${it.name}!`,'log-item');
     }
   } else if(it.type==='armor'){
     let prev=G.player.armor;
     if(!prev||it.def>prev.def){
-      if(prev){prev.carried=true;prev.x=prev.y=undefined;}
-      G.player.armor=it;it.carried=false;
+      if(prev){
+        G.items=G.items.filter(i=>i.id!==prev.id);
+        prev.carried=true; prev.x=undefined; prev.y=undefined;
+        G.items.push(prev);
+      }
+      G.player.armor=it; it.carried=false;
+      G.items=G.items.filter(i=>i.id!==it.id);
       addLog(`Equipped ${it.name}!`,'log-item');
     }
   }
@@ -870,9 +889,26 @@ function useItem(id){
     addLog(`Drank ${it.name}: +${h} HP`,'log-item');
     floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
     G.items=G.items.filter(i=>i.id!==id);
-  } else {
-    if(it.type==='weapon'){G.player.weapon=it;it.carried=false;addLog(`Equipped ${it.name}`,'log-item');}
-    else if(it.type==='armor'){G.player.armor=it;it.carried=false;addLog(`Equipped ${it.name}`,'log-item');}
+  } else if(it.type==='weapon'){
+    let prev=G.player.weapon;
+    if(prev){
+      G.items=G.items.filter(i=>i.id!==prev.id);
+      prev.carried=true;prev.x=prev.y=undefined;
+      G.items.push(prev);
+    }
+    G.player.weapon=it;
+    G.items=G.items.filter(i=>i.id!==id);
+    addLog(`Equipped ${it.name}`,'log-item');
+  } else if(it.type==='armor'){
+    let prev=G.player.armor;
+    if(prev){
+      G.items=G.items.filter(i=>i.id!==prev.id);
+      prev.carried=true;prev.x=prev.y=undefined;
+      G.items.push(prev);
+    }
+    G.player.armor=it;
+    G.items=G.items.filter(i=>i.id!==id);
+    addLog(`Equipped ${it.name}`,'log-item');
   }
   advanceTurn();closeInv();
 }
