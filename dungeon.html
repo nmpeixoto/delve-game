@@ -549,6 +549,7 @@ function switchShopTab(tab){
   document.getElementById('shop-buy-panel').style.display=tab==='buy'?'block':'none';
   document.getElementById('shop-sell-panel').style.display=tab==='sell'?'block':'none';
   if(tab==='sell') renderSellPanel();
+  if(tab==='buy') renderShop();
 }
 
 function renderSellPanel(){
@@ -608,6 +609,7 @@ function sellItem(id, equippedSlot){
   updateHUD();
   updateActBtns();
   renderSellPanel();
+  renderShop(); // refresh buy tab so affordability colours are up to date
 }
 
 function applyUpgrade(item){
