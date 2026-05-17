@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0f">
+<link rel="manifest" href="/game/manifest.json">
+<link rel="apple-touch-icon" href="/game/icon-192.png">
+<title>DELVE</title>
+<script>
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>navigator.serviceWorker.register('/game/sw.js').catch(()=>{}));
+  }
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap');
+
+:root{
+  --bg:#0a0a0f;--panel:#111118;--border:#1e1e2e;
+  --accent:#c084fc;--gold:#fbbf24;--red:#f87171;
+  --green:#4ade80;--blue:#60a5fa;--orange:#fb923c;
+  --dim:#4a4a6a;--text:#e2e8f0;--floor:#1a1a28;--wall:#0d0d15;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(192,132,252,.06) 0%,transparent 65%),repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,.01) 2px,rgba(255,255,255,.01) 4px);pointer-events:none;z-index:0;}
+
+/* ── TITLE ── */
+#title-screen{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;animation:fadeIn .6s ease;}
+#title-screen h1{font-family:'Press Start 2P',monospace;font-size:clamp(2.2rem,12vw,5rem);color:var(--accent);text-shadow:0 0 40px rgba(192,132,252,.7),0 0 80px rgba(192,132,252,.3);letter-spacing:.2em;margin-bottom:10px;animation:pulse 3s ease-in-out infinite;}
+.subtitle{color:var(--dim);font-size:.7rem;letter-spacing:.3em;margin-bottom:32px;text-transform:uppercase;}
+.flavor{color:var(--text);font-size:.68rem;line-height:2.2;max-width:340px;margin:0 auto 40px;opacity:.55;}
+.btn{font-family:'Press Start 2P',monospace;font-size:.6rem;padding:16px 32px;background:transparent;border:2px solid var(--accent);color:var(--accent);cursor:pointer;letter-spacing:.15em;transition:all .2s;position:relative;overflow:hidden;min-width:180px;}
+.btn::before{content:'';position:absolute;inset:0;background:var(--accent);transform:translateX(-100%);transition:transform .2s;z-index:-1;}
+.btn:active::before,.btn:hover::before{transform:translateX(0);}
+.btn:active,.btn:hover{color:var(--bg);}
+.btn-gold{border-color:var(--gold);color:var(--gold);}
+.btn-gold::before{background:var(--gold);}
+
+/* ── GAME LAYOUT (portrait default) ── */
+#game-screen{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;}
+
+/* HUD */
+#hud{flex-shrink:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--accent);}
+.hud-left{display:flex;flex-direction:column;gap:4px;}
+.hud-center{font-family:'Press Start 2P',monospace;font-size:.38rem;color:var(--accent);text-align:center;line-height:1.8;}
+.hud-right{display:flex;flex-direction:column;gap:3px;align-items:flex-end;}
+.stat-row{display:flex;align-items:center;gap:6px;}
+.stat-label{color:var(--dim);font-size:.55rem;}
+.bar{height:5px;background:var(--border);overflow:hidden;width:min(100px,22vw);}
+.bar-fill{height:100%;transition:width .3s;}
+.hp-fill{background:linear-gradient(90deg,var(--red),#ff9999);}
+.xp-fill{background:linear-gradient(90deg,var(--accent),#e879f9);}
+.stat-val{color:var(--text);font-size:.55rem;min-width:36px;}
+.hud-stats{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+.hud-stat{font-size:.55rem;}
+.hud-stat span{color:var(--text);}
+.gold-stat{color:var(--gold)!important;}
+
+/* MAP */
+#map-area{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg);min-height:0;}
+#map-wrap{background:var(--panel);border:1px solid var(--border);padding:3px;position:relative;flex-shrink:0;}
+#map{display:grid;line-height:1;font-family:'Share Tech Mono',monospace;user-select:none;touch-action:none;}
+.tile{display:flex;align-items:center;justify-content:center;transition:background .08s;}
+.tile-wall{background:var(--wall);color:#1a1a2e;}
+.tile-floor{background:var(--floor);color:#2a2a40;}
+.tile-player{background:var(--floor);color:var(--accent);text-shadow:0 0 8px var(--accent);}
+.tile-enemy{background:var(--floor);cursor:pointer;}
+.tile-item{background:var(--floor);color:var(--gold);text-shadow:0 0 5px var(--gold);cursor:pointer;}
+.tile-stairs{background:var(--floor);color:var(--green);text-shadow:0 0 5px var(--green);cursor:pointer;}
+.tile-shop{background:var(--floor);color:var(--gold);text-shadow:0 0 8px var(--gold),0 0 16px rgba(251,191,36,.4);cursor:pointer;animation:shopPulse 2s ease-in-out infinite;}
+.tile-dark{background:var(--wall);color:var(--wall);}
+.tile-seen{filter:brightness(.35);}
+
+/* LOG */
+#bottom-bar{flex-shrink:0;background:var(--panel);border-top:1px solid var(--border);}
+#log{padding:5px 10px;height:50px;overflow-y:auto;font-size:.58rem;line-height:1.65;scrollbar-width:thin;scrollbar-color:var(--dim) transparent;}
+.log-entry{opacity:.75;}
+.log-entry.new{opacity:1;color:var(--text);}
+.log-combat{color:var(--red);}
+.log-item{color:var(--gold);}
+.log-level{color:var(--accent);}
+.log-info{color:var(--blue);}
+.log-dead{color:var(--green);}
+.log-shop{color:var(--gold);}
+
+/* D-PAD */
+#dpad-area{flex-shrink:0;padding:10px 16px max(10px,env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+#dpad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:3px;flex-shrink:0;}
+.dpad-btn{background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:1.1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;transition:background .1s,border-color .1s;user-select:none;touch-action:none;}
+.dpad-btn:active{background:var(--border);border-color:var(--accent);}
+.dpad-center{background:rgba(192,132,252,.05);border-color:var(--dim);font-size:.5rem;color:var(--dim);}
+#action-btns{display:flex;flex-direction:column;gap:5px;flex-shrink:0;}
+.act-btn{font-family:'Press Start 2P',monospace;font-size:.36rem;padding:9px 10px;background:var(--panel);border:1px solid var(--border);color:var(--dim);cursor:pointer;letter-spacing:.08em;border-radius:3px;transition:all .15s;min-width:76px;text-align:center;}
+.act-btn:active{background:var(--border);}
+.bash-ready{border-color:var(--orange)!important;color:var(--orange)!important;}
+.stairs-avail{border-color:var(--green)!important;color:var(--green)!important;}
+.bag-has{border-color:var(--gold)!important;color:var(--gold)!important;}
+.shop-avail{border-color:var(--gold)!important;color:var(--gold)!important;animation:shopPulse 1.5s ease-in-out infinite;}
+
+/* ── LANDSCAPE LAYOUT — mobile only (excludes desktop monitors) ── */
+@media (orientation:landscape) and (max-height: 600px) {
+  #game-screen{flex-direction:row;flex-wrap:nowrap;}
+  #hud{
+    writing-mode:initial;
+    width:130px;flex-shrink:0;
+    grid-template-columns:1fr;
+    grid-template-rows:auto auto auto;
+    border-bottom:none;border-right:1px solid var(--accent);
+    padding:8px 6px;align-items:start;gap:8px;
+  }
+  .hud-right{align-items:flex-start;}
+  .hud-stats{flex-direction:column;gap:4px;}
+  .bar{width:90px;}
+  #map-area{flex:1;min-width:0;}
+  #bottom-bar{display:none;}
+  #dpad-area{
+    width:160px;flex-shrink:0;
+    flex-direction:column;justify-content:center;align-items:center;
+    border-top:none;border-left:1px solid var(--border);
+    padding:10px max(10px,env(safe-area-inset-right)) 10px 10px;
+    gap:10px;
+  }
+  #action-btns{flex-direction:column;gap:5px;}
+  .act-btn{min-width:68px;font-size:.32rem;padding:8px 6px;}
+}
+
+/* ── INVENTORY DRAWER ── */
+#inv-drawer{position:fixed;bottom:0;left:0;right:0;z-index:80;background:var(--panel);border-top:2px solid var(--accent);transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);max-height:65vh;overflow-y:auto;padding:14px 16px max(16px,env(safe-area-inset-bottom));}
+#inv-drawer.open{transform:translateY(0);}
+@media(orientation:landscape) and (max-height:600px){
+  #inv-drawer{max-height:80vh;}
+}
+.drawer-handle{width:40px;height:4px;background:var(--dim);border-radius:2px;margin:0 auto 14px;}
+.panel-title{font-family:'Press Start 2P',monospace;font-size:.38rem;color:var(--accent);letter-spacing:.2em;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:8px;}
+.inv-section{margin-bottom:14px;}
+.inv-slot{padding:8px 10px;border:1px solid var(--border);margin-bottom:5px;cursor:pointer;transition:all .12s;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.inv-slot:active{border-color:var(--gold);background:rgba(251,191,36,.07);}
+.inv-slot.equipped{border-color:var(--accent);background:rgba(192,132,252,.08);}
+.inv-name{color:var(--text);font-size:.65rem;}
+.inv-type{color:var(--dim);font-size:.52rem;}
+.inv-bonus{color:var(--green);font-size:.6rem;white-space:nowrap;}
+.inv-empty{color:var(--dim);font-size:.62rem;font-style:italic;padding:4px 0;}
+.inv-close-row{text-align:center;margin-top:8px;}
+#drawer-backdrop{position:fixed;inset:0;z-index:75;background:rgba(0,0,0,.5);display:none;}
+#drawer-backdrop.open{display:block;}
+
+/* ── SHOP OVERLAY ── */
+#shop-overlay{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:16px;animation:fadeIn .3s;}
+#shop-overlay.open{display:flex;}
+#shop-modal{background:var(--panel);border:2px solid var(--gold);padding:20px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 60px rgba(251,191,36,.25);}
+#shop-modal h2{font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--gold);text-align:center;margin-bottom:4px;}
+.shop-subtitle{color:var(--dim);font-size:.58rem;text-align:center;margin-bottom:14px;}
+.shop-gold-display{font-size:.7rem;color:var(--gold);text-align:center;margin-bottom:14px;}
+.shop-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);margin-bottom:6px;cursor:pointer;transition:all .15s;}
+.shop-item:active,.shop-item:hover{border-color:var(--gold);background:rgba(251,191,36,.06);}
+.shop-item.sold{opacity:.35;pointer-events:none;}
+.shop-item-left{flex:1;}
+.shop-item-name{color:var(--text);font-size:.65rem;}
+.shop-item-desc{color:var(--dim);font-size:.55rem;margin-top:2px;}
+.shop-item-price{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--gold);white-space:nowrap;}
+.shop-item-price.cant-afford{color:var(--red);}
+.shop-tabs{display:flex;gap:6px;margin-bottom:12px;}
+.shop-tab{font-family:'Press Start 2P',monospace;font-size:.4rem;padding:8px 16px;background:transparent;border:1px solid var(--border);color:var(--dim);cursor:pointer;flex:1;transition:all .15s;letter-spacing:.1em;}
+.shop-tab.active{border-color:var(--gold);color:var(--gold);background:rgba(251,191,36,.08);}
+.shop-tab:active{background:var(--border);}
+.sell-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);margin-bottom:6px;cursor:pointer;transition:all .15s;}
+.sell-item:active,.sell-item:hover{border-color:var(--green);background:rgba(74,222,128,.06);}
+.sell-item-left{flex:1;}
+.sell-item-name{color:var(--text);font-size:.65rem;}
+.sell-item-desc{color:var(--dim);font-size:.55rem;margin-top:2px;}
+.sell-item-price{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--green);white-space:nowrap;}
+.sell-empty{color:var(--dim);font-size:.62rem;font-style:italic;padding:8px 0;text-align:center;}
+
+/* ── OTHER OVERLAYS ── */
+.overlay{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;animation:fadeIn .3s;padding:16px;}
+.modal{background:var(--panel);border:2px solid var(--accent);padding:28px 24px;text-align:center;max-width:360px;width:100%;box-shadow:0 0 60px rgba(192,132,252,.3);}
+.modal h2{font-family:'Press Start 2P',monospace;font-size:.9rem;margin-bottom:14px;color:var(--accent);}
+.modal.death h2{color:var(--red);}
+.modal.victory h2{color:var(--gold);}
+.modal p{font-size:.65rem;line-height:2;color:var(--dim);margin-bottom:16px;}
+.modal .stats-list{font-size:.62rem;line-height:2.4;margin-bottom:18px;}
+.modal .stats-list span{color:var(--text);}
+#tooltip{position:fixed;background:var(--panel);border:1px solid var(--accent);padding:7px 11px;font-size:.6rem;line-height:1.9;pointer-events:none;z-index:90;display:none;max-width:160px;}
+
+/* FX */
+#map-wrap.shake{animation:shake .18s ease;}
+.float-text{position:fixed;font-family:'Press Start 2P',monospace;font-size:.45rem;pointer-events:none;z-index:200;animation:floatup .85s ease forwards;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{text-shadow:0 0 40px rgba(192,132,252,.6)}50%{text-shadow:0 0 80px rgba(192,132,252,.95),0 0 120px rgba(192,132,252,.4)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@keyframes floatup{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-28px)}}
+@keyframes shopPulse{0%,100%{opacity:1}50%{opacity:.6}}
+.hidden{display:none!important;}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--dim);}
+</style>
+</head>
+<body>
+
+<!-- INSTALL BANNER -->
+<div id="install-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:#1a1a2e;border-top:2px solid #c084fc;padding:12px 16px;align-items:center;justify-content:space-between;gap:12px;font-family:'Share Tech Mono',monospace;font-size:.65rem;">
+  <span style="color:#e2e8f0;">📲 Install DELVE as an app?</span>
+  <div style="display:flex;gap:8px;">
+    <button id="install-btn" style="font-family:'Press Start 2P',monospace;font-size:.4rem;padding:8px 12px;background:transparent;border:1px solid #c084fc;color:#c084fc;cursor:pointer;">INSTALL</button>
+    <button onclick="document.getElementById('install-banner').style.display='none'" style="font-family:'Press Start 2P',monospace;font-size:.4rem;padding:8px 12px;background:transparent;border:1px solid #4a4a6a;color:#4a4a6a;cursor:pointer;">✕</button>
+  </div>
+</div>
+
+<!-- TITLE -->
+<div id="title-screen">
+  <h1>DELVE</h1>
+  <p class="subtitle">A Roguelike</p>
+  <p class="flavor">The dungeon goes down forever.<br>Death is permanent. Loot is scarce.<br>Every run, a new story.</p>
+  <button class="btn" onclick="startGame()">▶ DESCEND</button>
+</div>
+
+<!-- GAME -->
+<div id="game-screen" class="hidden">
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-left">
+      <div class="stat-row">
+        <span class="stat-label">HP</span>
+        <div class="bar"><div class="bar-fill hp-fill" id="hp-bar"></div></div>
+        <span class="stat-val" id="hp-val">20/20</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">XP</span>
+        <div class="bar"><div class="bar-fill xp-fill" id="xp-bar" style="width:0%"></div></div>
+        <span class="stat-val" id="xp-val">0/10</span>
+      </div>
+    </div>
+    <div class="hud-center">DELVE<br><span id="floor-label" style="color:var(--gold)">FLOOR 1</span></div>
+    <div class="hud-right">
+      <div class="hud-stats">
+        <div class="hud-stat">⚔<span id="atk-val" style="color:var(--orange)">4</span></div>
+        <div class="hud-stat">🛡<span id="def-val" style="color:var(--blue)">1</span></div>
+        <div class="hud-stat">★<span id="lvl-val" style="color:var(--accent)">1</span></div>
+        <div class="hud-stat gold-stat">💰<span id="gold-val">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map-area">
+    <div id="map-wrap"><div id="map"></div></div>
+  </div>
+
+  <!-- LOG (portrait only) -->
+  <div id="bottom-bar"><div id="log"></div></div>
+
+  <!-- D-PAD + ACTIONS -->
+  <div id="dpad-area">
+    <div id="dpad">
+      <div></div>
+      <div class="dpad-btn" ontouchstart="dpadPress(0,-1);event.preventDefault()" ontouchend="dpadRelease()" onclick="move(0,-1)">↑</div>
+      <div></div>
+      <div class="dpad-btn" ontouchstart="dpadPress(-1,0);event.preventDefault()" ontouchend="dpadRelease()" onclick="move(-1,0)">←</div>
+      <div class="dpad-btn dpad-center">·</div>
+      <div class="dpad-btn" ontouchstart="dpadPress(1,0);event.preventDefault()"  ontouchend="dpadRelease()" onclick="move(1,0)">→</div>
+      <div></div>
+      <div class="dpad-btn" ontouchstart="dpadPress(0,1);event.preventDefault()"  ontouchend="dpadRelease()" onclick="move(0,1)">↓</div>
+      <div></div>
+    </div>
+    <div id="action-btns">
+      <button class="act-btn" id="bash-btn"   onclick="doBash()">BASH</button>
+      <button class="act-btn" id="stairs-btn" onclick="descend()">STAIRS</button>
+      <button class="act-btn" id="shop-btn"   onclick="openShop()">SHOP</button>
+      <button class="act-btn" id="bag-btn"    onclick="openInv()">BAG</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRAWER BACKDROP -->
+<div id="drawer-backdrop" onclick="closeInv()"></div>
+
+<!-- INVENTORY DRAWER -->
+<div id="inv-drawer">
+  <div class="drawer-handle"></div>
+  <div class="inv-section">
+    <div class="panel-title">EQUIPPED</div>
+    <div id="equipped-list"></div>
+  </div>
+  <div class="inv-section">
+    <div class="panel-title">INVENTORY — tap to use/equip</div>
+    <div id="inventory-list"></div>
+  </div>
+  <div class="inv-close-row">
+    <button class="btn" style="font-size:.45rem;padding:10px 20px" onclick="closeInv()">CLOSE</button>
+  </div>
+</div>
+
+<!-- SHOP OVERLAY -->
+<div id="shop-overlay">
+  <div id="shop-modal">
+    <h2>☆ MERCHANT ☆</h2>
+    <div class="shop-gold-display">💰 Gold: <span id="shop-gold-val">0</span></div>
+    <!-- Tabs -->
+    <div class="shop-tabs">
+      <button class="shop-tab active" id="tab-buy"  onclick="switchShopTab('buy')">BUY</button>
+      <button class="shop-tab"        id="tab-sell" onclick="switchShopTab('sell')">SELL</button>
+    </div>
+    <div id="shop-buy-panel">
+      <p class="shop-subtitle">Buy wisely. The dungeon is long.</p>
+      <div id="shop-items"></div>
+    </div>
+    <div id="shop-sell-panel" style="display:none">
+      <p class="shop-subtitle">Sell price is 50% of item value.</p>
+      <div id="sell-items"></div>
+    </div>
+    <div class="shop-close-row">
+      <button class="btn" style="font-size:.45rem;padding:10px 20px" onclick="closeShop()">LEAVE SHOP</button>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ===================== CONSTANTS =====================
+const MAP_W=28,MAP_H=18,FLOORS=5;
+const TILE={WALL:0,FLOOR:1,STAIRS:2,SHOP:3};
+const DIRS={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],
+            w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],W:[0,-1],S:[0,1],A:[-1,0],D:[1,0]};
+
+// ===================== DATA =====================
+const WEAPONS=[
+  {name:'Rusty Dagger', type:'weapon',atk:2, sym:'†',rarity:'common', price:20},
+  {name:'Short Sword',  type:'weapon',atk:4, sym:'†',rarity:'common', price:35},
+  {name:'Battle Axe',   type:'weapon',atk:7, sym:'⚔',rarity:'rare',   price:60},
+  {name:'Shadow Blade', type:'weapon',atk:10,sym:'⚔',rarity:'rare',   price:90},
+  {name:'Soul Reaper',  type:'weapon',atk:15,sym:'⚔',rarity:'legendary',price:150},
+  {name:'Bone Staff',   type:'weapon',atk:5, sym:'♦',rarity:'common', price:40},
+  {name:'Arcane Rod',   type:'weapon',atk:9, sym:'♦',rarity:'rare',   price:75},
+];
+const ARMORS=[
+  {name:'Leather Vest', type:'armor',def:2, sym:'◈',rarity:'common', price:20},
+  {name:'Chain Mail',   type:'armor',def:4, sym:'◈',rarity:'common', price:35},
+  {name:'Plate Armor',  type:'armor',def:7, sym:'◈',rarity:'rare',   price:65},
+  {name:'Shadow Cloak', type:'armor',def:5, sym:'◈',rarity:'rare',   price:55},
+  {name:'Dragon Scale', type:'armor',def:12,sym:'◈',rarity:'legendary',price:140},
+];
+const POTIONS=[
+  {name:'Health Potion', type:'potion',heal:15,sym:'!',rarity:'common',   price:15},
+  {name:'Greater Potion',type:'potion',heal:30,sym:'!',rarity:'rare',     price:30},
+  {name:'Elixir of Life',type:'potion',heal:60,sym:'!',rarity:'legendary',price:60},
+];
+// Shop-exclusive upgrades
+const UPGRADES=[
+  {name:'Strength Tonic', type:'upgrade',stat:'atk',amount:2,sym:'↑',rarity:'rare',   price:50,  desc:'+2 Attack (permanent)'},
+  {name:'Iron Skin',      type:'upgrade',stat:'def',amount:2,sym:'↑',rarity:'rare',   price:50,  desc:'+2 Defense (permanent)'},
+  {name:'Vitality Brew',  type:'upgrade',stat:'hp', amount:15,sym:'♥',rarity:'rare',  price:45,  desc:'+15 Max HP (permanent)'},
+  {name:'Blessing',       type:'upgrade',stat:'all',amount:1,sym:'★',rarity:'legendary',price:120,desc:'+1 ATK, +1 DEF, +10 Max HP'},
+];
+const ENEMIES=[
+  {name:'Rat',    sym:'r',hp:5, atk:2, def:0,xp:3, gold:2, color:'#cd853f'},
+  {name:'Goblin', sym:'g',hp:10,atk:4, def:1,xp:6, gold:4, color:'#4ade80'},
+  {name:'Skeleton',sym:'s',hp:15,atk:6,def:2,xp:10,gold:6, color:'#e2e8f0'},
+  {name:'Orc',    sym:'o',hp:25,atk:8, def:3,xp:15,gold:10,color:'#84cc16'},
+  {name:'Troll',  sym:'T',hp:40,atk:12,def:4,xp:25,gold:15,color:'#22d3ee'},
+  {name:'Demon',  sym:'D',hp:55,atk:15,def:5,xp:35,gold:22,color:'#f87171'},
+  {name:'Lich',   sym:'L',hp:70,atk:18,def:6,xp:50,gold:30,color:'#a78bfa'},
+];
+
+let G={},_dpadTimer=null,_swipeStart=null;
+const rand=n=>Math.floor(Math.random()*n);
+const rr=(a,b)=>a+rand(b-a+1);
+const ch=p=>Math.random()<p;
+
+// ===================== MAP GEN =====================
+function generateMap(){
+  let map=Array.from({length:MAP_H},()=>Array(MAP_W).fill(TILE.WALL));
+  let rooms=[];
+  const carve=(x,y,w,h)=>{
+    for(let ry=y;ry<y+h;ry++) for(let rx=x;rx<x+w;rx++)
+      if(ry>0&&ry<MAP_H-1&&rx>0&&rx<MAP_W-1) map[ry][rx]=TILE.FLOOR;
+    rooms.push({x,y,w,h,cx:Math.floor(x+w/2),cy:Math.floor(y+h/2)});
+  };
+  const tunnel=(x1,y1,x2,y2)=>{
+    let cx=x1,cy=y1;
+    while(cx!==x2){map[cy][cx]=TILE.FLOOR;cx+=(x2>cx?1:-1);}
+    while(cy!==y2){map[cy][cx]=TILE.FLOOR;cy+=(y2>cy?1:-1);}
+  };
+  let n=rr(5,8),att=0;
+  while(rooms.length<n&&att<200){
+    att++;
+    let rw=rr(3,7),rh=rr(3,5),rx=rr(1,MAP_W-rw-1),ry=rr(1,MAP_H-rh-1);
+    let ok=true;
+    for(let r of rooms) if(rx<r.x+r.w+1&&rx+rw>r.x-1&&ry<r.y+r.h+1&&ry+rh>r.y-1){ok=false;break;}
+    if(ok) carve(rx,ry,rw,rh);
+  }
+  for(let i=1;i<rooms.length;i++) tunnel(rooms[i-1].cx,rooms[i-1].cy,rooms[i].cx,rooms[i].cy);
+  return{map,rooms};
+}
+
+// ===================== INIT =====================
+function initGame(){
+  G={
+    floor:1,
+    player:{x:0,y:0,hp:20,maxHp:20,atk:4,def:1,lvl:1,xp:0,xpNext:10,
+            weapon:null,armor:null,kills:0,gold:0},
+    enemies:[],items:[],
+    map:null,rooms:[],shopPos:null,shopStock:[],
+    visible:new Set(),seen:new Set(),
+    log:[],turn:0,bashCooldown:0,
+    gameOver:false,won:false,
+  };
+  buildFloor();
+}
+
+function buildFloor(){
+  let{map,rooms}=generateMap();
+  G.map=map;G.rooms=rooms;G.enemies=[];G.items=[];G.shopPos=null;G.shopStock=[];
+  G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
+
+  // Stairs in last room
+  map[rooms[rooms.length-1].cy][rooms[rooms.length-1].cx]=TILE.STAIRS;
+
+  // Shop in a middle room (if enough rooms), not first or last
+  if(rooms.length>=4){
+    let shopRoomIdx=Math.floor(rooms.length/2)+rand(2)-1;
+    shopRoomIdx=Math.max(1,Math.min(rooms.length-2,shopRoomIdx));
+    let sr=rooms[shopRoomIdx];
+    G.shopPos={x:sr.cx,y:sr.cy};
+    map[sr.cy][sr.cx]=TILE.SHOP;
+    G.shopStock=generateShopStock();
+  }
+
+  // Enemies & items in remaining rooms
+  for(let i=1;i<rooms.length;i++){
+    let r=rooms[i];
+    // Don't spawn enemies in shop room
+    if(G.shopPos&&r.cx===G.shopPos.x&&r.cy===G.shopPos.y) continue;
+    let ne=rr(1,2+G.floor);
+    for(let e=0;e<ne;e++){
+      let tier=Math.min(Math.floor(G.floor*.8+rand(2)),ENEMIES.length-1);
+      let t=ENEMIES[tier],sc=1+(G.floor-1)*.4;
+      G.enemies.push({...t,
+        hp:Math.round(t.hp*sc),maxHp:Math.round(t.hp*sc),
+        atk:Math.round(t.atk*sc),def:Math.round(t.def*sc),
+        xp:Math.round(t.xp*sc),gold:Math.round(t.gold*sc),
+        x:r.x+rr(1,r.w-2),y:r.y+rr(1,r.h-2),id:Math.random()});
+    }
+    if(ch(.65)) spawnItem(r);
+  }
+  computeVision();render();
+  addLog(`Floor ${G.floor}. ${G.shopPos?'A merchant awaits nearby...':''}`, G.shopPos?'log-shop':'log-info');
+}
+
+// ===================== SHOP =====================
+function generateShopStock(){
+  let stock=[];
+  let floorScale=G.floor;
+
+  // Always offer 2 potions
+  let pots=[...POTIONS].sort(()=>Math.random()-.5);
+  stock.push({...pots[0],id:Math.random(),sold:false});
+  if(ch(.6)) stock.push({...pots[1],id:Math.random(),sold:false});
+
+  // 1-2 weapons scaled to floor
+  let weps=WEAPONS.filter(w=>w.atk<=4+floorScale*3).sort(()=>Math.random()-.5);
+  if(weps.length) stock.push({...weps[0],id:Math.random(),sold:false});
+  if(weps.length>1&&ch(.5)) stock.push({...weps[1],id:Math.random(),sold:false});
+
+  // 1 armor
+  let arms=ARMORS.filter(a=>a.def<=2+floorScale*2).sort(()=>Math.random()-.5);
+  if(arms.length) stock.push({...arms[0],id:Math.random(),sold:false});
+
+  // 1 upgrade (floors 2+)
+  if(G.floor>=2){
+    let ups=UPGRADES.filter(u=>u.rarity!=='legendary'||G.floor>=4).sort(()=>Math.random()-.5);
+    if(ups.length) stock.push({...ups[0],id:Math.random(),sold:false});
+  }
+
+  return stock;
+}
+
+function openShop(){
+  if(G.gameOver||G.won)return;
+  if(!G.shopPos){addLog('No shop on this floor','log-info');return;}
+  let p=G.player;
+  let dx=Math.abs(p.x-G.shopPos.x),dy=Math.abs(p.y-G.shopPos.y);
+  if(dx>1||dy>1){addLog('Move to the shop ($) to enter','log-shop');return;}
+  renderShop();
+  switchShopTab('buy');
+  document.getElementById('shop-overlay').classList.add('open');
+}
+
+function closeShop(){
+  document.getElementById('shop-overlay').classList.remove('open');
+}
+
+function renderShop(){
+  document.getElementById('shop-gold-val').textContent=G.player.gold;
+  let h='';
+  G.shopStock.forEach(item=>{
+    let canAfford=G.player.gold>=item.price;
+    let desc=item.desc||iDesc(item);
+    h+=`<div class="shop-item${item.sold?' sold':''}" onclick="buyItem('${item.id}')">
+      <div class="shop-item-left">
+        <div class="shop-item-name">${item.sym} ${item.name}${item.sold?' (SOLD)':''}</div>
+        <div class="shop-item-desc">${desc} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
+      </div>
+      <div class="shop-item-price${canAfford?'':' cant-afford'}">💰${item.price}</div>
+    </div>`;
+  });
+  document.getElementById('shop-items').innerHTML=h;
+}
+
+function buyItem(id){
+  let item=G.shopStock.find(i=>i.id==id);
+  if(!item||item.sold)return;
+  if(G.player.gold<item.price){addLog('Not enough gold!','log-shop');return;}
+  G.player.gold-=item.price;
+  item.sold=true;
+
+  if(item.type==='potion'){
+    let heal=Math.min(item.heal,G.player.maxHp-G.player.hp);
+    G.player.hp+=heal;
+    addLog(`Bought & used ${item.name}: +${heal} HP`,'log-shop');
+    floatText(`+${heal} HP`,G.player.x,G.player.y,'#4ade80');
+  } else if(item.type==='weapon'){
+    // Put in inventory, auto-equip if better
+    let clone={...item,carried:true,id:Math.random()};
+    G.items.push(clone);
+    autoEquip(clone);
+    addLog(`Bought ${item.name}`,'log-shop');
+  } else if(item.type==='armor'){
+    let clone={...item,carried:true,id:Math.random()};
+    G.items.push(clone);
+    autoEquip(clone);
+    addLog(`Bought ${item.name}`,'log-shop');
+  } else if(item.type==='upgrade'){
+    applyUpgrade(item);
+  }
+
+  renderShop();
+  updateHUD();
+  updateActBtns();
+}
+
+function switchShopTab(tab){
+  document.getElementById('tab-buy').classList.toggle('active', tab==='buy');
+  document.getElementById('tab-sell').classList.toggle('active', tab==='sell');
+  document.getElementById('shop-buy-panel').style.display=tab==='buy'?'block':'none';
+  document.getElementById('shop-sell-panel').style.display=tab==='sell'?'block':'none';
+  if(tab==='sell') renderSellPanel();
+}
+
+function renderSellPanel(){
+  // Sellable = carried items + equipped items (player can sell anything from bag or currently equipped)
+  let sellable=[
+    ...G.items.filter(i=>i.carried),
+    ...(G.player.weapon?[{...G.player.weapon,_equipped:'weapon'}]:[]),
+    ...(G.player.armor?[{...G.player.armor,_equipped:'armor'}]:[]),
+  ];
+  let h='';
+  if(!sellable.length){
+    h='<div class="sell-empty">Nothing to sell.</div>';
+  } else {
+    sellable.forEach(item=>{
+      let sellPrice=Math.max(1,Math.floor((item.price||10)/2));
+      let equippedTag=item._equipped?` <span style="color:var(--accent);font-size:.5rem">[EQUIPPED]</span>`:'';
+      h+=`<div class="sell-item" onclick="sellItem('${item.id}','${item._equipped||''}')">
+        <div class="sell-item-left">
+          <div class="sell-item-name">${item.sym} ${item.name}${equippedTag}</div>
+          <div class="sell-item-desc">${iDesc(item)} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
+        </div>
+        <div class="sell-item-price">+${sellPrice}💰</div>
+      </div>`;
+    });
+  }
+  document.getElementById('sell-items').innerHTML=h;
+}
+
+function sellItem(id, equippedSlot){
+  let item, isEquipped=false;
+  if(equippedSlot==='weapon'&&G.player.weapon?.id==id){
+    item=G.player.weapon; isEquipped=true;
+  } else if(equippedSlot==='armor'&&G.player.armor?.id==id){
+    item=G.player.armor; isEquipped=true;
+  } else {
+    item=G.items.find(i=>i.id==id&&i.carried);
+  }
+  if(!item) return;
+  let sellPrice=Math.max(1,Math.floor((item.price||10)/2));
+  G.player.gold+=sellPrice;
+  if(isEquipped){
+    if(equippedSlot==='weapon') G.player.weapon=null;
+    else if(equippedSlot==='armor') G.player.armor=null;
+  } else {
+    G.items=G.items.filter(i=>i.id!==id);
+  }
+  addLog(`Sold ${item.name} for ${sellPrice}💰`, 'log-shop');
+  floatText(`+${sellPrice}💰`, G.player.x, G.player.y, '#fbbf24');
+  document.getElementById('shop-gold-val').textContent=G.player.gold;
+  updateHUD();
+  updateActBtns();
+  renderSellPanel();
+}
+
+function applyUpgrade(item){
+  if(item.stat==='atk'){p.atk+=item.amount;addLog(`Strength Tonic: ATK +${item.amount}!`,'log-level');}
+  else if(item.stat==='def'){p.def+=item.amount;addLog(`Iron Skin: DEF +${item.amount}!`,'log-level');}
+  else if(item.stat==='hp'){p.maxHp+=item.amount;p.hp=Math.min(p.maxHp,p.hp+item.amount);addLog(`Vitality Brew: Max HP +${item.amount}!`,'log-level');}
+  else if(item.stat==='all'){p.atk+=1;p.def+=1;p.maxHp+=10;p.hp=Math.min(p.maxHp,p.hp+10);addLog(`Blessing: ATK+1, DEF+1, MaxHP+10!`,'log-level');}
+  floatText('UPGRADED!',p.x,p.y,'#c084fc');
+}
+
+// ===================== FLOOR/ITEMS =====================
+function spawnItem(r){
+  let pool=[...WEAPONS,...ARMORS,...POTIONS];
+  let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
+  let t=w[rand(w.length)];
+  G.items.push({...t,x:r.x+rr(1,r.w-2),y:r.y+rr(1,r.h-2),id:Math.random()});
+}
+
+// ===================== FOV =====================
+function computeVision(){
+  G.visible=new Set();
+  let px=G.player.x,py=G.player.y;
+  for(let a=0;a<360;a+=3){
+    let rad=a*Math.PI/180;
+    for(let r=0;r<6;r++){
+      let ix=Math.round(px+Math.cos(rad)*r),iy=Math.round(py+Math.sin(rad)*r);
+      if(ix<0||ix>=MAP_W||iy<0||iy>=MAP_H) break;
+      let k=iy*MAP_W+ix;G.visible.add(k);G.seen.add(k);
+      if(G.map[iy][ix]===TILE.WALL) break;
+    }
+  }
+}
+
+// ===================== RENDER =====================
+function getCellSize(){
+  let a=document.getElementById('map-area');
+  return Math.max(9,Math.min(Math.floor((a.clientWidth-10)/MAP_W),Math.floor((a.clientHeight-10)/MAP_H),18));
+}
+function iDesc(item){
+  if(item.type==='weapon') return `ATK+${item.atk}`;
+  if(item.type==='armor')  return `DEF+${item.def}`;
+  if(item.type==='potion') return `Heal ${item.heal} HP`;
+  if(item.type==='upgrade')return item.desc||'';
+  return '';
+}
+const gatk=()=>G.player.atk+(G.player.weapon?.atk||0);
+const gdef=()=>G.player.def+(G.player.armor?.def||0);
+
+function render(){
+  const mapEl=document.getElementById('map');
+  const cs=getCellSize();
+  mapEl.style.gridTemplateColumns=`repeat(${MAP_W},${cs}px)`;
+  mapEl.style.fontSize=`${cs*.72}px`;
+  const CH={[TILE.WALL]:'█',[TILE.FLOOR]:'·',[TILE.STAIRS]:'>',[TILE.SHOP]:'$'};
+  let h='';
+  for(let y=0;y<MAP_H;y++){
+    for(let x=0;x<MAP_W;x++){
+      let k=y*MAP_W+x,vis=G.visible.has(k),seen=G.seen.has(k);
+      let s=`width:${cs}px;height:${cs}px;`;
+      if(!seen){h+=`<div class="tile tile-dark" style="${s}"></div>`;continue;}
+      let t=G.map[y][x];
+      if(x===G.player.x&&y===G.player.y){h+=`<div class="tile tile-player" style="${s}">@</div>`;continue;}
+      let en=vis?G.enemies.find(e=>e.x===x&&e.y===y):null;
+      if(en){
+        h+=`<div class="tile tile-enemy" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
+          onclick="tileAttack('${en.id}')"
+          onmouseenter="showTip(event,'${en.name}',${en.hp},${en.maxHp},${en.atk})"
+          onmouseleave="hideTip()">${en.sym.toUpperCase()}</div>`;
+        continue;
+      }
+      let it=vis?G.items.find(i=>!i.carried&&i.x===x&&i.y===y):null;
+      if(it){
+        h+=`<div class="tile tile-item" style="${s}"
+          onclick="tilePickup('${it.id}')"
+          onmouseenter="showTip(event,'${it.name}: ${iDesc(it)}')"
+          onmouseleave="hideTip()">${it.sym}</div>`;
+        continue;
+      }
+      if(t===TILE.STAIRS&&vis){h+=`<div class="tile tile-stairs" style="${s}" onclick="descend()">></div>`;continue;}
+      if(t===TILE.SHOP&&vis){h+=`<div class="tile tile-shop" style="${s}" onclick="openShop()">$</div>`;continue;}
+      let sc=(seen&&!vis)?' tile-seen':'';
+      h+=`<div class="tile ${t===TILE.WALL?'tile-wall':'tile-floor'}${sc}" style="${s}">${CH[t]||' '}</div>`;
+    }
+  }
+  mapEl.innerHTML=h;
+  updateHUD();updateInvDrawer();updateActBtns();
+}
+
+function updateHUD(){
+  let p=G.player;
+  document.getElementById('hp-bar').style.width=(p.hp/p.maxHp*100)+'%';
+  document.getElementById('hp-val').textContent=`${p.hp}/${p.maxHp}`;
+  document.getElementById('xp-bar').style.width=(p.xp/p.xpNext*100)+'%';
+  document.getElementById('xp-val').textContent=`${p.xp}/${p.xpNext}`;
+  document.getElementById('atk-val').textContent=gatk();
+  document.getElementById('def-val').textContent=gdef();
+  document.getElementById('lvl-val').textContent=p.lvl;
+  document.getElementById('gold-val').textContent=p.gold;
+  document.getElementById('floor-label').textContent=`FLOOR ${G.floor}`;
+}
+
+function updateActBtns(){
+  // BASH
+  let bb=document.getElementById('bash-btn');
+  bb.className='act-btn'+(G.bashCooldown===0?' bash-ready':'');
+  bb.textContent=G.bashCooldown>0?`BASH ${G.bashCooldown}`:'⚡BASH';
+  // STAIRS
+  let sb=document.getElementById('stairs-btn');
+  let onS=G.map&&G.map[G.player.y][G.player.x]===TILE.STAIRS;
+  sb.className='act-btn'+(onS?' stairs-avail':'');
+  sb.textContent=onS?'▼ GO':'STAIRS';
+  // SHOP
+  let shopBtn=document.getElementById('shop-btn');
+  let nearShop=G.shopPos&&Math.abs(G.player.x-G.shopPos.x)<=1&&Math.abs(G.player.y-G.shopPos.y)<=1;
+  shopBtn.className='act-btn'+(nearShop?' shop-avail':'');
+  shopBtn.textContent=nearShop?'$ SHOP':'SHOP';
+  // BAG
+  let bagBtn=document.getElementById('bag-btn');
+  let hasItems=G.items.some(i=>i.carried);
+  bagBtn.className='act-btn'+(hasItems?' bag-has':'');
+  bagBtn.textContent=hasItems?'🎒 BAG':'BAG';
+}
+
+function updateInvDrawer(){
+  let inv=G.items.filter(i=>i.carried);
+  let h='';
+  if(!inv.length) h='<div class="inv-empty">Empty</div>';
+  else inv.forEach(it=>{
+    h+=`<div class="inv-slot" onclick="useItem('${it.id}')">
+      <div><div class="inv-name">${it.name}</div><div class="inv-type">${it.rarity} ${it.type}</div></div>
+      <div class="inv-bonus">${iDesc(it)}</div>
+    </div>`;
+  });
+  document.getElementById('inventory-list').innerHTML=h;
+  let eh='';
+  if(G.player.weapon) eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.weapon.name}</div><div class="inv-type">weapon</div></div><div class="inv-bonus">ATK+${G.player.weapon.atk}</div></div>`;
+  if(G.player.armor)  eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.armor.name}</div><div class="inv-type">armor</div></div><div class="inv-bonus">DEF+${G.player.armor.def}</div></div>`;
+  if(!G.player.weapon&&!G.player.armor) eh='<div class="inv-empty">Nothing equipped</div>';
+  document.getElementById('equipped-list').innerHTML=eh;
+}
+
+// ===================== COMBAT =====================
+function tileAttack(id){
+  let en=G.enemies.find(e=>e.id==id);if(!en)return;
+  if(Math.abs(en.x-G.player.x)>1||Math.abs(en.y-G.player.y)>1){
+    move(Math.sign(en.x-G.player.x)||0,Math.sign(en.y-G.player.y)||0);return;
+  }
+  attackEnemy(id,false);
+}
+function tilePickup(id){
+  let it=G.items.find(i=>i.id==id);if(!it||it.carried)return;
+  if(Math.abs(it.x-G.player.x)>1||Math.abs(it.y-G.player.y)>1){
+    move(Math.sign(it.x-G.player.x)||0,Math.sign(it.y-G.player.y)||0);return;
+  }
+  pickupItem(id);
+}
+
+function attackEnemy(id,bash=false){
+  let en=G.enemies.find(e=>e.id==id);if(!en)return;
+  let dmg=Math.max(1,gatk()-en.def+rand(3));
+  if(bash){dmg*=2;G.bashCooldown=5;}
+  en.hp-=dmg;
+  floatText(`-${dmg}`,en.x,en.y,'#f87171');
+  addLog(`Hit ${en.name} for ${dmg}${bash?' (BASH!)':''}`, 'log-combat');
+  if(en.hp<=0){
+    let goldDrop=en.gold+rand(3);
+    G.player.xp+=en.xp;G.player.kills++;G.player.gold+=goldDrop;
+    addLog(`${en.name} slain! +${en.xp} XP  +${goldDrop}💰`, 'log-dead');
+    floatText(`+${goldDrop}💰`,en.x,en.y,'#fbbf24');
+    G.enemies=G.enemies.filter(e=>e.id!==id);
+    checkLevelUp();
+    if(ch(.2)){
+      let pool=[...WEAPONS,...ARMORS,...POTIONS];
+      G.items.push({...pool[rand(pool.length)],x:en.x,y:en.y,id:Math.random()});
+    }
+    advanceTurn();return;
+  }
+  let edm=Math.max(1,en.atk-gdef()+rand(3));
+  G.player.hp=Math.max(0,G.player.hp-edm);
+  floatText(`-${edm}`,G.player.x,G.player.y,'#60a5fa');
+  addLog(`${en.name} hits you for ${edm}`,'log-combat');
+  shakeMap();advanceTurn();
+  if(G.player.hp<=0){G.gameOver=true;showDeath();}
+}
+
+function checkLevelUp(){
+  while(G.player.xp>=G.player.xpNext){
+    G.player.xp-=G.player.xpNext;G.player.lvl++;
+    G.player.xpNext=Math.round(G.player.xpNext*1.6);
+    G.player.maxHp+=8;G.player.hp=Math.min(G.player.maxHp,G.player.hp+8);
+    G.player.atk+=1;G.player.def+=1;
+    addLog(`LEVEL UP! Now level ${G.player.lvl}!`,'log-level');
+    floatText('LVL UP!',G.player.x,G.player.y,'#c084fc');
+  }
+}
+
+function advanceTurn(){
+  G.turn++;if(G.bashCooldown>0)G.bashCooldown--;
+  G.enemies.forEach(e=>{
+    if(!G.visible.has(e.y*MAP_W+e.x)){
+      if(ch(.4)){
+        let ds=[[-1,0],[1,0],[0,-1],[0,1]];let[dx,dy]=ds[rand(4)];
+        let nx=e.x+dx,ny=e.y+dy;
+        if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
+           !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;}
+      }
+    } else {
+      let dx=G.player.x-e.x,dy=G.player.y-e.y;
+      let steps=Math.abs(dx)>Math.abs(dy)?[[Math.sign(dx),0],[0,Math.sign(dy)]]:[[0,Math.sign(dy)],[Math.sign(dx),0]];
+      for(let[sx,sy] of steps){
+        let nx=e.x+sx,ny=e.y+sy;
+        if(nx===G.player.x&&ny===G.player.y){
+          let edm=Math.max(1,e.atk-gdef()+rand(3));
+          G.player.hp=Math.max(0,G.player.hp-edm);
+          addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
+          shakeMap();floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
+          if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
+          break;
+        }
+        if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
+           !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;break;}
+      }
+    }
+  });
+  computeVision();render();
+}
+
+function pickupItem(id){
+  let it=G.items.find(i=>i.id==id);if(!it||it.carried)return;
+  if(it.type==='potion'){
+    let h=Math.min(it.heal,G.player.maxHp-G.player.hp);
+    G.player.hp+=h;
+    addLog(`Used ${it.name}: +${h} HP`,'log-item');
+    floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
+    G.items=G.items.filter(i=>i.id!==id);
+  } else {
+    it.carried=true;it.x=undefined;it.y=undefined;
+    addLog(`Picked up ${it.name}`,'log-item');
+    autoEquip(it);
+  }
+  advanceTurn();
+}
+
+function autoEquip(it){
+  if(it.type==='weapon'){
+    let prev=G.player.weapon;
+    if(!prev||it.atk>prev.atk){
+      if(prev){prev.carried=true;prev.x=prev.y=undefined;}
+      G.player.weapon=it;it.carried=false;
+      addLog(`Equipped ${it.name}!`,'log-item');
+    }
+  } else if(it.type==='armor'){
+    let prev=G.player.armor;
+    if(!prev||it.def>prev.def){
+      if(prev){prev.carried=true;prev.x=prev.y=undefined;}
+      G.player.armor=it;it.carried=false;
+      addLog(`Equipped ${it.name}!`,'log-item');
+    }
+  }
+}
+
+function useItem(id){
+  let it=G.items.find(i=>i.id==id);if(!it)return;
+  if(it.type==='potion'){
+    let h=Math.min(it.heal,G.player.maxHp-G.player.hp);
+    G.player.hp+=h;
+    addLog(`Drank ${it.name}: +${h} HP`,'log-item');
+    floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
+    G.items=G.items.filter(i=>i.id!==id);
+  } else {
+    if(it.type==='weapon'){G.player.weapon=it;it.carried=false;addLog(`Equipped ${it.name}`,'log-item');}
+    else if(it.type==='armor'){G.player.armor=it;it.carried=false;addLog(`Equipped ${it.name}`,'log-item');}
+  }
+  advanceTurn();closeInv();
+}
+
+function descend(){
+  if(G.gameOver||G.won)return;
+  if(G.map[G.player.y][G.player.x]!==TILE.STAIRS){addLog('Find the stairs (>) first','log-info');return;}
+  G.floor++;
+  if(G.floor>FLOORS){G.won=true;showVictory();return;}
+  G.player.hp=Math.min(G.player.maxHp,G.player.hp+10);
+  buildFloor();
+}
+
+// ===================== MOVEMENT =====================
+function move(dx,dy){
+  if(G.gameOver||G.won||!G.map)return;
+  let nx=G.player.x+dx,ny=G.player.y+dy;
+  if(nx<0||nx>=MAP_W||ny<0||ny>=MAP_H||G.map[ny][nx]===TILE.WALL)return;
+  let en=G.enemies.find(e=>e.x===nx&&e.y===ny);
+  if(en){attackEnemy(en.id);return;}
+  let it=G.items.find(i=>!i.carried&&i.x===nx&&i.y===ny);
+  G.player.x=nx;G.player.y=ny;computeVision();
+  if(it)pickupItem(it.id);else advanceTurn();
+}
+
+function dpadPress(dx,dy){
+  if(G.gameOver||G.won)return;
+  move(dx,dy);clearInterval(_dpadTimer);
+  _dpadTimer=setInterval(()=>move(dx,dy),185);
+}
+function dpadRelease(){clearInterval(_dpadTimer);_dpadTimer=null;}
+
+function doBash(){
+  if(G.gameOver||G.won)return;
+  if(G.bashCooldown>0){addLog(`Bash on cooldown (${G.bashCooldown} turns)`,'log-info');return;}
+  let t=G.enemies
+    .filter(e=>G.visible.has(e.y*MAP_W+e.x)&&Math.abs(e.x-G.player.x)<=2&&Math.abs(e.y-G.player.y)<=2)
+    .sort((a,b)=>(Math.abs(a.x-G.player.x)+Math.abs(a.y-G.player.y))-(Math.abs(b.x-G.player.x)+Math.abs(b.y-G.player.y)));
+  if(t.length)attackEnemy(t[0].id,true);
+  else addLog('No nearby enemies to Bash','log-info');
+}
+
+// ===================== SWIPE =====================
+document.getElementById('map-area').addEventListener('touchstart',e=>{
+  if(e.touches.length!==1)return;
+  _swipeStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
+},{passive:true});
+document.getElementById('map-area').addEventListener('touchend',e=>{
+  if(!_swipeStart||G.gameOver||G.won)return;
+  let dx=e.changedTouches[0].clientX-_swipeStart.x;
+  let dy=e.changedTouches[0].clientY-_swipeStart.y;
+  _swipeStart=null;
+  if(Math.sqrt(dx*dx+dy*dy)<20)return;
+  if(Math.abs(dx)>Math.abs(dy))move(Math.sign(dx),0);
+  else move(0,Math.sign(dy));
+},{passive:true});
+
+// ===================== LOG =====================
+function addLog(msg,cls=''){
+  G.log.unshift({msg,cls});if(G.log.length>40)G.log.pop();
+  let el=document.getElementById('log');
+  el.innerHTML=G.log.map((l,i)=>`<div class="log-entry ${l.cls} ${i===0?'new':''}">${l.msg}</div>`).join('');
+  el.scrollTop=0;
+}
+
+// ===================== TOOLTIP =====================
+function showTip(e,name,hp,maxHp,atk){
+  let t=document.getElementById('tooltip');
+  t.innerHTML=`<strong style="color:var(--text)">${name}</strong><br>`+
+    (hp!==undefined?`HP:<span style="color:var(--red)">${hp}/${maxHp}</span> `:'') +
+    (atk!==undefined?`ATK:<span style="color:var(--orange)">${atk}</span>`:'');
+  t.style.display='block';t.style.left=(e.clientX+12)+'px';t.style.top=(e.clientY-8)+'px';
+}
+function hideTip(){document.getElementById('tooltip').style.display='none';}
+
+// ===================== FX =====================
+function shakeMap(){
+  let m=document.getElementById('map-wrap');
+  m.classList.remove('shake');void m.offsetWidth;m.classList.add('shake');
+}
+function floatText(txt,gx,gy,color){
+  let r=document.getElementById('map-wrap').getBoundingClientRect();
+  let cs=getCellSize();
+  let el=document.createElement('div');
+  el.className='float-text';el.textContent=txt;el.style.color=color;
+  el.style.left=(r.left+gx*cs+cs/2)+'px';el.style.top=(r.top+gy*cs)+'px';
+  document.body.appendChild(el);setTimeout(()=>el.remove(),880);
+}
+
+// ===================== INV DRAWER =====================
+function openInv(){
+  document.getElementById('inv-drawer').classList.add('open');
+  document.getElementById('drawer-backdrop').classList.add('open');
+  updateInvDrawer();
+}
+function closeInv(){
+  document.getElementById('inv-drawer').classList.remove('open');
+  document.getElementById('drawer-backdrop').classList.remove('open');
+}
+
+// ===================== SCREENS =====================
+function startGame(){
+  document.getElementById('title-screen').classList.add('hidden');
+  document.getElementById('game-screen').classList.remove('hidden');
+  initGame();
+  window.addEventListener('resize',()=>{if(G.map)render();});
+}
+
+function showDeath(){
+  let p=G.player,o=document.createElement('div');
+  o.className='overlay';
+  o.innerHTML=`<div class="modal death">
+    <h2>⚰ YOU DIED</h2>
+    <p>Fallen on floor ${G.floor}.</p>
+    <div class="stats-list">
+      Level: <span>${p.lvl}</span><br>
+      Kills: <span>${p.kills}</span><br>
+      Gold earned: <span>${p.gold}💰</span><br>
+      Floors: <span>${G.floor}</span><br>
+      Turns: <span>${G.turn}</span>
+    </div>
+    <button class="btn" onclick="this.closest('.overlay').remove();startGame()">TRY AGAIN</button>
+  </div>`;
+  document.body.appendChild(o);
+}
+
+function showVictory(){
+  let p=G.player,o=document.createElement('div');
+  o.className='overlay';
+  o.innerHTML=`<div class="modal victory">
+    <h2>★ VICTORY ★</h2>
+    <p>You escaped the dungeon!</p>
+    <div class="stats-list">
+      Level: <span>${p.lvl}</span><br>
+      Kills: <span>${p.kills}</span><br>
+      Gold: <span>${p.gold}💰</span><br>
+      Turns: <span>${G.turn}</span>
+    </div>
+    <button class="btn btn-gold" onclick="this.closest('.overlay').remove();startGame()">DESCEND AGAIN</button>
+  </div>`;
+  document.body.appendChild(o);
+}
+
+// ===================== KEYBOARD =====================
+document.addEventListener('keydown',e=>{
+  if(G.gameOver||G.won)return;
+  if(document.getElementById('game-screen').classList.contains('hidden'))return;
+  if(DIRS[e.key]){e.preventDefault();let[dx,dy]=DIRS[e.key];move(dx,dy);}
+  if(e.key==='b'||e.key==='B') doBash();
+  if(e.key==='.'||e.key==='>') descend();
+  if(e.key==='i'||e.key==='I') openInv();
+  if(e.key==='t'||e.key==='T') openShop();
+});
+
+// Only prevent double-tap zoom on d-pad buttons
+document.addEventListener('touchend',e=>{
+  if(e.target.closest('.dpad-btn'))e.preventDefault();
+},{passive:false});
+
+// ===================== PWA =====================
+let _installPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();_installPrompt=e;
+  document.getElementById('install-banner').style.display='flex';
+});
+document.getElementById('install-btn').addEventListener('click',()=>{
+  if(!_installPrompt)return;
+  _installPrompt.prompt();
+  _installPrompt.userChoice.then(()=>{_installPrompt=null;document.getElementById('install-banner').style.display='none';});
+});
+window.addEventListener('appinstalled',()=>{document.getElementById('install-banner').style.display='none';});
+</script>
+</body>
+</html>
