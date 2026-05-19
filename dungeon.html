@@ -56,9 +56,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .xp-fill{background:linear-gradient(90deg,var(--accent),#e879f9);}
 .stat-val{color:var(--text);font-size:.55rem;min-width:36px;}
 .hud-stats{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
-.hud-stat{font-size:.55rem;}
+.hud-stat{font-size:.55rem;display:flex;align-items:baseline;gap:2px;}
 .hud-stat span{color:var(--text);}
-.gold-stat{color:var(--gold)!important;}
+.hud-label{color:var(--dim);font-size:.5rem;}
 
 /* MAP */
 #map-area{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg);min-height:0;}
@@ -174,6 +174,15 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .sell-item-desc{color:var(--dim);font-size:.55rem;margin-top:2px;}
 .sell-item-price{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--green);white-space:nowrap;}
 .sell-empty{color:var(--dim);font-size:.62rem;font-style:italic;padding:8px 0;text-align:center;}
+.help-table{width:100%;border-collapse:collapse;font-size:.62rem;}
+.help-table tr{border-bottom:1px solid var(--border);}
+.help-table tr:last-child{border-bottom:none;}
+.help-table td{padding:8px 6px;vertical-align:top;line-height:1.7;color:#9ca3af;}
+.help-table td:last-child{color:var(--text);}
+.help-key{color:var(--accent)!important;font-family:'Press Start 2P',monospace;font-size:.38rem;white-space:nowrap;width:70px;padding-right:10px!important;}
+.help-sym{font-family:'Share Tech Mono',monospace!important;font-size:.7rem!important;}
+.green{color:var(--green)!important;}
+.gold-c{color:var(--gold)!important;}
 
 /* ── OTHER OVERLAYS ── */
 .overlay{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;animation:fadeIn .3s;padding:16px;}
@@ -234,13 +243,17 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <span class="stat-val" id="xp-val">0/10</span>
       </div>
     </div>
-    <div class="hud-center">DELVE<br><span id="floor-label" style="color:var(--gold)">FLOOR 1</span></div>
+    <div class="hud-center">
+      DELVE<br>
+      <span id="floor-label" style="color:var(--gold)">FLOOR 1</span><br>
+      <button onclick="openHelp()" style="font-family:'Press Start 2P',monospace;font-size:.32rem;padding:3px 7px;background:transparent;border:1px solid var(--dim);color:var(--dim);cursor:pointer;margin-top:3px;letter-spacing:.1em;">?</button>
+    </div>
     <div class="hud-right">
       <div class="hud-stats">
-        <div class="hud-stat">⚔<span id="atk-val" style="color:var(--orange)">4</span></div>
-        <div class="hud-stat">🛡<span id="def-val" style="color:var(--blue)">1</span></div>
-        <div class="hud-stat">★<span id="lvl-val" style="color:var(--accent)">1</span></div>
-        <div class="hud-stat gold-stat">💰<span id="gold-val">0</span></div>
+        <div class="hud-stat"><span class="hud-label">ATK</span><span id="atk-val" style="color:var(--orange)">4</span></div>
+        <div class="hud-stat"><span class="hud-label">DEF</span><span id="def-val" style="color:var(--blue)">1</span></div>
+        <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span></div>
+        <div class="hud-stat"><span class="hud-label" style="color:var(--gold)">GP</span><span id="gold-val" style="color:var(--gold)">0</span></div>
       </div>
     </div>
   </div>
@@ -318,6 +331,72 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 </div>
 
+<!-- HELP MODAL -->
+<div id="help-overlay" style="display:none;position:fixed;inset:0;z-index:115;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px;animation:fadeIn .3s;">
+  <div id="help-modal" style="background:var(--panel);border:2px solid var(--accent);padding:20px;max-width:440px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 0 60px rgba(192,132,252,.3);">
+    <h2 style="font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--accent);text-align:center;margin-bottom:14px;">? HOW TO PLAY</h2>
+    <!-- Tabs -->
+    <div class="shop-tabs" style="margin-bottom:14px;">
+      <button class="shop-tab active" id="htab-controls" onclick="switchHelpTab('controls')">CONTROLS</button>
+      <button class="shop-tab"        id="htab-combat"   onclick="switchHelpTab('combat')">COMBAT</button>
+      <button class="shop-tab"        id="htab-items"    onclick="switchHelpTab('items')">ITEMS</button>
+      <button class="shop-tab"        id="htab-shop"     onclick="switchHelpTab('shop')">SHOP</button>
+    </div>
+
+    <!-- CONTROLS -->
+    <div id="hpanel-controls">
+      <table class="help-table">
+        <tr><td class="help-key">↑↓←→</td><td>Move — d-pad, Arrow Keys, or <span style="color:var(--accent)">W A S D</span></td></tr>
+        <tr><td class="help-key">Swipe</td><td>Move on mobile — swipe the map in any direction</td></tr>
+        <tr><td class="help-key">BASH / <span style="color:var(--accent)">B</span></td><td>Activate Bash ability (see Combat tab)</td></tr>
+        <tr><td class="help-key">STAIRS / <span style="color:var(--accent)">. &gt;</span></td><td>Descend when standing on stairs <span class="help-sym green">></span></td></tr>
+        <tr><td class="help-key">SHOP / <span style="color:var(--accent)">T</span></td><td>Enter merchant when standing next to <span class="help-sym gold-c">$</span></td></tr>
+        <tr><td class="help-key">BAG / <span style="color:var(--accent)">I</span></td><td>Open inventory to use or equip carried items</td></tr>
+        <tr><td class="help-key">? / <span style="color:var(--accent)">H</span></td><td>Open this help screen at any time</td></tr>
+      </table>
+    </div>
+
+    <!-- COMBAT -->
+    <div id="hpanel-combat" style="display:none">
+      <table class="help-table">
+        <tr><td class="help-key">Bump</td><td>Walk into an adjacent enemy to attack them automatically</td></tr>
+        <tr><td class="help-key">Tap</td><td>Tap or click a visible enemy to attack from up to 2 tiles away</td></tr>
+        <tr><td class="help-key">⚡ BASH</td><td>Deals <span style="color:var(--orange)">double damage</span> to the nearest visible enemy within 2 tiles. 5-turn cooldown. Use on tough enemies or when low on HP</td></tr>
+        <tr><td class="help-key">DEF</td><td>Each point of DEF reduces incoming damage by 1. Stack armor to survive deeper floors</td></tr>
+        <tr><td class="help-key">XP</td><td>Killing enemies grants XP. Level up to gain +1 ATK, +1 DEF, and +8 Max HP</td></tr>
+        <tr><td class="help-key">Tip</td><td>Enemies you cannot see still wander. They pursue you once spotted</td></tr>
+      </table>
+    </div>
+
+    <!-- ITEMS -->
+    <div id="hpanel-items" style="display:none">
+      <table class="help-table">
+        <tr><td class="help-key help-sym gold">†  ⚔  ♦</td><td><span style="color:var(--gold)">Weapons</span> — increases ATK. Auto-equipped if better than current</td></tr>
+        <tr><td class="help-key help-sym gold">◈</td><td><span style="color:var(--gold)">Armor</span> — increases DEF. Auto-equipped if better than current</td></tr>
+        <tr><td class="help-key help-sym gold">!</td><td><span style="color:var(--gold)">Potions</span> — restores HP instantly on pickup</td></tr>
+        <tr><td class="help-key">Rarity</td><td><span style="color:var(--text)">Common</span> · <span style="color:var(--blue)">Rare</span> · <span style="color:var(--accent)">Legendary</span> — higher rarity means stronger stats</td></tr>
+        <tr><td class="help-key">BAG</td><td>Items not auto-equipped go into your bag. Open BAG to manually equip a weaker item or use a saved potion</td></tr>
+        <tr><td class="help-key">Drop</td><td>Enemies have a 20% chance to drop an item on death</td></tr>
+      </table>
+    </div>
+
+    <!-- SHOP -->
+    <div id="hpanel-shop" style="display:none">
+      <table class="help-table">
+        <tr><td class="help-key help-sym gold">$</td><td>The merchant appears on most floors. Walk next to the <span style="color:var(--gold)">$</span> tile and tap SHOP</td></tr>
+        <tr><td class="help-key">💰 Gold</td><td>Earned by killing enemies. Shown in the top-right HUD</td></tr>
+        <tr><td class="help-key">BUY</td><td>Purchase weapons, armor, potions, and permanent stat upgrades. Red price = can't afford yet</td></tr>
+        <tr><td class="help-key">SELL</td><td>Sell items from your bag or equipped gear for 50% of their value. Useful for clearing space and funding better upgrades</td></tr>
+        <tr><td class="help-key">Upgrades</td><td>Available from floor 2: permanent boosts to ATK, DEF, or Max HP. Worth saving gold for</td></tr>
+      </table>
+    </div>
+
+    <div style="text-align:center;margin-top:14px;">
+      <button class="btn" style="font-size:.45rem;padding:10px 20px" onclick="closeHelp()">CLOSE</button>
+    </div>
+  </div>
+</div>
+
 <div id="tooltip"></div>
 
 <script>
@@ -366,10 +445,16 @@ const ENEMIES=[
   {name:'Lich',   sym:'L',hp:70,atk:18,def:6,xp:50,gold:30,color:'#a78bfa'},
 ];
 
-let G={},_dpadTimer=null,_swipeStart=null;
+let G={},_dpadTimer=null,_swipeStart=null,_lastAction=0;
 const rand=n=>Math.floor(Math.random()*n);
 const rr=(a,b)=>a+rand(b-a+1);
 const ch=p=>Math.random()<p;
+// Debounce tile actions — 400ms safety net against double-fire
+function canAct(){
+  const now=Date.now();
+  if(now-_lastAction<400) return false;
+  _lastAction=now; return true;
+}
 
 // ===================== MAP GEN =====================
 function generateMap(){
@@ -409,6 +494,7 @@ function initGame(){
     log:[],turn:0,bashCooldown:0,
     gameOver:false,won:false,
   };
+  resetTips();
   buildFloor();
 }
 
@@ -449,6 +535,13 @@ function buildFloor(){
   }
   computeVision();render();
   addLog(`Floor ${G.floor}. ${G.shopPos?'A merchant awaits nearby...':''}`, G.shopPos?'log-shop':'log-info');
+  // Fire tips for anything visible on spawn
+  setTimeout(()=>{
+    if(!TIPS.firstEnemy.shown && G.enemies.some(e=>G.visible.has(e.y*MAP_W+e.x))) fireTip('firstEnemy');
+    if(!TIPS.firstShop.shown && G.shopPos && G.visible.has(G.shopPos.y*MAP_W+G.shopPos.x)) fireTip('firstShop');
+    if(!TIPS.firstStairs.shown && G.map[G.rooms[G.rooms.length-1].cy][G.rooms[G.rooms.length-1].cx]===TILE.STAIRS &&
+       G.visible.has(G.rooms[G.rooms.length-1].cy*MAP_W+G.rooms[G.rooms.length-1].cx)) fireTip('firstStairs');
+  }, 600); // slight delay so floor message shows first
 }
 
 // ===================== SHOP =====================
@@ -500,7 +593,9 @@ function renderShop(){
   G.shopStock.forEach(item=>{
     let canAfford=G.player.gold>=item.price;
     let desc=item.desc||iDesc(item);
-    h+=`<div class="shop-item${item.sold?' sold':''}" onclick="buyItem('${item.id}')">
+    h+=`<div class="shop-item${item.sold?' sold':''}"
+      onclick="buyItem('${item.id}')"
+      ontouchend="event.preventDefault();buyItem('${item.id}')">
       <div class="shop-item-left">
         <div class="shop-item-name">${item.sym} ${item.name}${item.sold?' (SOLD)':''}</div>
         <div class="shop-item-desc">${desc} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
@@ -566,7 +661,9 @@ function renderSellPanel(){
     sellable.forEach(item=>{
       let sellPrice=Math.max(1,Math.floor((item.price||10)/2));
       let equippedTag=item._equipped?` <span style="color:var(--accent);font-size:.5rem">[EQUIPPED]</span>`:'';
-      h+=`<div class="sell-item" onclick="sellItem('${item.id}','${item._equipped||''}')">
+      h+=`<div class="sell-item"
+        onclick="sellItem('${item.id}','${item._equipped||''}')"
+        ontouchend="event.preventDefault();sellItem('${item.id}','${item._equipped||''}')">
         <div class="sell-item-left">
           <div class="sell-item-name">${item.sym} ${item.name}${equippedTag}</div>
           <div class="sell-item-desc">${iDesc(item)} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
@@ -675,21 +772,25 @@ function render(){
       let en=vis?G.enemies.find(e=>e.x===x&&e.y===y):null;
       if(en){
         h+=`<div class="tile tile-enemy" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
-          onclick="tileAttack('${en.id}')"
+          ontouchend="event.preventDefault();tileAttack('${en.id}')"
+          ontouchstart="showTip(event,'${en.name}',${en.hp},${en.maxHp},${en.atk});event.stopPropagation()"
           onmouseenter="showTip(event,'${en.name}',${en.hp},${en.maxHp},${en.atk})"
-          onmouseleave="hideTip()">${en.sym.toUpperCase()}</div>`;
+          onmouseleave="hideTip()"
+          onclick="tileAttack('${en.id}')">${en.sym.toUpperCase()}</div>`;
         continue;
       }
       let it=vis?G.items.find(i=>!i.carried&&i.x===x&&i.y===y):null;
       if(it){
         h+=`<div class="tile tile-item" style="${s}"
-          onclick="tilePickup('${it.id}')"
+          ontouchend="event.preventDefault();tilePickup('${it.id}')"
+          ontouchstart="showTip(event,'${it.name}: ${iDesc(it)}');event.stopPropagation()"
           onmouseenter="showTip(event,'${it.name}: ${iDesc(it)}')"
-          onmouseleave="hideTip()">${it.sym}</div>`;
+          onmouseleave="hideTip()"
+          onclick="tilePickup('${it.id}')">${it.sym}</div>`;
         continue;
       }
-      if(t===TILE.STAIRS&&vis){h+=`<div class="tile tile-stairs" style="${s}" onclick="descend()">></div>`;continue;}
-      if(t===TILE.SHOP&&vis){h+=`<div class="tile tile-shop" style="${s}" onclick="openShop()">$</div>`;continue;}
+      if(t===TILE.STAIRS&&vis){h+=`<div class="tile tile-stairs" style="${s}" onclick="descend()" ontouchend="event.preventDefault();descend()">></div>`;continue;}
+      if(t===TILE.SHOP&&vis){h+=`<div class="tile tile-shop" style="${s}" onclick="openShop()" ontouchend="event.preventDefault();openShop()">$</div>`;continue;}
       let sc=(seen&&!vis)?' tile-seen':'';
       h+=`<div class="tile ${t===TILE.WALL?'tile-wall':'tile-floor'}${sc}" style="${s}">${CH[t]||' '}</div>`;
     }
@@ -738,7 +839,9 @@ function updateInvDrawer(){
   let h='';
   if(!inv.length) h='<div class="inv-empty">Empty</div>';
   else inv.forEach(it=>{
-    h+=`<div class="inv-slot" onclick="useItem('${it.id}')">
+    h+=`<div class="inv-slot"
+      onclick="useItem('${it.id}')"
+      ontouchend="event.preventDefault();useItem('${it.id}')">
       <div><div class="inv-name">${it.name}</div><div class="inv-type">${it.rarity} ${it.type}</div></div>
       <div class="inv-bonus">${iDesc(it)}</div>
     </div>`;
@@ -753,6 +856,7 @@ function updateInvDrawer(){
 
 // ===================== COMBAT =====================
 function tileAttack(id){
+  if(!canAct()||G.gameOver||G.won) return;
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
   if(Math.abs(en.x-G.player.x)>1||Math.abs(en.y-G.player.y)>1){
     move(Math.sign(en.x-G.player.x)||0,Math.sign(en.y-G.player.y)||0);return;
@@ -760,6 +864,7 @@ function tileAttack(id){
   attackEnemy(id,false);
 }
 function tilePickup(id){
+  if(!canAct()||G.gameOver||G.won) return;
   let it=G.items.find(i=>i.id==id);if(!it||it.carried)return;
   if(Math.abs(it.x-G.player.x)>1||Math.abs(it.y-G.player.y)>1){
     move(Math.sign(it.x-G.player.x)||0,Math.sign(it.y-G.player.y)||0);return;
@@ -779,6 +884,7 @@ function attackEnemy(id,bash=false){
     G.player.xp+=en.xp;G.player.kills++;G.player.gold+=goldDrop;
     addLog(`${en.name} slain! +${en.xp} XP  +${goldDrop}💰`, 'log-dead');
     floatText(`+${goldDrop}💰`,en.x,en.y,'#fbbf24');
+    fireTip('firstGold');
     G.enemies=G.enemies.filter(e=>e.id!==id);
     checkLevelUp();
     if(ch(.2)){
@@ -803,6 +909,7 @@ function checkLevelUp(){
     G.player.atk+=1;G.player.def+=1;
     addLog(`LEVEL UP! Now level ${G.player.lvl}!`,'log-level');
     floatText('LVL UP!',G.player.x,G.player.y,'#c084fc');
+    fireTip('firstLevelUp');
   }
 }
 
@@ -835,6 +942,11 @@ function advanceTurn(){
     }
   });
   computeVision();render();
+  // Fire tips for newly visible things
+  if(!TIPS.firstEnemy.shown && G.enemies.some(e=>G.visible.has(e.y*MAP_W+e.x))) fireTip('firstEnemy');
+  if(!TIPS.firstStairs.shown && G.rooms.length &&
+     G.visible.has(G.rooms[G.rooms.length-1].cy*MAP_W+G.rooms[G.rooms.length-1].cx)) fireTip('firstStairs');
+  if(!TIPS.firstShop.shown && G.shopPos && G.visible.has(G.shopPos.y*MAP_W+G.shopPos.x)) fireTip('firstShop');
 }
 
 function pickupItem(id){
@@ -849,6 +961,7 @@ function pickupItem(id){
     it.carried=true;it.x=undefined;it.y=undefined;
     addLog(`Picked up ${it.name}`,'log-item');
     autoEquip(it);
+    fireTip('firstItem');
   }
   advanceTurn();
 }
@@ -978,13 +1091,26 @@ function addLog(msg,cls=''){
 
 // ===================== TOOLTIP =====================
 function showTip(e,name,hp,maxHp,atk){
+  e.stopPropagation(); // prevent global dismiss firing on same click
   let t=document.getElementById('tooltip');
   t.innerHTML=`<strong style="color:var(--text)">${name}</strong><br>`+
     (hp!==undefined?`HP:<span style="color:var(--red)">${hp}/${maxHp}</span> `:'') +
     (atk!==undefined?`ATK:<span style="color:var(--orange)">${atk}</span>`:'');
-  t.style.display='block';t.style.left=(e.clientX+12)+'px';t.style.top=(e.clientY-8)+'px';
+  t.style.display='block';
+  t.style.left=(e.clientX+12)+'px';
+  t.style.top=(e.clientY-8)+'px';
+  clearTimeout(t._hideTimer);
+  t._hideTimer=setTimeout(()=>hideTip(), 2500);
 }
-function hideTip(){document.getElementById('tooltip').style.display='none';}
+function hideTip(){
+  clearTimeout(document.getElementById('tooltip')._hideTimer);
+  document.getElementById('tooltip').style.display='none';
+}
+// Hide tooltip when touching/clicking anywhere else
+document.addEventListener('touchstart',()=>hideTip(),{passive:true});
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.tile-enemy,.tile-item')) hideTip();
+},{passive:true});
 
 // ===================== FX =====================
 function shakeMap(){
@@ -1005,6 +1131,7 @@ function openInv(){
   document.getElementById('inv-drawer').classList.add('open');
   document.getElementById('drawer-backdrop').classList.add('open');
   updateInvDrawer();
+  fireTip('firstBag');
 }
 function closeInv(){
   document.getElementById('inv-drawer').classList.remove('open');
@@ -1054,6 +1181,45 @@ function showVictory(){
   document.body.appendChild(o);
 }
 
+// ===================== HELP MODAL =====================
+function openHelp(){
+  document.getElementById('help-overlay').style.display='flex';
+  switchHelpTab('controls');
+}
+function closeHelp(){
+  document.getElementById('help-overlay').style.display='none';
+}
+function switchHelpTab(tab){
+  ['controls','combat','items','shop'].forEach(t=>{
+    document.getElementById(`htab-${t}`).classList.toggle('active', t===tab);
+    document.getElementById(`hpanel-${t}`).style.display= t===tab ? 'block' : 'none';
+  });
+}
+
+// ===================== CONTEXTUAL TIPS =====================
+// Tips fire once per run (not persisted — resets each new game intentionally
+// so new players always see them, returning players can dismiss quickly)
+const TIPS = {
+  firstEnemy:  { shown:false, tab:'combat',   msg:'Tip: walk into an enemy to attack, tap one from up to 2 tiles away, or use ⚡BASH for double damage (5-turn cooldown).' },
+  firstItem:   { shown:false, tab:'items',    msg:'Tip: items auto-equip if better than what you have. Check your BAG for anything carried.' },
+  firstLevelUp:{ shown:false, tab:'combat',   msg:'Tip: levelling up raises ATK, DEF, and Max HP. Kill enemies to gain XP.' },
+  firstShop:   { shown:false, tab:'shop',     msg:'Tip: the merchant ($) buys and sells. Save gold for permanent stat upgrades from floor 2.' },
+  firstStairs: { shown:false, tab:'controls', msg:'Tip: stand on the > tile and tap STAIRS (or press .) to descend to the next floor.' },
+  firstBag:    { shown:false, tab:'items',    msg:'Tip: open BAG to manually equip a weaker item, swap gear, or use a saved potion.' },
+  firstGold:   { shown:false, tab:'shop',     msg:'Tip: enemies drop gold. Collect it to spend at the merchant on each floor.' },
+};
+
+function fireTip(key){
+  let tip = TIPS[key];
+  if(!tip || tip.shown) return;
+  tip.shown = true;
+  addLog(tip.msg, 'log-info');
+}
+
+function resetTips(){
+  Object.values(TIPS).forEach(t => t.shown = false);
+}
+
 // ===================== KEYBOARD =====================
 document.addEventListener('keydown',e=>{
   if(G.gameOver||G.won)return;
@@ -1063,6 +1229,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='.'||e.key==='>') descend();
   if(e.key==='i'||e.key==='I') openInv();
   if(e.key==='t'||e.key==='T') openShop();
+  if(e.key==='?'||e.key==='h'||e.key==='H') openHelp();
 });
 
 // Only prevent double-tap zoom on d-pad buttons
