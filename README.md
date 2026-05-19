@@ -4,7 +4,7 @@
 
 **DELVE** is a procedurally generated roguelike dungeon crawler that runs entirely in the browser — no installation, no downloads, no account needed. Built as a single HTML file with vanilla JavaScript.
 
-🎮 **Play now:** [nunopeixoto.pt/game/dungeon.html](https://www.nunopeixoto.pt/game/dungeon.html)
+🎮 **Play now:** [nunopeixoto.pt/game/dungeon.html](http://www.nunopeixoto.pt/game/dungeon.html)
 
 ---
 
