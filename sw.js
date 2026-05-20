@@ -9,6 +9,8 @@ self.addEventListener('install', e => {
         '/game/manifest.json',
         '/game/icon-192.png',
         '/game/icon-512.png',
+        '/game/favicon.ico',
+        '/game/favicon-32.png',
       ]).catch(() => {})
     )
   );
