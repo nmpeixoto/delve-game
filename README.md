@@ -4,7 +4,7 @@
 
 **DELVE** is a procedurally generated roguelike dungeon crawler that runs entirely in the browser — no installation, no downloads, no account needed. Built as a single HTML file with vanilla JavaScript.
 
-🎮 **Play now:** [nunopeixoto.pt/game/dungeon.html](http://www.nunopeixoto.pt/game/dungeon.html)
+🎮 **Play now:** [nunopeixoto.pt/game/dungeon.html](https://www.nunopeixoto.pt/game/dungeon.html)
 
 ---
 
@@ -39,15 +39,15 @@ A turn-based dungeon crawler in the classic roguelike tradition. You descend 5 f
 |---|---|
 | WASD / Arrow Keys | Move |
 | Swipe (mobile) | Move |
-| Walk into enemy | Attack |
-| Tap enemy tile | Attack from up to 2 tiles away |
-| B | Bash — double damage, 5-turn cooldown |
-| . or > | Descend stairs |
-| T | Enter shop (stand next to $) |
-| I | Open bag / inventory |
-| H or ? | Open help screen |
+| Walk into enemy | Attack (adjacent) |
+| Tap / click enemy | Attack from up to 2 tiles away |
+| `B` | Bash — double damage, 5-turn cooldown |
+| `. ` or `>` | Descend stairs |
+| `T` | Enter shop (stand next to `$`) |
+| `I` | Open bag / inventory |
+| `H` or `?` | Open help screen |
 
-### Map symbols
+### Map Symbols
 
 | Symbol | Meaning |
 |---|---|
@@ -57,32 +57,104 @@ A turn-based dungeon crawler in the classic roguelike tradition. You descend 5 f
 | `!` | Potion |
 | `†` `⚔` `♦` | Weapons |
 | `◈` | Armor |
-| `r g s o T D L` | Enemies (Rat → Lich) |
+| `r` | Rat |
+| `g` | Goblin |
+| `s` | Skeleton |
+| `o` | Orc |
+| `T` | Troll |
+| `D` | Demon |
+| `L` | Lich |
 
-### Tips
+---
 
-- Walk into enemies to attack them, or tap them from a distance
-- Use **Bash** on tough enemies — it deals double damage
-- Stand on `>` and press STAIRS (or `.`) to descend
-- Stand next to `$` and press SHOP to trade
-- Check your **BAG** — items that didn't auto-equip are stored there
-- Save gold for permanent stat upgrades from floor 2 onward
-- Selling unused gear funds better purchases
+## Enemies
+
+Enemy stats shown are **base values** (floor 1). Stats scale by **+40% per floor** — a Lich on floor 5 is significantly more dangerous than on floor 1.
+
+| Enemy | Symbol | HP | ATK | DEF | XP | Gold Drop | First Appears |
+|---|:---:|---:|---:|---:|---:|---:|---|
+| Rat | `r` | 5 | 2 | 0 | 3 | 2 | Floor 1 |
+| Goblin | `g` | 10 | 4 | 1 | 6 | 4 | Floor 1 |
+| Skeleton | `s` | 15 | 6 | 2 | 10 | 6 | Floor 1–2 |
+| Orc | `o` | 25 | 8 | 3 | 15 | 10 | Floor 2–3 |
+| Troll | `T` | 40 | 12 | 4 | 25 | 15 | Floor 3–4 |
+| Demon | `D` | 55 | 15 | 5 | 35 | 22 | Floor 4–5 |
+| Lich | `L` | 70 | 18 | 6 | 50 | 30 | Floor 4–5 |
+
+**DEF** reduces incoming damage by 1 per point — a Troll with DEF 4 requires at least 5 ATK to deal any damage. Stack armor and use **Bash** on high-DEF enemies.
+
+---
+
+## Items & Shop
+
+### Weapons
+
+| Name | ATK Bonus | Rarity | Shop Price |
+|---|---:|---|---:|
+| Rusty Dagger | +2 | Common | 20g |
+| Bone Staff | +5 | Common | 40g |
+| Short Sword | +4 | Common | 35g |
+| Arcane Rod | +9 | Rare | 75g |
+| Battle Axe | +7 | Rare | 60g |
+| Shadow Blade | +10 | Rare | 90g |
+| Soul Reaper | +15 | Legendary | 150g |
+
+### Armor
+
+| Name | DEF Bonus | Rarity | Shop Price |
+|---|---:|---|---:|
+| Leather Vest | +2 | Common | 20g |
+| Chain Mail | +4 | Common | 35g |
+| Shadow Cloak | +5 | Rare | 55g |
+| Plate Armor | +7 | Rare | 65g |
+| Dragon Scale | +12 | Legendary | 140g |
+
+### Potions
+
+| Name | Heal | Rarity | Shop Price |
+|---|---:|---|---:|
+| Health Potion | 15 HP | Common | 15g |
+| Greater Potion | 30 HP | Rare | 30g |
+| Elixir of Life | 60 HP | Legendary | 60g |
+
+### Permanent Upgrades *(available from floor 2)*
+
+| Name | Effect | Shop Price |
+|---|---|---:|
+| Strength Tonic | +2 ATK (permanent) | 50g |
+| Iron Skin | +2 DEF (permanent) | 50g |
+| Vitality Brew | +15 Max HP (permanent) | 45g |
+| Blessing | +1 ATK, +1 DEF, +10 Max HP | 120g |
+
+Sold items return **50% of their shop price** — selling unused loot is a valid strategy for funding upgrades.
+
+---
+
+## Tips
+
+- Walk into enemies to attack, or tap them to attack from up to 2 tiles away
+- Use **Bash** (`B`) on tough enemies — it deals double damage on a 5-turn cooldown
+- Stand on `>` and press STAIRS (or `.`) to descend to the next floor
+- Stand next to `$` and press SHOP to open the merchant
+- Check your **BAG** — items that didn't auto-equip are stored there for later
+- Save gold for **permanent stat upgrades** available from floor 2 onward
+- Sell unused weapons and armor to fund better purchases
+- **DEF stacking is powerful** — each DEF point absorbed reduces damage from every hit
 
 ---
 
 ## Installing as an App (PWA)
 
-DELVE is a Progressive Web App. On Android:
+DELVE is a Progressive Web App. It installs like a native app and works offline after the first load.
 
-1. Open the game URL in **Chrome**
+**Android (Chrome):**
+1. Open the game URL in Chrome
 2. Tap **⋮ → Add to Home Screen**
-3. It installs like a native app — full screen, works offline
+3. Launches full screen, no browser bar
 
-On iOS (Safari):
-
-1. Open the URL in **Safari**
-2. Tap the **Share** button → **Add to Home Screen**
+**iOS (Safari):**
+1. Open the URL in Safari
+2. Tap the **Share button → Add to Home Screen**
 
 ---
 
@@ -95,6 +167,8 @@ On iOS (Safari):
 | `sw.js` | Service worker — enables offline play |
 | `icon-192.png` | Home screen icon (192×192) |
 | `icon-512.png` | Splash screen icon (512×512) |
+| `favicon.ico` | Browser tab icon (16×16 + 32×32) |
+| `favicon-32.png` | Browser tab icon for modern browsers |
 
 The game is intentionally a **single HTML file**. No build process, no dependencies, no framework. Drop it anywhere and it works.
 
@@ -106,7 +180,7 @@ The game is intentionally a **single HTML file**. No build process, no dependenc
 |---|---|---|
 | v0.01 | Released | Base game — map gen, combat, FOV, inventory |
 | v0.02 | Released | Shop system, gold economy, landscape layout |
-| v0.03 | In progress | Help system, tips, sell items, bug fixes |
+| v0.03 | In progress | Help system, tips, sell items, icons, bug fixes |
 | v0.04 | Planned | Character classes, abilities |
 | v0.05 | Planned | Minimap, traps, secret rooms |
 | v0.06 | Planned | Floor 5 boss, legendary drops |
