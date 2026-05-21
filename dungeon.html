@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0a0f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap">
 <link rel="manifest" href="/game/manifest.json">
 <link rel="apple-touch-icon" href="/game/icon-192.png">
 <link rel="icon" type="image/x-icon" href="/game/favicon.ico">
@@ -18,7 +21,6 @@
   }
 </script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap');
 
 :root{
   --bg:#0a0a0f;--panel:#111118;--border:#1e1e2e;
@@ -32,7 +34,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* ── TITLE ── */
 #title-screen{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;animation:fadeIn .6s ease;}
-#title-screen h1{font-family:'Press Start 2P',monospace;font-size:clamp(2.2rem,12vw,5rem);color:var(--accent);text-shadow:0 0 40px rgba(192,132,252,.7),0 0 80px rgba(192,132,252,.3);letter-spacing:.2em;margin-bottom:10px;animation:pulse 3s ease-in-out infinite;}
+#title-screen h1{font-family:'Press Start 2P',monospace;font-size:16px;transform:scale(3);transform-origin:center;color:var(--accent);text-shadow:0 0 40px rgba(192,132,252,.7),0 0 80px rgba(192,132,252,.3);letter-spacing:.2em;margin-bottom:60px;animation:pulse 3s ease-in-out infinite;image-rendering:pixelated;-webkit-font-smoothing:none;}
+@media(max-width:400px){#title-screen h1{transform:scale(2.2);margin-bottom:44px;}}
+@media(min-width:700px){#title-screen h1{transform:scale(4);margin-bottom:80px;}}
 .subtitle{color:var(--dim);font-size:.7rem;letter-spacing:.3em;margin-bottom:32px;text-transform:uppercase;}
 .flavor{color:var(--text);font-size:.68rem;line-height:2.2;max-width:340px;margin:0 auto 40px;opacity:.55;}
 .btn{font-family:'Press Start 2P',monospace;font-size:.6rem;padding:16px 32px;background:transparent;border:2px solid var(--accent);color:var(--accent);cursor:pointer;letter-spacing:.15em;transition:all .2s;position:relative;overflow:hidden;min-width:180px;}
@@ -108,19 +112,25 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   #game-screen{flex-direction:row;flex-wrap:nowrap;}
   #hud{
     writing-mode:initial;
-    width:130px;flex-shrink:0;
+    width:120px;flex-shrink:0;
     grid-template-columns:1fr;
     grid-template-rows:auto auto auto;
     border-bottom:none;border-right:1px solid var(--accent);
-    padding:8px 6px;align-items:start;gap:8px;
+    padding:6px 5px;align-items:start;gap:6px;
+    overflow:hidden;
   }
-  .hud-right{align-items:flex-start;}
-  .hud-stats{flex-direction:column;gap:4px;}
-  .bar{width:90px;}
+  .hud-left{width:100%;}
+  .bar{width:100%!important;max-width:100px;}
+  .stat-val{min-width:28px;font-size:.5rem;}
+  .stat-label{font-size:.48rem;}
+  .hud-right{align-items:flex-start;width:100%;}
+  .hud-stats{flex-direction:column;gap:3px;}
+  .hud-stat{font-size:.5rem;}
+  .hud-center{font-size:.34rem;}
   #map-area{flex:1;min-width:0;}
   #bottom-bar{display:none;}
   #dpad-area{
-    width:160px;flex-shrink:0;
+    width:150px;flex-shrink:0;
     flex-direction:column;justify-content:center;align-items:center;
     border-top:none;border-left:1px solid var(--border);
     padding:10px max(10px,env(safe-area-inset-right)) 10px 10px;
@@ -153,7 +163,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 /* ── SHOP OVERLAY ── */
 #shop-overlay{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:16px;animation:fadeIn .3s;}
 #shop-overlay.open{display:flex;}
-#shop-modal{background:var(--panel);border:2px solid var(--gold);padding:20px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 60px rgba(251,191,36,.25);}
+#shop-modal{background:var(--panel);border:2px solid var(--gold);padding:20px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 60px rgba(251,191,36,.25);touch-action:pan-y;}
 #shop-modal h2{font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--gold);text-align:center;margin-bottom:4px;}
 .shop-subtitle{color:var(--dim);font-size:.58rem;text-align:center;margin-bottom:14px;}
 .shop-gold-display{font-size:.7rem;color:var(--gold);text-align:center;margin-bottom:14px;}
@@ -519,19 +529,38 @@ function buildFloor(){
   }
 
   // Enemies & items in remaining rooms
+  // Compute initial vision to avoid spawning enemies the player can see
+  // Player position already set above (line 506)
+  computeVision();
+  const startVisible = new Set(G.visible);
+
   for(let i=1;i<rooms.length;i++){
     let r=rooms[i];
-    // Don't spawn enemies in shop room
+    // Don't spawn enemies in shop room or the starting room
     if(G.shopPos&&r.cx===G.shopPos.x&&r.cy===G.shopPos.y) continue;
     let ne=rr(1,2+G.floor);
     for(let e=0;e<ne;e++){
       let tier=Math.min(Math.floor(G.floor*.8+rand(2)),ENEMIES.length-1);
       let t=ENEMIES[tier],sc=1+(G.floor-1)*.4;
+      // Find a position not visible from player start, with extra distance check
+      let ex, ey, attempts=0;
+      do {
+        ex=r.x+rr(1,r.w-2);
+        ey=r.y+rr(1,r.h-2);
+        attempts++;
+        let dist=Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y);
+        if(!startVisible.has(ey*MAP_W+ex) && dist>8) break;
+      } while(attempts<30);
+      // Only place if clearly out of starting vision
+      if(startVisible.has(ey*MAP_W+ex)) {
+        // Last resort: skip this enemy rather than spawn it visible
+        if(Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y)<=8) continue;
+      }
       G.enemies.push({...t,
         hp:Math.round(t.hp*sc),maxHp:Math.round(t.hp*sc),
         atk:Math.round(t.atk*sc),def:Math.round(t.def*sc),
         xp:Math.round(t.xp*sc),gold:Math.round(t.gold*sc),
-        x:r.x+rr(1,r.w-2),y:r.y+rr(1,r.h-2),id:Math.random()});
+        x:ex,y:ey,id:Math.random()});
     }
     if(ch(.65)) spawnItem(r);
   }
@@ -597,7 +626,7 @@ function renderShop(){
     let desc=item.desc||iDesc(item);
     h+=`<div class="shop-item${item.sold?' sold':''}"
       onclick="buyItem('${item.id}')"
-      ontouchend="event.preventDefault();buyItem('${item.id}')">
+      ontouchend="event.preventDefault();event.stopPropagation();buyItem('${item.id}')">
       <div class="shop-item-left">
         <div class="shop-item-name">${item.sym} ${item.name}${item.sold?' (SOLD)':''}</div>
         <div class="shop-item-desc">${desc} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
@@ -609,6 +638,7 @@ function renderShop(){
 }
 
 function buyItem(id){
+  if(!canAct()) return;
   let item=G.shopStock.find(i=>i.id==id);
   if(!item||item.sold)return;
   if(G.player.gold<item.price){addLog('Not enough gold!','log-shop');return;}
@@ -665,7 +695,7 @@ function renderSellPanel(){
       let equippedTag=item._equipped?` <span style="color:var(--accent);font-size:.5rem">[EQUIPPED]</span>`:'';
       h+=`<div class="sell-item"
         onclick="sellItem('${item.id}','${item._equipped||''}')"
-        ontouchend="event.preventDefault();sellItem('${item.id}','${item._equipped||''}')">
+        ontouchend="event.preventDefault();event.stopPropagation();sellItem('${item.id}','${item._equipped||''}')">
         <div class="sell-item-left">
           <div class="sell-item-name">${item.sym} ${item.name}${equippedTag}</div>
           <div class="sell-item-desc">${iDesc(item)} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
@@ -678,6 +708,7 @@ function renderSellPanel(){
 }
 
 function sellItem(id, equippedSlot){
+  if(!canAct()) return;
   // Prevent double-sell: mark item as selling immediately
   let item, isEquipped=false;
   if(equippedSlot==='weapon' && G.player.weapon && String(G.player.weapon.id)===String(id)){
@@ -774,11 +805,12 @@ function render(){
       let en=vis?G.enemies.find(e=>e.x===x&&e.y===y):null;
       if(en){
         h+=`<div class="tile tile-enemy" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
-          ontouchend="event.preventDefault();tileAttack('${en.id}')"
-          ontouchstart="showTip(event,'${en.name}',${en.hp},${en.maxHp},${en.atk});event.stopPropagation()"
           onmouseenter="showTip(event,'${en.name}',${en.hp},${en.maxHp},${en.atk})"
           onmouseleave="hideTip()"
-          onclick="tileAttack('${en.id}')">${en.sym.toUpperCase()}</div>`;
+          onclick="tileAttack('${en.id}')"
+          ontouchstart="startLongPress(event,'${en.id}','${en.name}',${en.hp},${en.maxHp},${en.atk})"
+          ontouchend="endLongPress(event,'${en.id}')"
+          ontouchmove="cancelLongPress()">${en.sym.toUpperCase()}</div>`;
         continue;
       }
       let it=vis?G.items.find(i=>!i.carried&&i.x===x&&i.y===y):null;
@@ -1089,6 +1121,31 @@ function addLog(msg,cls=''){
   let el=document.getElementById('log');
   el.innerHTML=G.log.map((l,i)=>`<div class="log-entry ${l.cls} ${i===0?'new':''}">${l.msg}</div>`).join('');
   el.scrollTop=0;
+}
+
+// ===================== LONG PRESS (enemy inspect) =====================
+let _lpTimer=null, _lpFired=false, _lpId=null;
+
+function startLongPress(e, id, name, hp, maxHp, atk){
+  e.stopPropagation();
+  _lpFired=false; _lpId=id;
+  _lpTimer=setTimeout(()=>{
+    _lpFired=true;
+    showTip(e, name, hp, maxHp, atk);
+    // Light vibration to confirm long press on mobile
+    if(navigator.vibrate) navigator.vibrate(40);
+  }, 480);
+}
+function endLongPress(e, id){
+  clearTimeout(_lpTimer);
+  e.preventDefault();
+  e.stopPropagation();
+  if(_lpFired){ _lpFired=false; return; } // long press — tooltip already shown, don't attack
+  tileAttack(id); // short tap — attack
+}
+function cancelLongPress(){
+  clearTimeout(_lpTimer);
+  _lpFired=false;
 }
 
 // ===================== TOOLTIP =====================
