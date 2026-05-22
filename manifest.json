@@ -2,7 +2,7 @@
   "name": "DELVE — Roguelike",
   "short_name": "DELVE",
   "description": "A procedurally generated roguelike dungeon crawler. Death is permanent. Every run is different.",
-  "start_url": "/game/dungeon.html",
+  "start_url": "dungeon.html",
   "display": "fullscreen",
   "orientation": "portrait",
   "background_color": "#0a0a0f",
