@@ -540,7 +540,9 @@ function initGame(){
 
 function buildFloor(){
   let{map,rooms}=generateMap();
-  G.map=map;G.rooms=rooms;G.enemies=[];G.items=[];G.shopPos=null;G.shopStock=[];
+  G.map=map;G.rooms=rooms;G.enemies=[];G.shopPos=null;G.shopStock=[];
+  // Preserve carried items (bag contents) across floor transitions — only clear floor items
+  G.items=G.items.filter(i=>i.carried);
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
 
   // Stairs in last room
