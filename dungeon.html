@@ -187,6 +187,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .sell-item-desc{color:var(--dim);font-size:.55rem;margin-top:2px;}
 .sell-item-price{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--green);white-space:nowrap;}
 .sell-empty{color:var(--dim);font-size:.62rem;font-style:italic;padding:8px 0;text-align:center;}
+.emergency-potion-row{display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--green);background:rgba(74,222,128,.06);}
+.emergency-potion-name{color:var(--text);font-size:.65rem;}
+.emergency-potion-heal{color:var(--green);font-family:'Press Start 2P',monospace;font-size:.45rem;}
+.emergency-warn{color:var(--red);font-size:.55rem;text-align:center;margin-top:6px;}
 .help-table{width:100%;border-collapse:collapse;font-size:.62rem;}
 .help-table tr{border-bottom:1px solid var(--border);}
 .help-table tr:last-child{border-bottom:none;}
@@ -317,6 +321,29 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
   <div class="inv-close-row">
     <button class="btn" style="font-size:.45rem;padding:10px 20px" onclick="closeInv()">CLOSE</button>
+  </div>
+</div>
+
+<!-- EMERGENCY POTION OVERLAY -->
+<div id="emergency-overlay" style="display:none;position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s;">
+  <div id="emergency-modal" style="background:var(--panel);border:2px solid var(--red);padding:22px 20px;max-width:360px;width:100%;box-shadow:0 0 60px rgba(248,113,113,.4);">
+    <h2 style="font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--red);text-align:center;margin-bottom:8px;">⚠ FATAL HIT INCOMING</h2>
+    <p id="emergency-msg" style="font-size:.6rem;color:var(--dim);text-align:center;line-height:1.9;margin-bottom:14px;"></p>
+    <div id="emergency-potion" style="margin-bottom:14px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button id="emergency-drink-btn"
+        style="font-family:'Press Start 2P',monospace;font-size:.4rem;padding:12px;flex:1;background:transparent;border:2px solid var(--green);color:var(--green);cursor:pointer;touch-action:manipulation;"
+        onclick="resolveEmergency(true)"
+        ontouchend="event.preventDefault();event.stopPropagation();resolveEmergency(true)">
+        DRINK
+      </button>
+      <button
+        style="font-family:'Press Start 2P',monospace;font-size:.4rem;padding:12px;flex:1;background:transparent;border:2px solid var(--dim);color:var(--dim);cursor:pointer;touch-action:manipulation;"
+        onclick="resolveEmergency(false)"
+        ontouchend="event.preventDefault();event.stopPropagation();resolveEmergency(false)">
+        IGNORE
+      </button>
+    </div>
   </div>
 </div>
 
@@ -647,10 +674,9 @@ function buyItem(id){
   item.sold=true;
 
   if(item.type==='potion'){
-    let heal=Math.min(item.heal,G.player.maxHp-G.player.hp);
-    G.player.hp+=heal;
-    addLog(`Bought & used ${item.name}: +${heal} HP`,'log-shop');
-    floatText(`+${heal} HP`,G.player.x,G.player.y,'#4ade80');
+    let clone={...item,carried:true,id:Math.random()};
+    G.items.push(clone);
+    addLog(`Bought ${item.name} — stored in bag`,'log-shop');
   } else if(item.type==='weapon'){
     // Put in inventory, auto-equip if better
     let clone={...item,carried:true,id:Math.random()};
@@ -930,11 +956,13 @@ function attackEnemy(id,bash=false){
     advanceTurn();return;
   }
   let edm=Math.max(1,en.atk-gdef()+rand(3));
-  G.player.hp=Math.max(0,G.player.hp-edm);
-  floatText(`-${edm}`,G.player.x,G.player.y,'#60a5fa');
-  addLog(`${en.name} hits you for ${edm}`,'log-combat');
-  shakeMap();advanceTurn();
-  if(G.player.hp<=0){G.gameOver=true;showDeath();}
+  checkEmergencyPotion(en, edm, ()=>{
+    G.player.hp=Math.max(0,G.player.hp-edm);
+    floatText(`-${edm}`,G.player.x,G.player.y,'#60a5fa');
+    addLog(`${en.name} hits you for ${edm}`,'log-combat');
+    shakeMap();advanceTurn();
+    if(G.player.hp<=0){G.gameOver=true;showDeath();}
+  });
 }
 
 function checkLevelUp(){
@@ -966,10 +994,13 @@ function advanceTurn(){
         let nx=e.x+sx,ny=e.y+sy;
         if(nx===G.player.x&&ny===G.player.y){
           let edm=Math.max(1,e.atk-gdef()+rand(3));
-          G.player.hp=Math.max(0,G.player.hp-edm);
-          addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
-          shakeMap();floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
-          if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
+          checkEmergencyPotion(e, edm, ()=>{
+            G.player.hp=Math.max(0,G.player.hp-edm);
+            addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
+            shakeMap();floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
+            if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
+            computeVision();render();
+          });
           break;
         }
         if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
@@ -988,11 +1019,10 @@ function advanceTurn(){
 function pickupItem(id){
   let it=G.items.find(i=>i.id==id);if(!it||it.carried)return;
   if(it.type==='potion'){
-    let h=Math.min(it.heal,G.player.maxHp-G.player.hp);
-    G.player.hp+=h;
-    addLog(`Used ${it.name}: +${h} HP`,'log-item');
-    floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
-    G.items=G.items.filter(i=>i.id!==id);
+    it.carried=true;it.x=undefined;it.y=undefined;
+    addLog(`Picked up ${it.name} — stored in bag`,'log-item');
+    floatText(`+BAG`,G.player.x,G.player.y,'#fbbf24');
+    fireTip('firstPotion');
   } else {
     it.carried=true;it.x=undefined;it.y=undefined;
     addLog(`Picked up ${it.name}`,'log-item');
@@ -1046,6 +1076,7 @@ function useItem(id){
     addLog(`Drank ${it.name}: +${h} HP`,'log-item');
     floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
     G.items=G.items.filter(i=>i.id!==id);
+    advanceTurn();closeInv();
   } else if(it.type==='weapon'){
     let prev=G.player.weapon;
     if(prev){
@@ -1154,6 +1185,85 @@ function endLongPress(e, id){
 function cancelLongPress(){
   clearTimeout(_lpTimer);
   _lpFired=false;
+}
+
+// ===================== EMERGENCY POTION SYSTEM =====================
+// G.pendingHit stores {dmg, afterFn} when paused waiting for player response
+function getBestPotions(neededHeal){
+  let potions=G.items.filter(i=>i.carried&&i.type==='potion')
+    .sort((a,b)=>b.heal-a.heal);
+  if(!potions.length) return [];
+  // If best potion alone is enough, return just that one
+  if(potions[0].heal>=neededHeal) return [potions[0]];
+  // Otherwise chain potions until we have enough
+  let chain=[], total=0;
+  for(let p of potions){
+    chain.push(p); total+=p.heal;
+    if(total>=neededHeal) break;
+  }
+  return chain;
+}
+
+function checkEmergencyPotion(enemy, dmg, afterFn){
+  // Max possible next hit from this enemy
+  let maxNextHit=Math.max(1, enemy.atk-gdef()+2);
+  // Would that kill us?
+  if(G.player.hp-maxNextHit>0){
+    afterFn(); return; // safe — just proceed
+  }
+  // Do we have any potions?
+  let potions=G.items.filter(i=>i.carried&&i.type==='potion');
+  if(!potions.length){
+    afterFn(); return; // no potions — nothing to offer
+  }
+  // How much heal do we need to survive the max hit?
+  let neededHeal=maxNextHit-G.player.hp+1;
+  let chain=getBestPotions(neededHeal);
+  let totalHeal=chain.reduce((s,p)=>s+p.heal,0);
+  let willSurvive=totalHeal>=neededHeal;
+
+  // Store pending hit
+  G.pendingHit={dmg, afterFn, potionChain:chain};
+
+  // Build modal content
+  let msg=`<strong style="color:var(--red)">${enemy.name}</strong> could deal up to <strong style="color:var(--orange)">${maxNextHit} damage</strong>. You have <strong style="color:var(--red)">${G.player.hp} HP</strong>.`;
+  document.getElementById('emergency-msg').innerHTML=msg;
+
+  let ph='';
+  chain.forEach(p=>{
+    ph+=`<div class="emergency-potion-row">
+      <span class="emergency-potion-name">! ${p.name}</span>
+      <span class="emergency-potion-heal">+${p.heal} HP</span>
+    </div>`;
+  });
+  if(!willSurvive){
+    ph+=`<div class="emergency-warn">⚠ May not be enough to survive!</div>`;
+  }
+  document.getElementById('emergency-potion').innerHTML=ph;
+
+  let overlay=document.getElementById('emergency-overlay');
+  overlay.style.display='flex';
+}
+
+function resolveEmergency(drink){
+  let overlay=document.getElementById('emergency-overlay');
+  overlay.style.display='none';
+  if(!G.pendingHit) return;
+  let {afterFn, potionChain}=G.pendingHit;
+  G.pendingHit=null;
+
+  if(drink && potionChain.length){
+    potionChain.forEach(p=>{
+      let heal=Math.min(p.heal, G.player.maxHp-G.player.hp);
+      G.player.hp+=heal;
+      addLog(`Drank ${p.name}: +${heal} HP`,'log-item');
+      floatText(`+${heal} HP`,G.player.x,G.player.y,'#4ade80');
+      G.items=G.items.filter(i=>i.id!==p.id);
+    });
+    updateHUD();
+  }
+  // Now apply the enemy hit
+  afterFn();
 }
 
 // ===================== TOOLTIP =====================
@@ -1270,7 +1380,8 @@ function switchHelpTab(tab){
 // so new players always see them, returning players can dismiss quickly)
 const TIPS = {
   firstEnemy:  { shown:false, tab:'combat',   msg:'Tip: walk into an enemy to attack, tap one from up to 2 tiles away, or use ⚡BASH for double damage (5-turn cooldown).' },
-  firstItem:   { shown:false, tab:'items',    msg:'Tip: items auto-equip if better than what you have. Check your BAG for anything carried.' },
+  firstPotion:{ shown:false, tab:'items', msg:'Tip: potions are stored in your BAG. Tap BAG to drink one manually, or the game will prompt you automatically when a hit could be fatal.' },
+  firstItem:  { shown:false, tab:'items', msg:'Tip: items auto-equip if better than what you have. Check your BAG for anything carried.' },
   firstLevelUp:{ shown:false, tab:'combat',   msg:'Tip: levelling up raises ATK, DEF, and Max HP. Kill enemies to gain XP.' },
   firstShop:   { shown:false, tab:'shop',     msg:'Tip: the merchant ($) buys and sells. Save gold for permanent stat upgrades from floor 2.' },
   firstStairs: { shown:false, tab:'controls', msg:'Tip: stand on the > tile and tap STAIRS (or press .) to descend to the next floor.' },
