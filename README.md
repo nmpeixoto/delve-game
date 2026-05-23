@@ -4,7 +4,7 @@
 
 **DELVE** is a procedurally generated roguelike dungeon crawler that runs entirely in the browser — no installation, no downloads, no account needed. Built as a single HTML file with vanilla JavaScript.
 
-🎮 **Play now:** [nunopeixoto.pt/game/dungeon.html](https://www.nunopeixoto.pt/game/dungeon.html)
+🎮 **Play now:** [nunopeixoto.pt/game/dungeon.html](http://www.nunopeixoto.pt/game/dungeon.html)
 
 ---
 
@@ -57,10 +57,10 @@ A turn-based dungeon crawler in the classic roguelike tradition. You descend 5 f
 | `!` | Potion |
 | `†` `⚔` `♦` | Weapons |
 | `◈` | Armor |
-| `r` | Rat |
-| `g` | Goblin |
-| `s` | Skeleton |
-| `o` | Orc |
+| `R` | Rat |
+| `G` | Goblin |
+| `S` | Skeleton |
+| `O` | Orc |
 | `T` | Troll |
 | `D` | Demon |
 | `L` | Lich |
@@ -73,10 +73,10 @@ Enemy stats shown are **base values** (floor 1). Stats scale by **+40% per floor
 
 | Enemy | Symbol | HP | ATK | DEF | XP | Gold Drop | First Appears |
 |---|:---:|---:|---:|---:|---:|---:|---|
-| Rat | `r` | 5 | 2 | 0 | 3 | 2 | Floor 1 |
-| Goblin | `g` | 10 | 4 | 1 | 6 | 4 | Floor 1 |
-| Skeleton | `s` | 15 | 6 | 2 | 10 | 6 | Floor 1–2 |
-| Orc | `o` | 25 | 8 | 3 | 15 | 10 | Floor 2–3 |
+| Rat | `R` | 5 | 2 | 0 | 3 | 2 | Floor 1 |
+| Goblin | `G` | 10 | 4 | 1 | 6 | 4 | Floor 1 |
+| Skeleton | `S` | 15 | 6 | 2 | 10 | 6 | Floor 1–2 |
+| Orc | `O` | 25 | 8 | 3 | 15 | 10 | Floor 2–3 |
 | Troll | `T` | 40 | 12 | 4 | 25 | 15 | Floor 3–4 |
 | Demon | `D` | 55 | 15 | 5 | 35 | 22 | Floor 4–5 |
 | Lich | `L` | 70 | 18 | 6 | 50 | 30 | Floor 4–5 |
