@@ -215,7 +215,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 /* FX */
 #map-wrap.shake{animation:shake .18s ease;}
 .float-text{position:fixed;font-family:'Press Start 2P',monospace;font-size:.45rem;pointer-events:none;z-index:200;animation:floatup .85s ease forwards;}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+#damage-flash{position:fixed;inset:0;z-index:300;background:rgba(248,113,113,0.35);pointer-events:none;opacity:0;}
+#damage-flash.flash{animation:damageFlash .4s ease-out forwards;}
+@keyframes damageFlash{0%{opacity:1;}100%{opacity:0;}}
+@keyframes enemyDeath{0%{filter:brightness(3) saturate(0);}100%{filter:brightness(0);opacity:0;}}
+.tile-enemy-dying{animation:enemyDeath .3s ease-out forwards;pointer-events:none;}
 @keyframes pulse{0%,100%{text-shadow:0 0 40px rgba(192,132,252,.6)}50%{text-shadow:0 0 80px rgba(192,132,252,.95),0 0 120px rgba(192,132,252,.4)}}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 @keyframes floatup{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-28px)}}
@@ -323,6 +327,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <button class="btn" style="font-size:.45rem;padding:10px 20px" onclick="closeInv()">CLOSE</button>
   </div>
 </div>
+
+<div id="damage-flash"></div>
 
 <!-- EMERGENCY POTION OVERLAY -->
 <div id="emergency-overlay" style="display:none;position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s;">
@@ -527,7 +533,7 @@ function initGame(){
   G={
     floor:1,
     player:{x:0,y:0,hp:20,maxHp:20,atk:4,def:1,lvl:1,xp:0,xpNext:10,
-            weapon:null,armor:null,kills:0,gold:0},
+            weapon:null,armor:null,kills:0,gold:0,damageDealt:0,bestWeapon:'Bare hands'},
     enemies:[],items:[],
     map:null,rooms:[],shopPos:null,shopStock:[],
     visible:new Set(),seen:new Set(),
@@ -679,6 +685,7 @@ function buyItem(id){
     let clone={...item,carried:true,id:Math.random()};
     G.items.push(clone);
     addLog(`Bought ${item.name} — stored in bag`,'log-shop');
+    SFX.buy();
   } else if(item.type==='weapon'){
     // Put in inventory, auto-equip if better
     let clone={...item,carried:true,id:Math.random()};
@@ -764,6 +771,7 @@ function sellItem(id, equippedSlot){
 
   addLog(`Sold ${item.name} for ${sellPrice}💰`, 'log-shop');
   floatText(`+${sellPrice}💰`, G.player.x, G.player.y, '#fbbf24');
+  SFX.sell();
   document.getElementById('shop-gold-val').textContent=G.player.gold;
   updateHUD();
   updateActBtns();
@@ -834,13 +842,15 @@ function render(){
       if(x===G.player.x&&y===G.player.y){h+=`<div class="tile tile-player" style="${s}">@</div>`;continue;}
       let en=vis?G.enemies.find(e=>e.x===x&&e.y===y):null;
       if(en){
-        h+=`<div class="tile tile-enemy" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
+        let dyingClass=en.dying?' tile-enemy-dying':'';
+        h+=`<div class="tile tile-enemy${dyingClass}" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
           onmouseenter="showTip(event,'${en.name}',${en.hp},${en.maxHp},${en.atk})"
           onmouseleave="hideTip()"
-          onclick="tileAttack('${en.id}')"
-          ontouchstart="startLongPress(event,'${en.id}','${en.name}',${en.hp},${en.maxHp},${en.atk})"
-          ontouchend="endLongPress(event,'${en.id}')"
-          ontouchmove="cancelLongPress()">${en.sym.toUpperCase()}</div>`;
+          onclick="${en.dying?'':`tileAttack('${en.id}')`}"
+          ontouchstart="${en.dying?'':'startLongPress(event,\''+en.id+'\',\''+en.name+'\','+en.hp+','+en.maxHp+','+en.atk+')'}"
+          ontouchend="${en.dying?'':'endLongPress(event,\''+en.id+'\')'}"
+          ontouchmove="${en.dying?'':'cancelLongPress()'}">
+          ${en.sym.toUpperCase()}</div>`;
         continue;
       }
       let it=vis?G.items.find(i=>!i.carried&&i.x===x&&i.y===y):null;
@@ -939,8 +949,9 @@ function tilePickup(id){
 function attackEnemy(id,bash=false){
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
   let dmg=Math.max(1,gatk()-en.def+rand(3));
-  if(bash){dmg*=2;G.bashCooldown=5;}
+  if(bash){dmg*=2;G.bashCooldown=5;SFX.bash();}else{SFX.hit();}
   en.hp-=dmg;
+  G.player.damageDealt+=dmg;
   floatText(`-${dmg}`,en.x,en.y,'#f87171');
   addLog(`Hit ${en.name} for ${dmg}${bash?' (BASH!)':''}`, 'log-combat');
   if(en.hp<=0){
@@ -948,21 +959,28 @@ function attackEnemy(id,bash=false){
     G.player.xp+=en.xp;G.player.kills++;G.player.gold+=goldDrop;
     addLog(`${en.name} slain! +${en.xp} XP  +${goldDrop}💰`, 'log-dead');
     floatText(`+${goldDrop}💰`,en.x,en.y,'#fbbf24');
+    SFX.enemyDeath();
     fireTip('firstGold');
-    G.enemies=G.enemies.filter(e=>e.id!==id);
-    checkLevelUp();
-    if(ch(.2)){
-      let pool=[...WEAPONS,...ARMORS,...POTIONS];
-      G.items.push({...pool[rand(pool.length)],x:en.x,y:en.y,id:Math.random()});
-    }
-    advanceTurn();return;
+    // Mark dying — remove after animation
+    en.dying=true;
+    render();
+    setTimeout(()=>{
+      G.enemies=G.enemies.filter(e=>e.id!==id);
+      if(ch(.2)){
+        let pool=[...WEAPONS,...ARMORS,...POTIONS];
+        G.items.push({...pool[rand(pool.length)],x:en.x,y:en.y,id:Math.random()});
+      }
+      checkLevelUp();
+      advanceTurn();
+    },320);
+    return;
   }
   let edm=Math.max(1,en.atk-gdef()+rand(3));
   checkEmergencyPotion(en, edm, ()=>{
     G.player.hp=Math.max(0,G.player.hp-edm);
     floatText(`-${edm}`,G.player.x,G.player.y,'#60a5fa');
     addLog(`${en.name} hits you for ${edm}`,'log-combat');
-    shakeMap();advanceTurn();
+    SFX.damage();shakeMap();flashDamage();advanceTurn();
     if(G.player.hp<=0){G.gameOver=true;showDeath();}
   });
 }
@@ -975,7 +993,7 @@ function checkLevelUp(){
     G.player.atk+=1;G.player.def+=1;
     addLog(`LEVEL UP! Now level ${G.player.lvl}!`,'log-level');
     floatText('LVL UP!',G.player.x,G.player.y,'#c084fc');
-    fireTip('firstLevelUp');
+    SFX.levelUp();fireTip('firstLevelUp');
   }
 }
 
@@ -999,7 +1017,7 @@ function advanceTurn(){
           checkEmergencyPotion(e, edm, ()=>{
             G.player.hp=Math.max(0,G.player.hp-edm);
             addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
-            shakeMap();floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
+            SFX.damage();shakeMap();flashDamage();floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
             if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
             computeVision();render();
           });
@@ -1024,14 +1042,24 @@ function pickupItem(id){
     it.carried=true;it.x=undefined;it.y=undefined;
     addLog(`Picked up ${it.name} — stored in bag`,'log-item');
     floatText(`+BAG`,G.player.x,G.player.y,'#fbbf24');
-    fireTip('firstPotion');
+    SFX.pickup();fireTip('firstPotion');
   } else {
     it.carried=true;it.x=undefined;it.y=undefined;
     addLog(`Picked up ${it.name}`,'log-item');
-    autoEquip(it);
+    SFX.pickup();autoEquip(it);
     fireTip('firstItem');
   }
   advanceTurn();
+}
+
+function updateBestWeapon(weapon){
+  let current=G.player.bestWeapon;
+  // Parse current best ATK (stored as "Name (ATK+X)")
+  let match=current.match(/ATK\+(\d+)/);
+  let currentAtk=match?parseInt(match[1]):0;
+  if(weapon.atk>currentAtk){
+    G.player.bestWeapon=`${weapon.name} (ATK+${weapon.atk})`;
+  }
 }
 
 function autoEquip(it){
@@ -1045,6 +1073,7 @@ function autoEquip(it){
       }
       G.player.weapon=it;it.carried=false;
       G.items=G.items.filter(i=>i.id!==it.id);
+      updateBestWeapon(it);
       addLog(`Equipped ${it.name}!`,'log-item');
     } else {
       // Worse than current — keep in bag
@@ -1088,6 +1117,7 @@ function useItem(id){
     }
     G.player.weapon=it;
     G.items=G.items.filter(i=>i.id!==id);
+    updateBestWeapon(it);
     addLog(`Equipped ${it.name}`,'log-item');
   } else if(it.type==='armor'){
     let prev=G.player.armor;
@@ -1298,6 +1328,10 @@ function shakeMap(){
   let m=document.getElementById('map-wrap');
   m.classList.remove('shake');void m.offsetWidth;m.classList.add('shake');
 }
+function flashDamage(){
+  let el=document.getElementById('damage-flash');
+  el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');
+}
 function floatText(txt,gx,gy,color){
   let r=document.getElementById('map-wrap').getBoundingClientRect();
   let cs=getCellSize();
@@ -1328,6 +1362,7 @@ function startGame(){
 }
 
 function showDeath(){
+  SFX.playerDeath();
   let p=G.player,o=document.createElement('div');
   o.className='overlay';
   o.innerHTML=`<div class="modal death">
@@ -1336,6 +1371,8 @@ function showDeath(){
     <div class="stats-list">
       Level: <span>${p.lvl}</span><br>
       Kills: <span>${p.kills}</span><br>
+      Damage dealt: <span>${p.damageDealt}</span><br>
+      Best weapon: <span>${p.bestWeapon}</span><br>
       Gold earned: <span>${p.gold}💰</span><br>
       Floors: <span>${G.floor}</span><br>
       Turns: <span>${G.turn}</span>
@@ -1354,6 +1391,8 @@ function showVictory(){
     <div class="stats-list">
       Level: <span>${p.lvl}</span><br>
       Kills: <span>${p.kills}</span><br>
+      Damage dealt: <span>${p.damageDealt}</span><br>
+      Best weapon: <span>${p.bestWeapon}</span><br>
       Gold: <span>${p.gold}💰</span><br>
       Turns: <span>${G.turn}</span>
     </div>
@@ -1401,6 +1440,37 @@ function fireTip(key){
 function resetTips(){
   Object.values(TIPS).forEach(t => t.shown = false);
 }
+
+// ===================== SOUND EFFECTS =====================
+const SFX=(function(){
+  let ctx=null;
+  function getCtx(){
+    if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
+    return ctx;
+  }
+  function play(freq,type,duration,volume=0.3,freqEnd=null){
+    try{
+      let c=getCtx(),o=c.createOscillator(),g=c.createGain();
+      o.connect(g);g.connect(c.destination);
+      o.type=type;o.frequency.setValueAtTime(freq,c.currentTime);
+      if(freqEnd) o.frequency.linearRampToValueAtTime(freqEnd,c.currentTime+duration);
+      g.gain.setValueAtTime(volume,c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+duration);
+      o.start();o.stop(c.currentTime+duration);
+    }catch(e){}
+  }
+  return{
+    hit:        ()=>play(220,'square',0.08,0.2),
+    damage:     ()=>play(80,'sawtooth',0.15,0.3,60),
+    enemyDeath: ()=>play(150,'sawtooth',0.2,0.25,60),
+    pickup:     ()=>play(880,'sine',0.12,0.2),
+    levelUp:    ()=>{[523,659,784,1047].forEach((f,i)=>setTimeout(()=>play(f,'sine',0.2,0.25),i*80));},
+    buy:        ()=>play(660,'sine',0.15,0.2),
+    sell:       ()=>play(440,'sine',0.12,0.15),
+    bash:       ()=>{play(150,'sawtooth',0.1,0.4);setTimeout(()=>play(100,'square',0.15,0.3),50);},
+    playerDeath:()=>{[300,250,200,150,100].forEach((f,i)=>setTimeout(()=>play(f,'sawtooth',0.3,0.3),i*120));},
+  };
+})();
 
 // ===================== KEYBOARD =====================
 document.addEventListener('keydown',e=>{

@@ -4,7 +4,7 @@
 
 **DELVE** is a procedurally generated roguelike dungeon crawler that runs entirely in the browser — no installation, no downloads, no account needed. Built as a single HTML file with vanilla JavaScript.
 
-🎮 **Play now:** [nunopeixoto.pt/game/dungeon.html](http://www.nunopeixoto.pt/game/dungeon.html)
+🎮 **Play now:** [nunopeixoto.pt/game/dungeon.html](https://www.nunopeixoto.pt/game/dungeon.html)
 
 ---
 
@@ -26,6 +26,12 @@ A turn-based dungeon crawler in the classic roguelike tradition. You descend 5 f
 - **XP and levelling** — gain ATK, DEF, and Max HP on level up
 - **Bash ability** — double damage attack on a 5-turn cooldown
 - **Auto-equip** — better gear equips automatically, old gear moves to your bag
+- **Potion bag system** — potions stored in bag and used when you choose
+- **Emergency potion prompt** — when a fatal hit is incoming, the game pauses and offers your best potion
+- **Sound effects** — 8-bit Web Audio sounds for attacks, pickups, level-ups, shop, and death
+- **Damage flash** — red screen vignette when the player takes a hit
+- **Enemy death animation** — enemies flash and fade before disappearing
+- **Run summary** — full stats on death/victory including damage dealt and best weapon found
 - **Contextual tips** — first-time hints that fire at the right moment without getting in the way
 - **In-game help** — `?` button opens a 4-tab reference (Controls, Combat, Items, Shop)
 
@@ -41,8 +47,9 @@ A turn-based dungeon crawler in the classic roguelike tradition. You descend 5 f
 | Swipe (mobile) | Move |
 | Walk into enemy | Attack (adjacent) |
 | Tap / click enemy | Attack from up to 2 tiles away |
+| Long press enemy (mobile) | Inspect HP and ATK without attacking |
 | `B` | Bash — double damage, 5-turn cooldown |
-| `. ` or `>` | Descend stairs |
+| `.` or `>` | Descend stairs |
 | `T` | Enter shop (stand next to `$`) |
 | `I` | Open bag / inventory |
 | `H` or `?` | Open help screen |
@@ -92,10 +99,10 @@ Enemy stats shown are **base values** (floor 1). Stats scale by **+40% per floor
 | Name | ATK Bonus | Rarity | Shop Price |
 |---|---:|---|---:|
 | Rusty Dagger | +2 | Common | 20g |
-| Bone Staff | +5 | Common | 40g |
 | Short Sword | +4 | Common | 35g |
-| Arcane Rod | +9 | Rare | 75g |
+| Bone Staff | +5 | Common | 40g |
 | Battle Axe | +7 | Rare | 60g |
+| Arcane Rod | +9 | Rare | 75g |
 | Shadow Blade | +10 | Rare | 90g |
 | Soul Reaper | +15 | Legendary | 150g |
 
@@ -110,6 +117,8 @@ Enemy stats shown are **base values** (floor 1). Stats scale by **+40% per floor
 | Dragon Scale | +12 | Legendary | 140g |
 
 ### Potions
+
+Potions are **stored in your bag** when picked up or purchased — they are never consumed automatically. Use them manually from the BAG menu, or let the emergency prompt offer them when a hit could be fatal. Potions carry over between floors.
 
 | Name | Heal | Rarity | Shop Price |
 |---|---:|---|---:|
@@ -130,16 +139,48 @@ Sold items return **50% of their shop price** — selling unused loot is a valid
 
 ---
 
+## Potions & Emergency System
+
+Potions are stored in your bag and carry over between floors. Two ways to use them:
+
+**Manual use** — open BAG at any time and tap a potion to drink it. Costs a turn.
+
+**Emergency prompt** — when the game calculates that the next enemy hit could kill you, it pauses and shows a warning overlay before the hit lands. It offers your best available potion (or chains multiple potions if one isn't enough):
+- **DRINK** — consume the potion(s) and then take the hit with your new HP
+- **IGNORE** — take the hit without drinking; prompts again next turn if still in danger
+
+If you have no potions in your bag, no prompt is shown.
+
+---
+
+## Run Summary
+
+At the end of every run (death or victory) the game shows a full summary:
+
+| Stat | Description |
+|---|---|
+| Level | Final level reached |
+| Kills | Total enemies defeated |
+| Damage dealt | Total damage inflicted across the run |
+| Best weapon | Highest ATK weapon equipped during the run |
+| Gold earned | Total gold accumulated |
+| Floors reached | How deep you got |
+| Turns taken | Total turns played |
+
+---
+
 ## Tips
 
 - Walk into enemies to attack, or tap them to attack from up to 2 tiles away
-- Use **Bash** (`B`) on tough enemies — it deals double damage on a 5-turn cooldown
+- **Long press** an enemy on mobile to inspect their HP and ATK without attacking
+- Use **Bash** (`B`) on tough enemies — double damage on a 5-turn cooldown
 - Stand on `>` and press STAIRS (or `.`) to descend to the next floor
 - Stand next to `$` and press SHOP to open the merchant
-- Check your **BAG** — items that didn't auto-equip are stored there for later
+- **Save potions** — they carry over between floors, so stock up on early floors
+- Check your **BAG** — potions, unequipped weapons and armor are all stored there
 - Save gold for **permanent stat upgrades** available from floor 2 onward
 - Sell unused weapons and armor to fund better purchases
-- **DEF stacking is powerful** — each DEF point absorbed reduces damage from every hit
+- **DEF stacking is powerful** — each DEF point reduces damage from every hit
 
 ---
 
@@ -180,7 +221,7 @@ The game is intentionally a **single HTML file**. No build process, no dependenc
 |---|---|---|
 | v0.01 | Released | Base game — map gen, combat, FOV, inventory |
 | v0.02 | Released | Shop system, gold economy, landscape layout |
-| v0.03 | In progress | Help system, tips, sell items, icons, bug fixes |
+| v0.03 | Released | Polish & feel — sounds, animations, potion system, help, tips, icons |
 | v0.04 | Planned | Character classes, abilities |
 | v0.05 | Planned | Minimap, traps, secret rooms |
 | v0.06 | Planned | Floor 5 boss, legendary drops |
@@ -198,6 +239,8 @@ See [`DELVE_Roadmap.docx`](DELVE_Roadmap.docx) for the full development plan wit
 - Offline-capable via service worker after first load
 - Mobile-first layout with portrait and landscape support
 - Touch input via `ontouchend` + `preventDefault()` for reliable single-tap on Android
+- `touch-action: manipulation` on all interactive elements eliminates 300ms tap delay
+- Sound effects generated via Web Audio API — no audio files, works offline
 - Tested on Chrome (Android), Safari (iOS), Firefox, and desktop browsers
 
 ---
