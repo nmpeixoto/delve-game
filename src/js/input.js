@@ -18,7 +18,8 @@ document.addEventListener('keydown',e=>{
   // Block game input when overlays are open
   if(isOverlayOpen()) return;
   if(DIRS[e.key]){e.preventDefault();let[dx,dy]=DIRS[e.key];move(dx,dy);}
-  if(e.key==='b'||e.key==='B') doBash();
+  if(e.key==='1'||e.key==='b'||e.key==='B') doAbility1();
+  if(e.key==='2'||e.key==='v'||e.key==='V') doAbility2();
   if(e.key==='.'||e.key==='>') descend();
   if(e.key==='i'||e.key==='I') {
     if(document.getElementById('inv-drawer').classList.contains('open')) closeInv();

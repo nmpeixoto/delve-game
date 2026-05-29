@@ -7,13 +7,13 @@ async function runTest(url, name) {
   const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
   let screenshotPath = null;
-  
+
   // Set viewport to a typical desktop size
   await page.setViewport({ width: 1280, height: 800 });
 
   const logs = [];
   const errors = [];
-  
+
   page.on('console', msg => {
     const type = msg.type();
     if (type === 'error') {
@@ -36,15 +36,27 @@ async function runTest(url, name) {
   try {
     console.log(`Navigating to ${url}...`);
     await page.goto(url, { waitUntil: 'networkidle0', timeout: 5000 });
-    
+
     // Check title
     const title = await page.title();
     console.log(`Page title: "${title}"`);
 
-    // Click "DESCEND" button on title screen
-    console.log('Clicking "DESCEND" on title screen...');
+    // Click "NEW GAME" button on title screen
+    console.log('Clicking "NEW GAME" on title screen...');
     await page.waitForSelector('#title-screen .btn', { visible: true });
     await page.click('#title-screen .btn');
+
+    // Wait for class select overlay
+    console.log('Waiting for class select overlay...');
+    await page.waitForSelector('#class-select-overlay', { visible: true });
+
+    // Click "WARRIOR" button on class list
+    console.log('Clicking "WARRIOR" on class list...');
+    await page.click('#cbtn-warrior');
+
+    // Click "START" button
+    console.log('Clicking "START" button...');
+    await page.click('#class-select-modal .btn-gold');
 
     // Wait for game screen to become visible
     console.log('Waiting for game screen...');
@@ -62,7 +74,7 @@ async function runTest(url, name) {
     // Verify HUD
     const hp = await page.$eval('#hp-val', el => el.textContent);
     console.log(`Initial HP: ${hp}`);
-    if (hp !== '20/20') throw new Error('Initial HP is incorrect');
+    if (hp !== '30/30') throw new Error('Initial HP is incorrect');
 
     // Take screenshot
     screenshotPath = path.join(__dirname, `screenshot_${name}.png`);
@@ -78,6 +90,7 @@ async function runTest(url, name) {
     if (errors.length > 0) {
       console.error(`\n❌ ${name} finished with errors:`);
       errors.forEach(e => console.error(e));
+      throw new Error(`${name} emitted ${errors.length} browser error(s)`);
     } else {
       console.log(`\n✅ ${name} test passed successfully! No errors detected.`);
     }
@@ -85,6 +98,7 @@ async function runTest(url, name) {
   } catch (err) {
     console.error(`\n❌ Error during ${name} test:`);
     console.error(err.message);
+    process.exitCode = 1;
   } finally {
     await browser.close();
     if (screenshotPath && process.env.KEEP_TEST_ARTIFACTS !== '1') {

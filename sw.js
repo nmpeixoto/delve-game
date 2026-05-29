@@ -1,4 +1,4 @@
-const CACHE = 'delve-v4';
+const CACHE = 'delve-v0.04';
 
 // Install: cache core assets using relative paths
 self.addEventListener('install', e => {
@@ -30,7 +30,10 @@ self.addEventListener('install', e => {
         'src/js/input.js',
         'src/js/pwa.js',
         'src/js/main.js',
-      ]).catch(() => {})
+      ]).catch(err => {
+        console.warn('DELVE cache warm failed', err);
+        throw err;
+      })
     )
   );
   self.skipWaiting();

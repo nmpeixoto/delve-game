@@ -12,8 +12,8 @@ function generateMap(){
     while(cx!==x2){map[cy][cx]=TILE.FLOOR;cx+=(x2>cx?1:-1);}
     while(cy!==y2){map[cy][cx]=TILE.FLOOR;cy+=(y2>cy?1:-1);}
   };
-  let n=rr(5,8),att=0;
-  while(rooms.length<n&&att<200){
+  let n=rr(14,22),att=0;
+  while(rooms.length<n&&att<300){
     att++;
     let rw=rr(3,7),rh=rr(3,5),rx=rr(1,MAP_W-rw-1),ry=rr(1,MAP_H-rh-1);
     let ok=true;
@@ -25,15 +25,58 @@ function generateMap(){
 }
 
 // ===================== INIT =====================
-function initGame(){
+function initGame(playerClass = 'warrior'){
+  let p = {
+    x:0,y:0,lvl:1,xp:0,xpNext:10,
+    weapon:null,armor:null,kills:0,gold:0,damageDealt:0,bestWeapon:'Bare hands',
+    class: playerClass,
+    shieldWallTurns: 0,
+    vanishTurns: 0,
+    freeMoves: 0,
+    bloodlustTurns: 0,
+    rootedTurns: 0,
+    vampirism: 0,
+    regen: 0,
+    swiftness: 0
+  };
+  if(playerClass === 'warrior') {
+    p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 3;
+    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◈', price:35};
+  } else if(playerClass === 'rogue') {
+    p.hp = 18; p.maxHp = 18; p.atk = 6; p.def = 1;
+    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:2, rarity:'common', sym:'†', price:20};
+    p.bestWeapon = 'Rusty Dagger';
+  } else if(playerClass === 'mage') {
+    p.hp = 15; p.maxHp = 15; p.atk = 5; p.def = 1;
+    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'♦', price:40};
+    p.bestWeapon = 'Bone Staff';
+  } else if(playerClass === 'paladin') {
+    p.hp = 25; p.maxHp = 25; p.atk = 2; p.def = 4;
+    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◈', price:45};
+  } else if(playerClass === 'ranger') {
+    p.hp = 15; p.maxHp = 15; p.atk = 4; p.def = 2;
+    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:3, rarity:'common', sym:'🏹', price:30};
+    p.bestWeapon = 'Shortbow';
+  } else if(playerClass === 'barbarian') {
+    p.hp = 40; p.maxHp = 40; p.atk = 5; p.def = 0;
+    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:40};
+    p.bestWeapon = 'Great Axe';
+  } else if(playerClass === 'necromancer') {
+    p.hp = 15; p.maxHp = 15; p.atk = 3; p.def = 1;
+    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:4, rarity:'common', sym:'♦', price:40};
+    p.bestWeapon = 'Skull Rod';
+  } else if(playerClass === 'monk') {
+    p.hp = 20; p.maxHp = 20; p.atk = 3; p.def = 2;
+  }
+
   G={
     floor:1,
-    player:{x:0,y:0,hp:20,maxHp:20,atk:4,def:1,lvl:1,xp:0,xpNext:10,
-            weapon:null,armor:null,kills:0,gold:0,damageDealt:0,bestWeapon:'Bare hands'},
-    enemies:[],items:[],
-    map:null,rooms:[],shopPos:null,shopStock:[],
+    player: p,
+    enemies:[],items:[],traps:[],
+    map:null,rooms:[],shops:[],
     visible:new Set(),seen:new Set(),
-    log:[],turn:0,bashCooldown:0,
+    log:[],turn:0,
+    ability1Cooldown:0, ability2Cooldown:0,
     gameOver:false,won:false,
   };
   resetTips();
@@ -42,7 +85,7 @@ function initGame(){
 
 function buildFloor(){
   let{map,rooms}=generateMap();
-  G.map=map;G.rooms=rooms;G.enemies=[];G.shopPos=null;G.shopStock=[];
+  G.map=map;G.rooms=rooms;G.enemies=[];G.shops=[];G.traps=[];G.currentShop=null;
   // Preserve carried items (bag contents) across floor transitions — only clear floor items
   G.items=G.items.filter(i=>i.carried);
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
@@ -50,14 +93,15 @@ function buildFloor(){
   // Stairs in last room
   map[rooms[rooms.length-1].cy][rooms[rooms.length-1].cx]=TILE.STAIRS;
 
-  // Shop in a middle room (if enough rooms), not first or last
-  if(rooms.length>=4){
-    let shopRoomIdx=Math.floor(rooms.length/2)+rand(2)-1;
-    shopRoomIdx=Math.max(1,Math.min(rooms.length-2,shopRoomIdx));
-    let sr=rooms[shopRoomIdx];
-    G.shopPos={x:sr.cx,y:sr.cy};
-    map[sr.cy][sr.cx]=TILE.SHOP;
-    G.shopStock=generateShopStock();
+  // Shops in middle rooms, up to 3
+  if(rooms.length>=5){
+    let pool = rooms.slice(1, -1).sort(()=>Math.random()-.5);
+    let numShops = Math.min(3, pool.length);
+    for(let i=0; i<numShops; i++){
+      let sr = pool[i];
+      G.shops.push({x:sr.cx, y:sr.cy, stock:generateShopStock()});
+      map[sr.cy][sr.cx]=TILE.SHOP;
+    }
   }
 
   // Enemies & items in remaining rooms
@@ -67,8 +111,8 @@ function buildFloor(){
 
   for(let i=1;i<rooms.length;i++){
     let r=rooms[i];
-    // Don't spawn enemies in shop room or the starting room
-    if(G.shopPos&&r.cx===G.shopPos.x&&r.cy===G.shopPos.y) continue;
+    // Don't spawn enemies in shop rooms or the starting room
+    if(G.shops.some(s=>r.cx===s.x&&r.cy===s.y)) continue;
     let ne=rr(1,2+G.floor);
     for(let e=0;e<ne;e++){
       let tier=Math.min(Math.floor(G.floor*.8+rand(2)),ENEMIES.length-1);
@@ -91,16 +135,16 @@ function buildFloor(){
         hp:Math.round(t.hp*sc),maxHp:Math.round(t.hp*sc),
         atk:Math.round(t.atk*sc),def:Math.round(t.def*sc),
         xp:Math.round(t.xp*sc),gold:Math.round(t.gold*sc),
-        x:ex,y:ey,id:uid()});
+        x:ex,y:ey,id:uid(), stunnedTurns: 0});
     }
     if(ch(.65)) spawnItem(r);
   }
   computeVision();render();
-  addLog(`Floor ${G.floor}. ${G.shopPos?'A merchant awaits nearby...':''}`, G.shopPos?'log-shop':'log-info');
+  addLog(`Floor ${G.floor}. ${G.shops.length?'Merchants await nearby...':''}`, G.shops.length?'log-shop':'log-info');
   // Fire tips for anything visible on spawn
   setTimeout(()=>{
     if(!TIPS.firstEnemy.shown && G.enemies.some(e=>G.visible.has(e.y*MAP_W+e.x))) fireTip('firstEnemy');
-    if(!TIPS.firstShop.shown && G.shopPos && G.visible.has(G.shopPos.y*MAP_W+G.shopPos.x)) fireTip('firstShop');
+    if(!TIPS.firstShop.shown && G.shops.some(s=>G.visible.has(s.y*MAP_W+s.x))) fireTip('firstShop');
     if(!TIPS.firstStairs.shown && G.map[G.rooms[G.rooms.length-1].cy][G.rooms[G.rooms.length-1].cx]===TILE.STAIRS &&
        G.visible.has(G.rooms[G.rooms.length-1].cy*MAP_W+G.rooms[G.rooms.length-1].cx)) fireTip('firstStairs');
   }, 600); // slight delay so floor message shows first

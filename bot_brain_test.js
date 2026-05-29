@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const MAP_W = 28;
-const MAP_H = 18;
+const MAP_W = 56;
+const MAP_H = 36;
 const WALL = 0;
 const FLOOR = 1;
 const STAIRS = 2;
@@ -14,11 +14,11 @@ function classList(open = false) {
   return { contains: cls => cls === 'open' && open };
 }
 
-function makeDocument() {
+function makeDocument(options = {}) {
   const elements = {
     'emergency-overlay': { style: { display: 'none' }, classList: classList(false) },
     'shop-overlay': { style: { display: 'none' }, classList: classList(false) },
-    'inv-drawer': { style: { display: 'none' }, classList: classList(false) },
+    'inv-drawer': { style: { display: 'none' }, classList: classList(options.bagOpen || false) },
   };
 
   return {
@@ -37,12 +37,14 @@ function setFloor(map, coords) {
   });
 }
 
-function loadBrain() {
+function loadBrain(options = {}) {
+  const deterministicMath = Object.create(Math);
+  deterministicMath.random = () => 0;
   const context = {
     window: {},
-    document: makeDocument(),
+    document: makeDocument(options),
     console,
-    Math,
+    Math: deterministicMath,
     Set,
   };
   vm.createContext(context);
@@ -72,17 +74,17 @@ function baseGame(map, overrides = {}) {
     map,
     enemies: overrides.enemies || [],
     items: overrides.items || [],
-    shopPos: overrides.shopPos || null,
-    shopStock: overrides.shopStock || [],
+    shops: overrides.shops || [],
     visible: overrides.visible || new Set([player.y * MAP_W + player.x]),
     seen: overrides.seen || new Set([player.y * MAP_W + player.x]),
-    bashCooldown: overrides.bashCooldown || 0,
+    ability1Cooldown: overrides.ability1Cooldown || 0,
+    ability2Cooldown: overrides.ability2Cooldown || 0,
     ...overrides.G,
   };
 }
 
-function decide(G) {
-  const context = loadBrain();
+function decide(G, options = {}) {
+  const context = loadBrain(options);
   context.G = G;
   return context.window.botDecisionLogic();
 }
@@ -201,8 +203,7 @@ test('resupplies at an affordable shop before exiting weak with no potion', () =
     player: { hp: 13, maxHp: 20, gold: 15 },
     seen,
     visible: new Set(seen),
-    shopPos: { x: 3, y: 5 },
-    shopStock: [{ id: 'potion-1', type: 'potion', price: 15, sold: false }],
+    shops: [{ x: 3, y: 5, stock: [{ id: 'potion-1', type: 'potion', price: 15, sold: false }] }],
   });
 
   const decision = decide(G);
@@ -245,4 +246,127 @@ test('rushes known floor 5 stairs instead of bashing a range enemy', () => {
 
   assert.strictEqual(decision.type, 'key');
   assert.strictEqual(decision.val, 'ArrowRight');
+});
+
+test('paths to nearest unseen tile instead of falling back to random movement', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [4, 5],
+    [5, 5],
+    [6, 5],
+    [7, 5],
+  ]);
+  const seen = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6]);
+  const G = baseGame(map, {
+    seen,
+    visible: new Set(seen),
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowRight');
+});
+
+test('derives map dimensions from the active game map', () => {
+  const map = [
+    [WALL, WALL, WALL],
+    [WALL, FLOOR, STAIRS],
+    [WALL, WALL, WALL],
+  ];
+  const G = {
+    floor: 5,
+    player: {
+      x: 1,
+      y: 1,
+      hp: 20,
+      maxHp: 20,
+      gold: 0,
+      lvl: 1,
+      xp: 0,
+      xpNext: 10,
+      weapon: null,
+      armor: null,
+    },
+    map,
+    enemies: [],
+    items: [],
+    shops: [],
+    visible: new Set([1 * 3 + 1, 1 * 3 + 2]),
+    seen: new Set([1 * 3 + 1, 1 * 3 + 2]),
+    ability1Cooldown: 0,
+    ability2Cooldown: 0,
+  };
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowRight');
+});
+
+test('ignores shop gear the current class can never equip', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [4, 5, SHOP],
+    [5, 5],
+    [6, 5],
+  ]);
+  const seen = new Set([5 * MAP_W + 4, 5 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { class: 'warrior', gold: 100 },
+    seen,
+    visible: new Set(seen),
+    shops: [{
+      x: 4,
+      y: 5,
+      stock: [{ id: 'rogue-blade', type: 'weapon', atk: 99, price: 1, sold: false, reqClass: ['rogue'] }],
+    }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowRight');
+});
+
+test('attacks a killable adjacent enemy before trying to kite', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [4, 5],
+    [5, 5],
+    [5, 6],
+  ]);
+  const visible = new Set([4 * MAP_W + 5, 5 * MAP_W + 4, 5 * MAP_W + 5, 6 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { class: 'rogue', atk: 6, hp: 6, maxHp: 18, weapon: { atk: 2 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'goblin-1', name: 'Goblin', x: 4, y: 5, hp: 2, maxHp: 10, atk: 4, def: 1 }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowLeft');
+});
+
+test('clicks the visible representative id for grouped potion stacks', () => {
+  const map = makeMap();
+  setFloor(map, [[5, 5]]);
+  const visible = new Set([5 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { hp: 1, maxHp: 100 },
+    seen: new Set(visible),
+    visible,
+    items: [
+      { id: 'visible-elixir', name: 'Elixir of Life', type: 'potion', heal: 15, carried: true },
+      { id: 'hidden-elixir', name: 'Elixir of Life', type: 'potion', heal: 60, carried: true },
+    ],
+  });
+
+  const decision = decide(G, { bagOpen: true });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '.inv-slot[onclick*="visible-elixir"]');
 });

@@ -15,9 +15,16 @@ function getBestPotions(neededHeal){
   return chain;
 }
 
+function incomingDamageMax(enemy){
+  let maxNextHit=Math.max(1, enemy.atk-gdef()+2);
+  if(G.player.shieldWallTurns>0) maxNextHit=Math.ceil(maxNextHit/2);
+  if(G.player.bloodlustTurns>0) maxNextHit*=2;
+  return maxNextHit;
+}
+
 function checkEmergencyPotion(enemy, dmg, afterFn){
   // Max possible next hit from this enemy
-  let maxNextHit=Math.max(1, enemy.atk-gdef()+2);
+  let maxNextHit=Math.max(dmg, incomingDamageMax(enemy));
   // Would that kill us?
   if(G.player.hp-maxNextHit>0){
     afterFn(); return; // safe — just proceed

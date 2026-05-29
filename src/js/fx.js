@@ -15,3 +15,12 @@ function floatText(txt,gx,gy,color){
   el.style.left=(r.left+gx*cs+cs/2)+'px';el.style.top=(r.top+gy*cs)+'px';
   document.body.appendChild(el);setTimeout(()=>el.remove(),880);
 }
+function popText(txt,gx,gy){
+  let r=document.getElementById('map-wrap').getBoundingClientRect();
+  let cs=getCellSize();
+  let el=document.createElement('div');
+  el.className='pop-text';el.textContent=txt;
+  // center on tile
+  el.style.left=(r.left+gx*cs+cs/4)+'px';el.style.top=(r.top+gy*cs-cs/4)+'px';
+  document.body.appendChild(el);setTimeout(()=>el.remove(),400);
+}

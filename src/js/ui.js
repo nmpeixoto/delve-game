@@ -86,7 +86,7 @@ function switchHelpTab(tab){
 // Tips fire once per run (not persisted — resets each new game intentionally
 // so new players always see them, returning players can dismiss quickly)
 const TIPS = {
-  firstEnemy:  { shown:false, tab:'combat',   msg:'Tip: walk into an enemy to attack, tap one from up to 2 tiles away, or use ⚡BASH for double damage (5-turn cooldown).' },
+  firstEnemy:  { shown:false, tab:'combat',   msg:'Tip: walk into an enemy to attack, tap one from range, or press B to use your class ability when it is ready.' },
   firstPotion:{ shown:false, tab:'items', msg:'Tip: potions are stored in your BAG. Tap BAG to drink one manually, or the game will prompt you automatically when a hit could be fatal.' },
   firstItem:  { shown:false, tab:'items', msg:'Tip: items auto-equip if better than what you have. Check your BAG for anything carried.' },
   firstLevelUp:{ shown:false, tab:'combat',   msg:'Tip: levelling up raises ATK, DEF, and Max HP. Kill enemies to gain XP.' },

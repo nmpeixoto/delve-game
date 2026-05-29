@@ -15,7 +15,7 @@ function tilePickup(id){
   pickupItem(id);
 }
 
-function pickupItem(id){
+function pickupItem(id, opts={}){
   let it=G.items.find(i=>i.id==id);if(!it||it.carried)return;
   if(it.type==='potion'){
     it.carried=true;it.x=undefined;it.y=undefined;
@@ -28,12 +28,11 @@ function pickupItem(id){
     SFX.pickup();autoEquip(it);
     fireTip('firstItem');
   }
-  advanceTurn();
+  advanceTurn(opts);
 }
 
 function updateBestWeapon(weapon){
   let current=G.player.bestWeapon;
-  // Parse current best ATK (stored as "Name (ATK+X)")
   let match=current.match(/ATK\+(\d+)/);
   let currentAtk=match?parseInt(match[1]):0;
   if(weapon.atk>currentAtk){
@@ -41,10 +40,78 @@ function updateBestWeapon(weapon){
   }
 }
 
+function canEquip(it) {
+  if (it.reqLvl && G.player.lvl < it.reqLvl) return false;
+  if (it.reqClass && !it.reqClass.includes(G.player.class)) return false;
+  return true;
+}
+
+function weaponPower(it) {
+  if (!it) {
+    return G.player.class === 'monk' ? 2 + Math.floor(G.player.lvl / 2) : 0;
+  }
+  let power = it.atk || 0;
+  if (G.player.class === 'mage' && it.sym === '\u2666') power += Math.floor(power / 2);
+  return power;
+}
+
+function armorPower(it) {
+  return it ? (it.def || 0) : 0;
+}
+
+function getItemColorClass(it) {
+  if (it.type !== 'weapon' && it.type !== 'armor') return '';
+  if (it.reqClass && !it.reqClass.includes(G.player.class)) return 'item-never';
+
+  let isUpgrade = false;
+  if (it.type === 'weapon') isUpgrade = weaponPower(it) > weaponPower(G.player.weapon);
+  if (it.type === 'armor') isUpgrade = armorPower(it) > armorPower(G.player.armor);
+
+  if (!isUpgrade) return '';
+
+  if (it.reqLvl && it.reqLvl > G.player.lvl) return 'item-wait';
+  return 'item-upgrade';
+}
+
+function checkBagUpgrades(){
+  let bag = G.items.filter(i=>i.carried);
+  let swapped = false;
+  bag.forEach(it => {
+    if(canEquip(it)) {
+      if(it.type === 'weapon' && weaponPower(it) > weaponPower(G.player.weapon)) {
+        let prev = G.player.weapon;
+        if(prev) {
+          prev.carried = true; prev.x = undefined; prev.y = undefined;
+          G.items.push(prev);
+        }
+        G.player.weapon = it; it.carried = false;
+        let idx = G.items.findIndex(i => i.id === it.id);
+        if(idx > -1) G.items.splice(idx, 1);
+        updateBestWeapon(it);
+        addLog(`Auto-equipped better weapon: ${it.name}`, 'log-item');
+        swapped = true;
+      }
+      else if(it.type === 'armor' && armorPower(it) > armorPower(G.player.armor)) {
+        let prev = G.player.armor;
+        if(prev) {
+          prev.carried = true; prev.x = undefined; prev.y = undefined;
+          G.items.push(prev);
+        }
+        G.player.armor = it; it.carried = false;
+        let idx = G.items.findIndex(i => i.id === it.id);
+        if(idx > -1) G.items.splice(idx, 1);
+        addLog(`Auto-equipped better armor: ${it.name}`, 'log-item');
+        swapped = true;
+      }
+    }
+  });
+  if(swapped) SFX.pickup();
+}
+
 function autoEquip(it){
   if(it.type==='weapon'){
     let prev=G.player.weapon;
-    if(!prev||it.atk>prev.atk){
+    if(canEquip(it) && weaponPower(it)>weaponPower(prev)){
       if(prev){
         G.items=G.items.filter(i=>i.id!==prev.id);
         prev.carried=true;prev.x=undefined;prev.y=undefined;
@@ -55,13 +122,13 @@ function autoEquip(it){
       updateBestWeapon(it);
       addLog(`Equipped ${it.name}!`,'log-item');
     } else {
-      // Worse than current — keep in bag
       it.carried=true;it.x=undefined;it.y=undefined;
-      addLog(`${it.name} added to bag (weaker than current).`,'log-item');
+      let reason = !canEquip(it) ? 'requirements not met' : 'weaker than current';
+      addLog(`${it.name} added to bag (${reason}).`,'log-item');
     }
   } else if(it.type==='armor'){
     let prev=G.player.armor;
-    if(!prev||it.def>prev.def){
+    if(canEquip(it) && armorPower(it)>armorPower(prev)){
       if(prev){
         G.items=G.items.filter(i=>i.id!==prev.id);
         prev.carried=true;prev.x=undefined;prev.y=undefined;
@@ -71,9 +138,9 @@ function autoEquip(it){
       G.items=G.items.filter(i=>i.id!==it.id);
       addLog(`Equipped ${it.name}!`,'log-item');
     } else {
-      // Worse than current — keep in bag
       it.carried=true;it.x=undefined;it.y=undefined;
-      addLog(`${it.name} added to bag (weaker than current).`,'log-item');
+      let reason = !canEquip(it) ? 'requirements not met' : 'weaker than current';
+      addLog(`${it.name} added to bag (${reason}).`,'log-item');
     }
   }
 }
@@ -85,10 +152,18 @@ function useItem(id){
     G.player.hp+=h;
     addLog(`Drank ${it.name}: +${h} HP`,'log-item');
     floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
-    G.items=G.items.filter(i=>i.id!==id);
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
     advanceTurn();closeInv();
     return;
-  } else if(it.type==='weapon'){
+  }
+
+  if(!canEquip(it)) {
+    addLog(`Cannot equip ${it.name} (Requires: ${it.reqLvl?'Lvl '+it.reqLvl:''} ${it.reqClass?it.reqClass.join('/'):''})`, 'log-info');
+    return;
+  }
+
+  if(it.type==='weapon'){
     let prev=G.player.weapon;
     if(prev){
       G.items=G.items.filter(i=>i.id!==prev.id);
@@ -96,7 +171,8 @@ function useItem(id){
       G.items.push(prev);
     }
     G.player.weapon=it;
-    G.items=G.items.filter(i=>i.id!==id);
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
     updateBestWeapon(it);
     addLog(`Equipped ${it.name}`,'log-item');
   } else if(it.type==='armor'){
@@ -107,7 +183,8 @@ function useItem(id){
       G.items.push(prev);
     }
     G.player.armor=it;
-    G.items=G.items.filter(i=>i.id!==id);
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
     addLog(`Equipped ${it.name}`,'log-item');
   }
   advanceTurn();closeInv();

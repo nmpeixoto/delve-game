@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "build": "node build.js",
     "test": "node bot_brain_test.js && node combat_test.js"
   },
   "dependencies": {

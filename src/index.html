@@ -13,9 +13,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap">
 <link rel="stylesheet" href="css/style.css">
 <link rel="manifest" href="../manifest.json">
-<link rel="apple-touch-icon" href="../assets/icon-192.png">
-<link rel="icon" type="image/x-icon" href="../assets/favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../icon-192.png">
+<link rel="icon" type="image/x-icon" href="../favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32.png">
 <title>DELVE</title>
 <script>
   if('serviceWorker' in navigator){
@@ -39,7 +39,10 @@
   <h1>DELVE</h1>
   <p class="subtitle">A Roguelike</p>
   <p class="flavor">The dungeon goes down forever.<br>Death is permanent. Loot is scarce.<br>Every run, a new story.</p>
-  <button class="btn" onclick="startGame()">▶ DESCEND</button>
+
+  <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;align-items:center;">
+    <button class="btn" style="width:200px" onclick="openClassSelect()">NEW GAME</button>
+  </div>
 </div>
 
 <!-- GAME -->
@@ -67,7 +70,7 @@
       <div class="hud-stats">
         <div class="hud-stat"><span class="hud-label">ATK</span><span id="atk-val" style="color:var(--orange)">4</span></div>
         <div class="hud-stat"><span class="hud-label">DEF</span><span id="def-val" style="color:var(--blue)">1</span></div>
-        <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span></div>
+        <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span> <span id="class-val" style="color:var(--dim);text-transform:uppercase;font-size:.45rem;margin-left:2px;"></span></div>
         <div class="hud-stat"><span class="hud-label" style="color:var(--gold)">GP</span><span id="gold-val" style="color:var(--gold)">0</span></div>
       </div>
     </div>
@@ -95,7 +98,8 @@
       <div></div>
     </div>
     <div id="action-btns">
-      <button class="act-btn" id="bash-btn"   onclick="doBash()">BASH</button>
+      <button class="act-btn" id="ability1-btn" onclick="doAbility1()">ABIL1</button>
+      <button class="act-btn" id="ability2-btn" onclick="doAbility2()" style="display:none">ABIL2</button>
       <button class="act-btn" id="stairs-btn" onclick="descend()">STAIRS</button>
       <button class="act-btn" id="shop-btn"   onclick="openShop()">SHOP</button>
       <button class="act-btn" id="bag-btn"    onclick="openInv()">BAG</button>
@@ -188,7 +192,8 @@
       <table class="help-table">
         <tr><td class="help-key">↑↓←→</td><td>Move — d-pad, Arrow Keys, or <span style="color:var(--accent)">W A S D</span></td></tr>
         <tr><td class="help-key">Swipe</td><td>Move on mobile — swipe the map in any direction</td></tr>
-        <tr><td class="help-key">BASH / <span style="color:var(--accent)">B</span></td><td>Activate Bash ability (see Combat tab)</td></tr>
+        <tr><td class="help-key">ABILITY 1 / <span style="color:var(--accent)">B</span></td><td>Activate your class's first ability</td></tr>
+        <tr><td class="help-key">ABILITY 2 / <span style="color:var(--accent)">V</span></td><td>At level 5, activate your class's second ability</td></tr>
         <tr><td class="help-key">STAIRS / <span style="color:var(--accent)">. &gt;</span></td><td>Descend when standing on stairs <span class="help-sym green">></span></td></tr>
         <tr><td class="help-key">SHOP / <span style="color:var(--accent)">T</span></td><td>Enter merchant when standing next to <span class="help-sym gold-c">$</span></td></tr>
         <tr><td class="help-key">BAG / <span style="color:var(--accent)">I</span></td><td>Open inventory to use or equip carried items</td></tr>
@@ -200,8 +205,8 @@
     <div id="hpanel-combat" style="display:none">
       <table class="help-table">
         <tr><td class="help-key">Bump</td><td>Walk into an adjacent enemy to attack them automatically</td></tr>
-        <tr><td class="help-key">Tap</td><td>Tap or click a visible enemy to attack from up to 2 tiles away</td></tr>
-        <tr><td class="help-key">⚡ BASH</td><td>Deals <span style="color:var(--orange)">double damage</span> to the nearest visible enemy within 2 tiles. 5-turn cooldown. Use on tough enemies or when low on HP</td></tr>
+        <tr><td class="help-key">Tap</td><td>Tap or click a visible enemy to attack from up to 2 tiles away, or 3 tiles as a Ranger with a bow</td></tr>
+        <tr><td class="help-key">⚡ ABILITIES</td><td>Each class has unique skills and cooldowns. Check the class select screen for exact effects</td></tr>
         <tr><td class="help-key">DEF</td><td>Each point of DEF reduces incoming damage by 1. Stack armor to survive deeper floors</td></tr>
         <tr><td class="help-key">XP</td><td>Killing enemies grants XP. Level up to gain +1 ATK, +1 DEF, and +8 Max HP</td></tr>
         <tr><td class="help-key">Tip</td><td>Enemies you cannot see still wander. They pursue you once spotted</td></tr>
@@ -233,6 +238,25 @@
 
     <div style="text-align:center;margin-top:14px;">
       <button class="btn" style="font-size:.45rem;padding:10px 20px" onclick="closeHelp()">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLASS SELECT OVERLAY -->
+<div id="class-select-overlay" style="display:none;position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s;">
+  <div id="class-select-modal" style="background:var(--panel);border:2px solid var(--accent);max-width:640px;width:100%;height:85vh;display:flex;flex-direction:column;box-shadow:0 0 60px rgba(192,132,252,.3);">
+    <div style="padding:16px;border-bottom:1px solid var(--border);text-align:center;">
+      <h2 style="font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--accent);">SELECT CLASS</h2>
+    </div>
+    <div id="class-select-body">
+      <!-- Left side: List -->
+      <div id="class-list"></div>
+      <!-- Right side: Details -->
+      <div id="class-details"></div>
+    </div>
+    <div style="padding:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;">
+      <button class="btn" style="flex:1;min-width:0;padding:16px 8px;font-size:.5rem" onclick="closeClassSelect()">CANCEL</button>
+      <button class="btn btn-gold" style="flex:2;min-width:0;padding:16px 8px;font-size:.55rem" onclick="confirmClassSelect()">START</button>
     </div>
   </div>
 </div>

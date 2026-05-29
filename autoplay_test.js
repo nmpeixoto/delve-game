@@ -8,15 +8,15 @@ async function waitForGameStable(page) {
   }, { timeout: 1200 }).catch(() => {});
 }
 
-async function runAutoBot(url, runIndex) {
+async function runAutoBot(url, runIndex, heroClass = 'warrior') {
   const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
-  
+
   await page.setViewport({ width: 1280, height: 800 });
 
   const errors = [];
   page.on('console', msg => {
-    if (msg.type() === 'error') errors.push(`[Error]: ${msg.text()}`);
+    if (msg.type() === 'error' && !msg.text().includes('404')) errors.push(`[Error]: ${msg.text()}`);
   });
   page.on('pageerror', error => {
     errors.push(`[Exception]: ${error.message}`);
@@ -24,8 +24,20 @@ async function runAutoBot(url, runIndex) {
 
   try {
     await page.goto(url, { waitUntil: 'networkidle0' });
+
+    // Click NEW GAME
     await page.waitForSelector('#title-screen .btn', { visible: true });
     await page.click('#title-screen .btn');
+
+    // Wait for class select overlay
+    await page.waitForSelector('#class-select-overlay', { visible: true });
+
+    // Select the class
+    await page.click(`#cbtn-${heroClass}`);
+
+    // Click START
+    await page.click('#class-select-modal .btn-gold');
+
     await page.waitForFunction(() => {
       const el = document.getElementById('game-screen');
       return el && !el.classList.contains('hidden');
@@ -38,7 +50,7 @@ async function runAutoBot(url, runIndex) {
     await page.waitForFunction(() => typeof G !== 'undefined' && G.map && G.player);
     await page.evaluate(() => { window.canAct = () => true; });
     let turns = 0;
-    const MAX_TURNS = 5000;
+    const MAX_TURNS = parseInt(process.env.MAX_TURNS, 10) || 5000;
     let floor = 1;
     let finalStatus = 'max_turns';
     let decisions = [];
@@ -58,7 +70,9 @@ async function runAutoBot(url, runIndex) {
         const decision = window.botDecisionLogic();
         if (typeof G === 'undefined' || !G.player) return { decision, trace: { decision } };
 
-        const MAP_W = 28, MAP_H = 18, WALL = 0, STAIRS = 2;
+        const MAP_H = G.map ? G.map.length : 36;
+        const MAP_W = G.map && G.map[0] ? G.map[0].length : 56;
+        const STAIRS = 2;
         const p = G.player;
         const liveEnemies = G.enemies.filter(e => !e.dying);
         const visibleEnemies = liveEnemies
@@ -88,7 +102,8 @@ async function runAutoBot(url, runIndex) {
             pos: `${p.x},${p.y}`,
             gold: p.gold,
             lvl: p.lvl,
-            bashCooldown: G.bashCooldown,
+            ability1Cooldown: G.ability1Cooldown,
+            ability2Cooldown: G.ability2Cooldown,
             enemies: liveEnemies.length,
             dyingEnemies: G.enemies.length - liveEnemies.length,
             adjEnemies,
@@ -103,7 +118,7 @@ async function runAutoBot(url, runIndex) {
       const botDecision = step.decision;
 
       if (!botDecision) {
-        finalStatus = 'stuck';
+        finalStatus = 'stuck:' + JSON.stringify(step);
         break;
       }
 
@@ -137,25 +152,28 @@ async function runAutoBot(url, runIndex) {
       }).catch(e => []);
     }
 
-    return { run: runIndex, turns, floor, status: finalStatus, errors, logs, decisions };
+    return { run: runIndex, class: heroClass, turns, floor, status: finalStatus, errors, logs, decisions };
   } catch (err) {
-    return { run: runIndex, turns: 0, floor: 0, status: 'fatal_script_error', errors: [err.message], logs: [], decisions: [] };
+    return { run: runIndex, class: heroClass, turns: 0, floor: 0, status: 'fatal_script_error', errors: [err.message], logs: [], decisions: [] };
   } finally {
     await browser.close();
   }
 }
 
-async function runMany(count) {
+async function runMany(count, classFilter = null) {
   console.log(`Starting ${count} automated bot runs using bot_brain.js...`);
   const results = [];
+  const verbose = process.env.BOT_VERBOSE !== '0';
+  const classes = classFilter ? [classFilter] : ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk'];
   for (let i = 1; i <= count; i++) {
-    console.log(`[Run ${i}/${count}] Playing...`);
-    const res = await runAutoBot('http://127.0.0.1:8080/src/index.html', i);
+    const cls = classes[(i - 1) % classes.length];
+    console.log(`[Run ${i}/${count}] Playing as ${cls.toUpperCase()}...`);
+    const res = await runAutoBot('http://127.0.0.1:8080/src/index.html', i, cls);
     console.log(`   -> Ended with status: ${res.status.toUpperCase()} | Floor: ${res.floor} | Turns: ${res.turns} | Errors: ${res.errors.length}`);
-    if (res.decisions.length > 0) {
+    if (verbose && res.decisions.length > 0) {
       console.log(`   -> Last ${res.decisions.length} decisions: ${JSON.stringify(res.decisions)}`);
     }
-    if (res.logs.length > 0) {
+    if (verbose && res.logs.length > 0) {
       console.log(`   -> Last 5 logs:`);
       res.logs.forEach(l => console.log(`      ${l}`));
     }
@@ -171,6 +189,18 @@ async function runMany(count) {
 
   const statuses = {};
   results.forEach(r => statuses[r.status] = (statuses[r.status] || 0) + 1);
+  const byClass = {};
+  results.forEach(r => {
+    byClass[r.class] ||= { runs: 0, maxFloor: 0, totalFloor: 0, outcomes: {} };
+    byClass[r.class].runs++;
+    byClass[r.class].maxFloor = Math.max(byClass[r.class].maxFloor, r.floor);
+    byClass[r.class].totalFloor += r.floor;
+    byClass[r.class].outcomes[r.status] = (byClass[r.class].outcomes[r.status] || 0) + 1;
+  });
+  Object.values(byClass).forEach(c => {
+    c.avgFloor = Number((c.totalFloor / c.runs).toFixed(1));
+    delete c.totalFloor;
+  });
 
   const allErrors = [];
   results.forEach(r => {
@@ -183,14 +213,21 @@ async function runMany(count) {
     floors: { max: maxFloor, min: minFloor, avg: avgFloor },
     turns: { avg: avgTurns },
     outcomes: statuses,
+    byClass,
     bugCount: allErrors.length,
     bugs: allErrors
   };
 
-  fs.writeFileSync('bot_findings.json', JSON.stringify(report, null, 2));
-  console.log('\n✅ Completed all runs. Findings compiled to bot_findings.json');
+  if (process.env.KEEP_TEST_ARTIFACTS === '1') {
+    fs.writeFileSync('bot_findings.json', JSON.stringify(report, null, 2));
+    console.log('\n✅ Completed all runs. Findings compiled to bot_findings.json');
+  } else {
+    console.log('\n✅ Completed all runs. Set KEEP_TEST_ARTIFACTS=1 to write bot_findings.json.');
+  }
+  console.log(`Summary: ${JSON.stringify(report)}`);
 }
 
 // Only run 3 times for the fast iterative learning loop by default, can be modified by the agent.
 const runsArg = parseInt(process.argv[2]) || 3;
-runMany(runsArg).catch(console.error);
+const classArg = process.argv[3] || null;
+runMany(runsArg, classArg).catch(console.error);

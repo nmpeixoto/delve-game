@@ -7,29 +7,27 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0a0f">
+<meta name="description" content="A procedurally generated roguelike dungeon crawler. Death is permanent. Every run is different.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
-<link rel="icon" type="image/x-icon" href="favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<title>DELVE</title>
-<script>
-  if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-  }
-</script>
 <style>
+/* ══════════════════════════════════════════════
+   DELVE — Browser Roguelike — Stylesheet
+   ══════════════════════════════════════════════ */
 
 :root{
   --bg:#0a0a0f;--panel:#111118;--border:#1e1e2e;
   --accent:#c084fc;--gold:#fbbf24;--red:#f87171;
   --green:#4ade80;--blue:#60a5fa;--orange:#fb923c;
-  --dim:#4a4a6a;--text:#e2e8f0;--floor:#1a1a28;--wall:#0d0d15;
+  --dim:#7e7ea3;--text:#e2e8f0;--floor:#1a1a28;--wall:#0d0d15;
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;}
+html { font-size: 16px; }
+@media (min-width: 700px) and (min-height: 600px) { html { font-size: 18px; } }
+@media (min-width: 1000px) and (min-height: 800px) { html { font-size: 22px; } }
+@media (min-width: 1400px) and (min-height: 1000px) { html { font-size: 28px; } }
 body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(192,132,252,.06) 0%,transparent 65%),repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,.01) 2px,rgba(255,255,255,.01) 4px);pointer-events:none;z-index:0;}
 
 /* ── TITLE ── */
@@ -68,7 +66,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* MAP */
 #map-area{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg);min-height:0;}
-#map-wrap{background:var(--panel);border:1px solid var(--border);padding:3px;position:relative;flex-shrink:0;}
+#map-wrap{background:var(--panel);border:1px solid var(--border);padding:3px;position:relative;flex-shrink:0;will-change:transform;}
 #map{display:grid;line-height:1;font-family:'Share Tech Mono',monospace;user-select:none;touch-action:none;}
 .tile{display:flex;align-items:center;justify-content:center;transition:background .08s;}
 .tile-wall{background:var(--wall);color:#1a1a2e;}
@@ -78,6 +76,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .tile-item{background:var(--floor);color:var(--gold);text-shadow:0 0 5px var(--gold);cursor:pointer;}
 .tile-stairs{background:var(--floor);color:var(--green);text-shadow:0 0 5px var(--green);cursor:pointer;}
 .tile-shop{background:var(--floor);color:var(--gold);text-shadow:0 0 8px var(--gold),0 0 16px rgba(251,191,36,.4);cursor:pointer;animation:shopPulse 2s ease-in-out infinite;}
+.tile-trap{background:var(--floor);color:var(--orange);text-shadow:0 0 5px var(--orange);}
 .tile-dark{background:var(--wall);color:var(--wall);}
 .tile-seen{filter:brightness(.35);}
 
@@ -172,7 +171,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .shop-item.sold{opacity:.35;pointer-events:none;}
 .shop-item-left{flex:1;}
 .shop-item-name{color:var(--text);font-size:.65rem;}
-.shop-item-desc{color:var(--dim);font-size:.55rem;margin-top:2px;}
+.shop-item-desc{color:var(--dim);font-size:.65rem;margin-top:2px;}
 .shop-item-price{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--gold);white-space:nowrap;}
 .shop-item-price.cant-afford{color:var(--red);}
 .shop-tabs{display:flex;gap:6px;margin-bottom:12px;}
@@ -184,7 +183,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .sell-item:active,.sell-item:hover{border-color:var(--green);background:rgba(74,222,128,.06);}
 .sell-item-left{flex:1;}
 .sell-item-name{color:var(--text);font-size:.65rem;}
-.sell-item-desc{color:var(--dim);font-size:.55rem;margin-top:2px;}
+.sell-item-desc{color:var(--dim);font-size:.65rem;margin-top:2px;}
 .sell-item-price{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--green);white-space:nowrap;}
 .sell-empty{color:var(--dim);font-size:.62rem;font-style:italic;padding:8px 0;text-align:center;}
 .emergency-potion-row{display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--green);background:rgba(74,222,128,.06);}
@@ -223,12 +222,56 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 @keyframes pulse{0%,100%{text-shadow:0 0 40px rgba(192,132,252,.6)}50%{text-shadow:0 0 80px rgba(192,132,252,.95),0 0 120px rgba(192,132,252,.4)}}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 @keyframes floatup{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-28px)}}
+.pop-text{position:fixed;font-size:1.4rem;pointer-events:none;z-index:200;animation:popAnim .4s ease-out forwards;text-shadow:0 0 10px rgba(255,255,255,0.5);}
+@keyframes popAnim{0%{opacity:0;transform:scale(0.2) translateY(10px)}30%{opacity:1;transform:scale(1.2) translateY(-5px)}100%{opacity:0;transform:scale(1.5) translateY(-15px)}}
 @keyframes shopPulse{0%,100%{opacity:1}50%{opacity:.6}}
 @keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
 .hidden{display:none!important;}
 ::-webkit-scrollbar{width:3px;}
 ::-webkit-scrollbar-thumb{background:var(--dim);}
+.req-tag{display:inline-block;background:rgba(248,113,113,0.15);border:1px solid var(--red);color:#ff9999;padding:1px 4px;border-radius:2px;font-size:0.5rem;margin-left:4px;vertical-align:middle;}
+.req-tag.req-match{background:rgba(74,222,128,0.15);border-color:var(--green);color:#86efac;}
+.req-tag.req-wait{background:rgba(251,146,60,0.15);border-color:var(--orange);color:#fdba74;}
+.req-tag.req-dim-match{background:rgba(74,222,128,0.05);border-color:#4a5a4a;color:#7a9a7a;}
+
+/* ── CLASS SELECT ── */
+#class-select-body { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+#class-list { width:100%; height:130px; border-bottom:1px solid var(--border); overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:6px; padding:10px; flex-shrink:0; }
+#class-details { flex:1; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
+.class-btn { font-family:'Press Start 2P',monospace; font-size:.45rem; padding:12px 6px; background:var(--bg); border:1px solid var(--border); color:var(--dim); cursor:pointer; text-align:center; transition:all .15s; user-select:none; }
+.class-btn.selected { border-color:var(--accent); color:var(--text); background:rgba(192,132,252,.1); }
+.class-title { font-family:'Press Start 2P',monospace; font-size:.7rem; color:var(--accent); margin-bottom:4px; text-transform:uppercase; }
+.class-tagline { font-size:.55rem; color:var(--dim); margin-bottom:12px; }
+.class-stat-box { background:var(--bg); border:1px solid var(--border); padding:10px; display:flex; justify-content:space-between; margin-bottom:10px; }
+.c-stat { text-align:center; flex:1; }
+.c-stat-lbl { font-size:.45rem; color:var(--dim); margin-bottom:4px; }
+.c-stat-val { font-family:'Press Start 2P',monospace; font-size:.5rem; color:var(--text); }
+.c-section { margin-bottom:12px; }
+.c-sec-title { font-size:.5rem; color:var(--dim); text-transform:uppercase; margin-bottom:6px; letter-spacing:.1em; }
+.c-ability { background:rgba(255,255,255,.03); border:1px solid var(--border); padding:8px; margin-bottom:6px; }
+.c-ab-name { font-family:'Press Start 2P',monospace; font-size:.4rem; color:var(--gold); margin-bottom:4px; }
+.c-ab-desc { font-size:.55rem; color:var(--text); line-height:1.6; }
+
+@media(min-width: 500px) {
+  #class-select-body { flex-direction:row; }
+  #class-list { width:11rem; height:auto; border-bottom:none; border-right:1px solid var(--border); display:flex; flex-direction:column; }
+}
+
+.item-never { color: var(--red) !important; text-shadow: 0 0 5px var(--red); }
+.item-wait { color: var(--orange) !important; text-shadow: 0 0 5px var(--orange); }
+.item-upgrade { color: var(--green) !important; text-shadow: 0 0 5px var(--green); }
+
 </style>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<title>DELVE</title>
+<script>
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  }
+</script>
 </head>
 <body>
 
@@ -246,7 +289,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <h1>DELVE</h1>
   <p class="subtitle">A Roguelike</p>
   <p class="flavor">The dungeon goes down forever.<br>Death is permanent. Loot is scarce.<br>Every run, a new story.</p>
-  <button class="btn" onclick="startGame()">▶ DESCEND</button>
+
+  <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;align-items:center;">
+    <button class="btn" style="width:200px" onclick="openClassSelect()">NEW GAME</button>
+  </div>
 </div>
 
 <!-- GAME -->
@@ -274,7 +320,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div class="hud-stats">
         <div class="hud-stat"><span class="hud-label">ATK</span><span id="atk-val" style="color:var(--orange)">4</span></div>
         <div class="hud-stat"><span class="hud-label">DEF</span><span id="def-val" style="color:var(--blue)">1</span></div>
-        <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span></div>
+        <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span> <span id="class-val" style="color:var(--dim);text-transform:uppercase;font-size:.45rem;margin-left:2px;"></span></div>
         <div class="hud-stat"><span class="hud-label" style="color:var(--gold)">GP</span><span id="gold-val" style="color:var(--gold)">0</span></div>
       </div>
     </div>
@@ -302,7 +348,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div></div>
     </div>
     <div id="action-btns">
-      <button class="act-btn" id="bash-btn"   onclick="doBash()">BASH</button>
+      <button class="act-btn" id="ability1-btn" onclick="doAbility1()">ABIL1</button>
+      <button class="act-btn" id="ability2-btn" onclick="doAbility2()" style="display:none">ABIL2</button>
       <button class="act-btn" id="stairs-btn" onclick="descend()">STAIRS</button>
       <button class="act-btn" id="shop-btn"   onclick="openShop()">SHOP</button>
       <button class="act-btn" id="bag-btn"    onclick="openInv()">BAG</button>
@@ -395,7 +442,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <table class="help-table">
         <tr><td class="help-key">↑↓←→</td><td>Move — d-pad, Arrow Keys, or <span style="color:var(--accent)">W A S D</span></td></tr>
         <tr><td class="help-key">Swipe</td><td>Move on mobile — swipe the map in any direction</td></tr>
-        <tr><td class="help-key">BASH / <span style="color:var(--accent)">B</span></td><td>Activate Bash ability (see Combat tab)</td></tr>
+        <tr><td class="help-key">ABILITY 1 / <span style="color:var(--accent)">B</span></td><td>Activate your class's first ability</td></tr>
+        <tr><td class="help-key">ABILITY 2 / <span style="color:var(--accent)">V</span></td><td>At level 5, activate your class's second ability</td></tr>
         <tr><td class="help-key">STAIRS / <span style="color:var(--accent)">. &gt;</span></td><td>Descend when standing on stairs <span class="help-sym green">></span></td></tr>
         <tr><td class="help-key">SHOP / <span style="color:var(--accent)">T</span></td><td>Enter merchant when standing next to <span class="help-sym gold-c">$</span></td></tr>
         <tr><td class="help-key">BAG / <span style="color:var(--accent)">I</span></td><td>Open inventory to use or equip carried items</td></tr>
@@ -407,8 +455,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div id="hpanel-combat" style="display:none">
       <table class="help-table">
         <tr><td class="help-key">Bump</td><td>Walk into an adjacent enemy to attack them automatically</td></tr>
-        <tr><td class="help-key">Tap</td><td>Tap or click a visible enemy to attack from up to 2 tiles away</td></tr>
-        <tr><td class="help-key">⚡ BASH</td><td>Deals <span style="color:var(--orange)">double damage</span> to the nearest visible enemy within 2 tiles. 5-turn cooldown. Use on tough enemies or when low on HP</td></tr>
+        <tr><td class="help-key">Tap</td><td>Tap or click a visible enemy to attack from up to 2 tiles away, or 3 tiles as a Ranger with a bow</td></tr>
+        <tr><td class="help-key">⚡ ABILITIES</td><td>Each class has unique skills and cooldowns. Check the class select screen for exact effects</td></tr>
         <tr><td class="help-key">DEF</td><td>Each point of DEF reduces incoming damage by 1. Stack armor to survive deeper floors</td></tr>
         <tr><td class="help-key">XP</td><td>Killing enemies grants XP. Level up to gain +1 ATK, +1 DEF, and +8 Max HP</td></tr>
         <tr><td class="help-key">Tip</td><td>Enemies you cannot see still wander. They pursue you once spotted</td></tr>
@@ -444,43 +492,126 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 </div>
 
+<!-- CLASS SELECT OVERLAY -->
+<div id="class-select-overlay" style="display:none;position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s;">
+  <div id="class-select-modal" style="background:var(--panel);border:2px solid var(--accent);max-width:640px;width:100%;height:85vh;display:flex;flex-direction:column;box-shadow:0 0 60px rgba(192,132,252,.3);">
+    <div style="padding:16px;border-bottom:1px solid var(--border);text-align:center;">
+      <h2 style="font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--accent);">SELECT CLASS</h2>
+    </div>
+    <div id="class-select-body">
+      <!-- Left side: List -->
+      <div id="class-list"></div>
+      <!-- Right side: Details -->
+      <div id="class-details"></div>
+    </div>
+    <div style="padding:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;">
+      <button class="btn" style="flex:1;min-width:0;padding:16px 8px;font-size:.5rem" onclick="closeClassSelect()">CANCEL</button>
+      <button class="btn btn-gold" style="flex:2;min-width:0;padding:16px 8px;font-size:.55rem" onclick="confirmClassSelect()">START</button>
+    </div>
+  </div>
+</div>
+
 <div id="tooltip"></div>
 
+<!-- JS Modules — load order matters (globals shared) -->
 <script>
 // ===================== CONSTANTS =====================
-const MAP_W=28,MAP_H=18,FLOORS=5;
+const MAP_W=56,MAP_H=36,FLOORS=5;
 const TILE={WALL:0,FLOOR:1,STAIRS:2,SHOP:3};
 const DIRS={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],
             w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],W:[0,-1],S:[0,1],A:[-1,0],D:[1,0]};
 
+</script>
+<script>
 // ===================== DATA =====================
 const WEAPONS=[
-  {name:'Rusty Dagger', type:'weapon',atk:2, sym:'†',rarity:'common', price:20},
-  {name:'Short Sword',  type:'weapon',atk:4, sym:'†',rarity:'common', price:35},
-  {name:'Battle Axe',   type:'weapon',atk:7, sym:'⚔',rarity:'rare',   price:60},
-  {name:'Shadow Blade', type:'weapon',atk:10,sym:'⚔',rarity:'rare',   price:90},
-  {name:'Soul Reaper',  type:'weapon',atk:15,sym:'⚔',rarity:'legendary',price:150},
-  {name:'Bone Staff',   type:'weapon',atk:5, sym:'♦',rarity:'common', price:40},
-  {name:'Arcane Rod',   type:'weapon',atk:9, sym:'♦',rarity:'rare',   price:75},
+  // Universal
+  {name:'Rusty Dagger',  type:'weapon', atk:2, sym:'†', rarity:'common', price:15},
+  {name:'Short Sword',   type:'weapon', atk:4, sym:'†', rarity:'common', price:30},
+  {name:'Broadsword',    type:'weapon', atk:6, sym:'⚔', rarity:'common', price:50, reqLvl:3},
+  {name:'Steel Glaive',  type:'weapon', atk:9, sym:'⚔', rarity:'rare',   price:80, reqLvl:6},
+
+  // Warrior / Paladin
+  {name:'Iron Mace',     type:'weapon', atk:5, sym:'⚔', rarity:'common', price:40, reqClass:['warrior','paladin']},
+  {name:'War Hammer',    type:'weapon', atk:8, sym:'⚔', rarity:'rare',   price:75, reqClass:['warrior','paladin'], reqLvl:5},
+  {name:'Holy Avenger',  type:'weapon', atk:14,sym:'⚔', rarity:'legendary', price:150, reqClass:['paladin'], reqLvl:10},
+  {name:'Champion Blade',type:'weapon', atk:15,sym:'⚔', rarity:'legendary', price:160, reqClass:['warrior'], reqLvl:10},
+
+  // Barbarian
+  {name:'Great Axe',     type:'weapon', atk:4, sym:'⚔', rarity:'common', price:40, reqClass:['barbarian']},
+  {name:'Savage Cleaver',type:'weapon', atk:9, sym:'⚔', rarity:'rare',   price:85, reqClass:['barbarian'], reqLvl:5},
+  {name:'Titan Slayer',  type:'weapon', atk:16,sym:'⚔', rarity:'legendary', price:180, reqClass:['barbarian'], reqLvl:10},
+
+  // Rogue
+  {name:'Twin Daggers',  type:'weapon', atk:5, sym:'†', rarity:'common', price:45, reqClass:['rogue']},
+  {name:'Assassin Dirk', type:'weapon', atk:8, sym:'†', rarity:'rare',   price:75, reqClass:['rogue'], reqLvl:5},
+  {name:'Shadow Blade',  type:'weapon', atk:14,sym:'†', rarity:'legendary', price:150, reqClass:['rogue'], reqLvl:10},
+
+  // Ranger
+  {name:'Shortbow',      type:'weapon', atk:3, sym:'🏹', rarity:'common', price:30, reqClass:['ranger']},
+  {name:'Longbow',       type:'weapon', atk:6, sym:'🏹', rarity:'rare',   price:65, reqClass:['ranger'], reqLvl:4},
+  {name:'Crossbow',      type:'weapon', atk:9, sym:'🏹', rarity:'rare',   price:90, reqClass:['ranger'], reqLvl:7},
+  {name:'Elven Bow',     type:'weapon', atk:13,sym:'🏹', rarity:'legendary', price:140, reqClass:['ranger'], reqLvl:10},
+
+  // Mage / Necromancer
+  {name:'Bone Staff',    type:'weapon', atk:5, sym:'♦', rarity:'common', price:40, reqClass:['mage','necromancer']},
+  {name:'Skull Rod',     type:'weapon', atk:4, sym:'♦', rarity:'common', price:40, reqClass:['mage','necromancer']},
+  {name:'Arcane Wand',   type:'weapon', atk:8, sym:'♦', rarity:'rare',   price:75, reqClass:['mage','necromancer'], reqLvl:5},
+  {name:'Void Staff',    type:'weapon', atk:12,sym:'♦', rarity:'rare',   price:110, reqClass:['mage','necromancer'], reqLvl:8},
+  {name:'Elder Wand',    type:'weapon', atk:18,sym:'♦', rarity:'legendary', price:200, reqClass:['mage'], reqLvl:12},
+  {name:'Scythe of Death',type:'weapon',atk:17,sym:'♦', rarity:'legendary', price:190, reqClass:['necromancer'], reqLvl:12},
 ];
+
 const ARMORS=[
-  {name:'Leather Vest', type:'armor',def:2, sym:'◈',rarity:'common', price:20},
-  {name:'Chain Mail',   type:'armor',def:4, sym:'◈',rarity:'common', price:35},
-  {name:'Plate Armor',  type:'armor',def:7, sym:'◈',rarity:'rare',   price:65},
-  {name:'Shadow Cloak', type:'armor',def:5, sym:'◈',rarity:'rare',   price:55},
-  {name:'Dragon Scale', type:'armor',def:12,sym:'◈',rarity:'legendary',price:140},
+  // Universal light/medium
+  {name:'Cloth Tunic',   type:'armor', def:1, sym:'◈', rarity:'common', price:10},
+  {name:'Leather Vest',  type:'armor', def:2, sym:'◈', rarity:'common', price:20},
+  {name:'Studded Armor', type:'armor', def:4, sym:'◈', rarity:'common', price:40, reqLvl:3},
+  {name:'Mithril Shirt', type:'armor', def:7, sym:'◈', rarity:'rare',   price:80, reqLvl:6},
+
+  // Heavy (Warrior/Paladin)
+  {name:'Chain Mail',    type:'armor', def:4, sym:'◈', rarity:'common', price:35, reqClass:['warrior','paladin']},
+  {name:'Iron Plate',    type:'armor', def:5, sym:'◈', rarity:'common', price:45, reqClass:['warrior','paladin']},
+  {name:'Steel Plate',   type:'armor', def:8, sym:'◈', rarity:'rare',   price:80, reqClass:['warrior','paladin'], reqLvl:5},
+  {name:'Dragon Scale',  type:'armor', def:12,sym:'◈', rarity:'legendary', price:150, reqClass:['warrior','paladin'], reqLvl:10},
+
+  // Rogue / Ranger
+  {name:'Ranger Tunic',  type:'armor', def:3, sym:'◈', rarity:'common', price:30, reqClass:['rogue','ranger']},
+  {name:'Shadow Cloak',  type:'armor', def:6, sym:'◈', rarity:'rare',   price:70, reqClass:['rogue','ranger'], reqLvl:5},
+  {name:'Assassin Garb', type:'armor', def:10,sym:'◈', rarity:'legendary', price:130, reqClass:['rogue'], reqLvl:10},
+  {name:'Hunter Vest',   type:'armor', def:10,sym:'◈', rarity:'legendary', price:130, reqClass:['ranger'], reqLvl:10},
+
+  // Barbarian (Low DEF, but they wear it anyway)
+  {name:'Furs',          type:'armor', def:3, sym:'◈', rarity:'common', price:25, reqClass:['barbarian']},
+  {name:'Bone Armor',    type:'armor', def:6, sym:'◈', rarity:'rare',   price:60, reqClass:['barbarian'], reqLvl:5},
+
+  // Mage / Necromancer
+  {name:'Apprentice Robe',type:'armor',def:2, sym:'◈', rarity:'common', price:25, reqClass:['mage','necromancer']},
+  {name:'Mystic Robe',   type:'armor', def:5, sym:'◈', rarity:'rare',   price:60, reqClass:['mage','necromancer'], reqLvl:5},
+  {name:'Archmage Robes',type:'armor', def:9, sym:'◈', rarity:'legendary', price:120, reqClass:['mage'], reqLvl:10},
+  {name:'Lich Shroud',   type:'armor', def:9, sym:'◈', rarity:'legendary', price:120, reqClass:['necromancer'], reqLvl:10},
+
+  // Monk
+  {name:'Gi',            type:'armor', def:3, sym:'◈', rarity:'common', price:30, reqClass:['monk']},
+  {name:'Master Gi',     type:'armor', def:6, sym:'◈', rarity:'rare',   price:70, reqClass:['monk'], reqLvl:5},
+  {name:'Grandmaster Robe',type:'armor',def:11,sym:'◈', rarity:'legendary', price:140, reqClass:['monk'], reqLvl:10},
 ];
+
 const POTIONS=[
   {name:'Health Potion', type:'potion',heal:15,sym:'!',rarity:'common',   price:15},
   {name:'Greater Potion',type:'potion',heal:30,sym:'!',rarity:'rare',     price:30},
   {name:'Elixir of Life',type:'potion',heal:60,sym:'!',rarity:'legendary',price:60},
 ];
+
 // Shop-exclusive upgrades
 const UPGRADES=[
   {name:'Strength Tonic', type:'upgrade',stat:'atk',amount:2,sym:'↑',rarity:'rare',   price:50,  desc:'+2 Attack (permanent)'},
   {name:'Iron Skin',      type:'upgrade',stat:'def',amount:2,sym:'↑',rarity:'rare',   price:50,  desc:'+2 Defense (permanent)'},
   {name:'Vitality Brew',  type:'upgrade',stat:'hp', amount:15,sym:'♥',rarity:'rare',  price:45,  desc:'+15 Max HP (permanent)'},
   {name:'Blessing',       type:'upgrade',stat:'all',amount:1,sym:'★',rarity:'legendary',price:120,desc:'+1 ATK, +1 DEF, +10 Max HP'},
+  {name:'Vampiric Ring',  type:'upgrade',stat:'vamp',amount:1,sym:'💍',rarity:'legendary',price:150,desc:'Heal 1 HP per kill'},
+  {name:'Troll Blood',    type:'upgrade',stat:'regen',amount:1,sym:'♥',rarity:'legendary',price:160,desc:'Heal 1 HP every 10 turns'},
+  {name:'Hermes Boots',   type:'upgrade',stat:'swift',amount:1,sym:'⚡',rarity:'legendary',price:140,desc:'Gain 1 free move every 15 turns'},
 ];
 const ENEMIES=[
   {name:'Rat',    sym:'r',hp:5, atk:2, def:0,xp:3, gold:2, color:'#cd853f'},
@@ -492,6 +623,9 @@ const ENEMIES=[
   {name:'Lich',   sym:'L',hp:70,atk:18,def:6,xp:50,gold:30,color:'#a78bfa'},
 ];
 
+</script>
+<script>
+// ===================== STATE & HELPERS =====================
 let G={},_dpadTimer=null,_swipeStart=null,_lastAction=0;
 const rand=n=>Math.floor(Math.random()*n);
 const rr=(a,b)=>a+rand(b-a+1);
@@ -505,300 +639,70 @@ function canAct(){
   _lastAction=now; return true;
 }
 
-// ===================== MAP GEN =====================
-function generateMap(){
-  let map=Array.from({length:MAP_H},()=>Array(MAP_W).fill(TILE.WALL));
-  let rooms=[];
-  const carve=(x,y,w,h)=>{
-    for(let ry=y;ry<y+h;ry++) for(let rx=x;rx<x+w;rx++)
-      if(ry>0&&ry<MAP_H-1&&rx>0&&rx<MAP_W-1) map[ry][rx]=TILE.FLOOR;
-    rooms.push({x,y,w,h,cx:Math.floor(x+w/2),cy:Math.floor(y+h/2)});
+</script>
+<script>
+// ===================== SOUND EFFECTS =====================
+const SFX=(function(){
+  let ctx=null;
+  function getCtx(){
+    if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
+    return ctx;
+  }
+  function play(freq,type,duration,volume=0.3,freqEnd=null){
+    try{
+      let c=getCtx(),o=c.createOscillator(),g=c.createGain();
+      o.connect(g);g.connect(c.destination);
+      o.type=type;o.frequency.setValueAtTime(freq,c.currentTime);
+      if(freqEnd) o.frequency.linearRampToValueAtTime(freqEnd,c.currentTime+duration);
+      g.gain.setValueAtTime(volume,c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+duration);
+      o.start();o.stop(c.currentTime+duration);
+    }catch(e){}
+  }
+  return{
+    hit:        ()=>play(220,'square',0.08,0.2),
+    damage:     ()=>play(80,'sawtooth',0.15,0.3,60),
+    enemyDeath: ()=>play(150,'sawtooth',0.2,0.25,60),
+    pickup:     ()=>play(880,'sine',0.12,0.2),
+    levelUp:    ()=>{[523,659,784,1047].forEach((f,i)=>setTimeout(()=>play(f,'sine',0.2,0.25),i*80));},
+    buy:        ()=>play(660,'sine',0.15,0.2),
+    sell:       ()=>play(440,'sine',0.12,0.15),
+    bash:       ()=>{play(150,'sawtooth',0.1,0.4);setTimeout(()=>play(100,'square',0.15,0.3),50);},
+    playerDeath:()=>{[300,250,200,150,100].forEach((f,i)=>setTimeout(()=>play(f,'sawtooth',0.3,0.3),i*120));},
   };
-  const tunnel=(x1,y1,x2,y2)=>{
-    let cx=x1,cy=y1;
-    while(cx!==x2){map[cy][cx]=TILE.FLOOR;cx+=(x2>cx?1:-1);}
-    while(cy!==y2){map[cy][cx]=TILE.FLOOR;cy+=(y2>cy?1:-1);}
-  };
-  let n=rr(5,8),att=0;
-  while(rooms.length<n&&att<200){
-    att++;
-    let rw=rr(3,7),rh=rr(3,5),rx=rr(1,MAP_W-rw-1),ry=rr(1,MAP_H-rh-1);
-    let ok=true;
-    for(let r of rooms) if(rx<r.x+r.w+1&&rx+rw>r.x-1&&ry<r.y+r.h+1&&ry+rh>r.y-1){ok=false;break;}
-    if(ok) carve(rx,ry,rw,rh);
-  }
-  for(let i=1;i<rooms.length;i++) tunnel(rooms[i-1].cx,rooms[i-1].cy,rooms[i].cx,rooms[i].cy);
-  return{map,rooms};
+})();
+
+</script>
+<script>
+// ===================== FX =====================
+function shakeMap(){
+  let m=document.getElementById('map-wrap');
+  m.classList.remove('shake');void m.offsetWidth;m.classList.add('shake');
+}
+function flashDamage(){
+  let el=document.getElementById('damage-flash');
+  el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');
+}
+function floatText(txt,gx,gy,color){
+  let r=document.getElementById('map-wrap').getBoundingClientRect();
+  let cs=getCellSize();
+  let el=document.createElement('div');
+  el.className='float-text';el.textContent=txt;el.style.color=color;
+  el.style.left=(r.left+gx*cs+cs/2)+'px';el.style.top=(r.top+gy*cs)+'px';
+  document.body.appendChild(el);setTimeout(()=>el.remove(),880);
+}
+function popText(txt,gx,gy){
+  let r=document.getElementById('map-wrap').getBoundingClientRect();
+  let cs=getCellSize();
+  let el=document.createElement('div');
+  el.className='pop-text';el.textContent=txt;
+  // center on tile
+  el.style.left=(r.left+gx*cs+cs/4)+'px';el.style.top=(r.top+gy*cs-cs/4)+'px';
+  document.body.appendChild(el);setTimeout(()=>el.remove(),400);
 }
 
-// ===================== INIT =====================
-function initGame(){
-  G={
-    floor:1,
-    player:{x:0,y:0,hp:20,maxHp:20,atk:4,def:1,lvl:1,xp:0,xpNext:10,
-            weapon:null,armor:null,kills:0,gold:0,damageDealt:0,bestWeapon:'Bare hands'},
-    enemies:[],items:[],
-    map:null,rooms:[],shopPos:null,shopStock:[],
-    visible:new Set(),seen:new Set(),
-    log:[],turn:0,bashCooldown:0,
-    gameOver:false,won:false,
-  };
-  resetTips();
-  buildFloor();
-}
-
-function buildFloor(){
-  let{map,rooms}=generateMap();
-  G.map=map;G.rooms=rooms;G.enemies=[];G.shopPos=null;G.shopStock=[];
-  // Preserve carried items (bag contents) across floor transitions — only clear floor items
-  G.items=G.items.filter(i=>i.carried);
-  G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
-
-  // Stairs in last room
-  map[rooms[rooms.length-1].cy][rooms[rooms.length-1].cx]=TILE.STAIRS;
-
-  // Shop in a middle room (if enough rooms), not first or last
-  if(rooms.length>=4){
-    let shopRoomIdx=Math.floor(rooms.length/2)+rand(2)-1;
-    shopRoomIdx=Math.max(1,Math.min(rooms.length-2,shopRoomIdx));
-    let sr=rooms[shopRoomIdx];
-    G.shopPos={x:sr.cx,y:sr.cy};
-    map[sr.cy][sr.cx]=TILE.SHOP;
-    G.shopStock=generateShopStock();
-  }
-
-  // Enemies & items in remaining rooms
-  // Compute initial vision to avoid spawning enemies the player can see
-  // Player position already set above (line 506)
-  computeVision();
-  const startVisible = new Set(G.visible);
-
-  for(let i=1;i<rooms.length;i++){
-    let r=rooms[i];
-    // Don't spawn enemies in shop room or the starting room
-    if(G.shopPos&&r.cx===G.shopPos.x&&r.cy===G.shopPos.y) continue;
-    let ne=rr(1,2+G.floor);
-    for(let e=0;e<ne;e++){
-      let tier=Math.min(Math.floor(G.floor*.8+rand(2)),ENEMIES.length-1);
-      let t=ENEMIES[tier],sc=1+(G.floor-1)*.4;
-      // Find a position not visible from player start, with extra distance check
-      let ex, ey, attempts=0;
-      do {
-        ex=r.x+rr(1,r.w-2);
-        ey=r.y+rr(1,r.h-2);
-        attempts++;
-        let dist=Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y);
-        if(!startVisible.has(ey*MAP_W+ex) && dist>8) break;
-      } while(attempts<30);
-      // Only place if clearly out of starting vision
-      if(startVisible.has(ey*MAP_W+ex)) {
-        // Last resort: skip this enemy rather than spawn it visible
-        if(Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y)<=8) continue;
-      }
-      G.enemies.push({...t,
-        hp:Math.round(t.hp*sc),maxHp:Math.round(t.hp*sc),
-        atk:Math.round(t.atk*sc),def:Math.round(t.def*sc),
-        xp:Math.round(t.xp*sc),gold:Math.round(t.gold*sc),
-        x:ex,y:ey,id:uid()});
-    }
-    if(ch(.65)) spawnItem(r);
-  }
-  computeVision();render();
-  addLog(`Floor ${G.floor}. ${G.shopPos?'A merchant awaits nearby...':''}`, G.shopPos?'log-shop':'log-info');
-  // Fire tips for anything visible on spawn
-  setTimeout(()=>{
-    if(!TIPS.firstEnemy.shown && G.enemies.some(e=>G.visible.has(e.y*MAP_W+e.x))) fireTip('firstEnemy');
-    if(!TIPS.firstShop.shown && G.shopPos && G.visible.has(G.shopPos.y*MAP_W+G.shopPos.x)) fireTip('firstShop');
-    if(!TIPS.firstStairs.shown && G.map[G.rooms[G.rooms.length-1].cy][G.rooms[G.rooms.length-1].cx]===TILE.STAIRS &&
-       G.visible.has(G.rooms[G.rooms.length-1].cy*MAP_W+G.rooms[G.rooms.length-1].cx)) fireTip('firstStairs');
-  }, 600); // slight delay so floor message shows first
-}
-
-// ===================== SHOP =====================
-function generateShopStock(){
-  let stock=[];
-  let floorScale=G.floor;
-
-  // Always offer 2 potions
-  let pots=[...POTIONS].sort(()=>Math.random()-.5);
-  stock.push({...pots[0],id:uid(),sold:false});
-  if(ch(.6)) stock.push({...pots[1],id:uid(),sold:false});
-
-  // 1-2 weapons scaled to floor
-  let weps=WEAPONS.filter(w=>w.atk<=4+floorScale*3).sort(()=>Math.random()-.5);
-  if(weps.length) stock.push({...weps[0],id:uid(),sold:false});
-  if(weps.length>1&&ch(.5)) stock.push({...weps[1],id:uid(),sold:false});
-
-  // 1 armor
-  let arms=ARMORS.filter(a=>a.def<=2+floorScale*2).sort(()=>Math.random()-.5);
-  if(arms.length) stock.push({...arms[0],id:uid(),sold:false});
-
-  // 1 upgrade (floors 2+)
-  if(G.floor>=2){
-    let ups=UPGRADES.filter(u=>u.rarity!=='legendary'||G.floor>=4).sort(()=>Math.random()-.5);
-    if(ups.length) stock.push({...ups[0],id:uid(),sold:false});
-  }
-
-  return stock;
-}
-
-function openShop(){
-  if(G.gameOver||G.won)return;
-  if(!G.shopPos){addLog('No shop on this floor','log-info');return;}
-  let p=G.player;
-  let dx=Math.abs(p.x-G.shopPos.x),dy=Math.abs(p.y-G.shopPos.y);
-  if(dx>1||dy>1){addLog('Move to the shop ($) to enter','log-shop');return;}
-  renderShop();
-  switchShopTab('buy');
-  document.getElementById('shop-overlay').classList.add('open');
-}
-
-function closeShop(){
-  document.getElementById('shop-overlay').classList.remove('open');
-}
-
-function renderShop(){
-  document.getElementById('shop-gold-val').textContent=G.player.gold;
-  let h='';
-  G.shopStock.forEach(item=>{
-    let canAfford=G.player.gold>=item.price;
-    let desc=item.desc||iDesc(item);
-    h+=`<div class="shop-item${item.sold?' sold':''}"
-      onclick="buyItem('${item.id}')"
-      ontouchend="event.preventDefault();event.stopPropagation();buyItem('${item.id}')">
-      <div class="shop-item-left">
-        <div class="shop-item-name">${item.sym} ${item.name}${item.sold?' (SOLD)':''}</div>
-        <div class="shop-item-desc">${desc} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
-      </div>
-      <div class="shop-item-price${canAfford?'':' cant-afford'}">💰${item.price}</div>
-    </div>`;
-  });
-  document.getElementById('shop-items').innerHTML=h;
-}
-
-function buyItem(id){
-  if(!canAct()) return;
-  let item=G.shopStock.find(i=>i.id==id);
-  if(!item||item.sold)return;
-  if(G.player.gold<item.price){addLog('Not enough gold!','log-shop');return;}
-  G.player.gold-=item.price;
-  item.sold=true;
-
-  if(item.type==='potion'){
-    let clone={...item,carried:true,id:uid()};
-    G.items.push(clone);
-    addLog(`Bought ${item.name} — stored in bag`,'log-shop');
-    SFX.buy();
-  } else if(item.type==='weapon'){
-    // Put in inventory, auto-equip if better
-    let clone={...item,carried:true,id:uid()};
-    G.items.push(clone);
-    autoEquip(clone);
-    addLog(`Bought ${item.name}`,'log-shop');
-  } else if(item.type==='armor'){
-    let clone={...item,carried:true,id:uid()};
-    G.items.push(clone);
-    autoEquip(clone);
-    addLog(`Bought ${item.name}`,'log-shop');
-  } else if(item.type==='upgrade'){
-    applyUpgrade(item);
-  }
-
-  renderShop();
-  updateHUD();
-  updateActBtns();
-}
-
-function switchShopTab(tab){
-  document.getElementById('tab-buy').classList.toggle('active', tab==='buy');
-  document.getElementById('tab-sell').classList.toggle('active', tab==='sell');
-  document.getElementById('shop-buy-panel').style.display=tab==='buy'?'block':'none';
-  document.getElementById('shop-sell-panel').style.display=tab==='sell'?'block':'none';
-  if(tab==='sell') renderSellPanel();
-  if(tab==='buy') renderShop();
-}
-
-function renderSellPanel(){
-  // Sellable = carried items + equipped items (player can sell anything from bag or currently equipped)
-  let sellable=[
-    ...G.items.filter(i=>i.carried),
-    ...(G.player.weapon?[{...G.player.weapon,_equipped:'weapon'}]:[]),
-    ...(G.player.armor?[{...G.player.armor,_equipped:'armor'}]:[]),
-  ];
-  let h='';
-  if(!sellable.length){
-    h='<div class="sell-empty">Nothing to sell.</div>';
-  } else {
-    sellable.forEach(item=>{
-      let sellPrice=Math.max(1,Math.floor((item.price||10)/2));
-      let equippedTag=item._equipped?` <span style="color:var(--accent);font-size:.5rem">[EQUIPPED]</span>`:'';
-      h+=`<div class="sell-item"
-        onclick="sellItem('${item.id}','${item._equipped||''}')"
-        ontouchend="event.preventDefault();event.stopPropagation();sellItem('${item.id}','${item._equipped||''}')">
-        <div class="sell-item-left">
-          <div class="sell-item-name">${item.sym} ${item.name}${equippedTag}</div>
-          <div class="sell-item-desc">${iDesc(item)} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
-        </div>
-        <div class="sell-item-price">+${sellPrice}💰</div>
-      </div>`;
-    });
-  }
-  document.getElementById('sell-items').innerHTML=h;
-}
-
-function sellItem(id, equippedSlot){
-  if(!canAct()) return;
-  // Prevent double-sell: mark item as selling immediately
-  let item, isEquipped=false;
-  if(equippedSlot==='weapon' && G.player.weapon && String(G.player.weapon.id)===String(id)){
-    item=G.player.weapon; isEquipped=true;
-  } else if(equippedSlot==='armor' && G.player.armor && String(G.player.armor.id)===String(id)){
-    item=G.player.armor; isEquipped=true;
-  } else {
-    item=G.items.find(i=>String(i.id)===String(id) && i.carried && !i._selling);
-    if(item) item._selling=true; // lock immediately to block double-tap
-  }
-  if(!item) return;
-
-  let sellPrice=Math.max(1,Math.floor((item.price||10)/2));
-  G.player.gold+=sellPrice;
-
-  if(isEquipped){
-    if(equippedSlot==='weapon') G.player.weapon=null;
-    else if(equippedSlot==='armor') G.player.armor=null;
-    // Also purge any ghost copy of this item from G.items
-    G.items=G.items.filter(i=>String(i.id)!==String(id));
-  } else {
-    G.items=G.items.filter(i=>String(i.id)!==String(id));
-  }
-
-  addLog(`Sold ${item.name} for ${sellPrice}💰`, 'log-shop');
-  floatText(`+${sellPrice}💰`, G.player.x, G.player.y, '#fbbf24');
-  SFX.sell();
-  document.getElementById('shop-gold-val').textContent=G.player.gold;
-  updateHUD();
-  updateActBtns();
-  renderSellPanel();
-  renderShop(); // refresh buy tab so affordability colours are up to date
-}
-
-function applyUpgrade(item){
-  let p=G.player;
-  if(item.stat==='atk'){p.atk+=item.amount;addLog(`Strength Tonic: ATK +${item.amount}!`,'log-level');}
-  else if(item.stat==='def'){p.def+=item.amount;addLog(`Iron Skin: DEF +${item.amount}!`,'log-level');}
-  else if(item.stat==='hp'){p.maxHp+=item.amount;p.hp=Math.min(p.maxHp,p.hp+item.amount);addLog(`Vitality Brew: Max HP +${item.amount}!`,'log-level');}
-  else if(item.stat==='all'){p.atk+=1;p.def+=1;p.maxHp+=10;p.hp=Math.min(p.maxHp,p.hp+10);addLog(`Blessing: ATK+1, DEF+1, MaxHP+10!`,'log-level');}
-  floatText('UPGRADED!',p.x,p.y,'#c084fc');
-}
-
-// ===================== FLOOR/ITEMS =====================
-function spawnItem(r){
-  let pool=[...WEAPONS,...ARMORS,...POTIONS];
-  let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
-  let t=w[rand(w.length)];
-  G.items.push({...t,x:r.x+rr(1,r.w-2),y:r.y+rr(1,r.h-2),id:uid()});
-}
-
+</script>
+<script>
 // ===================== FOV =====================
 function computeVision(){
   G.visible=new Set();
@@ -814,20 +718,93 @@ function computeVision(){
   }
 }
 
+</script>
+<script>
 // ===================== RENDER =====================
 function getCellSize(){
   let a=document.getElementById('map-area');
   return Math.max(9,Math.min(Math.floor((a.clientWidth-10)/MAP_W),Math.floor((a.clientHeight-10)/MAP_H),18));
 }
+function positionMapOnPlayer(){
+  const area=document.getElementById('map-area');
+  const wrap=document.getElementById('map-wrap');
+  const player=document.querySelector('.tile-player');
+  if(!area||!wrap||!player) return;
+  wrap.style.transform='translate(0px,0px)';
+  const areaRect=area.getBoundingClientRect();
+  const wrapRect=wrap.getBoundingClientRect();
+  const playerRect=player.getBoundingClientRect();
+  let tx=0,ty=0;
+  const mx=Math.min(32,areaRect.width*.18);
+  const my=Math.min(32,areaRect.height*.18);
+  if(wrapRect.width>areaRect.width){
+    if(playerRect.left<areaRect.left+mx) tx=areaRect.left+mx-playerRect.left;
+    else if(playerRect.right>areaRect.right-mx) tx=areaRect.right-mx-playerRect.right;
+    tx=Math.max(areaRect.right-wrapRect.right,Math.min(areaRect.left-wrapRect.left,tx));
+  }
+  if(wrapRect.height>areaRect.height){
+    if(playerRect.top<areaRect.top+my) ty=areaRect.top+my-playerRect.top;
+    else if(playerRect.bottom>areaRect.bottom-my) ty=areaRect.bottom-my-playerRect.bottom;
+    ty=Math.max(areaRect.bottom-wrapRect.bottom,Math.min(areaRect.top-wrapRect.top,ty));
+  }
+  wrap.style.transform=`translate(${Math.round(tx)}px,${Math.round(ty)}px)`;
+}
 function iDesc(item){
-  if(item.type==='weapon') return `ATK+${item.atk}`;
-  if(item.type==='armor')  return `DEF+${item.def}`;
+  let reqs = [];
+  let canEverEquip = !item.reqClass || item.reqClass.includes(G.player.class);
+  let canEquipNow = canEverEquip && (!item.reqLvl || G.player.lvl >= item.reqLvl);
+
+  let pAtk = typeof weaponPower === 'function' ? weaponPower(G.player.weapon) : (G.player.weapon ? G.player.weapon.atk : 0);
+  let pDef = typeof armorPower === 'function' ? armorPower(G.player.armor) : (G.player.armor ? G.player.armor.def : 0);
+  let itemAtk = typeof weaponPower === 'function' ? weaponPower(item) : (item.atk || 0);
+  let isBetter = (item.type==='weapon' && itemAtk > pAtk) || (item.type==='armor' && item.def > pDef);
+
+  if(item.reqLvl) reqs.push(`Lvl ${item.reqLvl}`);
+  if(item.reqClass) reqs.push(`${item.reqClass.map(c=>c.substring(0,3).toUpperCase()).join('/')}`);
+
+  let cls = 'req-tag';
+  let prefix = '';
+  if(!canEverEquip) {
+    // defaults to red
+  } else if(!canEquipNow && isBetter) {
+    cls += ' req-wait'; prefix = '⏳ ';
+  } else if(canEquipNow && isBetter) {
+    cls += ' req-match'; prefix = '✔ ';
+  } else if(canEquipNow && !isBetter) {
+    cls += ' req-dim-match'; prefix = '✔ ';
+  }
+
+  let rStr = reqs.length ? `<span class="${cls}">${prefix}Req: ${reqs.join(' ')}</span>` : '';
+
+  if(item.type==='weapon') {
+    let pAtk = typeof weaponPower === 'function' ? weaponPower(G.player.weapon) : (G.player.weapon ? G.player.weapon.atk : 0);
+    let itemAtk = typeof weaponPower === 'function' ? weaponPower(item) : item.atk;
+    let up = itemAtk > pAtk ? ' <span class=green>▲</span>' : '';
+    return `ATK+${item.atk}${up} ${rStr}`;
+  }
+  if(item.type==='armor') {
+    let pDef = typeof armorPower === 'function' ? armorPower(G.player.armor) : (G.player.armor ? G.player.armor.def : 0);
+    let itemDef = typeof armorPower === 'function' ? armorPower(item) : item.def;
+    let up = itemDef > pDef ? ' <span class=green>▲</span>' : '';
+    return `DEF+${item.def}${up} ${rStr}`;
+  }
   if(item.type==='potion') return `Heal ${item.heal} HP`;
   if(item.type==='upgrade')return item.desc||'';
   return '';
 }
-const gatk=()=>G.player.atk+(G.player.weapon?.atk||0);
-const gdef=()=>G.player.def+(G.player.armor?.def||0);
+const gatk=()=>{
+  let w = G.player.weapon;
+  let watk = typeof weaponPower === 'function' ? weaponPower(w) : (w ? w.atk : 0);
+  if(typeof weaponPower !== 'function' && G.player.class === 'monk' && !w) watk += 2 + Math.floor(G.player.lvl / 2);
+  if(typeof weaponPower !== 'function' && G.player.class === 'mage' && w && w.sym === '♦') watk += Math.floor(watk / 2);
+  let total = G.player.atk + watk;
+  if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 10);
+  return total;
+};
+const gdef=()=>{
+  let armDef = G.player.armor ? G.player.armor.def : 0;
+  return G.player.def + armDef;
+};
 
 function render(){
   const mapEl=document.getElementById('map');
@@ -845,34 +822,48 @@ function render(){
       if(x===G.player.x&&y===G.player.y){h+=`<div class="tile tile-player" style="${s}">@</div>`;continue;}
       let en=vis?G.enemies.find(e=>e.x===x&&e.y===y):null;
       if(en){
+        let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
+        let dist = Math.max(Math.abs(en.x-G.player.x), Math.abs(en.y-G.player.y));
+        let canTap = (dist <= maxRange);
         let dyingClass=en.dying?' tile-enemy-dying':'';
         h+=`<div class="tile tile-enemy${dyingClass}" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
           onmouseenter="showTip(event,'${en.name}',${en.hp},${en.maxHp},${en.atk})"
           onmouseleave="hideTip()"
-          onclick="${en.dying?'':`tileAttack('${en.id}')`}"
+          onclick="${en.dying||!canTap?'':`tileAttack('${en.id}')`}"
           ontouchstart="${en.dying?'':`startLongPress(event,'${en.id}','${en.name}',${en.hp},${en.maxHp},${en.atk})`}"
-          ontouchend="${en.dying?'':`endLongPress(event,'${en.id}')`}"
+          ontouchend="${en.dying||!canTap?'':`endLongPress(event,'${en.id}')`}"
           ontouchmove="${en.dying?'':'cancelLongPress()'}">
           ${en.sym.toUpperCase()}</div>`;
         continue;
       }
       let it=vis?G.items.find(i=>!i.carried&&i.x===x&&i.y===y):null;
       if(it){
+        let safeName = it.name.replace(/'/g,"\\'").replace(/"/g,"&quot;");
+        let safeDesc = iDesc(it).replace(/'/g,"\\'").replace(/"/g,"&quot;");
         h+=`<div class="tile tile-item" style="${s}"
           ontouchend="event.preventDefault();tilePickup('${it.id}')"
-          ontouchstart="showTip(event,'${it.name}: ${iDesc(it)}');event.stopPropagation()"
-          onmouseenter="showTip(event,'${it.name}: ${iDesc(it)}')"
+          ontouchstart="showTip(event,'${safeName}: ${safeDesc}');event.stopPropagation()"
+          onmouseenter="showTip(event,'${safeName}: ${safeDesc}')"
           onmouseleave="hideTip()"
           onclick="tilePickup('${it.id}')">${it.sym}</div>`;
         continue;
       }
-      if(t===TILE.STAIRS&&vis){h+=`<div class="tile tile-stairs" style="${s}" onclick="descend()" ontouchend="event.preventDefault();descend()">></div>`;continue;}
-      if(t===TILE.SHOP&&vis){h+=`<div class="tile tile-shop" style="${s}" onclick="openShop()" ontouchend="event.preventDefault();openShop()">$</div>`;continue;}
+      let trap=seen&&G.traps?G.traps.find(t=>t.x===x&&t.y===y):null;
+      if(trap){
+        h+=`<div class="tile tile-trap" style="${s}">^</div>`;continue;
+      }
+      if(t===TILE.STAIRS&&seen){
+        h+=`<div class="tile tile-stairs" style="${s}" onclick="descend()" ontouchend="event.preventDefault();descend()">></div>`;continue;
+      }
+      if(t===TILE.SHOP&&seen){
+        h+=`<div class="tile tile-shop" style="${s}" onclick="openShop()" ontouchend="event.preventDefault();openShop()">$</div>`;continue;
+      }
       let sc=(seen&&!vis)?' tile-seen':'';
       h+=`<div class="tile ${t===TILE.WALL?'tile-wall':'tile-floor'}${sc}" style="${s}">${CH[t]||' '}</div>`;
     }
   }
   mapEl.innerHTML=h;
+  positionMapOnPlayer();
   updateHUD();updateInvDrawer();updateActBtns();
 }
 
@@ -885,15 +876,31 @@ function updateHUD(){
   document.getElementById('atk-val').textContent=gatk();
   document.getElementById('def-val').textContent=gdef();
   document.getElementById('lvl-val').textContent=p.lvl;
+  document.getElementById('class-val').textContent=p.class;
   document.getElementById('gold-val').textContent=p.gold;
   document.getElementById('floor-label').textContent=`FLOOR ${G.floor}`;
 }
 
 function updateActBtns(){
-  // BASH
-  let bb=document.getElementById('bash-btn');
-  bb.className='act-btn'+(G.bashCooldown===0?' bash-ready':'');
-  bb.textContent=G.bashCooldown>0?`BASH ${G.bashCooldown}`:'⚡BASH';
+  const A1 = { warrior:'BASH', rogue:'DASH', mage:'FIREBALL', paladin:'SMITE', ranger:'PIERCING SHOT', barbarian:'CLEAVE', necromancer:'SIPHON LIFE', monk:'PUSH KICK' };
+  const A2 = { warrior:'SHIELD', rogue:'VANISH', mage:'BLINK', paladin:'HEAL', ranger:'BEAR TRAP', barbarian:'BLOODLUST', necromancer:'EXPLOSION', monk:'FLURRY' };
+
+  // ABILITY 1
+  let a1=document.getElementById('ability1-btn');
+  let a1Name = A1[G.player.class] || 'ABIL1';
+  a1.className='act-btn'+(G.ability1Cooldown===0?' bash-ready':'');
+  a1.textContent=G.ability1Cooldown>0?`${a1Name} ${G.ability1Cooldown}`:`⚡${a1Name}`;
+
+  // ABILITY 2
+  let a2=document.getElementById('ability2-btn');
+  if(G.player.lvl >= 5) {
+    a2.style.display = 'block';
+    let a2Name = A2[G.player.class] || 'ABIL2';
+    a2.className='act-btn'+(G.ability2Cooldown===0?' bash-ready':'');
+    a2.textContent=G.ability2Cooldown>0?`${a2Name} ${G.ability2Cooldown}`:`⚡${a2Name}`;
+  } else {
+    a2.style.display = 'none';
+  }
   // STAIRS
   let sb=document.getElementById('stairs-btn');
   let onS=G.map&&G.map[G.player.y][G.player.x]===TILE.STAIRS;
@@ -901,7 +908,7 @@ function updateActBtns(){
   sb.textContent=onS?'▼ GO':'STAIRS';
   // SHOP
   let shopBtn=document.getElementById('shop-btn');
-  let nearShop=G.shopPos&&Math.abs(G.player.x-G.shopPos.x)<=1&&Math.abs(G.player.y-G.shopPos.y)<=1;
+  let nearShop=G.shops && G.shops.some(s => Math.abs(G.player.x-s.x)<=1 && Math.abs(G.player.y-s.y)<=1);
   shopBtn.className='act-btn'+(nearShop?' shop-avail':'');
   shopBtn.textContent=nearShop?'$ SHOP':'SHOP';
   // BAG
@@ -915,14 +922,25 @@ function updateInvDrawer(){
   let inv=G.items.filter(i=>i.carried);
   let h='';
   if(!inv.length) h='<div class="inv-empty">Empty</div>';
-  else inv.forEach(it=>{
-    h+=`<div class="inv-slot"
-      onclick="useItem('${it.id}')"
-      ontouchend="event.preventDefault();useItem('${it.id}')">
-      <div><div class="inv-name">${it.name}</div><div class="inv-type">${it.rarity} ${it.type}</div></div>
-      <div class="inv-bonus">${iDesc(it)}</div>
-    </div>`;
-  });
+  else {
+    let grouped = {};
+    inv.forEach(it => {
+      if(!grouped[it.name]) grouped[it.name] = { count: 0, items: [] };
+      grouped[it.name].count++;
+      grouped[it.name].items.push(it);
+    });
+    Object.values(grouped).forEach(g => {
+      let it = g.items[0];
+      let countTag = g.count > 1 ? ` <span style="color:var(--accent);font-size:.5rem">x${g.count}</span>` : '';
+      let colorCls = getItemColorClass(it);
+      h+=`<div class="inv-slot"
+        onclick="useItem('${it.id}')"
+        ontouchend="event.preventDefault();useItem('${it.id}')">
+        <div><div class="inv-name ${colorCls}">${it.name}${countTag}</div><div class="inv-type">${it.rarity} ${it.type}</div></div>
+        <div class="inv-bonus">${iDesc(it)}</div>
+      </div>`;
+    });
+  }
   document.getElementById('inventory-list').innerHTML=h;
   let eh='';
   if(G.player.weapon) eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.weapon.name}</div><div class="inv-type">weapon</div></div><div class="inv-bonus">ATK+${G.player.weapon.atk}</div></div>`;
@@ -931,270 +949,31 @@ function updateInvDrawer(){
   document.getElementById('equipped-list').innerHTML=eh;
 }
 
-// ===================== COMBAT =====================
-function tileAttack(id){
-  if(!canAct()||G.gameOver||G.won) return;
-  let en=G.enemies.find(e=>e.id==id);if(!en)return;
-  if(en.dying)return;
-  let dist=Math.max(Math.abs(en.x-G.player.x),Math.abs(en.y-G.player.y));
-  if(dist<=2){
-    attackEnemy(id,false);
-  } else {
-    move(Math.sign(en.x-G.player.x)||0,Math.sign(en.y-G.player.y)||0);
-  }
+</script>
+<script>
+// ===================== TOOLTIP =====================
+function showTip(e,name,hp,maxHp,atk){
+  e.stopPropagation(); // prevent global dismiss firing on same click
+  let t=document.getElementById('tooltip');
+  t.innerHTML=`<strong style="color:var(--text)">${name}</strong><br>`+
+    (hp!==undefined?`HP:<span style="color:var(--red)">${hp}/${maxHp}</span> `:'') +
+    (atk!==undefined?`ATK:<span style="color:var(--orange)">${atk}</span>`:'');
+  t.style.display='block';
+  // Clamp tooltip to viewport
+  let tx=e.clientX+12, ty=e.clientY-8;
+  let tw=t.offsetWidth, th=t.offsetHeight;
+  if(tx+tw>window.innerWidth) tx=window.innerWidth-tw-4;
+  if(ty<0) ty=4;
+  if(ty+th>window.innerHeight) ty=window.innerHeight-th-4;
+  t.style.left=tx+'px';
+  t.style.top=ty+'px';
+  clearTimeout(t._hideTimer);
+  t._hideTimer=setTimeout(()=>hideTip(), 2500);
 }
-function tilePickup(id){
-  if(!canAct()||G.gameOver||G.won) return;
-  let it=G.items.find(i=>i.id==id);if(!it||it.carried)return;
-  if(Math.abs(it.x-G.player.x)>1||Math.abs(it.y-G.player.y)>1){
-    move(Math.sign(it.x-G.player.x)||0,Math.sign(it.y-G.player.y)||0);return;
-  }
-  pickupItem(id);
+function hideTip(){
+  clearTimeout(document.getElementById('tooltip')._hideTimer);
+  document.getElementById('tooltip').style.display='none';
 }
-
-function attackEnemy(id,bash=false){
-  let en=G.enemies.find(e=>e.id==id);if(!en)return;
-  if(en.dying)return;
-  let dmg=Math.max(1,gatk()-en.def+rand(3));
-  if(bash){dmg*=2;G.bashCooldown=5;SFX.bash();}else{SFX.hit();}
-  en.hp-=dmg;
-  G.player.damageDealt+=dmg;
-  floatText(`-${dmg}`,en.x,en.y,'#f87171');
-  addLog(`Hit ${en.name} for ${dmg}${bash?' (BASH!)':''}`, 'log-combat');
-  if(en.hp<=0){
-    let goldDrop=en.gold+rand(3);
-    G.player.xp+=en.xp;G.player.kills++;G.player.gold+=goldDrop;
-    addLog(`${en.name} slain! +${en.xp} XP  +${goldDrop}💰`, 'log-dead');
-    floatText(`+${goldDrop}💰`,en.x,en.y,'#fbbf24');
-    SFX.enemyDeath();
-    fireTip('firstGold');
-    // Mark dying — remove after animation
-    en.dying=true;
-    render();
-    setTimeout(()=>{
-      G.enemies=G.enemies.filter(e=>e.id!==id);
-      if(ch(.2)){
-        let pool=[...WEAPONS,...ARMORS,...POTIONS];
-        G.items.push({...pool[rand(pool.length)],x:en.x,y:en.y,id:uid()});
-      }
-      checkLevelUp();
-      advanceTurn();
-    },320);
-    return;
-  }
-  let edm=Math.max(1,en.atk-gdef()+rand(3));
-  checkEmergencyPotion(en, edm, ()=>{
-    G.player.hp=Math.max(0,G.player.hp-edm);
-    floatText(`-${edm}`,G.player.x,G.player.y,'#60a5fa');
-    addLog(`${en.name} hits you for ${edm}`,'log-combat');
-    SFX.damage();shakeMap();flashDamage();advanceTurn();
-    if(G.player.hp<=0){G.gameOver=true;showDeath();}
-  });
-}
-
-function checkLevelUp(){
-  while(G.player.xp>=G.player.xpNext){
-    G.player.xp-=G.player.xpNext;G.player.lvl++;
-    G.player.xpNext=Math.round(G.player.xpNext*1.6);
-    G.player.maxHp+=8;G.player.hp=Math.min(G.player.maxHp,G.player.hp+8);
-    G.player.atk+=1;G.player.def+=1;
-    addLog(`LEVEL UP! Now level ${G.player.lvl}!`,'log-level');
-    floatText('LVL UP!',G.player.x,G.player.y,'#c084fc');
-    SFX.levelUp();fireTip('firstLevelUp');
-  }
-}
-
-function advanceTurn(){
-  G.turn++;if(G.bashCooldown>0)G.bashCooldown--;
-  G.enemies.forEach(e=>{
-    if(G.gameOver||G.won) return;
-    if(e.dying) return;
-    if(!G.visible.has(e.y*MAP_W+e.x)){
-      if(ch(.4)){
-        let ds=[[-1,0],[1,0],[0,-1],[0,1]];let[dx,dy]=ds[rand(4)];
-        let nx=e.x+dx,ny=e.y+dy;
-        if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
-           !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;}
-      }
-    } else {
-      let dx=G.player.x-e.x,dy=G.player.y-e.y;
-      let steps=Math.abs(dx)>Math.abs(dy)?[[Math.sign(dx),0],[0,Math.sign(dy)]]:[[0,Math.sign(dy)],[Math.sign(dx),0]];
-      for(let[sx,sy] of steps){
-        let nx=e.x+sx,ny=e.y+sy;
-        if(nx===G.player.x&&ny===G.player.y){
-          let edm=Math.max(1,e.atk-gdef()+rand(3));
-          checkEmergencyPotion(e, edm, ()=>{
-            G.player.hp=Math.max(0,G.player.hp-edm);
-            addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
-            SFX.damage();shakeMap();flashDamage();floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
-            if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
-            computeVision();render();
-          });
-          break;
-        }
-        if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
-           !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;break;}
-      }
-    }
-  });
-  computeVision();render();
-  // Fire tips for newly visible things
-  if(!TIPS.firstEnemy.shown && G.enemies.some(e=>G.visible.has(e.y*MAP_W+e.x))) fireTip('firstEnemy');
-  if(!TIPS.firstStairs.shown && G.rooms.length &&
-     G.visible.has(G.rooms[G.rooms.length-1].cy*MAP_W+G.rooms[G.rooms.length-1].cx)) fireTip('firstStairs');
-  if(!TIPS.firstShop.shown && G.shopPos && G.visible.has(G.shopPos.y*MAP_W+G.shopPos.x)) fireTip('firstShop');
-}
-
-function pickupItem(id){
-  let it=G.items.find(i=>i.id==id);if(!it||it.carried)return;
-  if(it.type==='potion'){
-    it.carried=true;it.x=undefined;it.y=undefined;
-    addLog(`Picked up ${it.name} — stored in bag`,'log-item');
-    floatText(`+BAG`,G.player.x,G.player.y,'#fbbf24');
-    SFX.pickup();fireTip('firstPotion');
-  } else {
-    it.carried=true;it.x=undefined;it.y=undefined;
-    addLog(`Picked up ${it.name}`,'log-item');
-    SFX.pickup();autoEquip(it);
-    fireTip('firstItem');
-  }
-  advanceTurn();
-}
-
-function updateBestWeapon(weapon){
-  let current=G.player.bestWeapon;
-  // Parse current best ATK (stored as "Name (ATK+X)")
-  let match=current.match(/ATK\+(\d+)/);
-  let currentAtk=match?parseInt(match[1]):0;
-  if(weapon.atk>currentAtk){
-    G.player.bestWeapon=`${weapon.name} (ATK+${weapon.atk})`;
-  }
-}
-
-function autoEquip(it){
-  if(it.type==='weapon'){
-    let prev=G.player.weapon;
-    if(!prev||it.atk>prev.atk){
-      if(prev){
-        G.items=G.items.filter(i=>i.id!==prev.id);
-        prev.carried=true;prev.x=undefined;prev.y=undefined;
-        G.items.push(prev);
-      }
-      G.player.weapon=it;it.carried=false;
-      G.items=G.items.filter(i=>i.id!==it.id);
-      updateBestWeapon(it);
-      addLog(`Equipped ${it.name}!`,'log-item');
-    } else {
-      // Worse than current — keep in bag
-      it.carried=true;it.x=undefined;it.y=undefined;
-      addLog(`${it.name} added to bag (weaker than current).`,'log-item');
-    }
-  } else if(it.type==='armor'){
-    let prev=G.player.armor;
-    if(!prev||it.def>prev.def){
-      if(prev){
-        G.items=G.items.filter(i=>i.id!==prev.id);
-        prev.carried=true;prev.x=undefined;prev.y=undefined;
-        G.items.push(prev);
-      }
-      G.player.armor=it;it.carried=false;
-      G.items=G.items.filter(i=>i.id!==it.id);
-      addLog(`Equipped ${it.name}!`,'log-item');
-    } else {
-      // Worse than current — keep in bag
-      it.carried=true;it.x=undefined;it.y=undefined;
-      addLog(`${it.name} added to bag (weaker than current).`,'log-item');
-    }
-  }
-}
-
-function useItem(id){
-  let it=G.items.find(i=>i.id==id);if(!it)return;
-  if(it.type==='potion'){
-    let h=Math.min(it.heal,G.player.maxHp-G.player.hp);
-    G.player.hp+=h;
-    addLog(`Drank ${it.name}: +${h} HP`,'log-item');
-    floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
-    G.items=G.items.filter(i=>i.id!==id);
-    advanceTurn();closeInv();
-    return;
-  } else if(it.type==='weapon'){
-    let prev=G.player.weapon;
-    if(prev){
-      G.items=G.items.filter(i=>i.id!==prev.id);
-      prev.carried=true;prev.x=prev.y=undefined;
-      G.items.push(prev);
-    }
-    G.player.weapon=it;
-    G.items=G.items.filter(i=>i.id!==id);
-    updateBestWeapon(it);
-    addLog(`Equipped ${it.name}`,'log-item');
-  } else if(it.type==='armor'){
-    let prev=G.player.armor;
-    if(prev){
-      G.items=G.items.filter(i=>i.id!==prev.id);
-      prev.carried=true;prev.x=prev.y=undefined;
-      G.items.push(prev);
-    }
-    G.player.armor=it;
-    G.items=G.items.filter(i=>i.id!==id);
-    addLog(`Equipped ${it.name}`,'log-item');
-  }
-  advanceTurn();closeInv();
-}
-
-function descend(){
-  if(G.gameOver||G.won)return;
-  if(G.map[G.player.y][G.player.x]!==TILE.STAIRS){addLog('Find the stairs (>) first','log-info');return;}
-  G.floor++;
-  if(G.floor>FLOORS){G.won=true;showVictory();return;}
-  G.player.hp=Math.min(G.player.maxHp,G.player.hp+10);
-  buildFloor();
-}
-
-// ===================== MOVEMENT =====================
-function move(dx,dy){
-  if(G.gameOver||G.won||!G.map)return;
-  let nx=G.player.x+dx,ny=G.player.y+dy;
-  if(nx<0||nx>=MAP_W||ny<0||ny>=MAP_H||G.map[ny][nx]===TILE.WALL)return;
-  let en=G.enemies.find(e=>e.x===nx&&e.y===ny);
-  if(en){if(en.dying)return;attackEnemy(en.id);return;}
-  let it=G.items.find(i=>!i.carried&&i.x===nx&&i.y===ny);
-  G.player.x=nx;G.player.y=ny;computeVision();
-  if(it)pickupItem(it.id);else advanceTurn();
-}
-
-function dpadPress(dx,dy){
-  if(G.gameOver||G.won)return;
-  move(dx,dy);clearInterval(_dpadTimer);
-  _dpadTimer=setInterval(()=>move(dx,dy),185);
-}
-function dpadRelease(){clearInterval(_dpadTimer);_dpadTimer=null;}
-
-function doBash(){
-  if(G.gameOver||G.won)return;
-  if(G.bashCooldown>0){addLog(`Bash on cooldown (${G.bashCooldown} turns)`,'log-info');return;}
-  let t=G.enemies
-    .filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x)&&Math.abs(e.x-G.player.x)<=2&&Math.abs(e.y-G.player.y)<=2)
-    .sort((a,b)=>(Math.abs(a.x-G.player.x)+Math.abs(a.y-G.player.y))-(Math.abs(b.x-G.player.x)+Math.abs(b.y-G.player.y)));
-  if(t.length)attackEnemy(t[0].id,true);
-  else addLog('No nearby enemies to Bash','log-info');
-}
-
-// ===================== SWIPE =====================
-document.getElementById('map-area').addEventListener('touchstart',e=>{
-  if(e.touches.length!==1)return;
-  _swipeStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
-},{passive:true});
-document.getElementById('map-area').addEventListener('touchend',e=>{
-  if(!_swipeStart||G.gameOver||G.won)return;
-  let dx=e.changedTouches[0].clientX-_swipeStart.x;
-  let dy=e.changedTouches[0].clientY-_swipeStart.y;
-  _swipeStart=null;
-  if(Math.sqrt(dx*dx+dy*dy)<20)return;
-  if(Math.abs(dx)>Math.abs(dy))move(Math.sign(dx),0);
-  else move(0,Math.sign(dy));
-},{passive:true});
 
 // ===================== LOG =====================
 function addLog(msg,cls=''){
@@ -1229,6 +1008,68 @@ function cancelLongPress(){
   _lpFired=false;
 }
 
+// ===================== INV DRAWER =====================
+function openInv(){
+  document.getElementById('inv-drawer').classList.add('open');
+  document.getElementById('drawer-backdrop').classList.add('open');
+  updateInvDrawer();
+  fireTip('firstBag');
+}
+function closeInv(){
+  document.getElementById('inv-drawer').classList.remove('open');
+  document.getElementById('drawer-backdrop').classList.remove('open');
+}
+
+// ===================== HELP MODAL =====================
+function openHelp(){
+  document.getElementById('help-overlay').style.display='flex';
+  switchHelpTab('controls');
+}
+function closeHelp(){
+  document.getElementById('help-overlay').style.display='none';
+}
+function switchHelpTab(tab){
+  ['controls','combat','items','shop'].forEach(t=>{
+    document.getElementById(`htab-${t}`).classList.toggle('active', t===tab);
+    document.getElementById(`hpanel-${t}`).style.display= t===tab ? 'block' : 'none';
+  });
+}
+
+// ===================== CONTEXTUAL TIPS =====================
+// Tips fire once per run (not persisted — resets each new game intentionally
+// so new players always see them, returning players can dismiss quickly)
+const TIPS = {
+  firstEnemy:  { shown:false, tab:'combat',   msg:'Tip: walk into an enemy to attack, tap one from range, or press B to use your class ability when it is ready.' },
+  firstPotion:{ shown:false, tab:'items', msg:'Tip: potions are stored in your BAG. Tap BAG to drink one manually, or the game will prompt you automatically when a hit could be fatal.' },
+  firstItem:  { shown:false, tab:'items', msg:'Tip: items auto-equip if better than what you have. Check your BAG for anything carried.' },
+  firstLevelUp:{ shown:false, tab:'combat',   msg:'Tip: levelling up raises ATK, DEF, and Max HP. Kill enemies to gain XP.' },
+  firstShop:   { shown:false, tab:'shop',     msg:'Tip: the merchant ($) buys and sells. Save gold for permanent stat upgrades from floor 2.' },
+  firstStairs: { shown:false, tab:'controls', msg:'Tip: stand on the > tile and tap STAIRS (or press .) to descend to the next floor.' },
+  firstBag:    { shown:false, tab:'items',    msg:'Tip: open BAG to manually equip a weaker item, swap gear, or use a saved potion.' },
+  firstGold:   { shown:false, tab:'shop',     msg:'Tip: enemies drop gold. Collect it to spend at the merchant on each floor.' },
+};
+
+function fireTip(key){
+  let tip = TIPS[key];
+  if(!tip || tip.shown) return;
+  tip.shown = true;
+  addLog(tip.msg, 'log-info');
+}
+
+function resetTips(){
+  Object.values(TIPS).forEach(t => t.shown = false);
+}
+
+// Hide tooltip on any tap outside enemy/item/shop tiles
+document.addEventListener('touchstart', e=>{
+  if(!e.target.closest('.tile-enemy,.tile-item,.shop-item,.sell-item,.shop-tab')) hideTip();
+},{passive:true});
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.tile-enemy,.tile-item')) hideTip();
+},{passive:true});
+
+</script>
+<script>
 // ===================== EMERGENCY POTION SYSTEM =====================
 // G.pendingHit stores {dmg, afterFn} when paused waiting for player response
 function getBestPotions(neededHeal){
@@ -1246,9 +1087,16 @@ function getBestPotions(neededHeal){
   return chain;
 }
 
+function incomingDamageMax(enemy){
+  let maxNextHit=Math.max(1, enemy.atk-gdef()+2);
+  if(G.player.shieldWallTurns>0) maxNextHit=Math.ceil(maxNextHit/2);
+  if(G.player.bloodlustTurns>0) maxNextHit*=2;
+  return maxNextHit;
+}
+
 function checkEmergencyPotion(enemy, dmg, afterFn){
   // Max possible next hit from this enemy
-  let maxNextHit=Math.max(1, enemy.atk-gdef()+2);
+  let maxNextHit=Math.max(dmg, incomingDamageMax(enemy));
   // Would that kill us?
   if(G.player.hp-maxNextHit>0){
     afterFn(); return; // safe — just proceed
@@ -1308,73 +1156,1167 @@ function resolveEmergency(drink){
   afterFn();
 }
 
-// ===================== TOOLTIP =====================
-function showTip(e,name,hp,maxHp,atk){
-  e.stopPropagation(); // prevent global dismiss firing on same click
-  let t=document.getElementById('tooltip');
-  t.innerHTML=`<strong style="color:var(--text)">${name}</strong><br>`+
-    (hp!==undefined?`HP:<span style="color:var(--red)">${hp}/${maxHp}</span> `:'') +
-    (atk!==undefined?`ATK:<span style="color:var(--orange)">${atk}</span>`:'');
-  t.style.display='block';
-  // Clamp tooltip to viewport
-  let tx=e.clientX+12, ty=e.clientY-8;
-  let tw=t.offsetWidth, th=t.offsetHeight;
-  if(tx+tw>window.innerWidth) tx=window.innerWidth-tw-4;
-  if(ty<0) ty=4;
-  if(ty+th>window.innerHeight) ty=window.innerHeight-th-4;
-  t.style.left=tx+'px';
-  t.style.top=ty+'px';
-  clearTimeout(t._hideTimer);
-  t._hideTimer=setTimeout(()=>hideTip(), 2500);
-}
-function hideTip(){
-  clearTimeout(document.getElementById('tooltip')._hideTimer);
-  document.getElementById('tooltip').style.display='none';
-}
-// Hide tooltip on any tap outside enemy/item/shop tiles
-document.addEventListener('touchstart', e=>{
-  if(!e.target.closest('.tile-enemy,.tile-item,.shop-item,.sell-item,.shop-tab')) hideTip();
-},{passive:true});
-document.addEventListener('click', e=>{
-  if(!e.target.closest('.tile-enemy,.tile-item')) hideTip();
-},{passive:true});
-
-// ===================== FX =====================
-function shakeMap(){
-  let m=document.getElementById('map-wrap');
-  m.classList.remove('shake');void m.offsetWidth;m.classList.add('shake');
-}
-function flashDamage(){
-  let el=document.getElementById('damage-flash');
-  el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');
-}
-function floatText(txt,gx,gy,color){
-  let r=document.getElementById('map-wrap').getBoundingClientRect();
-  let cs=getCellSize();
-  let el=document.createElement('div');
-  el.className='float-text';el.textContent=txt;el.style.color=color;
-  el.style.left=(r.left+gx*cs+cs/2)+'px';el.style.top=(r.top+gy*cs)+'px';
-  document.body.appendChild(el);setTimeout(()=>el.remove(),880);
+</script>
+<script>
+// ===================== MOVEMENT =====================
+function consumeRootedTurn(){
+  G.player.rootedTurns=0;
+  addLog('You are rooted and cannot move!', 'log-combat');
+  advanceTurn();
 }
 
-// ===================== INV DRAWER =====================
-function openInv(){
-  document.getElementById('inv-drawer').classList.add('open');
-  document.getElementById('drawer-backdrop').classList.add('open');
-  updateInvDrawer();
-  fireTip('firstBag');
-}
-function closeInv(){
-  document.getElementById('inv-drawer').classList.remove('open');
-  document.getElementById('drawer-backdrop').classList.remove('open');
+function move(dx,dy){
+  if(G.gameOver||G.won||!G.map)return;
+  if(G.player.rootedTurns > 0) { consumeRootedTurn(); return; }
+  let nx=G.player.x+dx,ny=G.player.y+dy;
+  if(nx<0||nx>=MAP_W||ny<0||ny>=MAP_H||G.map[ny][nx]===TILE.WALL)return;
+  let en=G.enemies.find(e=>e.x===nx&&e.y===ny);
+  if(en){if(en.dying)return;attackEnemy(en.id);return;}
+  let it=G.items.find(i=>!i.carried&&i.x===nx&&i.y===ny);
+  G.player.x=nx;G.player.y=ny;computeVision();
+  if(it)pickupItem(it.id,{allowFreeMove:true});else advanceTurn({allowFreeMove:true});
 }
 
+function dpadPress(dx,dy){
+  if(G.gameOver||G.won)return;
+  move(dx,dy);clearInterval(_dpadTimer);
+  _dpadTimer=setInterval(()=>move(dx,dy),185);
+}
+function dpadRelease(){clearInterval(_dpadTimer);_dpadTimer=null;}
+
+</script>
+<script>
+// ===================== ITEMS =====================
+function spawnItem(r){
+  let pool=[...WEAPONS,...ARMORS,...POTIONS];
+  let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
+  let t=w[rand(w.length)];
+  G.items.push({...t,x:r.x+rr(1,r.w-2),y:r.y+rr(1,r.h-2),id:uid()});
+}
+
+function tilePickup(id){
+  if(!canAct()||G.gameOver||G.won) return;
+  let it=G.items.find(i=>i.id==id);if(!it||it.carried)return;
+  if(Math.abs(it.x-G.player.x)>1||Math.abs(it.y-G.player.y)>1){
+    move(Math.sign(it.x-G.player.x)||0,Math.sign(it.y-G.player.y)||0);return;
+  }
+  pickupItem(id);
+}
+
+function pickupItem(id, opts={}){
+  let it=G.items.find(i=>i.id==id);if(!it||it.carried)return;
+  if(it.type==='potion'){
+    it.carried=true;it.x=undefined;it.y=undefined;
+    addLog(`Picked up ${it.name} — stored in bag`,'log-item');
+    floatText(`+BAG`,G.player.x,G.player.y,'#fbbf24');
+    SFX.pickup();fireTip('firstPotion');
+  } else {
+    it.carried=true;it.x=undefined;it.y=undefined;
+    addLog(`Picked up ${it.name}`,'log-item');
+    SFX.pickup();autoEquip(it);
+    fireTip('firstItem');
+  }
+  advanceTurn(opts);
+}
+
+function updateBestWeapon(weapon){
+  let current=G.player.bestWeapon;
+  let match=current.match(/ATK\+(\d+)/);
+  let currentAtk=match?parseInt(match[1]):0;
+  if(weapon.atk>currentAtk){
+    G.player.bestWeapon=`${weapon.name} (ATK+${weapon.atk})`;
+  }
+}
+
+function canEquip(it) {
+  if (it.reqLvl && G.player.lvl < it.reqLvl) return false;
+  if (it.reqClass && !it.reqClass.includes(G.player.class)) return false;
+  return true;
+}
+
+function weaponPower(it) {
+  if (!it) {
+    return G.player.class === 'monk' ? 2 + Math.floor(G.player.lvl / 2) : 0;
+  }
+  let power = it.atk || 0;
+  if (G.player.class === 'mage' && it.sym === '\u2666') power += Math.floor(power / 2);
+  return power;
+}
+
+function armorPower(it) {
+  return it ? (it.def || 0) : 0;
+}
+
+function getItemColorClass(it) {
+  if (it.type !== 'weapon' && it.type !== 'armor') return '';
+  if (it.reqClass && !it.reqClass.includes(G.player.class)) return 'item-never';
+
+  let isUpgrade = false;
+  if (it.type === 'weapon') isUpgrade = weaponPower(it) > weaponPower(G.player.weapon);
+  if (it.type === 'armor') isUpgrade = armorPower(it) > armorPower(G.player.armor);
+
+  if (!isUpgrade) return '';
+
+  if (it.reqLvl && it.reqLvl > G.player.lvl) return 'item-wait';
+  return 'item-upgrade';
+}
+
+function checkBagUpgrades(){
+  let bag = G.items.filter(i=>i.carried);
+  let swapped = false;
+  bag.forEach(it => {
+    if(canEquip(it)) {
+      if(it.type === 'weapon' && weaponPower(it) > weaponPower(G.player.weapon)) {
+        let prev = G.player.weapon;
+        if(prev) {
+          prev.carried = true; prev.x = undefined; prev.y = undefined;
+          G.items.push(prev);
+        }
+        G.player.weapon = it; it.carried = false;
+        let idx = G.items.findIndex(i => i.id === it.id);
+        if(idx > -1) G.items.splice(idx, 1);
+        updateBestWeapon(it);
+        addLog(`Auto-equipped better weapon: ${it.name}`, 'log-item');
+        swapped = true;
+      }
+      else if(it.type === 'armor' && armorPower(it) > armorPower(G.player.armor)) {
+        let prev = G.player.armor;
+        if(prev) {
+          prev.carried = true; prev.x = undefined; prev.y = undefined;
+          G.items.push(prev);
+        }
+        G.player.armor = it; it.carried = false;
+        let idx = G.items.findIndex(i => i.id === it.id);
+        if(idx > -1) G.items.splice(idx, 1);
+        addLog(`Auto-equipped better armor: ${it.name}`, 'log-item');
+        swapped = true;
+      }
+    }
+  });
+  if(swapped) SFX.pickup();
+}
+
+function autoEquip(it){
+  if(it.type==='weapon'){
+    let prev=G.player.weapon;
+    if(canEquip(it) && weaponPower(it)>weaponPower(prev)){
+      if(prev){
+        G.items=G.items.filter(i=>i.id!==prev.id);
+        prev.carried=true;prev.x=undefined;prev.y=undefined;
+        G.items.push(prev);
+      }
+      G.player.weapon=it;it.carried=false;
+      G.items=G.items.filter(i=>i.id!==it.id);
+      updateBestWeapon(it);
+      addLog(`Equipped ${it.name}!`,'log-item');
+    } else {
+      it.carried=true;it.x=undefined;it.y=undefined;
+      let reason = !canEquip(it) ? 'requirements not met' : 'weaker than current';
+      addLog(`${it.name} added to bag (${reason}).`,'log-item');
+    }
+  } else if(it.type==='armor'){
+    let prev=G.player.armor;
+    if(canEquip(it) && armorPower(it)>armorPower(prev)){
+      if(prev){
+        G.items=G.items.filter(i=>i.id!==prev.id);
+        prev.carried=true;prev.x=undefined;prev.y=undefined;
+        G.items.push(prev);
+      }
+      G.player.armor=it;it.carried=false;
+      G.items=G.items.filter(i=>i.id!==it.id);
+      addLog(`Equipped ${it.name}!`,'log-item');
+    } else {
+      it.carried=true;it.x=undefined;it.y=undefined;
+      let reason = !canEquip(it) ? 'requirements not met' : 'weaker than current';
+      addLog(`${it.name} added to bag (${reason}).`,'log-item');
+    }
+  }
+}
+
+function useItem(id){
+  let it=G.items.find(i=>i.id==id);if(!it)return;
+  if(it.type==='potion'){
+    let h=Math.min(it.heal,G.player.maxHp-G.player.hp);
+    G.player.hp+=h;
+    addLog(`Drank ${it.name}: +${h} HP`,'log-item');
+    floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
+  if(!canEquip(it)) {
+    addLog(`Cannot equip ${it.name} (Requires: ${it.reqLvl?'Lvl '+it.reqLvl:''} ${it.reqClass?it.reqClass.join('/'):''})`, 'log-info');
+    return;
+  }
+
+  if(it.type==='weapon'){
+    let prev=G.player.weapon;
+    if(prev){
+      G.items=G.items.filter(i=>i.id!==prev.id);
+      prev.carried=true;prev.x=prev.y=undefined;
+      G.items.push(prev);
+    }
+    G.player.weapon=it;
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    updateBestWeapon(it);
+    addLog(`Equipped ${it.name}`,'log-item');
+  } else if(it.type==='armor'){
+    let prev=G.player.armor;
+    if(prev){
+      G.items=G.items.filter(i=>i.id!==prev.id);
+      prev.carried=true;prev.x=prev.y=undefined;
+      G.items.push(prev);
+    }
+    G.player.armor=it;
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    addLog(`Equipped ${it.name}`,'log-item');
+  }
+  advanceTurn();closeInv();
+}
+
+function descend(){
+  if(G.gameOver||G.won)return;
+  if(G.map[G.player.y][G.player.x]!==TILE.STAIRS){addLog('Find the stairs (>) first','log-info');return;}
+  G.floor++;
+  if(G.floor>FLOORS){G.won=true;showVictory();return;}
+  G.player.hp=Math.min(G.player.maxHp,G.player.hp+10);
+  buildFloor();
+}
+
+</script>
+<script>
+// ===================== COMBAT =====================
+function tileAttack(id){
+  if(!canAct()||G.gameOver||G.won) return;
+  let en=G.enemies.find(e=>e.id==id);if(!en)return;
+  if(en.dying)return;
+  let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
+  let dist=Math.max(Math.abs(en.x-G.player.x),Math.abs(en.y-G.player.y));
+  if(dist<=maxRange){
+    let rangedBow = G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹' && dist > 1;
+    attackEnemy(id,1,{skipCounter:rangedBow});
+  } else {
+    if(G.player.rootedTurns > 0) { consumeRootedTurn(); return; }
+    move(Math.sign(en.x-G.player.x)||0,Math.sign(en.y-G.player.y)||0);
+  }
+}
+
+function attackEnemy(id,multiplier=1,opts={}){
+  let en=G.enemies.find(e=>e.id==id);if(!en)return;
+  if(en.dying)return;
+  if(G.player.vanishTurns > 0) {
+    multiplier *= 2;
+    G.player.vanishTurns = 0;
+    addLog('Sneak Attack!', 'log-combat');
+  }
+  let dmg=Math.max(1,gatk()-en.def+rand(3));
+  if(multiplier>1){dmg*=multiplier;SFX.bash();}else{SFX.hit();}
+  en.hp-=dmg;
+  G.player.damageDealt+=dmg;
+  let atkSym = G.player.weapon ? G.player.weapon.sym : '👊';
+  if(atkSym === '†') atkSym = '🔪';
+  if(atkSym === '♦') atkSym = '✨';
+  popText(atkSym, en.x, en.y);
+  floatText(`-${dmg}`,en.x,en.y,'#f87171');
+  let multTag=multiplier>1?' (CRIT!)':'';
+  addLog(`Hit ${en.name} for ${dmg}${multTag}`, 'log-combat');
+
+  if(G.player.bloodlustTurns > 0) {
+    let heal = Math.floor(dmg / 2);
+    if(heal > 0) {
+      G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
+      floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
+    }
+  }
+
+  if(en.hp<=0){
+    killEnemy(en, false);
+    return;
+  }
+
+  if(opts.skipCounter){
+    advanceTurn();
+    return;
+  }
+
+  if(en.stunnedTurns>0){
+    advanceTurn();
+    return;
+  }
+
+  let edm=Math.max(1,en.atk-gdef()+rand(3));
+  if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm / 2);
+  if(G.player.bloodlustTurns > 0) edm *= 2;
+
+  if(G.player.class === 'rogue' && ch(.25)) {
+    addLog(`Dodged ${en.name}'s attack!`, 'log-info');
+    popText('💨', G.player.x, G.player.y);
+  } else {
+    checkEmergencyPotion(en, edm, ()=>{
+      G.player.hp=Math.max(0,G.player.hp-edm);
+      popText('💢', G.player.x, G.player.y);
+      floatText(`-${edm}`,G.player.x,G.player.y,'#60a5fa');
+      addLog(`${en.name} hits you for ${edm}`,'log-combat');
+      SFX.damage();shakeMap();flashDamage();advanceTurn();
+      if(G.player.hp<=0){G.gameOver=true;showDeath();}
+    });
+  }
+}
+
+function killEnemy(en, skipAdvanceTurn) {
+  let goldDrop=en.gold+rand(3);
+  G.player.xp+=en.xp;G.player.kills++;G.player.gold+=goldDrop;
+
+  if(G.player.vampirism > 0) {
+    let heal = G.player.vampirism;
+    G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
+    floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
+  }
+  if(G.player.class === 'necromancer') {
+    G.player.hp = Math.min(G.player.maxHp, G.player.hp + 1);
+    floatText('+1 HP', G.player.x, G.player.y, '#4ade80');
+  }
+
+  addLog(`${en.name} slain! +${en.xp} XP  +${goldDrop}💰`, 'log-dead');
+  floatText(`+${goldDrop}💰`,en.x,en.y,'#fbbf24');
+  SFX.enemyDeath();
+  fireTip('firstGold');
+  en.dying=true;
+
+  if(en.corpseExplosionTarget) {
+    addLog('CORPSE EXPLOSION!', 'log-combat');
+    SFX.bash();
+    G.enemies.forEach(o => {
+      if(o.id !== en.id && !o.dying && Math.abs(o.x - en.x) <= 1 && Math.abs(o.y - en.y) <= 1) {
+        let dmg = 10 + G.player.lvl * 2;
+        o.hp -= dmg;
+        floatText(`-${dmg}`, o.x, o.y, '#f87171');
+        if(o.hp <= 0) killEnemy(o, true);
+      }
+    });
+  }
+
+  render();
+  setTimeout(()=>{
+    G.enemies=G.enemies.filter(e=>e.id!==en.id);
+    if(ch(.2)){
+      let pool=[...WEAPONS,...ARMORS,...POTIONS];
+      G.items.push({...pool[rand(pool.length)],x:en.x,y:en.y,id:uid()});
+    }
+    checkLevelUp();
+    if(!skipAdvanceTurn) advanceTurn();
+  },320);
+}
+
+function checkLevelUp(){
+  let leveled = false;
+  while(G.player.xp>=G.player.xpNext){
+    G.player.xp-=G.player.xpNext;G.player.lvl++;
+    G.player.xpNext=Math.round(G.player.xpNext*1.6);
+    G.player.maxHp+=8;G.player.hp=Math.min(G.player.maxHp,G.player.hp+8);
+    G.player.atk+=1;G.player.def+=1;
+    if(G.player.class === 'paladin') {
+      G.player.maxHp += 2;
+      G.player.hp = Math.min(G.player.maxHp, G.player.hp + 2);
+    }
+    addLog(`LEVEL UP! Now level ${G.player.lvl}!`,'log-level');
+    floatText('LVL UP!',G.player.x,G.player.y,'#c084fc');
+    SFX.levelUp();fireTip('firstLevelUp');
+    leveled = true;
+  }
+  if(leveled) checkBagUpgrades();
+}
+
+function advanceTurn(opts={}){
+  if(opts.allowFreeMove && G.player.freeMoves > 0) {
+    G.player.freeMoves--;
+    computeVision(); render();
+    return;
+  }
+  G.turn++;
+
+  if(G.player.regen > 0 && G.turn % 10 === 0) {
+    let heal = G.player.regen;
+    G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
+    floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
+  }
+
+  if(G.player.class === 'warrior' && G.turn % 5 === 0 && G.player.hp < G.player.maxHp) {
+    G.player.hp = Math.min(G.player.maxHp, G.player.hp + 1);
+    floatText('+1 HP', G.player.x, G.player.y, '#4ade80');
+  }
+
+  if(G.player.swiftness > 0 && G.turn % 15 === 0) {
+    G.player.freeMoves += G.player.swiftness;
+    addLog(`Swiftness granted ${G.player.swiftness} free move(s)!`, 'log-info');
+  }
+
+  if(G.ability1Cooldown>0)G.ability1Cooldown--;
+  if(G.ability2Cooldown>0)G.ability2Cooldown--;
+  if(G.player.shieldWallTurns>0)G.player.shieldWallTurns--;
+  if(G.player.vanishTurns>0)G.player.vanishTurns--;
+  if(G.player.bloodlustTurns>0)G.player.bloodlustTurns--;
+  if(G.player.rootedTurns>0)G.player.rootedTurns--;
+
+  G.enemies.forEach(e=>{
+    if(G.gameOver||G.won) return;
+    if(e.dying) return;
+
+    let trapIdx = G.traps.findIndex(t => t.x===e.x && t.y===e.y);
+    if(trapIdx !== -1) {
+      G.traps.splice(trapIdx, 1);
+      e.stunnedTurns = 5;
+      e.hp -= 5;
+      floatText(`-5`, e.x, e.y, '#f87171');
+      addLog(`${e.name} stepped on a Bear Trap!`, 'log-combat');
+      if(e.hp<=0) { killEnemy(e, true); return; }
+    }
+
+    if(e.stunnedTurns>0) {
+      e.stunnedTurns--;
+      return;
+    }
+
+    let seesPlayer = G.visible.has(e.y*MAP_W+e.x) && G.player.vanishTurns === 0;
+    if(!seesPlayer){
+      if(ch(.4)){
+        let ds=[[-1,0],[1,0],[0,-1],[0,1]];let[dx,dy]=ds[rand(4)];
+        let nx=e.x+dx,ny=e.y+dy;
+        if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
+           !(nx===G.player.x&&ny===G.player.y)&&
+           !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;}
+      }
+    } else {
+      let dx=G.player.x-e.x,dy=G.player.y-e.y;
+      let steps=Math.abs(dx)>Math.abs(dy)?[[Math.sign(dx),0],[0,Math.sign(dy)]]:[[0,Math.sign(dy)],[Math.sign(dx),0]];
+      for(let[sx,sy] of steps){
+        let nx=e.x+sx,ny=e.y+sy;
+        if(nx===G.player.x&&ny===G.player.y){
+          let edm=Math.max(1,e.atk-gdef()+rand(3));
+          if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm / 2);
+          if(G.player.bloodlustTurns > 0) edm *= 2;
+
+          if(G.player.class === 'rogue' && ch(.25)) {
+            addLog(`Dodged ${e.name}'s attack!`, 'log-info');
+            popText('💨', G.player.x, G.player.y);
+          } else {
+            checkEmergencyPotion(e, edm, ()=>{
+              G.player.hp=Math.max(0,G.player.hp-edm);
+              addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
+              SFX.damage();shakeMap();flashDamage();
+              popText('💢', G.player.x, G.player.y);
+              floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
+              if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
+              computeVision();render();
+            });
+          }
+          break;
+        }
+        if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
+           !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;break;}
+      }
+    }
+  });
+  G.enemies.forEach(e=>{
+    if(e.corpseExplosionTurns>0){
+      e.corpseExplosionTurns--;
+      if(e.corpseExplosionTurns<=0){
+        e.corpseExplosionTarget=false;
+      }
+    }
+  });
+  computeVision();render();
+  if(!TIPS.firstEnemy.shown && G.enemies.some(e=>G.visible.has(e.y*MAP_W+e.x))) fireTip('firstEnemy');
+  if(!TIPS.firstStairs.shown && G.rooms.length &&
+     G.visible.has(G.rooms[G.rooms.length-1].cy*MAP_W+G.rooms[G.rooms.length-1].cx)) fireTip('firstStairs');
+  if(!TIPS.firstShop.shown && G.shops && G.shops.some(s=>G.visible.has(s.y*MAP_W+s.x))) fireTip('firstShop');
+}
+
+function doAbility1(){
+  if(G.gameOver||G.won)return;
+  if(G.ability1Cooldown>0){addLog(`Ability on cooldown (${G.ability1Cooldown})`,'log-info');return;}
+
+  let p = G.player;
+  let visEnemies = G.enemies.filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x));
+
+  if(p.class === 'warrior') {
+    let t=visEnemies.filter(e=>Math.abs(e.x-p.x)<=2&&Math.abs(e.y-p.y)<=2).sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
+    if(t.length) { G.ability1Cooldown = 5; attackEnemy(t[0].id,2); }
+    else addLog('No nearby enemies to Bash','log-info');
+  }
+  else if(p.class === 'rogue') {
+    p.freeMoves = 2; G.ability1Cooldown = 3;
+    addLog('Dashed! You have 2 free moves.', 'log-info'); updateActBtns();
+  }
+  else if(p.class === 'mage') {
+    let t=visEnemies.sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
+    if(t.length) {
+      G.ability1Cooldown = 5; let target = t[0]; let hits = [];
+      G.enemies.forEach(e => {
+        if(!e.dying && Math.abs(e.x-target.x)<=1 && Math.abs(e.y-target.y)<=1) {
+          let dmg = Math.max(1, gatk() - e.def + rand(3)); e.hp -= dmg;
+          floatText(`-${dmg}`,e.x,e.y,'#f87171'); p.damageDealt += dmg;
+          if(e.hp <= 0) hits.push(e);
+        }
+      });
+      SFX.bash(); addLog(`Fireball hit!`, 'log-combat');
+      if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
+      else advanceTurn();
+    } else addLog('No visible enemies to Fireball', 'log-info');
+  }
+  else if(p.class === 'paladin') {
+    let t=visEnemies.filter(e=>Math.abs(e.x-p.x)<=2&&Math.abs(e.y-p.y)<=2).sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
+    if(t.length) {
+      G.ability1Cooldown = 5;
+      let en = t[0];
+      en.stunnedTurns = 1;
+      attackEnemy(en.id, 1);
+      addLog(`Smited ${en.name}! They are stunned.`, 'log-combat');
+    } else addLog('No nearby enemies to Smite','log-info');
+  }
+  else if(p.class === 'ranger') {
+    let t=visEnemies.map(e=>{
+      let dx=e.x-p.x, dy=e.y-p.y;
+      let aligned = dx===0 || dy===0 || Math.abs(dx)===Math.abs(dy);
+      if(!aligned) return null;
+      let sx=Math.sign(dx), sy=Math.sign(dy);
+      let cx=p.x+sx, cy=p.y+sy, clear=true;
+      while(cx!==e.x || cy!==e.y) {
+        if(cx<0||cx>=MAP_W||cy<0||cy>=MAP_H||G.map[cy][cx]===TILE.WALL){clear=false;break;}
+        cx+=sx; cy+=sy;
+      }
+      return clear ? {e, sx, sy, dist:Math.abs(dx)+Math.abs(dy)} : null;
+    }).filter(Boolean).sort((a,b)=>a.dist-b.dist);
+    if(t.length) {
+      G.ability1Cooldown = 4;
+      let target = t[0].e;
+      let dx = t[0].sx, dy = t[0].sy;
+      let cx = p.x + dx, cy = p.y + dy;
+      let hits = [];
+      while(cx>=0&&cx<MAP_W&&cy>=0&&cy<MAP_H&&G.map[cy][cx] !== TILE.WALL) {
+        let e = G.enemies.find(e => e.x === cx && e.y === cy && !e.dying);
+        if(e) {
+          let dmg = Math.max(1, gatk() - e.def + rand(3)); e.hp -= dmg;
+          floatText(`-${dmg}`,e.x,e.y,'#f87171'); p.damageDealt += dmg;
+          if(e.hp <= 0) hits.push(e);
+        }
+        cx += dx; cy += dy;
+      }
+      SFX.bash(); addLog('Piercing Shot fired!', 'log-combat');
+      if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
+      else advanceTurn();
+    } else addLog('No visible enemies in line for Piercing Shot','log-info');
+  }
+  else if(p.class === 'barbarian') {
+    let targets = G.enemies.filter(e => !e.dying && Math.abs(e.x-p.x)<=1 && Math.abs(e.y-p.y)<=1);
+    if(!targets.length){addLog('No adjacent enemies to Cleave','log-info');return;}
+    G.ability1Cooldown = 4;
+    let hits = [];
+    targets.forEach(e => {
+        let dmg = Math.max(1, gatk() - e.def + rand(3)); e.hp -= dmg;
+        floatText(`-${dmg}`,e.x,e.y,'#f87171'); p.damageDealt += dmg;
+        if(e.hp <= 0) hits.push(e);
+    });
+    SFX.bash(); addLog('Cleave!', 'log-combat');
+    if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
+    else advanceTurn();
+  }
+  else if(p.class === 'necromancer') {
+    let t=visEnemies.filter(e=>Math.abs(e.x-p.x)<=2&&Math.abs(e.y-p.y)<=2).sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
+    if(t.length) {
+      G.ability1Cooldown = 5;
+      let en = t[0];
+      let dmg = Math.max(1, gatk() - en.def + rand(3));
+      en.hp -= dmg; floatText(`-${dmg}`,en.x,en.y,'#f87171'); p.damageDealt += dmg;
+      let heal = dmg;
+      p.hp = Math.min(p.maxHp, p.hp + heal); floatText(`+${heal} HP`, p.x, p.y, '#4ade80');
+      SFX.bash(); addLog(`Siphoned ${dmg} life from ${en.name}!`, 'log-combat');
+      if(en.hp <= 0) killEnemy(en, false);
+      else advanceTurn();
+    } else addLog('No nearby enemies to Siphon','log-info');
+  }
+  else if(p.class === 'monk') {
+    let t=visEnemies.filter(e=>Math.abs(e.x-p.x)<=1&&Math.abs(e.y-p.y)<=1).sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
+    if(t.length) {
+      G.ability1Cooldown = 3;
+      let en = t[0];
+      let dx = Math.sign(en.x - p.x), dy = Math.sign(en.y - p.y);
+      let nx = en.x + dx, ny = en.y + dy;
+      let dmg = Math.max(1, gatk() - en.def + rand(3));
+      if(G.map[ny] && G.map[ny][nx] !== TILE.WALL && !G.enemies.some(e=>e.x===nx&&e.y===ny)) {
+        en.x = nx; en.y = ny;
+      } else {
+        dmg *= 2;
+        addLog('Slammed into a wall!', 'log-combat');
+      }
+      en.hp -= dmg; floatText(`-${dmg}`,en.x,en.y,'#f87171'); p.damageDealt += dmg;
+      SFX.bash(); addLog(`Push Kick hit ${en.name} for ${dmg}!`, 'log-combat');
+      if(en.hp <= 0) killEnemy(en, false);
+      else advanceTurn();
+    } else addLog('No adjacent enemies to Push Kick','log-info');
+  }
+}
+
+function doAbility2(){
+  let p = G.player;
+  if(G.gameOver||G.won || p.lvl < 5)return;
+  if(G.ability2Cooldown>0){addLog(`Ability on cooldown (${G.ability2Cooldown})`,'log-info');return;}
+
+  if(p.class === 'warrior') {
+    p.shieldWallTurns = 3; G.ability2Cooldown = 10;
+    addLog('Shield Wall active! Damage halved for 3 turns.', 'log-info'); advanceTurn();
+  }
+  else if(p.class === 'rogue') {
+    p.vanishTurns = 3; G.ability2Cooldown = 10;
+    addLog('Vanished! You are invisible for 3 turns.', 'log-info'); advanceTurn();
+  }
+  else if(p.class === 'mage') {
+    let safeTiles = [];
+    for(let y=0;y<MAP_H;y++) for(let x=0;x<MAP_W;x++) {
+      if(G.visible.has(y*MAP_W+x) && G.map[y][x] === TILE.FLOOR) {
+        if(!G.enemies.some(e=>e.x===x&&e.y===y)) safeTiles.push({x,y});
+      }
+    }
+    if(safeTiles.length) {
+      let t = safeTiles[rand(safeTiles.length)];
+      p.x = t.x; p.y = t.y; G.ability2Cooldown = 8;
+      addLog('Blinked to a safe location!', 'log-combat'); advanceTurn();
+    }
+  }
+  else if(p.class === 'paladin') {
+    let heal = Math.floor(p.maxHp * 0.3);
+    p.hp = Math.min(p.maxHp, p.hp + heal);
+    floatText(`+${heal} HP`, p.x, p.y, '#4ade80');
+    G.ability2Cooldown = 15;
+    addLog('Lay on Hands: Healed!', 'log-combat'); advanceTurn();
+  }
+  else if(p.class === 'ranger') {
+    G.traps.push({x: p.x, y: p.y});
+    let safeAdj = [[-1,0],[1,0],[0,-1],[0,1]].map(d=>({x:p.x+d[0], y:p.y+d[1]}))
+      .filter(t=>G.map[t.y] && G.map[t.y][t.x]===TILE.FLOOR && !G.enemies.some(e=>e.x===t.x&&e.y===t.y));
+    if(safeAdj.length) {
+      let best = safeAdj[rand(safeAdj.length)];
+      p.x = best.x; p.y = best.y;
+    }
+    G.ability2Cooldown = 10;
+    addLog('Dropped a Bear Trap and jumped back!', 'log-combat'); advanceTurn();
+  }
+  else if(p.class === 'barbarian') {
+    p.bloodlustTurns = 3; G.ability2Cooldown = 12;
+    addLog('Bloodlust! Deal damage to heal, but take double damage!', 'log-combat'); advanceTurn();
+  }
+  else if(p.class === 'necromancer') {
+    let visEnemies = G.enemies.filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x));
+    let t=visEnemies.sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
+    if(t.length) {
+      t[0].corpseExplosionTarget = true;
+      t[0].corpseExplosionTurns = 3;
+      G.ability2Cooldown = 8;
+      addLog(`Targeted ${t[0].name} for Corpse Explosion!`, 'log-combat'); advanceTurn();
+    } else addLog('No visible enemies to target', 'log-info');
+  }
+  else if(p.class === 'monk') {
+    let visEnemies = G.enemies.filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x));
+    let t=visEnemies.filter(e=>Math.abs(e.x-p.x)<=1&&Math.abs(e.y-p.y)<=1).sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
+    if(t.length) {
+      G.ability2Cooldown = 10;
+      p.rootedTurns = 2;
+      let en = t[0];
+      addLog('Flurry of Blows! You are rooted.', 'log-combat');
+      attackEnemy(en.id, 3);
+    } else addLog('No adjacent enemies for Flurry', 'log-info');
+  }
+}
+
+</script>
+<script>
+// ===================== SHOP =====================
+function generateShopStock(){
+  let stock=[];
+  let floorScale=G.floor;
+
+  // 3-5 potions
+  let pots=[...POTIONS].sort(()=>Math.random()-.5);
+  for(let i=0; i<Math.min(pots.length, rr(3,5)); i++) {
+    stock.push({...pots[i],id:uid(),sold:false});
+  }
+
+  // 4-6 weapons scaled to floor
+  let weps=WEAPONS.filter(w=>w.atk<=4+floorScale*3).sort(()=>Math.random()-.5);
+  for(let i=0; i<Math.min(weps.length, rr(4,6)); i++) {
+    stock.push({...weps[i],id:uid(),sold:false});
+  }
+
+  // 3-4 armors
+  let arms=ARMORS.filter(a=>a.def<=2+floorScale*2).sort(()=>Math.random()-.5);
+  for(let i=0; i<Math.min(arms.length, rr(3,4)); i++) {
+    stock.push({...arms[i],id:uid(),sold:false});
+  }
+
+  // 2-4 upgrades (floors 2+)
+  if(G.floor>=2){
+    let ups=UPGRADES.filter(u=>u.rarity!=='legendary'||G.floor>=4).sort(()=>Math.random()-.5);
+    for(let i=0; i<Math.min(ups.length, rr(2,4)); i++) {
+      stock.push({...ups[i],id:uid(),sold:false});
+    }
+  }
+
+  return stock;
+}
+
+function openShop(){
+  if(G.gameOver||G.won)return;
+  if(!G.shops || G.shops.length===0){addLog('No shop on this floor','log-info');return;}
+  let p=G.player;
+  let nearShop = G.shops.find(s => Math.abs(p.x-s.x)<=1 && Math.abs(p.y-s.y)<=1);
+  if(!nearShop){addLog('Move to a shop ($) to enter','log-shop');return;}
+  G.currentShop = nearShop;
+  renderShop();
+  switchShopTab('buy');
+  document.getElementById('shop-overlay').classList.add('open');
+}
+
+function closeShop(){
+  document.getElementById('shop-overlay').classList.remove('open');
+}
+
+function renderShop(){
+  document.getElementById('shop-gold-val').textContent=G.player.gold;
+  let h='';
+  if(!G.currentShop) {
+    document.getElementById('shop-items').innerHTML='';
+    return;
+  }
+  G.currentShop.stock.forEach(item=>{
+    let canAfford=G.player.gold>=item.price;
+    let desc=item.desc||iDesc(item);
+      let colorCls = getItemColorClass(item);
+      h+=`<div class="shop-item${item.sold?' sold':''}"
+        onclick="buyItem('${item.id}')"
+        ontouchend="event.preventDefault();event.stopPropagation();buyItem('${item.id}')">
+        <div class="shop-item-left">
+          <div class="shop-item-name ${colorCls}">${item.sym} ${item.name}${item.sold?' (SOLD)':''}</div>
+        <div class="shop-item-desc">${desc} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
+      </div>
+      <div class="shop-item-price${canAfford?'':' cant-afford'}">💰${item.price}</div>
+    </div>`;
+  });
+  document.getElementById('shop-items').innerHTML=h;
+}
+
+function buyItem(id){
+  if(!canAct() || !G.currentShop) return;
+  let item=G.currentShop.stock.find(i=>i.id==id);
+  if(!item||item.sold)return;
+  if(G.player.gold<item.price){addLog('Not enough gold!','log-shop');return;}
+  G.player.gold-=item.price;
+  item.sold=true;
+
+  if(item.type==='potion'){
+    let clone={...item,carried:true,id:uid()};
+    G.items.push(clone);
+    addLog(`Bought ${item.name} — stored in bag`,'log-shop');
+    SFX.buy();
+  } else if(item.type==='weapon'){
+    // Put in inventory, auto-equip if better
+    let clone={...item,carried:true,id:uid()};
+    G.items.push(clone);
+    autoEquip(clone);
+    addLog(`Bought ${item.name}`,'log-shop');
+  } else if(item.type==='armor'){
+    let clone={...item,carried:true,id:uid()};
+    G.items.push(clone);
+    autoEquip(clone);
+    addLog(`Bought ${item.name}`,'log-shop');
+  } else if(item.type==='upgrade'){
+    applyUpgrade(item);
+  }
+
+  renderShop();
+  updateHUD();
+  updateActBtns();
+}
+
+function switchShopTab(tab){
+  document.getElementById('tab-buy').classList.toggle('active', tab==='buy');
+  document.getElementById('tab-sell').classList.toggle('active', tab==='sell');
+  document.getElementById('shop-buy-panel').style.display=tab==='buy'?'block':'none';
+  document.getElementById('shop-sell-panel').style.display=tab==='sell'?'block':'none';
+  if(tab==='sell') renderSellPanel();
+  if(tab==='buy') renderShop();
+}
+
+function renderSellPanel(){
+  // Sellable = carried items + equipped items (player can sell anything from bag or currently equipped)
+  let sellable=[
+    ...G.items.filter(i=>i.carried),
+    ...(G.player.weapon?[{...G.player.weapon,_equipped:'weapon'}]:[]),
+    ...(G.player.armor?[{...G.player.armor,_equipped:'armor'}]:[]),
+  ];
+  let h='<div style="margin-bottom:10px;"><button class="btn" style="width:100%" onclick="sellWeakerGear()">SELL WEAKER GEAR</button></div>';
+  if(!sellable.length){
+    h+='<div class="sell-empty">Nothing to sell.</div>';
+  } else {
+    let grouped = {};
+    sellable.forEach(item => {
+      let key = item.name + (item._equipped ? '_eq' : '');
+      if(!grouped[key]) grouped[key] = { count: 0, items: [] };
+      grouped[key].count++;
+      grouped[key].items.push(item);
+    });
+    Object.values(grouped).forEach(g => {
+      let item = g.items[0];
+      let sellPrice=Math.max(1,Math.floor((item.price||10)/2));
+      let equippedTag=item._equipped?` <span style="color:var(--accent);font-size:.5rem">[EQUIPPED]</span>`:'';
+      let countTag = g.count > 1 ? ` <span style="color:var(--accent);font-size:.5rem">x${g.count}</span>` : '';
+      let colorCls = getItemColorClass(item);
+      h+=`<div class="sell-item"
+        onclick="sellItem('${item.id}','${item._equipped||''}')"
+        ontouchend="event.preventDefault();event.stopPropagation();sellItem('${item.id}','${item._equipped||''}')">
+        <div class="sell-item-left">
+          <div class="sell-item-name ${colorCls}">${item.sym} ${item.name}${equippedTag}${countTag}</div>
+          <div class="sell-item-desc">${iDesc(item)} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
+        </div>
+        <div class="sell-item-price">+${sellPrice}💰</div>
+      </div>`;
+    });
+  }
+  document.getElementById('sell-items').innerHTML=h;
+}
+
+function sellItem(id, equippedSlot){
+  if(!canAct()) return;
+  // Prevent double-sell: mark item as selling immediately
+  let item, isEquipped=false;
+  if(equippedSlot==='weapon' && G.player.weapon && String(G.player.weapon.id)===String(id)){
+    item=G.player.weapon; isEquipped=true;
+  } else if(equippedSlot==='armor' && G.player.armor && String(G.player.armor.id)===String(id)){
+    item=G.player.armor; isEquipped=true;
+  } else {
+    item=G.items.find(i=>String(i.id)===String(id) && i.carried && !i._selling);
+    if(item) item._selling=true; // lock immediately to block double-tap
+  }
+  if(!item) return;
+
+  let sellPrice=Math.max(1,Math.floor((item.price||10)/2));
+  G.player.gold+=sellPrice;
+
+  if(isEquipped){
+    if(equippedSlot==='weapon') G.player.weapon=null;
+    else if(equippedSlot==='armor') G.player.armor=null;
+    // Also purge any ghost copy of this item from G.items
+    let idx = G.items.findIndex(i=>String(i.id)===String(id));
+    if(idx>-1) G.items.splice(idx,1);
+  } else {
+    let idx = G.items.findIndex(i=>String(i.id)===String(id));
+    if(idx>-1) G.items.splice(idx,1);
+  }
+
+  addLog(`Sold ${item.name} for ${sellPrice}💰`, 'log-shop');
+  floatText(`+${sellPrice}💰`, G.player.x, G.player.y, '#fbbf24');
+  SFX.sell();
+  document.getElementById('shop-gold-val').textContent=G.player.gold;
+  updateHUD();
+  updateActBtns();
+  renderSellPanel();
+  renderShop(); // refresh buy tab so affordability colours are up to date
+}
+
+function sellWeakerGear(){
+  if(!canAct()) return;
+  let soldCount = 0;
+  let totalGold = 0;
+
+  let pWeapAtk = weaponPower(G.player.weapon);
+  let pArmDef = armorPower(G.player.armor);
+
+  let newItems = [];
+  for (let i = 0; i < G.items.length; i++) {
+    let item = G.items[i];
+    if (!item.carried) {
+      newItems.push(item);
+      continue;
+    }
+
+    let shouldSell = false;
+    if ((item.type === 'weapon' || item.type === 'armor') && !canEquip(item)) shouldSell = true;
+    if (item.type === 'weapon' && weaponPower(item) < pWeapAtk) shouldSell = true;
+    if (item.type === 'armor' && armorPower(item) < pArmDef) shouldSell = true;
+
+    if (shouldSell) {
+      let sellPrice = Math.max(1, Math.floor((item.price || 10) / 2));
+      totalGold += sellPrice;
+      soldCount++;
+    } else {
+      newItems.push(item);
+    }
+  }
+
+  if (soldCount > 0) {
+    G.items = newItems;
+    G.player.gold += totalGold;
+    addLog(`Auto-sold ${soldCount} weaker gear for ${totalGold}💰`, 'log-shop');
+    floatText(`+${totalGold}💰`, G.player.x, G.player.y, '#fbbf24');
+    SFX.sell();
+    document.getElementById('shop-gold-val').textContent=G.player.gold;
+    updateHUD();
+    renderSellPanel();
+    renderShop();
+  } else {
+    addLog(`No weaker gear found to sell.`, 'log-shop');
+  }
+}
+
+function applyUpgrade(item){
+  let p=G.player;
+  if(item.stat==='atk'){p.atk+=item.amount;addLog(`Strength Tonic: ATK +${item.amount}!`,'log-level');}
+  else if(item.stat==='def'){p.def+=item.amount;addLog(`Iron Skin: DEF +${item.amount}!`,'log-level');}
+  else if(item.stat==='hp'){p.maxHp+=item.amount;p.hp=Math.min(p.maxHp,p.hp+item.amount);addLog(`Vitality Brew: Max HP +${item.amount}!`,'log-level');}
+  else if(item.stat==='all'){p.atk+=1;p.def+=1;p.maxHp+=10;p.hp=Math.min(p.maxHp,p.hp+10);addLog(`Blessing: ATK+1, DEF+1, MaxHP+10!`,'log-level');}
+  else if(item.stat==='vamp'){p.vampirism+=item.amount;addLog(`Vampiric Ring: Heal ${item.amount} HP per kill!`,'log-level');}
+  else if(item.stat==='regen'){p.regen+=item.amount;addLog(`Troll Blood: Heal ${item.amount} HP every 10 turns!`,'log-level');}
+  else if(item.stat==='swift'){p.swiftness+=item.amount;addLog(`Hermes Boots: +${item.amount} free move every 15 turns!`,'log-level');}
+  floatText('UPGRADED!',p.x,p.y,'#c084fc');
+}
+
+</script>
+<script>
+// ===================== MAP GEN =====================
+function generateMap(){
+  let map=Array.from({length:MAP_H},()=>Array(MAP_W).fill(TILE.WALL));
+  let rooms=[];
+  const carve=(x,y,w,h)=>{
+    for(let ry=y;ry<y+h;ry++) for(let rx=x;rx<x+w;rx++)
+      if(ry>0&&ry<MAP_H-1&&rx>0&&rx<MAP_W-1) map[ry][rx]=TILE.FLOOR;
+    rooms.push({x,y,w,h,cx:Math.floor(x+w/2),cy:Math.floor(y+h/2)});
+  };
+  const tunnel=(x1,y1,x2,y2)=>{
+    let cx=x1,cy=y1;
+    while(cx!==x2){map[cy][cx]=TILE.FLOOR;cx+=(x2>cx?1:-1);}
+    while(cy!==y2){map[cy][cx]=TILE.FLOOR;cy+=(y2>cy?1:-1);}
+  };
+  let n=rr(14,22),att=0;
+  while(rooms.length<n&&att<300){
+    att++;
+    let rw=rr(3,7),rh=rr(3,5),rx=rr(1,MAP_W-rw-1),ry=rr(1,MAP_H-rh-1);
+    let ok=true;
+    for(let r of rooms) if(rx<r.x+r.w+1&&rx+rw>r.x-1&&ry<r.y+r.h+1&&ry+rh>r.y-1){ok=false;break;}
+    if(ok) carve(rx,ry,rw,rh);
+  }
+  for(let i=1;i<rooms.length;i++) tunnel(rooms[i-1].cx,rooms[i-1].cy,rooms[i].cx,rooms[i].cy);
+  return{map,rooms};
+}
+
+// ===================== INIT =====================
+function initGame(playerClass = 'warrior'){
+  let p = {
+    x:0,y:0,lvl:1,xp:0,xpNext:10,
+    weapon:null,armor:null,kills:0,gold:0,damageDealt:0,bestWeapon:'Bare hands',
+    class: playerClass,
+    shieldWallTurns: 0,
+    vanishTurns: 0,
+    freeMoves: 0,
+    bloodlustTurns: 0,
+    rootedTurns: 0,
+    vampirism: 0,
+    regen: 0,
+    swiftness: 0
+  };
+  if(playerClass === 'warrior') {
+    p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 3;
+    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◈', price:35};
+  } else if(playerClass === 'rogue') {
+    p.hp = 18; p.maxHp = 18; p.atk = 6; p.def = 1;
+    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:2, rarity:'common', sym:'†', price:20};
+    p.bestWeapon = 'Rusty Dagger';
+  } else if(playerClass === 'mage') {
+    p.hp = 15; p.maxHp = 15; p.atk = 5; p.def = 1;
+    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'♦', price:40};
+    p.bestWeapon = 'Bone Staff';
+  } else if(playerClass === 'paladin') {
+    p.hp = 25; p.maxHp = 25; p.atk = 2; p.def = 4;
+    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◈', price:45};
+  } else if(playerClass === 'ranger') {
+    p.hp = 15; p.maxHp = 15; p.atk = 4; p.def = 2;
+    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:3, rarity:'common', sym:'🏹', price:30};
+    p.bestWeapon = 'Shortbow';
+  } else if(playerClass === 'barbarian') {
+    p.hp = 40; p.maxHp = 40; p.atk = 5; p.def = 0;
+    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:40};
+    p.bestWeapon = 'Great Axe';
+  } else if(playerClass === 'necromancer') {
+    p.hp = 15; p.maxHp = 15; p.atk = 3; p.def = 1;
+    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:4, rarity:'common', sym:'♦', price:40};
+    p.bestWeapon = 'Skull Rod';
+  } else if(playerClass === 'monk') {
+    p.hp = 20; p.maxHp = 20; p.atk = 3; p.def = 2;
+  }
+
+  G={
+    floor:1,
+    player: p,
+    enemies:[],items:[],traps:[],
+    map:null,rooms:[],shops:[],
+    visible:new Set(),seen:new Set(),
+    log:[],turn:0,
+    ability1Cooldown:0, ability2Cooldown:0,
+    gameOver:false,won:false,
+  };
+  resetTips();
+  buildFloor();
+}
+
+function buildFloor(){
+  let{map,rooms}=generateMap();
+  G.map=map;G.rooms=rooms;G.enemies=[];G.shops=[];G.traps=[];G.currentShop=null;
+  // Preserve carried items (bag contents) across floor transitions — only clear floor items
+  G.items=G.items.filter(i=>i.carried);
+  G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
+
+  // Stairs in last room
+  map[rooms[rooms.length-1].cy][rooms[rooms.length-1].cx]=TILE.STAIRS;
+
+  // Shops in middle rooms, up to 3
+  if(rooms.length>=5){
+    let pool = rooms.slice(1, -1).sort(()=>Math.random()-.5);
+    let numShops = Math.min(3, pool.length);
+    for(let i=0; i<numShops; i++){
+      let sr = pool[i];
+      G.shops.push({x:sr.cx, y:sr.cy, stock:generateShopStock()});
+      map[sr.cy][sr.cx]=TILE.SHOP;
+    }
+  }
+
+  // Enemies & items in remaining rooms
+  // Compute initial vision to avoid spawning enemies the player can see
+  computeVision();
+  const startVisible = new Set(G.visible);
+
+  for(let i=1;i<rooms.length;i++){
+    let r=rooms[i];
+    // Don't spawn enemies in shop rooms or the starting room
+    if(G.shops.some(s=>r.cx===s.x&&r.cy===s.y)) continue;
+    let ne=rr(1,2+G.floor);
+    for(let e=0;e<ne;e++){
+      let tier=Math.min(Math.floor(G.floor*.8+rand(2)),ENEMIES.length-1);
+      let t=ENEMIES[tier],sc=1+(G.floor-1)*.4;
+      // Find a position not visible from player start, with extra distance check
+      let ex, ey, attempts=0;
+      do {
+        ex=r.x+rr(1,r.w-2);
+        ey=r.y+rr(1,r.h-2);
+        attempts++;
+        let dist=Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y);
+        if(!startVisible.has(ey*MAP_W+ex) && dist>8) break;
+      } while(attempts<30);
+      // Only place if clearly out of starting vision
+      if(startVisible.has(ey*MAP_W+ex)) {
+        // Last resort: skip this enemy rather than spawn it visible
+        if(Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y)<=8) continue;
+      }
+      G.enemies.push({...t,
+        hp:Math.round(t.hp*sc),maxHp:Math.round(t.hp*sc),
+        atk:Math.round(t.atk*sc),def:Math.round(t.def*sc),
+        xp:Math.round(t.xp*sc),gold:Math.round(t.gold*sc),
+        x:ex,y:ey,id:uid(), stunnedTurns: 0});
+    }
+    if(ch(.65)) spawnItem(r);
+  }
+  computeVision();render();
+  addLog(`Floor ${G.floor}. ${G.shops.length?'Merchants await nearby...':''}`, G.shops.length?'log-shop':'log-info');
+  // Fire tips for anything visible on spawn
+  setTimeout(()=>{
+    if(!TIPS.firstEnemy.shown && G.enemies.some(e=>G.visible.has(e.y*MAP_W+e.x))) fireTip('firstEnemy');
+    if(!TIPS.firstShop.shown && G.shops.some(s=>G.visible.has(s.y*MAP_W+s.x))) fireTip('firstShop');
+    if(!TIPS.firstStairs.shown && G.map[G.rooms[G.rooms.length-1].cy][G.rooms[G.rooms.length-1].cx]===TILE.STAIRS &&
+       G.visible.has(G.rooms[G.rooms.length-1].cy*MAP_W+G.rooms[G.rooms.length-1].cx)) fireTip('firstStairs');
+  }, 600); // slight delay so floor message shows first
+}
+
+</script>
+<script>
 // ===================== SCREENS =====================
-function startGame(){
+let _resizeHandlerBound=false;
+
+function handleResize(){
+  if(G.map)render();
+}
+
+const CLASS_DATA = {
+  warrior: { name: 'Warrior', tagline: 'A sturdy fighter who excels in sustained combat.', hp: 30, atk: 3, def: 3, weapon: 'Bare Hands', armor: 'Chain Mail', ability1: 'BASH', desc1: 'Deals 2x damage to a nearby visible enemy. Cooldown: 5', ability2: 'SHIELD WALL', desc2: '(Lvl 5) Reduces incoming damage by 50% for 3 turns. Cooldown: 10', passive: 'Regenerates 1 HP every 5 turns.' },
+  rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 18, atk: 6, def: 1, weapon: 'Rusty Dagger', armor: 'None', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 25% of all incoming attacks.' },
+  mage: { name: 'Mage', tagline: 'A fragile spellcaster with potent magic.', hp: 15, atk: 5, def: 1, weapon: 'Bone Staff', armor: 'None', ability1: 'FIREBALL', desc1: 'Deals damage to all enemies in a 3x3 area around a target. Cooldown: 5', ability2: 'BLINK', desc2: '(Lvl 5) Teleport instantly to a safe, visible tile. Cooldown: 8', passive: 'Magic weapons (♦) deal +50% damage.' },
+  paladin: { name: 'Paladin', tagline: 'A holy champion focused on sustain and defense.', hp: 25, atk: 2, def: 4, weapon: 'Bare Hands', armor: 'Iron Plate', ability1: 'SMITE', desc1: 'Deals damage and stuns the enemy for 1 turn. Cooldown: 5', ability2: 'LAY ON HANDS', desc2: '(Lvl 5) Heals for 30% of Max HP. Cooldown: 15', passive: 'Max HP increases by 2 upon leveling up.' },
+  ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 15, atk: 4, def: 2, weapon: 'Shortbow', armor: 'None', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 3 tiles away.' },
+  barbarian: { name: 'Barbarian', tagline: 'A fearless brute who thrives in chaos.', hp: 40, atk: 5, def: 0, weapon: 'Great Axe', armor: 'None', ability1: 'CLEAVE', desc1: 'Deals damage to all adjacent enemies. Cooldown: 4', ability2: 'BLOODLUST', desc2: '(Lvl 5) For 3 turns, heal 50% of damage dealt, but take 2x damage. Cooldown: 12', passive: 'Deals +1 damage for every 10 missing HP.' },
+  necromancer: { name: 'Necromancer', tagline: 'A dark caster who drains life from foes.', hp: 15, atk: 3, def: 1, weapon: 'Skull Rod', armor: 'None', ability1: 'SIPHON LIFE', desc1: 'Deals damage and heals yourself for the same amount. Cooldown: 5', ability2: 'CORPSE EXPLOSION', desc2: '(Lvl 5) Mark an enemy for 3 turns. If it dies while marked, it explodes for heavy AoE damage. Cooldown: 8', passive: 'Heals 1 HP whenever an enemy dies.' },
+  monk: { name: 'Monk', tagline: 'A disciplined martial artist.', hp: 20, atk: 3, def: 2, weapon: 'Bare Hands', armor: 'None', ability1: 'PUSH KICK', desc1: 'Pushes an enemy 1 tile away. Deals extra damage if they hit a wall. Cooldown: 3', ability2: 'FLURRY OF BLOWS', desc2: '(Lvl 5) Attacks 3 times instantly, but you are rooted for your next turn. Cooldown: 10', passive: 'Gains +2 ATK (scaling with level) when NO weapon is equipped.' }
+};
+
+let _selectedClass = 'warrior';
+
+function openClassSelect() {
+  document.getElementById('class-select-overlay').style.display='flex';
+  let listHtml = '';
+  Object.keys(CLASS_DATA).forEach(k => {
+    listHtml += `<div class="class-btn ${k==='warrior'?'selected':''}" id="cbtn-${k}" onclick="selectClass('${k}')">${CLASS_DATA[k].name}</div>`;
+  });
+  document.getElementById('class-list').innerHTML = listHtml;
+  selectClass('warrior');
+}
+
+function closeClassSelect() {
+  document.getElementById('class-select-overlay').style.display='none';
+}
+
+function selectClass(id) {
+  _selectedClass = id;
+  document.querySelectorAll('.class-btn').forEach(el => el.classList.remove('selected'));
+  document.getElementById(`cbtn-${id}`).classList.add('selected');
+
+  let c = CLASS_DATA[id];
+  let h = `
+    <div class="class-title">${c.name}</div>
+    <div class="class-tagline">${c.tagline}</div>
+    <div class="class-stat-box">
+      <div class="c-stat"><div class="c-stat-lbl">HP</div><div class="c-stat-val" style="color:var(--red)">${c.hp}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">ATK</div><div class="c-stat-val" style="color:var(--orange)">${c.atk}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">DEF</div><div class="c-stat-val" style="color:var(--blue)">${c.def}</div></div>
+    </div>
+    <div class="c-section">
+      <div class="c-sec-title">STARTING GEAR</div>
+      <div style="font-size:.55rem;color:var(--text)">Weapon: <span style="color:var(--gold)">${c.weapon}</span><br>Armor: <span style="color:var(--gold)">${c.armor}</span></div>
+    </div>
+    <div class="c-section">
+      <div class="c-sec-title">ABILITIES</div>
+      <div class="c-ability"><div class="c-ab-name">⚡ ${c.ability1}</div><div class="c-ab-desc">${c.desc1}</div></div>
+      <div class="c-ability"><div class="c-ab-name">⚡ ${c.ability2}</div><div class="c-ab-desc">${c.desc2}</div></div>
+    </div>
+    <div class="c-section">
+      <div class="c-sec-title">PASSIVE</div>
+      <div style="font-size:.55rem;color:var(--text);line-height:1.6">${c.passive}</div>
+    </div>
+  `;
+  document.getElementById('class-details').innerHTML = h;
+}
+
+function confirmClassSelect() {
+  closeClassSelect();
+  startGame(_selectedClass);
+}
+
+function startGame(playerClass = 'warrior'){
   document.getElementById('title-screen').classList.add('hidden');
   document.getElementById('game-screen').classList.remove('hidden');
-  initGame();
-  window.addEventListener('resize',()=>{if(G.map)render();});
+  initGame(playerClass);
+  if(!_resizeHandlerBound){
+    window.addEventListener('resize',handleResize);
+    _resizeHandlerBound=true;
+  }
 }
 
 function showDeath(){
@@ -1393,7 +2335,7 @@ function showDeath(){
       Floors: <span>${G.floor}</span><br>
       Turns: <span>${G.turn}</span>
     </div>
-    <button class="btn" onclick="this.closest('.overlay').remove();startGame()">TRY AGAIN</button>
+    <button class="btn" onclick="this.closest('.overlay').remove();startGame('${p.class}')">TRY AGAIN</button>
   </div>`;
   document.body.appendChild(o);
 }
@@ -1412,82 +2354,13 @@ function showVictory(){
       Gold: <span>${p.gold}💰</span><br>
       Turns: <span>${G.turn}</span>
     </div>
-    <button class="btn btn-gold" onclick="this.closest('.overlay').remove();startGame()">DESCEND AGAIN</button>
+    <button class="btn btn-gold" onclick="this.closest('.overlay').remove();startGame('${p.class}')">DESCEND AGAIN</button>
   </div>`;
   document.body.appendChild(o);
 }
 
-// ===================== HELP MODAL =====================
-function openHelp(){
-  document.getElementById('help-overlay').style.display='flex';
-  switchHelpTab('controls');
-}
-function closeHelp(){
-  document.getElementById('help-overlay').style.display='none';
-}
-function switchHelpTab(tab){
-  ['controls','combat','items','shop'].forEach(t=>{
-    document.getElementById(`htab-${t}`).classList.toggle('active', t===tab);
-    document.getElementById(`hpanel-${t}`).style.display= t===tab ? 'block' : 'none';
-  });
-}
-
-// ===================== CONTEXTUAL TIPS =====================
-// Tips fire once per run (not persisted — resets each new game intentionally
-// so new players always see them, returning players can dismiss quickly)
-const TIPS = {
-  firstEnemy:  { shown:false, tab:'combat',   msg:'Tip: walk into an enemy to attack, tap one from up to 2 tiles away, or use ⚡BASH for double damage (5-turn cooldown).' },
-  firstPotion:{ shown:false, tab:'items', msg:'Tip: potions are stored in your BAG. Tap BAG to drink one manually, or the game will prompt you automatically when a hit could be fatal.' },
-  firstItem:  { shown:false, tab:'items', msg:'Tip: items auto-equip if better than what you have. Check your BAG for anything carried.' },
-  firstLevelUp:{ shown:false, tab:'combat',   msg:'Tip: levelling up raises ATK, DEF, and Max HP. Kill enemies to gain XP.' },
-  firstShop:   { shown:false, tab:'shop',     msg:'Tip: the merchant ($) buys and sells. Save gold for permanent stat upgrades from floor 2.' },
-  firstStairs: { shown:false, tab:'controls', msg:'Tip: stand on the > tile and tap STAIRS (or press .) to descend to the next floor.' },
-  firstBag:    { shown:false, tab:'items',    msg:'Tip: open BAG to manually equip a weaker item, swap gear, or use a saved potion.' },
-  firstGold:   { shown:false, tab:'shop',     msg:'Tip: enemies drop gold. Collect it to spend at the merchant on each floor.' },
-};
-
-function fireTip(key){
-  let tip = TIPS[key];
-  if(!tip || tip.shown) return;
-  tip.shown = true;
-  addLog(tip.msg, 'log-info');
-}
-
-function resetTips(){
-  Object.values(TIPS).forEach(t => t.shown = false);
-}
-
-// ===================== SOUND EFFECTS =====================
-const SFX=(function(){
-  let ctx=null;
-  function getCtx(){
-    if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
-    return ctx;
-  }
-  function play(freq,type,duration,volume=0.3,freqEnd=null){
-    try{
-      let c=getCtx(),o=c.createOscillator(),g=c.createGain();
-      o.connect(g);g.connect(c.destination);
-      o.type=type;o.frequency.setValueAtTime(freq,c.currentTime);
-      if(freqEnd) o.frequency.linearRampToValueAtTime(freqEnd,c.currentTime+duration);
-      g.gain.setValueAtTime(volume,c.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+duration);
-      o.start();o.stop(c.currentTime+duration);
-    }catch(e){}
-  }
-  return{
-    hit:        ()=>play(220,'square',0.08,0.2),
-    damage:     ()=>play(80,'sawtooth',0.15,0.3,60),
-    enemyDeath: ()=>play(150,'sawtooth',0.2,0.25,60),
-    pickup:     ()=>play(880,'sine',0.12,0.2),
-    levelUp:    ()=>{[523,659,784,1047].forEach((f,i)=>setTimeout(()=>play(f,'sine',0.2,0.25),i*80));},
-    buy:        ()=>play(660,'sine',0.15,0.2),
-    sell:       ()=>play(440,'sine',0.12,0.15),
-    bash:       ()=>{play(150,'sawtooth',0.1,0.4);setTimeout(()=>play(100,'square',0.15,0.3),50);},
-    playerDeath:()=>{[300,250,200,150,100].forEach((f,i)=>setTimeout(()=>play(f,'sawtooth',0.3,0.3),i*120));},
-  };
-})();
-
+</script>
+<script>
 // ===================== KEYBOARD =====================
 function isOverlayOpen(){
   return document.getElementById('shop-overlay').classList.contains('open')
@@ -1508,9 +2381,13 @@ document.addEventListener('keydown',e=>{
   // Block game input when overlays are open
   if(isOverlayOpen()) return;
   if(DIRS[e.key]){e.preventDefault();let[dx,dy]=DIRS[e.key];move(dx,dy);}
-  if(e.key==='b'||e.key==='B') doBash();
+  if(e.key==='1'||e.key==='b'||e.key==='B') doAbility1();
+  if(e.key==='2'||e.key==='v'||e.key==='V') doAbility2();
   if(e.key==='.'||e.key==='>') descend();
-  if(e.key==='i'||e.key==='I') openInv();
+  if(e.key==='i'||e.key==='I') {
+    if(document.getElementById('inv-drawer').classList.contains('open')) closeInv();
+    else openInv();
+  }
   if(e.key==='t'||e.key==='T') openShop();
   if(e.key==='?'||e.key==='h'||e.key==='H') openHelp();
 });
@@ -1520,6 +2397,23 @@ document.addEventListener('touchend',e=>{
   if(e.target.closest('.dpad-btn'))e.preventDefault();
 },{passive:false});
 
+// ===================== SWIPE =====================
+document.getElementById('map-area').addEventListener('touchstart',e=>{
+  if(e.touches.length!==1)return;
+  _swipeStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
+},{passive:true});
+document.getElementById('map-area').addEventListener('touchend',e=>{
+  if(!_swipeStart||G.gameOver||G.won)return;
+  let dx=e.changedTouches[0].clientX-_swipeStart.x;
+  let dy=e.changedTouches[0].clientY-_swipeStart.y;
+  _swipeStart=null;
+  if(Math.sqrt(dx*dx+dy*dy)<20)return;
+  if(Math.abs(dx)>Math.abs(dy))move(Math.sign(dx),0);
+  else move(0,Math.sign(dy));
+},{passive:true});
+
+</script>
+<script>
 // ===================== PWA =====================
 let _installPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{
@@ -1532,6 +2426,7 @@ document.getElementById('install-btn').addEventListener('click',()=>{
   _installPrompt.userChoice.then(()=>{_installPrompt=null;document.getElementById('install-banner').style.display='none';});
 });
 window.addEventListener('appinstalled',()=>{document.getElementById('install-banner').style.display='none';});
+
 </script>
 </body>
 </html>
