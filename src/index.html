@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="description" content="A procedurally generated roguelike dungeon crawler. Death is permanent. Every run is different.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="../manifest.json">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="icon" type="image/x-icon" href="../assets/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+<title>DELVE</title>
+<script>
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>navigator.serviceWorker.register('../sw.js').catch(()=>{}));
+  }
+</script>
+</head>
+<body>
+
+<!-- INSTALL BANNER -->
+<div id="install-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:#1a1a2e;border-top:2px solid #c084fc;padding:12px 16px;align-items:center;justify-content:space-between;gap:12px;font-family:'Share Tech Mono',monospace;font-size:.65rem;">
+  <span style="color:#e2e8f0;">📲 Install DELVE as an app?</span>
+  <div style="display:flex;gap:8px;">
+    <button id="install-btn" style="font-family:'Press Start 2P',monospace;font-size:.4rem;padding:8px 12px;background:transparent;border:1px solid #c084fc;color:#c084fc;cursor:pointer;">INSTALL</button>
+    <button onclick="document.getElementById('install-banner').style.display='none'" style="font-family:'Press Start 2P',monospace;font-size:.4rem;padding:8px 12px;background:transparent;border:1px solid #4a4a6a;color:#4a4a6a;cursor:pointer;">✕</button>
+  </div>
+</div>
+
+<!-- TITLE -->
+<div id="title-screen">
+  <h1>DELVE</h1>
+  <p class="subtitle">A Roguelike</p>
+  <p class="flavor">The dungeon goes down forever.<br>Death is permanent. Loot is scarce.<br>Every run, a new story.</p>
+  <button class="btn" onclick="startGame()">▶ DESCEND</button>
+</div>
+
+<!-- GAME -->
+<div id="game-screen" class="hidden">
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-left">
+      <div class="stat-row">
+        <span class="stat-label">HP</span>
+        <div class="bar"><div class="bar-fill hp-fill" id="hp-bar"></div></div>
+        <span class="stat-val" id="hp-val">20/20</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">XP</span>
+        <div class="bar"><div class="bar-fill xp-fill" id="xp-bar" style="width:0%"></div></div>
+        <span class="stat-val" id="xp-val">0/10</span>
+      </div>
+    </div>
+    <div class="hud-center">
+      DELVE<br>
+      <span id="floor-label" style="color:var(--gold)">FLOOR 1</span><br>
+      <button onclick="openHelp()" style="font-family:'Press Start 2P',monospace;font-size:.32rem;padding:3px 7px;background:transparent;border:1px solid var(--dim);color:var(--dim);cursor:pointer;margin-top:3px;letter-spacing:.1em;">?</button>
+    </div>
+    <div class="hud-right">
+      <div class="hud-stats">
+        <div class="hud-stat"><span class="hud-label">ATK</span><span id="atk-val" style="color:var(--orange)">4</span></div>
+        <div class="hud-stat"><span class="hud-label">DEF</span><span id="def-val" style="color:var(--blue)">1</span></div>
+        <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span></div>
+        <div class="hud-stat"><span class="hud-label" style="color:var(--gold)">GP</span><span id="gold-val" style="color:var(--gold)">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map-area">
+    <div id="map-wrap"><div id="map"></div></div>
+  </div>
+
+  <!-- LOG (portrait only) -->
+  <div id="bottom-bar"><div id="log"></div></div>
+
+  <!-- D-PAD + ACTIONS -->
+  <div id="dpad-area">
+    <div id="dpad">
+      <div></div>
+      <div class="dpad-btn" ontouchstart="dpadPress(0,-1);event.preventDefault()" ontouchend="dpadRelease()" onclick="move(0,-1)">↑</div>
+      <div></div>
+      <div class="dpad-btn" ontouchstart="dpadPress(-1,0);event.preventDefault()" ontouchend="dpadRelease()" onclick="move(-1,0)">←</div>
+      <div class="dpad-btn dpad-center">·</div>
+      <div class="dpad-btn" ontouchstart="dpadPress(1,0);event.preventDefault()"  ontouchend="dpadRelease()" onclick="move(1,0)">→</div>
+      <div></div>
+      <div class="dpad-btn" ontouchstart="dpadPress(0,1);event.preventDefault()"  ontouchend="dpadRelease()" onclick="move(0,1)">↓</div>
+      <div></div>
+    </div>
+    <div id="action-btns">
+      <button class="act-btn" id="bash-btn"   onclick="doBash()">BASH</button>
+      <button class="act-btn" id="stairs-btn" onclick="descend()">STAIRS</button>
+      <button class="act-btn" id="shop-btn"   onclick="openShop()">SHOP</button>
+      <button class="act-btn" id="bag-btn"    onclick="openInv()">BAG</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRAWER BACKDROP -->
+<div id="drawer-backdrop" onclick="closeInv()"></div>
+
+<!-- INVENTORY DRAWER -->
+<div id="inv-drawer">
+  <div class="drawer-handle"></div>
+  <div class="inv-section">
+    <div class="panel-title">EQUIPPED</div>
+    <div id="equipped-list"></div>
+  </div>
+  <div class="inv-section">
+    <div class="panel-title">INVENTORY — tap to use/equip</div>
+    <div id="inventory-list"></div>
+  </div>
+  <div class="inv-close-row">
+    <button class="btn" style="font-size:.45rem;padding:10px 20px" onclick="closeInv()">CLOSE</button>
+  </div>
+</div>
+
+<div id="damage-flash"></div>
+
+<!-- EMERGENCY POTION OVERLAY -->
+<div id="emergency-overlay" style="display:none;position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s;">
+  <div id="emergency-modal" style="background:var(--panel);border:2px solid var(--red);padding:22px 20px;max-width:360px;width:100%;box-shadow:0 0 60px rgba(248,113,113,.4);">
+    <h2 style="font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--red);text-align:center;margin-bottom:8px;">⚠ FATAL HIT INCOMING</h2>
+    <p id="emergency-msg" style="font-size:.6rem;color:var(--dim);text-align:center;line-height:1.9;margin-bottom:14px;"></p>
+    <div id="emergency-potion" style="margin-bottom:14px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button id="emergency-drink-btn"
+        style="font-family:'Press Start 2P',monospace;font-size:.4rem;padding:12px;flex:1;background:transparent;border:2px solid var(--green);color:var(--green);cursor:pointer;touch-action:manipulation;"
+        onclick="resolveEmergency(true)"
+        ontouchend="event.preventDefault();event.stopPropagation();resolveEmergency(true)">
+        DRINK
+      </button>
+      <button
+        style="font-family:'Press Start 2P',monospace;font-size:.4rem;padding:12px;flex:1;background:transparent;border:2px solid var(--dim);color:var(--dim);cursor:pointer;touch-action:manipulation;"
+        onclick="resolveEmergency(false)"
+        ontouchend="event.preventDefault();event.stopPropagation();resolveEmergency(false)">
+        IGNORE
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SHOP OVERLAY -->
+<div id="shop-overlay">
+  <div id="shop-modal">
+    <h2>☆ MERCHANT ☆</h2>
+    <div class="shop-gold-display">💰 Gold: <span id="shop-gold-val">0</span></div>
+    <!-- Tabs -->
+    <div class="shop-tabs">
+      <button class="shop-tab active" id="tab-buy"  onclick="switchShopTab('buy')"  ontouchend="event.preventDefault();event.stopPropagation();switchShopTab('buy')">BUY</button>
+      <button class="shop-tab"        id="tab-sell" onclick="switchShopTab('sell')" ontouchend="event.preventDefault();event.stopPropagation();switchShopTab('sell')">SELL</button>
+    </div>
+    <div id="shop-buy-panel">
+      <p class="shop-subtitle">Buy wisely. The dungeon is long.</p>
+      <div id="shop-items"></div>
+    </div>
+    <div id="shop-sell-panel" style="display:none">
+      <p class="shop-subtitle">Sell price is 50% of item value.</p>
+      <div id="sell-items"></div>
+    </div>
+    <div class="shop-close-row">
+      <button class="btn" style="font-size:.45rem;padding:10px 20px" onclick="closeShop()">LEAVE SHOP</button>
+    </div>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div id="help-overlay" style="display:none;position:fixed;inset:0;z-index:115;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px;animation:fadeIn .3s;">
+  <div id="help-modal" style="background:var(--panel);border:2px solid var(--accent);padding:20px;max-width:440px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 0 60px rgba(192,132,252,.3);">
+    <h2 style="font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--accent);text-align:center;margin-bottom:14px;">? HOW TO PLAY</h2>
+    <!-- Tabs -->
+    <div class="shop-tabs" style="margin-bottom:14px;">
+      <button class="shop-tab active" id="htab-controls" onclick="switchHelpTab('controls')">CONTROLS</button>
+      <button class="shop-tab"        id="htab-combat"   onclick="switchHelpTab('combat')">COMBAT</button>
+      <button class="shop-tab"        id="htab-items"    onclick="switchHelpTab('items')">ITEMS</button>
+      <button class="shop-tab"        id="htab-shop"     onclick="switchHelpTab('shop')">SHOP</button>
+    </div>
+
+    <!-- CONTROLS -->
+    <div id="hpanel-controls">
+      <table class="help-table">
+        <tr><td class="help-key">↑↓←→</td><td>Move — d-pad, Arrow Keys, or <span style="color:var(--accent)">W A S D</span></td></tr>
+        <tr><td class="help-key">Swipe</td><td>Move on mobile — swipe the map in any direction</td></tr>
+        <tr><td class="help-key">BASH / <span style="color:var(--accent)">B</span></td><td>Activate Bash ability (see Combat tab)</td></tr>
+        <tr><td class="help-key">STAIRS / <span style="color:var(--accent)">. &gt;</span></td><td>Descend when standing on stairs <span class="help-sym green">></span></td></tr>
+        <tr><td class="help-key">SHOP / <span style="color:var(--accent)">T</span></td><td>Enter merchant when standing next to <span class="help-sym gold-c">$</span></td></tr>
+        <tr><td class="help-key">BAG / <span style="color:var(--accent)">I</span></td><td>Open inventory to use or equip carried items</td></tr>
+        <tr><td class="help-key">? / <span style="color:var(--accent)">H</span></td><td>Open this help screen at any time</td></tr>
+      </table>
+    </div>
+
+    <!-- COMBAT -->
+    <div id="hpanel-combat" style="display:none">
+      <table class="help-table">
+        <tr><td class="help-key">Bump</td><td>Walk into an adjacent enemy to attack them automatically</td></tr>
+        <tr><td class="help-key">Tap</td><td>Tap or click a visible enemy to attack from up to 2 tiles away</td></tr>
+        <tr><td class="help-key">⚡ BASH</td><td>Deals <span style="color:var(--orange)">double damage</span> to the nearest visible enemy within 2 tiles. 5-turn cooldown. Use on tough enemies or when low on HP</td></tr>
+        <tr><td class="help-key">DEF</td><td>Each point of DEF reduces incoming damage by 1. Stack armor to survive deeper floors</td></tr>
+        <tr><td class="help-key">XP</td><td>Killing enemies grants XP. Level up to gain +1 ATK, +1 DEF, and +8 Max HP</td></tr>
+        <tr><td class="help-key">Tip</td><td>Enemies you cannot see still wander. They pursue you once spotted</td></tr>
+      </table>
+    </div>
+
+    <!-- ITEMS -->
+    <div id="hpanel-items" style="display:none">
+      <table class="help-table">
+        <tr><td class="help-key help-sym gold">†  ⚔  ♦</td><td><span style="color:var(--gold)">Weapons</span> — increases ATK. Auto-equipped if better than current</td></tr>
+        <tr><td class="help-key help-sym gold">◈</td><td><span style="color:var(--gold)">Armor</span> — increases DEF. Auto-equipped if better than current</td></tr>
+        <tr><td class="help-key help-sym gold">!</td><td><span style="color:var(--gold)">Potions</span> — stored in your BAG. Use manually or via emergency prompt when a hit could be fatal</td></tr>
+        <tr><td class="help-key">Rarity</td><td><span style="color:var(--text)">Common</span> · <span style="color:var(--blue)">Rare</span> · <span style="color:var(--accent)">Legendary</span> — higher rarity means stronger stats</td></tr>
+        <tr><td class="help-key">BAG</td><td>Items not auto-equipped go into your bag. Open BAG to manually equip a weaker item or use a saved potion</td></tr>
+        <tr><td class="help-key">Drop</td><td>Enemies have a 20% chance to drop an item on death</td></tr>
+      </table>
+    </div>
+
+    <!-- SHOP -->
+    <div id="hpanel-shop" style="display:none">
+      <table class="help-table">
+        <tr><td class="help-key help-sym gold">$</td><td>The merchant appears on most floors. Walk next to the <span style="color:var(--gold)">$</span> tile and tap SHOP</td></tr>
+        <tr><td class="help-key">💰 Gold</td><td>Earned by killing enemies. Shown in the top-right HUD</td></tr>
+        <tr><td class="help-key">BUY</td><td>Purchase weapons, armor, potions, and permanent stat upgrades. Red price = can't afford yet</td></tr>
+        <tr><td class="help-key">SELL</td><td>Sell items from your bag or equipped gear for 50% of their value. Useful for clearing space and funding better upgrades</td></tr>
+        <tr><td class="help-key">Upgrades</td><td>Available from floor 2: permanent boosts to ATK, DEF, or Max HP. Worth saving gold for</td></tr>
+      </table>
+    </div>
+
+    <div style="text-align:center;margin-top:14px;">
+      <button class="btn" style="font-size:.45rem;padding:10px 20px" onclick="closeHelp()">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<!-- JS Modules — load order matters (globals shared) -->
+<script src="js/constants.js"></script>
+<script src="js/data.js"></script>
+<script src="js/state.js"></script>
+<script src="js/sfx.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/vision.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/emergency.js"></script>
+<script src="js/movement.js"></script>
+<script src="js/items.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/shop.js"></script>
+<script src="js/map.js"></script>
+<script src="js/main.js"></script>
+<script src="js/input.js"></script>
+<script src="js/pwa.js"></script>
+</body>
+</html>

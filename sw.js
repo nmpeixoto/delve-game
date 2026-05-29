@@ -1,4 +1,4 @@
-const CACHE = 'delve-v2';
+const CACHE = 'delve-v4';
 
 // Install: cache core assets using relative paths
 self.addEventListener('install', e => {
@@ -11,6 +11,25 @@ self.addEventListener('install', e => {
         'icon-512.png',
         'favicon.ico',
         'favicon-32.png',
+        'src/index.html',
+        'src/css/style.css',
+        'src/js/constants.js',
+        'src/js/data.js',
+        'src/js/state.js',
+        'src/js/map.js',
+        'src/js/vision.js',
+        'src/js/render.js',
+        'src/js/combat.js',
+        'src/js/items.js',
+        'src/js/shop.js',
+        'src/js/movement.js',
+        'src/js/emergency.js',
+        'src/js/ui.js',
+        'src/js/sfx.js',
+        'src/js/fx.js',
+        'src/js/input.js',
+        'src/js/pwa.js',
+        'src/js/main.js',
       ]).catch(() => {})
     )
   );

@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "test": "node bot_brain_test.js && node combat_test.js"
+  },
+  "dependencies": {
+    "puppeteer": "^25.1.0"
+  }
+}

@@ -10,14 +10,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap">
-<link rel="manifest" href="/game/manifest.json">
-<link rel="apple-touch-icon" href="/game/icon-192.png">
-<link rel="icon" type="image/x-icon" href="/game/favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="/game/favicon-32.png">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <title>DELVE</title>
 <script>
   if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('/game/sw.js').catch(()=>{}));
+    window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
   }
 </script>
 <style>
@@ -224,6 +224,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 @keyframes floatup{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-28px)}}
 @keyframes shopPulse{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
 .hidden{display:none!important;}
 ::-webkit-scrollbar{width:3px;}
 ::-webkit-scrollbar-thumb{background:var(--dim);}
@@ -419,7 +420,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <table class="help-table">
         <tr><td class="help-key help-sym gold">†  ⚔  ♦</td><td><span style="color:var(--gold)">Weapons</span> — increases ATK. Auto-equipped if better than current</td></tr>
         <tr><td class="help-key help-sym gold">◈</td><td><span style="color:var(--gold)">Armor</span> — increases DEF. Auto-equipped if better than current</td></tr>
-        <tr><td class="help-key help-sym gold">!</td><td><span style="color:var(--gold)">Potions</span> — restores HP instantly on pickup</td></tr>
+        <tr><td class="help-key help-sym gold">!</td><td><span style="color:var(--gold)">Potions</span> — stored in your BAG. Use manually or via emergency prompt when a hit could be fatal</td></tr>
         <tr><td class="help-key">Rarity</td><td><span style="color:var(--text)">Common</span> · <span style="color:var(--blue)">Rare</span> · <span style="color:var(--accent)">Legendary</span> — higher rarity means stronger stats</td></tr>
         <tr><td class="help-key">BAG</td><td>Items not auto-equipped go into your bag. Open BAG to manually equip a weaker item or use a saved potion</td></tr>
         <tr><td class="help-key">Drop</td><td>Enemies have a 20% chance to drop an item on death</td></tr>
@@ -494,6 +495,8 @@ const ENEMIES=[
 let G={},_dpadTimer=null,_swipeStart=null,_lastAction=0;
 const rand=n=>Math.floor(Math.random()*n);
 const rr=(a,b)=>a+rand(b-a+1);
+let _idCounter=0;
+const uid=()=>`${Date.now().toString(36)}-${(++_idCounter).toString(36)}-${Math.random().toString(36).slice(2,8)}`;
 const ch=p=>Math.random()<p;
 // Debounce tile actions — 400ms safety net against double-fire
 function canAct(){
@@ -596,7 +599,7 @@ function buildFloor(){
         hp:Math.round(t.hp*sc),maxHp:Math.round(t.hp*sc),
         atk:Math.round(t.atk*sc),def:Math.round(t.def*sc),
         xp:Math.round(t.xp*sc),gold:Math.round(t.gold*sc),
-        x:ex,y:ey,id:Math.random()});
+        x:ex,y:ey,id:uid()});
     }
     if(ch(.65)) spawnItem(r);
   }
@@ -618,22 +621,22 @@ function generateShopStock(){
 
   // Always offer 2 potions
   let pots=[...POTIONS].sort(()=>Math.random()-.5);
-  stock.push({...pots[0],id:Math.random(),sold:false});
-  if(ch(.6)) stock.push({...pots[1],id:Math.random(),sold:false});
+  stock.push({...pots[0],id:uid(),sold:false});
+  if(ch(.6)) stock.push({...pots[1],id:uid(),sold:false});
 
   // 1-2 weapons scaled to floor
   let weps=WEAPONS.filter(w=>w.atk<=4+floorScale*3).sort(()=>Math.random()-.5);
-  if(weps.length) stock.push({...weps[0],id:Math.random(),sold:false});
-  if(weps.length>1&&ch(.5)) stock.push({...weps[1],id:Math.random(),sold:false});
+  if(weps.length) stock.push({...weps[0],id:uid(),sold:false});
+  if(weps.length>1&&ch(.5)) stock.push({...weps[1],id:uid(),sold:false});
 
   // 1 armor
   let arms=ARMORS.filter(a=>a.def<=2+floorScale*2).sort(()=>Math.random()-.5);
-  if(arms.length) stock.push({...arms[0],id:Math.random(),sold:false});
+  if(arms.length) stock.push({...arms[0],id:uid(),sold:false});
 
   // 1 upgrade (floors 2+)
   if(G.floor>=2){
     let ups=UPGRADES.filter(u=>u.rarity!=='legendary'||G.floor>=4).sort(()=>Math.random()-.5);
-    if(ups.length) stock.push({...ups[0],id:Math.random(),sold:false});
+    if(ups.length) stock.push({...ups[0],id:uid(),sold:false});
   }
 
   return stock;
@@ -682,18 +685,18 @@ function buyItem(id){
   item.sold=true;
 
   if(item.type==='potion'){
-    let clone={...item,carried:true,id:Math.random()};
+    let clone={...item,carried:true,id:uid()};
     G.items.push(clone);
     addLog(`Bought ${item.name} — stored in bag`,'log-shop');
     SFX.buy();
   } else if(item.type==='weapon'){
     // Put in inventory, auto-equip if better
-    let clone={...item,carried:true,id:Math.random()};
+    let clone={...item,carried:true,id:uid()};
     G.items.push(clone);
     autoEquip(clone);
     addLog(`Bought ${item.name}`,'log-shop');
   } else if(item.type==='armor'){
-    let clone={...item,carried:true,id:Math.random()};
+    let clone={...item,carried:true,id:uid()};
     G.items.push(clone);
     autoEquip(clone);
     addLog(`Bought ${item.name}`,'log-shop');
@@ -793,7 +796,7 @@ function spawnItem(r){
   let pool=[...WEAPONS,...ARMORS,...POTIONS];
   let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
   let t=w[rand(w.length)];
-  G.items.push({...t,x:r.x+rr(1,r.w-2),y:r.y+rr(1,r.h-2),id:Math.random()});
+  G.items.push({...t,x:r.x+rr(1,r.w-2),y:r.y+rr(1,r.h-2),id:uid()});
 }
 
 // ===================== FOV =====================
@@ -847,8 +850,8 @@ function render(){
           onmouseenter="showTip(event,'${en.name}',${en.hp},${en.maxHp},${en.atk})"
           onmouseleave="hideTip()"
           onclick="${en.dying?'':`tileAttack('${en.id}')`}"
-          ontouchstart="${en.dying?'':'startLongPress(event,\''+en.id+'\',\''+en.name+'\','+en.hp+','+en.maxHp+','+en.atk+')'}"
-          ontouchend="${en.dying?'':'endLongPress(event,\''+en.id+'\')'}"
+          ontouchstart="${en.dying?'':`startLongPress(event,'${en.id}','${en.name}',${en.hp},${en.maxHp},${en.atk})`}"
+          ontouchend="${en.dying?'':`endLongPress(event,'${en.id}')`}"
           ontouchmove="${en.dying?'':'cancelLongPress()'}">
           ${en.sym.toUpperCase()}</div>`;
         continue;
@@ -932,10 +935,13 @@ function updateInvDrawer(){
 function tileAttack(id){
   if(!canAct()||G.gameOver||G.won) return;
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
-  if(Math.abs(en.x-G.player.x)>1||Math.abs(en.y-G.player.y)>1){
-    move(Math.sign(en.x-G.player.x)||0,Math.sign(en.y-G.player.y)||0);return;
+  if(en.dying)return;
+  let dist=Math.max(Math.abs(en.x-G.player.x),Math.abs(en.y-G.player.y));
+  if(dist<=2){
+    attackEnemy(id,false);
+  } else {
+    move(Math.sign(en.x-G.player.x)||0,Math.sign(en.y-G.player.y)||0);
   }
-  attackEnemy(id,false);
 }
 function tilePickup(id){
   if(!canAct()||G.gameOver||G.won) return;
@@ -948,6 +954,7 @@ function tilePickup(id){
 
 function attackEnemy(id,bash=false){
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
+  if(en.dying)return;
   let dmg=Math.max(1,gatk()-en.def+rand(3));
   if(bash){dmg*=2;G.bashCooldown=5;SFX.bash();}else{SFX.hit();}
   en.hp-=dmg;
@@ -968,7 +975,7 @@ function attackEnemy(id,bash=false){
       G.enemies=G.enemies.filter(e=>e.id!==id);
       if(ch(.2)){
         let pool=[...WEAPONS,...ARMORS,...POTIONS];
-        G.items.push({...pool[rand(pool.length)],x:en.x,y:en.y,id:Math.random()});
+        G.items.push({...pool[rand(pool.length)],x:en.x,y:en.y,id:uid()});
       }
       checkLevelUp();
       advanceTurn();
@@ -1000,6 +1007,8 @@ function checkLevelUp(){
 function advanceTurn(){
   G.turn++;if(G.bashCooldown>0)G.bashCooldown--;
   G.enemies.forEach(e=>{
+    if(G.gameOver||G.won) return;
+    if(e.dying) return;
     if(!G.visible.has(e.y*MAP_W+e.x)){
       if(ch(.4)){
         let ds=[[-1,0],[1,0],[0,-1],[0,1]];let[dx,dy]=ds[rand(4)];
@@ -1108,6 +1117,7 @@ function useItem(id){
     floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
     G.items=G.items.filter(i=>i.id!==id);
     advanceTurn();closeInv();
+    return;
   } else if(it.type==='weapon'){
     let prev=G.player.weapon;
     if(prev){
@@ -1148,7 +1158,7 @@ function move(dx,dy){
   let nx=G.player.x+dx,ny=G.player.y+dy;
   if(nx<0||nx>=MAP_W||ny<0||ny>=MAP_H||G.map[ny][nx]===TILE.WALL)return;
   let en=G.enemies.find(e=>e.x===nx&&e.y===ny);
-  if(en){attackEnemy(en.id);return;}
+  if(en){if(en.dying)return;attackEnemy(en.id);return;}
   let it=G.items.find(i=>!i.carried&&i.x===nx&&i.y===ny);
   G.player.x=nx;G.player.y=ny;computeVision();
   if(it)pickupItem(it.id);else advanceTurn();
@@ -1165,7 +1175,7 @@ function doBash(){
   if(G.gameOver||G.won)return;
   if(G.bashCooldown>0){addLog(`Bash on cooldown (${G.bashCooldown} turns)`,'log-info');return;}
   let t=G.enemies
-    .filter(e=>G.visible.has(e.y*MAP_W+e.x)&&Math.abs(e.x-G.player.x)<=2&&Math.abs(e.y-G.player.y)<=2)
+    .filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x)&&Math.abs(e.x-G.player.x)<=2&&Math.abs(e.y-G.player.y)<=2)
     .sort((a,b)=>(Math.abs(a.x-G.player.x)+Math.abs(a.y-G.player.y))-(Math.abs(b.x-G.player.x)+Math.abs(b.y-G.player.y)));
   if(t.length)attackEnemy(t[0].id,true);
   else addLog('No nearby enemies to Bash','log-info');
@@ -1306,8 +1316,14 @@ function showTip(e,name,hp,maxHp,atk){
     (hp!==undefined?`HP:<span style="color:var(--red)">${hp}/${maxHp}</span> `:'') +
     (atk!==undefined?`ATK:<span style="color:var(--orange)">${atk}</span>`:'');
   t.style.display='block';
-  t.style.left=(e.clientX+12)+'px';
-  t.style.top=(e.clientY-8)+'px';
+  // Clamp tooltip to viewport
+  let tx=e.clientX+12, ty=e.clientY-8;
+  let tw=t.offsetWidth, th=t.offsetHeight;
+  if(tx+tw>window.innerWidth) tx=window.innerWidth-tw-4;
+  if(ty<0) ty=4;
+  if(ty+th>window.innerHeight) ty=window.innerHeight-th-4;
+  t.style.left=tx+'px';
+  t.style.top=ty+'px';
   clearTimeout(t._hideTimer);
   t._hideTimer=setTimeout(()=>hideTip(), 2500);
 }
@@ -1473,9 +1489,24 @@ const SFX=(function(){
 })();
 
 // ===================== KEYBOARD =====================
+function isOverlayOpen(){
+  return document.getElementById('shop-overlay').classList.contains('open')
+    || document.getElementById('help-overlay').style.display==='flex'
+    || document.getElementById('inv-drawer').classList.contains('open')
+    || document.getElementById('emergency-overlay').style.display==='flex';
+}
 document.addEventListener('keydown',e=>{
   if(G.gameOver||G.won)return;
   if(document.getElementById('game-screen').classList.contains('hidden'))return;
+  // Allow closing overlays with Escape
+  if(e.key==='Escape'){
+    if(document.getElementById('shop-overlay').classList.contains('open')){closeShop();return;}
+    if(document.getElementById('help-overlay').style.display==='flex'){closeHelp();return;}
+    if(document.getElementById('inv-drawer').classList.contains('open')){closeInv();return;}
+    return;
+  }
+  // Block game input when overlays are open
+  if(isOverlayOpen()) return;
   if(DIRS[e.key]){e.preventDefault();let[dx,dy]=DIRS[e.key];move(dx,dy);}
   if(e.key==='b'||e.key==='B') doBash();
   if(e.key==='.'||e.key==='>') descend();

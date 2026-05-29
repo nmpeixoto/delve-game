@@ -1,0 +1,248 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+const MAP_W = 28;
+const MAP_H = 18;
+const WALL = 0;
+const FLOOR = 1;
+const STAIRS = 2;
+const SHOP = 3;
+
+function classList(open = false) {
+  return { contains: cls => cls === 'open' && open };
+}
+
+function makeDocument() {
+  const elements = {
+    'emergency-overlay': { style: { display: 'none' }, classList: classList(false) },
+    'shop-overlay': { style: { display: 'none' }, classList: classList(false) },
+    'inv-drawer': { style: { display: 'none' }, classList: classList(false) },
+  };
+
+  return {
+    getElementById: id => elements[id] || { style: {}, classList: classList(false) },
+    querySelector: () => null,
+  };
+}
+
+function makeMap() {
+  return Array.from({ length: MAP_H }, () => Array(MAP_W).fill(WALL));
+}
+
+function setFloor(map, coords) {
+  coords.forEach(([x, y, tile = FLOOR]) => {
+    map[y][x] = tile;
+  });
+}
+
+function loadBrain() {
+  const context = {
+    window: {},
+    document: makeDocument(),
+    console,
+    Math,
+    Set,
+  };
+  vm.createContext(context);
+  const code = fs.readFileSync(path.join(__dirname, 'bot_brain.js'), 'utf8');
+  vm.runInContext(code, context);
+  return context;
+}
+
+function baseGame(map, overrides = {}) {
+  const player = {
+    x: 5,
+    y: 5,
+    hp: 20,
+    maxHp: 20,
+    gold: 0,
+    lvl: 1,
+    xp: 0,
+    xpNext: 10,
+    weapon: null,
+    armor: null,
+    ...overrides.player,
+  };
+
+  return {
+    floor: 1,
+    player,
+    map,
+    enemies: overrides.enemies || [],
+    items: overrides.items || [],
+    shopPos: overrides.shopPos || null,
+    shopStock: overrides.shopStock || [],
+    visible: overrides.visible || new Set([player.y * MAP_W + player.x]),
+    seen: overrides.seen || new Set([player.y * MAP_W + player.x]),
+    bashCooldown: overrides.bashCooldown || 0,
+    ...overrides.G,
+  };
+}
+
+function decide(G) {
+  const context = loadBrain();
+  context.G = G;
+  return context.window.botDecisionLogic();
+}
+
+function test(name, fn) {
+  try {
+    fn();
+    console.log(`PASS ${name}`);
+  } catch (err) {
+    console.error(`FAIL ${name}`);
+    console.error(err.stack || err.message);
+    process.exitCode = 1;
+  }
+}
+
+test('ignores dying enemies instead of bashing or bump-attacking them', () => {
+  const map = makeMap();
+  setFloor(map, [[4, 5], [5, 5], [6, 5]]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 4, 5 * MAP_W + 6]);
+  const seen = new Set(visible);
+  const G = baseGame(map, {
+    visible,
+    seen,
+    enemies: [{ id: 'dead-goblin', name: 'Goblin', x: 4, y: 5, hp: -3, dying: true }],
+  });
+
+  const decision = decide(G);
+
+  assert.notStrictEqual(decision.val, 'b');
+  assert.notStrictEqual(decision.val, 'ArrowLeft');
+});
+
+test('heads to known stairs at 70 percent hp with no potion instead of exploring unseen tiles', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [5, 5],
+    [6, 5],
+    [7, 5, STAIRS],
+  ]);
+  const seen = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { hp: 13, maxHp: 20 },
+    seen,
+    visible: new Set(seen),
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowRight');
+});
+
+test('does not bash a range enemy while weak with no potion and known stairs', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5, STAIRS],
+    [5, 7],
+  ]);
+  const seen = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7, 7 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { hp: 13, maxHp: 20 },
+    seen,
+    visible: new Set(seen),
+    enemies: [{ id: 'goblin-1', name: 'Goblin', x: 5, y: 7, hp: 10, maxHp: 10, atk: 4, def: 1 }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowRight');
+});
+
+test('drinks a potion before voluntary combat when critically hurt in combat', () => {
+  const map = makeMap();
+  setFloor(map, [[5, 5], [5, 6], [5, 7]]);
+  const visible = new Set([5 * MAP_W + 5, 6 * MAP_W + 5, 7 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { hp: 20, maxHp: 84 },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'troll-1', name: 'Troll', x: 5, y: 7, hp: 104, maxHp: 104, atk: 12, def: 4 }],
+    items: [{ id: 'elixir-1', type: 'potion', heal: 60, carried: true }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
+test('finishes an adjacent killable enemy instead of oscillating toward stairs', () => {
+  const map = makeMap();
+  setFloor(map, [[4, 5], [5, 5], [6, 5], [7, 5, STAIRS]]);
+  const seen = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { hp: 12, maxHp: 20, atk: 4, weapon: { atk: 4 } },
+    seen,
+    visible: new Set(seen),
+    enemies: [{ id: 'rat-1', name: 'Rat', x: 4, y: 5, hp: 5, maxHp: 5, atk: 2, def: 0 }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowLeft');
+});
+
+test('resupplies at an affordable shop before exiting weak with no potion', () => {
+  const map = makeMap();
+  setFloor(map, [[3, 5, SHOP], [4, 5], [5, 5], [6, 5], [7, 5, STAIRS]]);
+  const seen = new Set([5 * MAP_W + 3, 5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { hp: 13, maxHp: 20, gold: 15 },
+    seen,
+    visible: new Set(seen),
+    shopPos: { x: 3, y: 5 },
+    shopStock: [{ id: 'potion-1', type: 'potion', price: 15, sold: false }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowLeft');
+});
+
+test('descends immediately on floor 5 even if the map is not cleared', () => {
+  const map = makeMap();
+  setFloor(map, [[5, 5, STAIRS], [5, 4]]);
+  const seen = new Set([5 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { hp: 20, maxHp: 20 },
+    seen,
+    visible: new Set(seen),
+    enemies: [{ id: 'demon-1', name: 'Demon', x: 5, y: 4, hp: 143, maxHp: 143, atk: 15, def: 5 }],
+    G: { floor: 5 },
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, '>');
+});
+
+test('rushes known floor 5 stairs instead of bashing a range enemy', () => {
+  const map = makeMap();
+  setFloor(map, [[5, 5], [6, 5], [7, 5, STAIRS], [5, 7]]);
+  const seen = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7, 7 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { hp: 80, maxHp: 100 },
+    seen,
+    visible: new Set(seen),
+    enemies: [{ id: 'demon-1', name: 'Demon', x: 5, y: 7, hp: 143, maxHp: 143, atk: 15, def: 5 }],
+    G: { floor: 5 },
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowRight');
+});

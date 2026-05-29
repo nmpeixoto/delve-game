@@ -201,9 +201,11 @@ DELVE is a Progressive Web App. It installs like a native app and works offline 
 
 ## Files
 
+### Production (root)
+
 | File | Purpose |
 |---|---|
-| `dungeon.html` | The entire game — self-contained |
+| `dungeon.html` | The entire game — self-contained single file |
 | `manifest.json` | PWA metadata for home screen installation |
 | `sw.js` | Service worker — enables offline play |
 | `icon-192.png` | Home screen icon (192×192) |
@@ -211,7 +213,32 @@ DELVE is a Progressive Web App. It installs like a native app and works offline 
 | `favicon.ico` | Browser tab icon (16×16 + 32×32) |
 | `favicon-32.png` | Browser tab icon for modern browsers |
 
-The game is intentionally a **single HTML file**. No build process, no dependencies, no framework. Drop it anywhere and it works.
+### Development (`src/`)
+
+| Path | Purpose |
+|---|---|
+| `src/index.html` | HTML structure with external CSS/JS references |
+| `src/css/style.css` | All styles extracted from dungeon.html |
+| `src/js/constants.js` | Map dimensions, tile types, key mappings |
+| `src/js/data.js` | Weapons, armors, potions, upgrades, enemies |
+| `src/js/state.js` | Game state, random helpers, ID generator |
+| `src/js/map.js` | Procedural map generation and floor building |
+| `src/js/vision.js` | Raycasting field-of-vision |
+| `src/js/render.js` | Map rendering, HUD, action buttons, inventory |
+| `src/js/combat.js` | Attack, damage, level-up, turn advancement |
+| `src/js/items.js` | Item spawn, pickup, auto-equip, use, descent |
+| `src/js/shop.js` | Buy/sell system, upgrades, shop UI |
+| `src/js/movement.js` | Player movement and d-pad controls |
+| `src/js/emergency.js` | Emergency potion prompt system |
+| `src/js/ui.js` | Tooltips, log, help modal, tips, long press |
+| `src/js/sfx.js` | Web Audio sound effects |
+| `src/js/fx.js` | Visual effects (shake, flash, float text) |
+| `src/js/input.js` | Keyboard and swipe input handling |
+| `src/js/pwa.js` | PWA install prompt |
+| `src/js/main.js` | Game screens: start, death, victory |
+| `assets/` | Icons and favicons (copies for src/ use) |
+
+The production version (`dungeon.html`) is intentionally a **single HTML file** — no build process, no dependencies, no framework. Drop it anywhere and it works. The `src/` structure is for development and requires a local HTTP server.
 
 ---
 
