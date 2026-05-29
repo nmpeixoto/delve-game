@@ -64,6 +64,7 @@ function attackEnemy(id,multiplier=1,opts={}){
   if(G.player.class === 'rogue' && ch(.25)) {
     addLog(`Dodged ${en.name}'s attack!`, 'log-info');
     popText('💨', G.player.x, G.player.y);
+    advanceTurn();
   } else {
     checkEmergencyPotion(en, edm, ()=>{
       G.player.hp=Math.max(0,G.player.hp-edm);

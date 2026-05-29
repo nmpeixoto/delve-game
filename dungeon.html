@@ -1455,6 +1455,7 @@ function attackEnemy(id,multiplier=1,opts={}){
   if(G.player.class === 'rogue' && ch(.25)) {
     addLog(`Dodged ${en.name}'s attack!`, 'log-info');
     popText('💨', G.player.x, G.player.y);
+    advanceTurn();
   } else {
     checkEmergencyPotion(en, edm, ()=>{
       G.player.hp=Math.max(0,G.player.hp-edm);
@@ -2173,6 +2174,8 @@ function initGame(playerClass = 'warrior'){
 function buildFloor(){
   let{map,rooms}=generateMap();
   G.map=map;G.rooms=rooms;G.enemies=[];G.shops=[];G.traps=[];G.currentShop=null;
+  G.visible = new Set();
+  G.seen = new Set();
   // Preserve carried items (bag contents) across floor transitions — only clear floor items
   G.items=G.items.filter(i=>i.carried);
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;

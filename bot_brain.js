@@ -37,6 +37,13 @@ window.botDecisionLogic = function() {
     if (item.type === 'potion') return true;
     return false;
   };
+  const usefulFloorItem = item => {
+    if (item.type === 'potion') return true;
+    if (item.type === 'upgrade') return true;
+    if (item.type === 'weapon') return canEquip(item) && weaponPower(item) > weaponPower(p.weapon);
+    if (item.type === 'armor') return canEquip(item) && armorPower(item) > armorPower(p.armor);
+    return false;
+  };
   const shouldExitWithoutPotion = () => p.hp < p.maxHp * 0.7 && carriedPotions().length === 0;
   const stairsSeen = () => {
     for (let y = 0; y < MAP_H; y++) {
@@ -125,7 +132,7 @@ window.botDecisionLogic = function() {
   let bag = G.items.filter(i => i.carried);
   if (bag.length < 12) {
       let adjItem = G.items.find(i => !i.carried && Math.abs(i.x - p.x) + Math.abs(i.y - p.y) === 1);
-      if (adjItem) {
+      if (adjItem && usefulFloorItem(adjItem)) {
         if (adjItem.x < p.x) return { type: 'key', val: 'ArrowLeft' };
         if (adjItem.x > p.x) return { type: 'key', val: 'ArrowRight' };
         if (adjItem.y < p.y) return { type: 'key', val: 'ArrowUp' };
@@ -198,7 +205,7 @@ window.botDecisionLogic = function() {
       return null;
   };
 
-  let forcedExit = (G.floor >= 5 || shouldExitWithoutPotion()) && stairsSeen();
+  let forcedExit = ((G.floor >= 5 || shouldExitWithoutPotion()) && stairsSeen());
   let adjEnemy = liveEnemies.find(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y) === 1);
   let killableAdjEnemy = liveEnemies
     .filter(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y) === 1 && e.hp <= minNormalDamage(e))

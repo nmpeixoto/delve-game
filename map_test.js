@@ -1,0 +1,79 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+const MAP_W = 56;
+const MAP_H = 36;
+const TILE = { WALL: 0, FLOOR: 1, STAIRS: 2, SHOP: 3 };
+
+function loadMapContext() {
+  const deterministicMath = Object.create(Math);
+  deterministicMath.random = () => 0.5;
+
+  const context = {
+    G: {
+      floor: 1,
+      player: { x: 0, y: 0, hp: 20, maxHp: 20, class: 'warrior' },
+      enemies: [],
+      items: [],
+      traps: [],
+      map: null,
+      rooms: [],
+      shops: [],
+      visible: new Set([999999]),
+      seen: new Set([999999]),
+      log: [],
+    },
+    TIPS: {
+      firstEnemy: { shown: false },
+      firstShop: { shown: false },
+      firstStairs: { shown: false },
+    },
+    MAP_W,
+    MAP_H,
+    TILE,
+    FLOORS: 6,
+    rr: (a, b) => a + Math.floor(deterministicMath.random() * (b - a + 1)),
+    rand: n => Math.floor(deterministicMath.random() * n),
+    ch: () => false,
+    uid: () => 'uid-' + Math.random().toString(36).slice(2),
+    render: () => {},
+    addLog: () => {},
+    fireTip: () => {},
+    resetTips: () => {},
+    generateShopStock: () => [],
+    spawnItem: () => {},
+    computeVision: null,
+    setTimeout: fn => fn(),
+    Math: deterministicMath,
+    Set,
+  };
+
+  vm.createContext(context);
+  const visionCode = fs.readFileSync(path.join(__dirname, 'src/js/vision.js'), 'utf8');
+  vm.runInContext(visionCode, context);
+  const mapCode = fs.readFileSync(path.join(__dirname, 'src/js/map.js'), 'utf8');
+  vm.runInContext(mapCode, context);
+  return context;
+}
+
+function test(name, fn) {
+  try {
+    fn();
+    console.log(`PASS ${name}`);
+  } catch (err) {
+    console.error(`FAIL ${name}`);
+    console.error(err.stack || err.message);
+    process.exitCode = 1;
+  }
+}
+
+test('new floors do not inherit seen tiles from the previous floor', () => {
+  const context = loadMapContext();
+
+  context.buildFloor();
+
+  assert.strictEqual(context.G.seen.has(999999), false);
+  assert.ok(context.G.seen.size > 0);
+});

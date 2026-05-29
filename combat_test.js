@@ -404,6 +404,61 @@ test('free moves do not make attacks free actions', () => {
   assert.strictEqual(context.G.player.freeMoves, 1);
 });
 
+test('rogue dodge still ends the turn after a counterattack is avoided', () => {
+  const context = loadCombat({
+    ch: () => true,
+  });
+  context.G.player.class = 'rogue';
+  context.G.visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 4]);
+  context.G.seen = new Set([5 * MAP_W + 5, 5 * MAP_W + 4]);
+  context.G.enemies = [{
+    id: 'goblin-1',
+    name: 'Goblin',
+    hp: 20,
+    maxHp: 20,
+    atk: 4,
+    def: 1,
+    xp: 6,
+    gold: 4,
+    x: 4,
+    y: 5,
+    stunnedTurns: 0,
+  }];
+  let advances = 0;
+  context.advanceTurn = () => { advances += 1; };
+
+  context.attackEnemy('goblin-1');
+
+  assert.strictEqual(advances, 1);
+});
+
+test('rogue dodge during the enemy phase does not recurse the turn engine', () => {
+  const context = loadCombat({
+    ch: () => true,
+  });
+  context.G.player.class = 'rogue';
+  context.G.visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 4]);
+  context.G.seen = new Set([5 * MAP_W + 5, 5 * MAP_W + 4]);
+  context.G.enemies = [{
+    id: 'goblin-1',
+    name: 'Goblin',
+    hp: 20,
+    maxHp: 20,
+    atk: 4,
+    def: 1,
+    xp: 6,
+    gold: 4,
+    x: 4,
+    y: 5,
+    stunnedTurns: 0,
+  }];
+
+  context.advanceTurn();
+
+  assert.strictEqual(context.G.turn, 1);
+  assert.strictEqual(context.G.player.hp, 20);
+});
+
 test('unaware enemies do not wander onto the player tile', () => {
   const context = loadCombat({
     ch: () => true,

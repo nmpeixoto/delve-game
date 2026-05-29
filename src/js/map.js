@@ -86,6 +86,8 @@ function initGame(playerClass = 'warrior'){
 function buildFloor(){
   let{map,rooms}=generateMap();
   G.map=map;G.rooms=rooms;G.enemies=[];G.shops=[];G.traps=[];G.currentShop=null;
+  G.visible = new Set();
+  G.seen = new Set();
   // Preserve carried items (bag contents) across floor transitions — only clear floor items
   G.items=G.items.filter(i=>i.carried);
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;

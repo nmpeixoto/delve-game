@@ -304,6 +304,27 @@ test('derives map dimensions from the active game map', () => {
   assert.strictEqual(decision.val, 'ArrowRight');
 });
 
+test('ignores weaker adjacent floor gear when exploring', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [4, 5],
+    [5, 5],
+    [6, 5],
+    [5, 4],
+  ]);
+  const seen = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6]);
+  const G = baseGame(map, {
+    player: { weapon: { name: 'Longsword', type: 'weapon', atk: 4 }, armor: null },
+    seen,
+    visible: new Set(seen),
+    items: [{ id: 'rusty-1', name: 'Rusty Dagger', type: 'weapon', atk: 1, x: 6, y: 5, carried: false }],
+  });
+
+  const decision = decide(G);
+
+  assert.notStrictEqual(decision.val, 'ArrowRight');
+});
+
 test('ignores shop gear the current class can never equip', () => {
   const map = makeMap();
   setFloor(map, [
