@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { isRetryableStartupResult } = require('./autoplay_test');
+const { isRetryableStartupResult, hasActionResolved } = require('./autoplay_test');
 
 function test(name, fn) {
   try {
@@ -38,4 +38,40 @@ test('does not retry real gameplay failures or clean terminal outcomes', () => {
     turns: 10,
     errors: ['[Exception]: real runtime failure'],
   }), false);
+});
+
+test('resolves free movement even when the turn counter does not advance', () => {
+  assert.strictEqual(hasActionResolved({
+    turn: 12,
+    floor: 1,
+    x: 10,
+    y: 10,
+    hp: 20,
+    ability1Cooldown: 3,
+    ability2Cooldown: 0,
+    enemyState: '1:5:10,11:0',
+  }, {
+    turn: 12,
+    floor: 1,
+    x: 10,
+    y: 9,
+    hp: 20,
+    ability1Cooldown: 3,
+    ability2Cooldown: 0,
+    enemyState: '1:5:10,11:0',
+  }), true);
+});
+
+test('does not resolve an unchanged action snapshot', () => {
+  const snapshot = {
+    turn: 12,
+    floor: 1,
+    x: 10,
+    y: 10,
+    hp: 20,
+    ability1Cooldown: 3,
+    ability2Cooldown: 0,
+    enemyState: '1:5:10,11:0',
+  };
+  assert.strictEqual(hasActionResolved(snapshot, { ...snapshot }), false);
 });

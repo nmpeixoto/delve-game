@@ -21,12 +21,46 @@ async function waitForGameStable(page) {
   }, { timeout: 1500 }).catch(() => {});
 }
 
-async function waitForTurnAdvance(page, previousTurn) {
-  await page.waitForFunction(
-    turn => typeof G === 'undefined' || !G || G.gameOver || G.won || G.turn !== turn,
-    { timeout: 1500 },
-    previousTurn,
-  ).catch(() => {});
+function hasActionResolved(before, after) {
+  if (!before || !after) return true;
+  if (after.gameOver || after.won) return true;
+  return before.turn !== after.turn
+    || before.floor !== after.floor
+    || before.x !== after.x
+    || before.y !== after.y
+    || before.hp !== after.hp
+    || before.ability1Cooldown !== after.ability1Cooldown
+    || before.ability2Cooldown !== after.ability2Cooldown
+    || before.enemyState !== after.enemyState;
+}
+
+async function getActionSnapshot(page) {
+  return page.evaluate(() => {
+    if (typeof G === 'undefined' || !G || !G.player) return null;
+    return {
+      turn: G.turn,
+      floor: G.floor,
+      gameOver: G.gameOver,
+      won: G.won,
+      x: G.player.x,
+      y: G.player.y,
+      hp: G.player.hp,
+      ability1Cooldown: G.ability1Cooldown,
+      ability2Cooldown: G.ability2Cooldown,
+      enemyState: G.enemies
+        .map(e => `${e.id || e.name}:${e.hp}:${e.x},${e.y}:${e.dying ? 1 : 0}`)
+        .join('|'),
+    };
+  });
+}
+
+async function waitForActionResolution(page, beforeSnapshot) {
+  const timeoutAt = Date.now() + 350;
+  while (Date.now() < timeoutAt) {
+    const afterSnapshot = await getActionSnapshot(page).catch(() => null);
+    if (hasActionResolved(beforeSnapshot, afterSnapshot)) return;
+    await new Promise(resolve => setTimeout(resolve, 25));
+  }
 }
 
 function isRetryableStartupResult(result) {
@@ -167,7 +201,7 @@ async function runAutoBot(url, runIndex, heroClass = 'warrior') {
       }
 
       const turnKeyActions = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'b', 'v', '.', '>']);
-      const turnBeforeAction = await page.evaluate(() => (typeof G !== 'undefined' && G) ? G.turn : -1);
+      const actionBefore = await getActionSnapshot(page);
 
       if (botDecision.type === 'click') {
         await page.evaluate((sel) => {
@@ -181,7 +215,7 @@ async function runAutoBot(url, runIndex, heroClass = 'warrior') {
       }
 
       if (botDecision.type === 'attack' || (botDecision.type === 'key' && turnKeyActions.has(botDecision.val))) {
-        await waitForTurnAdvance(page, turnBeforeAction);
+        await waitForActionResolution(page, actionBefore);
       }
       await waitForGameStable(page);
 
@@ -296,6 +330,7 @@ if (require.main === module) {
 
 module.exports = {
   isRetryableStartupResult,
+  hasActionResolved,
   runAutoBot,
   runAutoBotWithRetries,
   runMany,

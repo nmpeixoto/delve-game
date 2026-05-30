@@ -100,6 +100,7 @@ test('ranger starts with a tunic and stronger bow ladder', () => {
   assert.strictEqual(context.G.player.def, 1);
   assert.strictEqual(context.G.player.weapon.name, 'Shortbow');
   assert.strictEqual(context.G.player.weapon.atk, 4);
+  assert.strictEqual(context.G.player.weapon.sym, '🏹');
   assert.strictEqual(context.G.player.armor.name, 'Ranger Tunic');
   assert.strictEqual(context.G.player.armor.def, 3);
 });

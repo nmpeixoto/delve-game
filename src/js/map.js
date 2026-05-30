@@ -53,38 +53,38 @@ function initGame(playerClass = 'warrior'){
   };
   if(playerClass === 'warrior') {
     p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 3;
-    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:3, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:35};
+    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:3, rarity:'common', sym:'◆', price:35};
   } else if(playerClass === 'rogue') {
     p.hp = 22; p.maxHp = 22; p.atk = 6; p.def = 1;
-    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ', price:20};
-    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:20};
+    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'†', price:20};
+    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◆', price:20};
     p.bestWeapon = 'Rusty Dagger';
   } else if(playerClass === 'mage') {
     p.hp = 15; p.maxHp = 15; p.atk = 5; p.def = 1;
-    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'ÃƒÂ¢Ã¢â€žÂ¢Ã‚Â¦', price:40};
-    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:25};
+    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'♦', price:40};
+    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:25};
     p.bestWeapon = 'Bone Staff';
   } else if(playerClass === 'paladin') {
     p.hp = 25; p.maxHp = 25; p.atk = 2; p.def = 4;
-    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:45};
+    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:45};
   } else if(playerClass === 'ranger') {
     p.hp = 17; p.maxHp = 17; p.atk = 4; p.def = 1;
-    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:4, rarity:'common', sym:'ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â¹', price:30};
-    p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:30};
+    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:4, rarity:'common', sym:'🏹', price:30};
+    p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:30};
     p.bestWeapon = 'Shortbow';
   } else if(playerClass === 'barbarian') {
     p.hp = 40; p.maxHp = 40; p.atk = 5; p.def = 0;
-    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'ÃƒÂ¢Ã…Â¡Ã¢â‚¬Â', price:40};
-    p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:25};
+    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:40};
+    p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'◆', price:25};
     p.bestWeapon = 'Great Axe';
   } else if(playerClass === 'necromancer') {
     p.hp = 16; p.maxHp = 16; p.atk = 3; p.def = 1;
-    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'ÃƒÂ¢Ã¢â€žÂ¢Ã‚Â¦', price:40};
-    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:25};
+    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'♦', price:40};
+    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:25};
     p.bestWeapon = 'Skull Rod';
   } else if(playerClass === 'monk') {
     p.hp = 22; p.maxHp = 22; p.atk = 3; p.def = 2;
-    p.armor = {id:uid(), name:'Gi', type:'armor', def:3, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:30};
+    p.armor = {id:uid(), name:'Gi', type:'armor', def:3, rarity:'common', sym:'◆', price:30};
   }
 
   G={
@@ -106,7 +106,7 @@ function buildFloor(){
   G.map=map;G.rooms=rooms;G.enemies=[];G.shops=[];G.traps=[];G.currentShop=null;
   G.visible = new Set();
   G.seen = new Set();
-  // Preserve carried items (bag contents) across floor transitions ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â only clear floor items
+  // Preserve carried items (bag contents) across floor transitions; only clear floor items.
   G.items=G.items.filter(i=>i.carried);
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
 

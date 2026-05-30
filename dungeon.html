@@ -527,75 +527,75 @@ const DIRS={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],
 // ===================== DATA =====================
 const WEAPONS=[
   // Universal
-  {name:'Rusty Dagger',  type:'weapon', atk:4, sym:'Ã¢â‚¬Â ', rarity:'common', price:15},
-  {name:'Short Sword',   type:'weapon', atk:4, sym:'Ã¢â‚¬Â ', rarity:'common', price:30},
-  {name:'Broadsword',    type:'weapon', atk:6, sym:'Ã¢Å¡â€', rarity:'common', price:50, reqLvl:3},
-  {name:'Steel Glaive',  type:'weapon', atk:9, sym:'Ã¢Å¡â€', rarity:'rare',   price:80, reqLvl:6},
+  {name:'Rusty Dagger',  type:'weapon', atk:4, sym:'†', rarity:'common', price:15},
+  {name:'Short Sword',   type:'weapon', atk:4, sym:'†', rarity:'common', price:30},
+  {name:'Broadsword',    type:'weapon', atk:6, sym:'⚔', rarity:'common', price:50, reqLvl:3},
+  {name:'Steel Glaive',  type:'weapon', atk:9, sym:'⚔', rarity:'rare',   price:80, reqLvl:6},
 
   // Warrior / Paladin
-  {name:'Iron Mace',     type:'weapon', atk:5, sym:'Ã¢Å¡â€', rarity:'common', price:40, reqClass:['warrior','paladin']},
-  {name:'War Hammer',    type:'weapon', atk:8, sym:'Ã¢Å¡â€', rarity:'rare',   price:75, reqClass:['warrior','paladin'], reqLvl:5},
-  {name:'Holy Avenger',  type:'weapon', atk:14,sym:'Ã¢Å¡â€', rarity:'legendary', price:150, reqClass:['paladin'], reqLvl:10},
-  {name:'Champion Blade',type:'weapon', atk:15,sym:'Ã¢Å¡â€', rarity:'legendary', price:160, reqClass:['warrior'], reqLvl:10},
+  {name:'Iron Mace',     type:'weapon', atk:5, sym:'⚔', rarity:'common', price:40, reqClass:['warrior','paladin']},
+  {name:'War Hammer',    type:'weapon', atk:8, sym:'⚔', rarity:'rare',   price:75, reqClass:['warrior','paladin'], reqLvl:5},
+  {name:'Holy Avenger',  type:'weapon', atk:14,sym:'⚔', rarity:'legendary', price:150, reqClass:['paladin'], reqLvl:10},
+  {name:'Champion Blade',type:'weapon', atk:15,sym:'⚔', rarity:'legendary', price:160, reqClass:['warrior'], reqLvl:10},
 
   // Barbarian
-  {name:'Great Axe',     type:'weapon', atk:4, sym:'Ã¢Å¡â€', rarity:'common', price:40, reqClass:['barbarian']},
-  {name:'Savage Cleaver',type:'weapon', atk:9, sym:'Ã¢Å¡â€', rarity:'rare',   price:85, reqClass:['barbarian'], reqLvl:5},
-  {name:'Titan Slayer',  type:'weapon', atk:16,sym:'Ã¢Å¡â€', rarity:'legendary', price:180, reqClass:['barbarian'], reqLvl:10},
+  {name:'Great Axe',     type:'weapon', atk:4, sym:'⚔', rarity:'common', price:40, reqClass:['barbarian']},
+  {name:'Savage Cleaver',type:'weapon', atk:9, sym:'⚔', rarity:'rare',   price:85, reqClass:['barbarian'], reqLvl:5},
+  {name:'Titan Slayer',  type:'weapon', atk:16,sym:'⚔', rarity:'legendary', price:180, reqClass:['barbarian'], reqLvl:10},
 
   // Rogue
-  {name:'Twin Daggers',  type:'weapon', atk:5, sym:'Ã¢â‚¬Â ', rarity:'common', price:45, reqClass:['rogue']},
-  {name:'Assassin Dirk', type:'weapon', atk:8, sym:'Ã¢â‚¬Â ', rarity:'rare',   price:75, reqClass:['rogue'], reqLvl:5},
-  {name:'Shadow Blade',  type:'weapon', atk:14,sym:'Ã¢â‚¬Â ', rarity:'legendary', price:150, reqClass:['rogue'], reqLvl:10},
+  {name:'Twin Daggers',  type:'weapon', atk:5, sym:'†', rarity:'common', price:45, reqClass:['rogue']},
+  {name:'Assassin Dirk', type:'weapon', atk:8, sym:'†', rarity:'rare',   price:75, reqClass:['rogue'], reqLvl:5},
+  {name:'Shadow Blade',  type:'weapon', atk:14,sym:'†', rarity:'legendary', price:150, reqClass:['rogue'], reqLvl:10},
 
   // Ranger
-  {name:'Shortbow',      type:'weapon', atk:4, sym:'Ã°Å¸ÂÂ¹', rarity:'common', price:30, reqClass:['ranger']},
-  {name:'Longbow',       type:'weapon', atk:7, sym:'Ã°Å¸ÂÂ¹', rarity:'rare',   price:65, reqClass:['ranger'], reqLvl:4},
-  {name:'Crossbow',      type:'weapon', atk:10, sym:'Ã°Å¸ÂÂ¹', rarity:'rare',   price:90, reqClass:['ranger'], reqLvl:7},
-  {name:'Elven Bow',     type:'weapon', atk:14,sym:'Ã°Å¸ÂÂ¹', rarity:'legendary', price:140, reqClass:['ranger'], reqLvl:10},
+  {name:'Shortbow',      type:'weapon', atk:4, sym:'🏹', rarity:'common', price:30, reqClass:['ranger']},
+  {name:'Longbow',       type:'weapon', atk:7, sym:'🏹', rarity:'rare',   price:65, reqClass:['ranger'], reqLvl:4},
+  {name:'Crossbow',      type:'weapon', atk:10, sym:'🏹', rarity:'rare',   price:90, reqClass:['ranger'], reqLvl:7},
+  {name:'Elven Bow',     type:'weapon', atk:14,sym:'🏹', rarity:'legendary', price:140, reqClass:['ranger'], reqLvl:10},
 
   // Mage / Necromancer
-  {name:'Bone Staff',    type:'weapon', atk:5, sym:'Ã¢â„¢Â¦', rarity:'common', price:40, reqClass:['mage','necromancer']},
-  {name:'Skull Rod',     type:'weapon', atk:5, sym:'Ã¢â„¢Â¦', rarity:'common', price:40, reqClass:['mage','necromancer']},
-  {name:'Arcane Wand',   type:'weapon', atk:8, sym:'Ã¢â„¢Â¦', rarity:'rare',   price:75, reqClass:['mage','necromancer'], reqLvl:5},
-  {name:'Void Staff',    type:'weapon', atk:12,sym:'Ã¢â„¢Â¦', rarity:'rare',   price:110, reqClass:['mage','necromancer'], reqLvl:8},
-  {name:'Elder Wand',    type:'weapon', atk:18,sym:'Ã¢â„¢Â¦', rarity:'legendary', price:200, reqClass:['mage'], reqLvl:12},
-  {name:'Scythe of Death',type:'weapon',atk:17,sym:'Ã¢â„¢Â¦', rarity:'legendary', price:190, reqClass:['necromancer'], reqLvl:12},
+  {name:'Bone Staff',    type:'weapon', atk:5, sym:'♦', rarity:'common', price:40, reqClass:['mage','necromancer']},
+  {name:'Skull Rod',     type:'weapon', atk:5, sym:'♦', rarity:'common', price:40, reqClass:['mage','necromancer']},
+  {name:'Arcane Wand',   type:'weapon', atk:8, sym:'♦', rarity:'rare',   price:75, reqClass:['mage','necromancer'], reqLvl:5},
+  {name:'Void Staff',    type:'weapon', atk:12,sym:'♦', rarity:'rare',   price:110, reqClass:['mage','necromancer'], reqLvl:8},
+  {name:'Elder Wand',    type:'weapon', atk:18,sym:'♦', rarity:'legendary', price:200, reqClass:['mage'], reqLvl:12},
+  {name:'Scythe of Death',type:'weapon',atk:17,sym:'♦', rarity:'legendary', price:190, reqClass:['necromancer'], reqLvl:12},
 ];
 
 const ARMORS=[
   // Universal light/medium
-  {name:'Cloth Tunic',   type:'armor', def:1, sym:'Ã¢â€”Ë†', rarity:'common', price:10},
-  {name:'Leather Vest',  type:'armor', def:2, sym:'Ã¢â€”Ë†', rarity:'common', price:20},
-  {name:'Studded Armor', type:'armor', def:4, sym:'Ã¢â€”Ë†', rarity:'common', price:40, reqLvl:3},
-  {name:'Mithril Shirt', type:'armor', def:7, sym:'Ã¢â€”Ë†', rarity:'rare',   price:80, reqLvl:6},
+  {name:'Cloth Tunic',   type:'armor', def:1, sym:'◆', rarity:'common', price:10},
+  {name:'Leather Vest',  type:'armor', def:2, sym:'◆', rarity:'common', price:20},
+  {name:'Studded Armor', type:'armor', def:4, sym:'◆', rarity:'common', price:40, reqLvl:3},
+  {name:'Mithril Shirt', type:'armor', def:7, sym:'◆', rarity:'rare',   price:80, reqLvl:6},
 
   // Heavy (Warrior/Paladin)
-  {name:'Chain Mail',    type:'armor', def:4, sym:'Ã¢â€”Ë†', rarity:'common', price:35, reqClass:['warrior','paladin']},
-  {name:'Iron Plate',    type:'armor', def:5, sym:'Ã¢â€”Ë†', rarity:'common', price:45, reqClass:['warrior','paladin']},
-  {name:'Steel Plate',   type:'armor', def:8, sym:'Ã¢â€”Ë†', rarity:'rare',   price:80, reqClass:['warrior','paladin'], reqLvl:5},
-  {name:'Dragon Scale',  type:'armor', def:12,sym:'Ã¢â€”Ë†', rarity:'legendary', price:150, reqClass:['warrior','paladin'], reqLvl:10},
+  {name:'Chain Mail',    type:'armor', def:4, sym:'◆', rarity:'common', price:35, reqClass:['warrior','paladin']},
+  {name:'Iron Plate',    type:'armor', def:5, sym:'◆', rarity:'common', price:45, reqClass:['warrior','paladin']},
+  {name:'Steel Plate',   type:'armor', def:8, sym:'◆', rarity:'rare',   price:80, reqClass:['warrior','paladin'], reqLvl:5},
+  {name:'Dragon Scale',  type:'armor', def:12,sym:'◆', rarity:'legendary', price:150, reqClass:['warrior','paladin'], reqLvl:10},
 
   // Rogue / Ranger
-  {name:'Ranger Tunic',  type:'armor', def:3, sym:'Ã¢â€”Ë†', rarity:'common', price:30, reqClass:['rogue','ranger']},
-  {name:'Shadow Cloak',  type:'armor', def:6, sym:'Ã¢â€”Ë†', rarity:'rare',   price:70, reqClass:['rogue','ranger'], reqLvl:5},
-  {name:'Assassin Garb', type:'armor', def:10,sym:'Ã¢â€”Ë†', rarity:'legendary', price:130, reqClass:['rogue'], reqLvl:10},
-  {name:'Hunter Vest',   type:'armor', def:10,sym:'Ã¢â€”Ë†', rarity:'legendary', price:130, reqClass:['ranger'], reqLvl:10},
+  {name:'Ranger Tunic',  type:'armor', def:3, sym:'◆', rarity:'common', price:30, reqClass:['rogue','ranger']},
+  {name:'Shadow Cloak',  type:'armor', def:6, sym:'◆', rarity:'rare',   price:70, reqClass:['rogue','ranger'], reqLvl:5},
+  {name:'Assassin Garb', type:'armor', def:10,sym:'◆', rarity:'legendary', price:130, reqClass:['rogue'], reqLvl:10},
+  {name:'Hunter Vest',   type:'armor', def:10,sym:'◆', rarity:'legendary', price:130, reqClass:['ranger'], reqLvl:10},
 
   // Barbarian (Low DEF, but they wear it anyway)
-  {name:'Furs',          type:'armor', def:4, sym:'Ã¢â€”Ë†', rarity:'common', price:25, reqClass:['barbarian']},
-  {name:'Bone Armor',    type:'armor', def:6, sym:'Ã¢â€”Ë†', rarity:'rare',   price:60, reqClass:['barbarian'], reqLvl:5},
+  {name:'Furs',          type:'armor', def:4, sym:'◆', rarity:'common', price:25, reqClass:['barbarian']},
+  {name:'Bone Armor',    type:'armor', def:6, sym:'◆', rarity:'rare',   price:60, reqClass:['barbarian'], reqLvl:5},
 
   // Mage / Necromancer
-  {name:'Apprentice Robe',type:'armor',def:2, sym:'Ã¢â€”Ë†', rarity:'common', price:25, reqClass:['mage','necromancer']},
-  {name:'Mystic Robe',   type:'armor', def:5, sym:'Ã¢â€”Ë†', rarity:'rare',   price:60, reqClass:['mage','necromancer'], reqLvl:5},
-  {name:'Archmage Robes',type:'armor', def:9, sym:'Ã¢â€”Ë†', rarity:'legendary', price:120, reqClass:['mage'], reqLvl:10},
-  {name:'Lich Shroud',   type:'armor', def:9, sym:'Ã¢â€”Ë†', rarity:'legendary', price:120, reqClass:['necromancer'], reqLvl:10},
+  {name:'Apprentice Robe',type:'armor',def:2, sym:'◆', rarity:'common', price:25, reqClass:['mage','necromancer']},
+  {name:'Mystic Robe',   type:'armor', def:5, sym:'◆', rarity:'rare',   price:60, reqClass:['mage','necromancer'], reqLvl:5},
+  {name:'Archmage Robes',type:'armor', def:9, sym:'◆', rarity:'legendary', price:120, reqClass:['mage'], reqLvl:10},
+  {name:'Lich Shroud',   type:'armor', def:9, sym:'◆', rarity:'legendary', price:120, reqClass:['necromancer'], reqLvl:10},
 
   // Monk
-  {name:'Gi',            type:'armor', def:3, sym:'Ã¢â€”Ë†', rarity:'common', price:30, reqClass:['monk']},
-  {name:'Master Gi',     type:'armor', def:6, sym:'Ã¢â€”Ë†', rarity:'rare',   price:70, reqClass:['monk'], reqLvl:5},
-  {name:'Grandmaster Robe',type:'armor',def:11,sym:'Ã¢â€”Ë†', rarity:'legendary', price:140, reqClass:['monk'], reqLvl:10},
+  {name:'Gi',            type:'armor', def:3, sym:'◆', rarity:'common', price:30, reqClass:['monk']},
+  {name:'Master Gi',     type:'armor', def:6, sym:'◆', rarity:'rare',   price:70, reqClass:['monk'], reqLvl:5},
+  {name:'Grandmaster Robe',type:'armor',def:11,sym:'◆', rarity:'legendary', price:140, reqClass:['monk'], reqLvl:10},
 ];
 
 const POTIONS=[
@@ -606,13 +606,13 @@ const POTIONS=[
 
 // Shop-exclusive upgrades
 const UPGRADES=[
-  {name:'Strength Tonic', type:'upgrade',stat:'atk',amount:2,sym:'Ã¢â€ â€˜',rarity:'rare',   price:50,  desc:'+2 Attack (permanent)'},
-  {name:'Iron Skin',      type:'upgrade',stat:'def',amount:2,sym:'Ã¢â€ â€˜',rarity:'rare',   price:50,  desc:'+2 Defense (permanent)'},
-  {name:'Vitality Brew',  type:'upgrade',stat:'hp', amount:15,sym:'Ã¢â„¢Â¥',rarity:'rare',  price:45,  desc:'+15 Max HP (permanent)'},
-  {name:'Blessing',       type:'upgrade',stat:'all',amount:1,sym:'Ã¢Ëœâ€¦',rarity:'legendary',price:120,desc:'+1 ATK, +1 DEF, +10 Max HP'},
-  {name:'Vampiric Ring',  type:'upgrade',stat:'vamp',amount:1,sym:'Ã°Å¸â€™Â',rarity:'legendary',price:150,desc:'Heal 1 HP per kill'},
-  {name:'Troll Blood',    type:'upgrade',stat:'regen',amount:1,sym:'Ã¢â„¢Â¥',rarity:'legendary',price:160,desc:'Heal 1 HP every 10 turns'},
-  {name:'Hermes Boots',   type:'upgrade',stat:'swift',amount:1,sym:'Ã¢Å¡Â¡',rarity:'legendary',price:140,desc:'Gain 1 free move every 15 turns'},
+  {name:'Strength Tonic', type:'upgrade',stat:'atk',amount:2,sym:'↑',rarity:'rare',   price:50,  desc:'+2 Attack (permanent)'},
+  {name:'Iron Skin',      type:'upgrade',stat:'def',amount:2,sym:'↑',rarity:'rare',   price:50,  desc:'+2 Defense (permanent)'},
+  {name:'Vitality Brew',  type:'upgrade',stat:'hp', amount:15,sym:'♥',rarity:'rare',  price:45,  desc:'+15 Max HP (permanent)'},
+  {name:'Blessing',       type:'upgrade',stat:'all',amount:1,sym:'★',rarity:'legendary',price:120,desc:'+1 ATK, +1 DEF, +10 Max HP'},
+  {name:'Vampiric Ring',  type:'upgrade',stat:'vamp',amount:1,sym:'💍',rarity:'legendary',price:150,desc:'Heal 1 HP per kill'},
+  {name:'Troll Blood',    type:'upgrade',stat:'regen',amount:1,sym:'♥',rarity:'legendary',price:160,desc:'Heal 1 HP every 10 turns'},
+  {name:'Hermes Boots',   type:'upgrade',stat:'swift',amount:1,sym:'⚡',rarity:'legendary',price:140,desc:'Gain 1 free move every 15 turns'},
 ];
 const ENEMIES=[
   {name:'Rat',    sym:'r',hp:5, atk:2, def:0,xp:3, gold:2, color:'#cd853f'},
@@ -2179,38 +2179,38 @@ function initGame(playerClass = 'warrior'){
   };
   if(playerClass === 'warrior') {
     p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 3;
-    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:3, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:35};
+    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:3, rarity:'common', sym:'◆', price:35};
   } else if(playerClass === 'rogue') {
     p.hp = 22; p.maxHp = 22; p.atk = 6; p.def = 1;
-    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ', price:20};
-    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:20};
+    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'†', price:20};
+    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◆', price:20};
     p.bestWeapon = 'Rusty Dagger';
   } else if(playerClass === 'mage') {
     p.hp = 15; p.maxHp = 15; p.atk = 5; p.def = 1;
-    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'ÃƒÂ¢Ã¢â€žÂ¢Ã‚Â¦', price:40};
-    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:25};
+    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'♦', price:40};
+    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:25};
     p.bestWeapon = 'Bone Staff';
   } else if(playerClass === 'paladin') {
     p.hp = 25; p.maxHp = 25; p.atk = 2; p.def = 4;
-    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:45};
+    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:45};
   } else if(playerClass === 'ranger') {
     p.hp = 17; p.maxHp = 17; p.atk = 4; p.def = 1;
-    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:4, rarity:'common', sym:'ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â¹', price:30};
-    p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:30};
+    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:4, rarity:'common', sym:'🏹', price:30};
+    p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:30};
     p.bestWeapon = 'Shortbow';
   } else if(playerClass === 'barbarian') {
     p.hp = 40; p.maxHp = 40; p.atk = 5; p.def = 0;
-    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'ÃƒÂ¢Ã…Â¡Ã¢â‚¬Â', price:40};
-    p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:25};
+    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:40};
+    p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'◆', price:25};
     p.bestWeapon = 'Great Axe';
   } else if(playerClass === 'necromancer') {
     p.hp = 16; p.maxHp = 16; p.atk = 3; p.def = 1;
-    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'ÃƒÂ¢Ã¢â€žÂ¢Ã‚Â¦', price:40};
-    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:25};
+    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'♦', price:40};
+    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:25};
     p.bestWeapon = 'Skull Rod';
   } else if(playerClass === 'monk') {
     p.hp = 22; p.maxHp = 22; p.atk = 3; p.def = 2;
-    p.armor = {id:uid(), name:'Gi', type:'armor', def:3, rarity:'common', sym:'ÃƒÂ¢Ã¢â‚¬â€Ã‹â€ ', price:30};
+    p.armor = {id:uid(), name:'Gi', type:'armor', def:3, rarity:'common', sym:'◆', price:30};
   }
 
   G={
@@ -2232,7 +2232,7 @@ function buildFloor(){
   G.map=map;G.rooms=rooms;G.enemies=[];G.shops=[];G.traps=[];G.currentShop=null;
   G.visible = new Set();
   G.seen = new Set();
-  // Preserve carried items (bag contents) across floor transitions ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â only clear floor items
+  // Preserve carried items (bag contents) across floor transitions; only clear floor items.
   G.items=G.items.filter(i=>i.carried);
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
 
