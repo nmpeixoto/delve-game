@@ -35,8 +35,9 @@ function updateBestWeapon(weapon){
   let current=G.player.bestWeapon;
   let match=current.match(/ATK\+(\d+)/);
   let currentAtk=match?parseInt(match[1]):0;
-  if(weapon.atk>currentAtk){
-    G.player.bestWeapon=`${weapon.name} (ATK+${weapon.atk})`;
+  let wp = weaponPower(weapon);
+  if(wp>currentAtk){
+    G.player.bestWeapon=`${weapon.name} (ATK+${wp})`;
   }
 }
 

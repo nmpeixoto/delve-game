@@ -3,13 +3,13 @@ function tileAttack(id){
   if(!canAct()||G.gameOver||G.won) return;
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
   if(en.dying)return;
-  let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 2 : 2;
+  let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
   let dist=Math.max(Math.abs(en.x-G.player.x),Math.abs(en.y-G.player.y));
   if(dist<=maxRange){
-    let rangedBow = G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹' && dist > 2;
+    let rangedBow = G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹' && dist >= 3;
     attackEnemy(id,1,{skipCounter:rangedBow});
   } else {
-    if(G.player.rootedTurns > 0) { consumeRootedTurn(); return; }
+    if(G.player.rootedTurns > 0) { addLog('You are rooted and cannot move closer!','log-info'); return; }
     move(Math.sign(en.x-G.player.x)||0,Math.sign(en.y-G.player.y)||0);
   }
 }
@@ -77,6 +77,9 @@ function attackEnemy(id,multiplier=1,opts={}){
   }
 }
 
+let _deathBatch = [];
+let _deathTimer = null;
+
 function killEnemy(en, skipAdvanceTurn) {
   let goldDrop=en.gold+rand(3);
   G.player.xp+=en.xp;G.player.kills++;G.player.gold+=goldDrop;
@@ -97,7 +100,8 @@ function killEnemy(en, skipAdvanceTurn) {
   fireTip('firstGold');
   en.dying=true;
 
-  if(en.corpseExplosionTarget) {
+  if(en.corpseExplosionTarget && !en._exploded) {
+    en._exploded = true;
     addLog('CORPSE EXPLOSION!', 'log-combat');
     SFX.bash();
     G.enemies.forEach(o => {
@@ -110,16 +114,25 @@ function killEnemy(en, skipAdvanceTurn) {
     });
   }
 
-  render();
-  setTimeout(()=>{
-    G.enemies=G.enemies.filter(e=>e.id!==en.id);
-    if(ch(.2)){
-      let pool=[...WEAPONS,...ARMORS,...POTIONS];
-      G.items.push({...pool[rand(pool.length)],x:en.x,y:en.y,id:uid()});
-    }
-    checkLevelUp();
-    if(!skipAdvanceTurn) advanceTurn();
-  },320);
+  _deathBatch.push({en, skipAdvanceTurn});
+  if(!_deathTimer) {
+    render();
+    _deathTimer = setTimeout(()=>{
+      let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
+      _deathBatch.forEach(d => {
+        G.enemies = G.enemies.filter(e => e.id !== d.en.id);
+        if(ch(.2)){
+          let pool=[...WEAPONS,...ARMORS,...POTIONS];
+          let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
+          G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
+        }
+      });
+      _deathBatch = [];
+      _deathTimer = null;
+      checkLevelUp();
+      if(shouldAdvance) advanceTurn();
+    }, 320);
+  }
 }
 
 function checkLevelUp(){
@@ -173,7 +186,7 @@ function advanceTurn(opts={}){
   if(G.player.rootedTurns>0)G.player.rootedTurns--;
 
   G.enemies.forEach(e=>{
-    if(G.gameOver||G.won) return;
+    if(G.gameOver||G.won||G.pendingHit) return;
     if(e.dying) return;
 
     let trapIdx = G.traps.findIndex(t => t.x===e.x && t.y===e.y);
@@ -357,7 +370,7 @@ function doAbility1(){
       let dx = Math.sign(en.x - p.x), dy = Math.sign(en.y - p.y);
       let nx = en.x + dx, ny = en.y + dy;
       let dmg = Math.max(1, gatk() - en.def + rand(3));
-      if(G.map[ny] && G.map[ny][nx] !== TILE.WALL && !G.enemies.some(e=>e.x===nx&&e.y===ny)) {
+      if(nx>=0 && nx<MAP_W && ny>=0 && ny<MAP_H && G.map[ny][nx] !== TILE.WALL && !G.enemies.some(e=>e.x===nx&&e.y===ny)) {
         en.x = nx; en.y = ny;
       } else {
         dmg *= 2;
@@ -378,7 +391,7 @@ function doAbility2(){
 
   if(p.class === 'warrior') {
     p.shieldWallTurns = 3; G.ability2Cooldown = 10;
-    addLog('Shield Wall active! Damage halved for 3 turns.', 'log-info'); advanceTurn();
+    addLog('Shield Wall active! Damage reduced by 40% for 3 turns.', 'log-info'); advanceTurn();
   }
   else if(p.class === 'rogue') {
     p.vanishTurns = 3; G.ability2Cooldown = 10;
@@ -417,7 +430,7 @@ function doAbility2(){
   }
   else if(p.class === 'barbarian') {
     p.bloodlustTurns = 3; G.ability2Cooldown = 12;
-    addLog('Bloodlust! Deal damage to heal, but take double damage!', 'log-combat'); advanceTurn();
+    addLog('Bloodlust! Deal damage to heal, but take 15% more damage!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'necromancer') {
     let visEnemies = G.enemies.filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x));

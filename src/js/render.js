@@ -100,7 +100,7 @@ function render(){
       if(x===G.player.x&&y===G.player.y){h+=`<div class="tile tile-player" style="${s}">@</div>`;continue;}
       let en=vis?G.enemies.find(e=>e.x===x&&e.y===y):null;
       if(en){
-        let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 2 : 2;
+        let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
         let dist = Math.max(Math.abs(en.x-G.player.x), Math.abs(en.y-G.player.y));
         let canTap = (dist <= maxRange);
         let dyingClass=en.dying?' tile-enemy-dying':'';
@@ -117,7 +117,7 @@ function render(){
       let it=vis?G.items.find(i=>!i.carried&&i.x===x&&i.y===y):null;
       if(it){
         let safeName = it.name.replace(/'/g,"\\'").replace(/"/g,"&quot;");
-        let safeDesc = iDesc(it).replace(/'/g,"\\'").replace(/"/g,"&quot;");
+        let safeDesc = iDesc(it).replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,"\\'").replace(/"/g,"&quot;");
         h+=`<div class="tile tile-item" style="${s}"
           ontouchend="event.preventDefault();tilePickup('${it.id}')"
           ontouchstart="showTip(event,'${safeName}: ${safeDesc}');event.stopPropagation()"
@@ -221,8 +221,8 @@ function updateInvDrawer(){
   }
   document.getElementById('inventory-list').innerHTML=h;
   let eh='';
-  if(G.player.weapon) eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.weapon.name}</div><div class="inv-type">weapon</div></div><div class="inv-bonus">ATK+${G.player.weapon.atk}</div></div>`;
-  if(G.player.armor)  eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.armor.name}</div><div class="inv-type">armor</div></div><div class="inv-bonus">DEF+${G.player.armor.def}</div></div>`;
+  if(G.player.weapon) eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.weapon.name}</div><div class="inv-type">weapon</div></div><div class="inv-bonus">ATK+${weaponPower(G.player.weapon)}</div></div>`;
+  if(G.player.armor)  eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.armor.name}</div><div class="inv-type">armor</div></div><div class="inv-bonus">DEF+${armorPower(G.player.armor)}</div></div>`;
   if(!G.player.weapon&&!G.player.armor) eh='<div class="inv-empty">Nothing equipped</div>';
   document.getElementById('equipped-list').innerHTML=eh;
 }

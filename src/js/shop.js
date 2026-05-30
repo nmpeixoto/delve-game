@@ -122,11 +122,13 @@ function buyItem(id){
     G.items.push(clone);
     autoEquip(clone);
     addLog(`Bought ${item.name}`,'log-shop');
+    SFX.buy();
   } else if(item.type==='armor'){
     let clone={...item,carried:true,id:uid()};
     G.items.push(clone);
     autoEquip(clone);
     addLog(`Bought ${item.name}`,'log-shop');
+    SFX.buy();
   } else if(item.type==='upgrade'){
     applyUpgrade(item);
   }

@@ -1,6 +1,5 @@
 // ===================== MOVEMENT =====================
 function consumeRootedTurn(){
-  G.player.rootedTurns=0;
   addLog('You are rooted and cannot move!', 'log-combat');
   advanceTurn();
 }

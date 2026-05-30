@@ -113,7 +113,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   .hud-stat{font-size:.5rem;}
   .hud-center{font-size:.34rem;}
   #map-area{flex:1;min-width:0;}
-  #bottom-bar{display:none;}
+  #bottom-bar{height:24px;overflow:hidden;border-top:1px solid var(--border);}
+  #log{height:24px;padding:2px 8px;font-size:.45rem;overflow:hidden;}
   #install-banner{display:none!important;}
   #dpad-area{
     width:150px;flex-shrink:0;
