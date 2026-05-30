@@ -55,12 +55,13 @@ function initGame(playerClass = 'warrior'){
     p.hp = 25; p.maxHp = 25; p.atk = 2; p.def = 4;
     p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◈', price:45};
   } else if(playerClass === 'ranger') {
-    p.hp = 15; p.maxHp = 15; p.atk = 3; p.def = 2;
-    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:3, rarity:'common', sym:'🏹', price:30};
+    p.hp = 15; p.maxHp = 15; p.atk = 3; p.def = 1;
+    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:2, rarity:'common', sym:'🏹', price:30};
     p.bestWeapon = 'Shortbow';
   } else if(playerClass === 'barbarian') {
     p.hp = 40; p.maxHp = 40; p.atk = 5; p.def = 0;
     p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:40};
+    p.armor = {id:uid(), name:'Furs', type:'armor', def:3, rarity:'common', sym:'◈', price:25};
     p.bestWeapon = 'Great Axe';
   } else if(playerClass === 'necromancer') {
     p.hp = 15; p.maxHp = 15; p.atk = 3; p.def = 1;

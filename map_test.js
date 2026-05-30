@@ -95,6 +95,17 @@ test('ranger starts with lower base attack now that bow range is fully used', ()
   context.initGame('ranger');
 
   assert.strictEqual(context.G.player.atk, 3);
+  assert.strictEqual(context.G.player.def, 1);
   assert.strictEqual(context.G.player.weapon.name, 'Shortbow');
-  assert.strictEqual(context.G.player.weapon.atk, 3);
+  assert.strictEqual(context.G.player.weapon.atk, 2);
+});
+
+test('barbarian starts with furs for full-clear durability', () => {
+  const context = loadMapContext();
+
+  context.initGame('barbarian');
+
+  assert.ok(context.G.player.armor);
+  assert.strictEqual(context.G.player.armor.name, 'Furs');
+  assert.strictEqual(context.G.player.armor.def, 3);
 });

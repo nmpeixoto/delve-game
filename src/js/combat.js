@@ -61,7 +61,7 @@ function attackEnemy(id,multiplier=1,opts={}){
   if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm / 2);
   if(G.player.bloodlustTurns > 0) edm *= 2;
 
-  if(G.player.class === 'rogue' && ch(.25)) {
+  if(G.player.class === 'rogue' && ch(.3)) {
     addLog(`Dodged ${en.name}'s attack!`, 'log-info');
     popText('💨', G.player.x, G.player.y);
     advanceTurn();
@@ -210,7 +210,7 @@ function advanceTurn(opts={}){
           if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm / 2);
           if(G.player.bloodlustTurns > 0) edm *= 2;
 
-          if(G.player.class === 'rogue' && ch(.25)) {
+          if(G.player.class === 'rogue' && ch(.3)) {
             addLog(`Dodged ${e.name}'s attack!`, 'log-info');
             popText('💨', G.player.x, G.player.y);
           } else {

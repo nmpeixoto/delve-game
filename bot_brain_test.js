@@ -520,6 +520,27 @@ test('rogue attacks adjacent enemies while healthy instead of dash-kiting', () =
   assert.strictEqual(decision.val, 'ArrowDown');
 });
 
+test('rogue attacks adjacent enemies at mid hp when a strong hit can kill', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [5, 5],
+    [5, 6],
+  ]);
+  const visible = new Set([4 * MAP_W + 5, 5 * MAP_W + 5, 6 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { class: 'rogue', atk: 7, hp: 15, maxHp: 28, weapon: { atk: 2 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'g1', name: 'Goblin', x: 5, y: 6, hp: 10, maxHp: 10, atk: 4, def: 1 }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowDown');
+});
+
 test('rogue fights instead of dash-spamming when critical with no known exit', () => {
   const map = makeMap();
   setFloor(map, [
@@ -556,6 +577,28 @@ test('rogue uses vanish before dash when wounded at level 5 in melee', () => {
     seen: new Set([4 * MAP_W + 5, 5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6, 6 * MAP_W + 5]),
     visible,
     enemies: [{ id: 'g1', name: 'Goblin', x: 5, y: 6, hp: 14, maxHp: 14, atk: 4, def: 1 }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'v');
+});
+
+test('rogue uses vanish offensively on late-floor visible threats before dash', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { class: 'rogue', lvl: 5, hp: 28, maxHp: 28, weapon: { atk: 2 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'orc-1', name: 'Orc', x: 7, y: 5, hp: 45, maxHp: 45, atk: 8, def: 2 }],
+    G: { floor: 5 },
   });
 
   const decision = decide(G);
@@ -607,6 +650,27 @@ test('mage attacks a weak visible enemy at range instead of kiting forever', () 
 
   assert.strictEqual(decision.type, 'attack');
   assert.strictEqual(decision.target, 'g1');
+});
+
+test('mage fireballs a healthy single visible threat instead of kiting forever', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { class: 'mage', hp: 15, maxHp: 15, weapon: { atk: 5, sym: '♦' } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'orc-1', name: 'Orc', x: 7, y: 5, hp: 45, maxHp: 45, atk: 8, def: 2 }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'b');
 });
 
 test('ranger uses bow range on visible enemies before walking toward them', () => {

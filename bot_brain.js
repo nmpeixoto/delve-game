@@ -224,6 +224,7 @@ window.botDecisionLogic = function() {
 
   const totalAtk = () => (p.atk || 0) + weaponPower(p.weapon);
   const minNormalDamage = en => Math.max(1, totalAtk() - en.def);
+  const maxNormalDamage = en => Math.max(1, totalAtk() - en.def + 2);
   const minBashDamage = en => minNormalDamage(en) * 2;
   const minSneakDamage = en => minNormalDamage(en) * (p.vanishTurns > 0 ? 2 : 1);
   const tapRange = () => (p.class === 'ranger' && isBow(p.weapon)) ? 3 : 2;
@@ -282,11 +283,11 @@ window.botDecisionLogic = function() {
   const ability2Decision = () => {
       if (G.ability2Cooldown !== 0 || p.lvl < 5) return null;
       if (p.class === 'warrior' && visEnemies.length >= 2) return { type: 'key', val: 'v' }; // SHIELD WALL
-      if (p.class === 'rogue' && (p.hp < p.maxHp * 0.85 || countAdjacentEnemies() > 0 || visEnemies.length >= 2) && visEnemies.length > 0) return { type: 'key', val: 'v' }; // VANISH
+      if (p.class === 'rogue' && (p.hp < p.maxHp * 0.85 || countAdjacentEnemies() > 0 || visEnemies.length >= 2 || G.floor >= 4) && visEnemies.length > 0) return { type: 'key', val: 'v' }; // VANISH
       if (p.class === 'mage' && (countAdjacentEnemies() > 0 || p.hp < p.maxHp * 0.75) && visEnemies.length > 0) return { type: 'key', val: 'v' }; // BLINK
       if (p.class === 'paladin' && p.hp < p.maxHp * 0.7) return { type: 'key', val: 'v' }; // LAY ON HANDS
       if (p.class === 'ranger' && adjEnemy) return { type: 'key', val: 'v' }; // BEAR TRAP
-      if (p.class === 'barbarian' && (visEnemies.length >= 2 || countAdjacentEnemies() >= 1) && p.hp > p.maxHp * 0.7) return { type: 'key', val: 'v' }; // BLOODLUST
+      if (p.class === 'barbarian' && countAdjacentEnemies() >= 2 && p.hp > p.maxHp * 0.85) return { type: 'key', val: 'v' }; // BLOODLUST
       if (p.class === 'necromancer' && (visibleClusters().length > 0 || visEnemies.length >= 2)) return { type: 'key', val: 'v' }; // CORPSE EXPLOSION
       if (p.class === 'monk' && adjEnemy && (p.hp > p.maxHp * 0.75 || countAdjacentEnemies() >= 2)) return { type: 'key', val: 'v' }; // FLURRY OF BLOWS
       return null;
@@ -306,13 +307,13 @@ window.botDecisionLogic = function() {
       else if (p.class === 'rogue') {
          if (!adjEnemy && p.hp > p.maxHp * 0.6 && (countVisibleEnemies() === 0 || (countVisibleEnemies() === 1 && p.hp > p.maxHp * 0.8))) return { type: 'key', val: 'b' }; // DASH
          if (adjEnemy) {
-            let adjacentKillable = Math.max(1, attackPower() - (adjEnemy.def || 0) + 2) >= adjEnemy.hp;
+            let adjacentKillable = maxNormalDamage(adjEnemy) >= adjEnemy.hp;
             let canSpendDash = (p.hp > p.maxHp * 0.45 && p.hp < p.maxHp * 0.75) || countAdjacentEnemies() >= 2;
             if (!adjacentKillable && canSpendDash) return { type: 'key', val: 'b' }; // DASH OUT
          }
       }
       else if (p.class === 'mage') {
-         if (visEnemies.length >= 1 && (visibleClusters().length > 0 || countAdjacentEnemies() > 0 || p.hp < p.maxHp * 0.9)) return { type: 'key', val: 'b' }; // FIREBALL
+         if (visEnemies.length >= 1) return { type: 'key', val: 'b' }; // FIREBALL
       }
       else if (p.class === 'paladin') {
          let target = liveEnemies.find(e => Math.abs(e.x - p.x) <= 2 && Math.abs(e.y - p.y) <= 2 && G.visible.has(e.y*MAP_W+e.x));
@@ -353,6 +354,10 @@ window.botDecisionLogic = function() {
   if (rangedAction) return rangedAction;
 
   if (p.class === 'rogue' && adjEnemy && p.hp >= p.maxHp * 0.75) {
+      return attackMove(adjEnemy);
+  }
+
+  if (p.class === 'rogue' && adjEnemy && adjEnemy.hp <= maxNormalDamage(adjEnemy)) {
       return attackMove(adjEnemy);
   }
 

@@ -548,10 +548,10 @@ const WEAPONS=[
   {name:'Shadow Blade',  type:'weapon', atk:14,sym:'†', rarity:'legendary', price:150, reqClass:['rogue'], reqLvl:10},
 
   // Ranger
-  {name:'Shortbow',      type:'weapon', atk:3, sym:'🏹', rarity:'common', price:30, reqClass:['ranger']},
-  {name:'Longbow',       type:'weapon', atk:6, sym:'🏹', rarity:'rare',   price:65, reqClass:['ranger'], reqLvl:4},
-  {name:'Crossbow',      type:'weapon', atk:9, sym:'🏹', rarity:'rare',   price:90, reqClass:['ranger'], reqLvl:7},
-  {name:'Elven Bow',     type:'weapon', atk:13,sym:'🏹', rarity:'legendary', price:140, reqClass:['ranger'], reqLvl:10},
+  {name:'Shortbow',      type:'weapon', atk:2, sym:'🏹', rarity:'common', price:30, reqClass:['ranger']},
+  {name:'Longbow',       type:'weapon', atk:5, sym:'🏹', rarity:'rare',   price:65, reqClass:['ranger'], reqLvl:4},
+  {name:'Crossbow',      type:'weapon', atk:8, sym:'🏹', rarity:'rare',   price:90, reqClass:['ranger'], reqLvl:7},
+  {name:'Elven Bow',     type:'weapon', atk:12,sym:'🏹', rarity:'legendary', price:140, reqClass:['ranger'], reqLvl:10},
 
   // Mage / Necromancer
   {name:'Bone Staff',    type:'weapon', atk:5, sym:'♦', rarity:'common', price:40, reqClass:['mage','necromancer']},
@@ -1457,7 +1457,7 @@ function attackEnemy(id,multiplier=1,opts={}){
   if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm / 2);
   if(G.player.bloodlustTurns > 0) edm *= 2;
 
-  if(G.player.class === 'rogue' && ch(.25)) {
+  if(G.player.class === 'rogue' && ch(.3)) {
     addLog(`Dodged ${en.name}'s attack!`, 'log-info');
     popText('💨', G.player.x, G.player.y);
     advanceTurn();
@@ -1606,7 +1606,7 @@ function advanceTurn(opts={}){
           if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm / 2);
           if(G.player.bloodlustTurns > 0) edm *= 2;
 
-          if(G.player.class === 'rogue' && ch(.25)) {
+          if(G.player.class === 'rogue' && ch(.3)) {
             addLog(`Dodged ${e.name}'s attack!`, 'log-info');
             popText('💨', G.player.x, G.player.y);
           } else {
@@ -2180,12 +2180,13 @@ function initGame(playerClass = 'warrior'){
     p.hp = 25; p.maxHp = 25; p.atk = 2; p.def = 4;
     p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◈', price:45};
   } else if(playerClass === 'ranger') {
-    p.hp = 15; p.maxHp = 15; p.atk = 3; p.def = 2;
-    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:3, rarity:'common', sym:'🏹', price:30};
+    p.hp = 15; p.maxHp = 15; p.atk = 3; p.def = 1;
+    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:2, rarity:'common', sym:'🏹', price:30};
     p.bestWeapon = 'Shortbow';
   } else if(playerClass === 'barbarian') {
     p.hp = 40; p.maxHp = 40; p.atk = 5; p.def = 0;
     p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:40};
+    p.armor = {id:uid(), name:'Furs', type:'armor', def:3, rarity:'common', sym:'◈', price:25};
     p.bestWeapon = 'Great Axe';
   } else if(playerClass === 'necromancer') {
     p.hp = 15; p.maxHp = 15; p.atk = 3; p.def = 1;
@@ -2289,11 +2290,11 @@ function handleResize(){
 
 const CLASS_DATA = {
   warrior: { name: 'Warrior', tagline: 'A sturdy fighter who excels in sustained combat.', hp: 30, atk: 3, def: 3, weapon: 'Bare Hands', armor: 'Chain Mail', ability1: 'BASH', desc1: 'Deals 2x damage to a nearby visible enemy. Cooldown: 5', ability2: 'SHIELD WALL', desc2: '(Lvl 5) Reduces incoming damage by 50% for 3 turns. Cooldown: 10', passive: 'Regenerates 1 HP every 5 turns.' },
-  rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 20, atk: 6, def: 1, weapon: 'Rusty Dagger', armor: 'Leather Vest', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 25% of all incoming attacks.' },
+  rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 20, atk: 6, def: 1, weapon: 'Rusty Dagger', armor: 'Leather Vest', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 30% of all incoming attacks.' },
   mage: { name: 'Mage', tagline: 'A fragile spellcaster with potent magic.', hp: 15, atk: 5, def: 1, weapon: 'Bone Staff', armor: 'None', ability1: 'FIREBALL', desc1: 'Deals damage to all enemies in a 3x3 area around a target. Cooldown: 5', ability2: 'BLINK', desc2: '(Lvl 5) Teleport instantly to a safe, visible tile. Cooldown: 8', passive: 'Magic weapons (♦) deal +50% damage.' },
   paladin: { name: 'Paladin', tagline: 'A holy champion focused on sustain and defense.', hp: 25, atk: 2, def: 4, weapon: 'Bare Hands', armor: 'Iron Plate', ability1: 'SMITE', desc1: 'Deals damage and stuns the enemy for 1 turn. Cooldown: 5', ability2: 'LAY ON HANDS', desc2: '(Lvl 5) Heals for 30% of Max HP. Cooldown: 15', passive: 'Max HP increases by 2 upon leveling up.' },
-  ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 15, atk: 3, def: 2, weapon: 'Shortbow', armor: 'None', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 3 tiles away.' },
-  barbarian: { name: 'Barbarian', tagline: 'A fearless brute who thrives in chaos.', hp: 40, atk: 5, def: 0, weapon: 'Great Axe', armor: 'None', ability1: 'CLEAVE', desc1: 'Deals damage to all adjacent enemies. Cooldown: 4', ability2: 'BLOODLUST', desc2: '(Lvl 5) For 3 turns, heal 50% of damage dealt, but take 2x damage. Cooldown: 12', passive: 'Deals +1 damage for every 10 missing HP.' },
+  ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 15, atk: 3, def: 1, weapon: 'Shortbow', armor: 'None', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 3 tiles away.' },
+  barbarian: { name: 'Barbarian', tagline: 'A fearless brute who thrives in chaos.', hp: 40, atk: 5, def: 0, weapon: 'Great Axe', armor: 'Furs', ability1: 'CLEAVE', desc1: 'Deals damage to all adjacent enemies. Cooldown: 4', ability2: 'BLOODLUST', desc2: '(Lvl 5) For 3 turns, heal 50% of damage dealt, but take 2x damage. Cooldown: 12', passive: 'Deals +1 damage for every 10 missing HP.' },
   necromancer: { name: 'Necromancer', tagline: 'A dark caster who drains life from foes.', hp: 15, atk: 3, def: 1, weapon: 'Skull Rod', armor: 'None', ability1: 'SIPHON LIFE', desc1: 'Deals damage and heals yourself for the same amount. Cooldown: 5', ability2: 'CORPSE EXPLOSION', desc2: '(Lvl 5) Mark an enemy for 3 turns. If it dies while marked, it explodes for heavy AoE damage. Cooldown: 8', passive: 'Heals 1 HP whenever an enemy dies.' },
   monk: { name: 'Monk', tagline: 'A disciplined martial artist.', hp: 20, atk: 3, def: 2, weapon: 'Bare Hands', armor: 'None', ability1: 'PUSH KICK', desc1: 'Pushes an enemy 1 tile away. Deals extra damage if they hit a wall. Cooldown: 3', ability2: 'FLURRY OF BLOWS', desc2: '(Lvl 5) Attacks 3 times instantly, but you are rooted for your next turn. Cooldown: 10', passive: 'Gains +2 ATK (scaling with level) when NO weapon is equipped.' }
 };

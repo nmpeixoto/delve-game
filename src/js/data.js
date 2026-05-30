@@ -23,10 +23,10 @@ const WEAPONS=[
   {name:'Shadow Blade',  type:'weapon', atk:14,sym:'†', rarity:'legendary', price:150, reqClass:['rogue'], reqLvl:10},
 
   // Ranger
-  {name:'Shortbow',      type:'weapon', atk:3, sym:'🏹', rarity:'common', price:30, reqClass:['ranger']},
-  {name:'Longbow',       type:'weapon', atk:6, sym:'🏹', rarity:'rare',   price:65, reqClass:['ranger'], reqLvl:4},
-  {name:'Crossbow',      type:'weapon', atk:9, sym:'🏹', rarity:'rare',   price:90, reqClass:['ranger'], reqLvl:7},
-  {name:'Elven Bow',     type:'weapon', atk:13,sym:'🏹', rarity:'legendary', price:140, reqClass:['ranger'], reqLvl:10},
+  {name:'Shortbow',      type:'weapon', atk:2, sym:'🏹', rarity:'common', price:30, reqClass:['ranger']},
+  {name:'Longbow',       type:'weapon', atk:5, sym:'🏹', rarity:'rare',   price:65, reqClass:['ranger'], reqLvl:4},
+  {name:'Crossbow',      type:'weapon', atk:8, sym:'🏹', rarity:'rare',   price:90, reqClass:['ranger'], reqLvl:7},
+  {name:'Elven Bow',     type:'weapon', atk:12,sym:'🏹', rarity:'legendary', price:140, reqClass:['ranger'], reqLvl:10},
 
   // Mage / Necromancer
   {name:'Bone Staff',    type:'weapon', atk:5, sym:'♦', rarity:'common', price:40, reqClass:['mage','necromancer']},
