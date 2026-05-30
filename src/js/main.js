@@ -94,7 +94,7 @@ function showDeath(){
       Floors: <span>${G.floor}</span><br>
       Turns: <span>${G.turn}</span>
     </div>
-    <button class="btn" onclick="this.closest('.overlay').remove();startGame('${p.class}')">TRY AGAIN</button>
+    <button class="btn" onclick="this.closest('.overlay').remove();openClassSelect()">CHOOSE CLASS</button>
   </div>`;
   document.body.appendChild(o);
 }
@@ -113,7 +113,7 @@ function showVictory(){
       Gold: <span>${p.gold}💰</span><br>
       Turns: <span>${G.turn}</span>
     </div>
-    <button class="btn btn-gold" onclick="this.closest('.overlay').remove();startGame('${p.class}')">DESCEND AGAIN</button>
+    <button class="btn btn-gold" onclick="this.closest('.overlay').remove();openClassSelect()">CHOOSE CLASS</button>
   </div>`;
   document.body.appendChild(o);
 }

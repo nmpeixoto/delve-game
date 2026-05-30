@@ -1,4 +1,4 @@
-const CACHE = 'delve-v0.04';
+const CACHE = 'delve-v0.05';
 
 // Install: cache core assets using relative paths
 self.addEventListener('install', e => {

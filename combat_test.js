@@ -196,6 +196,85 @@ test('paladin smite prevents the target immediate counterattack', () => {
   assert.strictEqual(context.G.player.hp, 20);
 });
 
+test('mage fireball hits enemies around the selected target, not around the player', () => {
+  const context = loadCombat({
+    G: {
+      player: {
+        x: 5,
+        y: 5,
+        hp: 20,
+        maxHp: 20,
+        atk: 4,
+        def: 1,
+        lvl: 1,
+        xp: 0,
+        xpNext: 10,
+        kills: 0,
+        gold: 0,
+        damageDealt: 0,
+        class: 'mage',
+        weapon: { sym: '♦' },
+        armor: null,
+        shieldWallTurns: 0,
+        vanishTurns: 0,
+        freeMoves: 0,
+        bloodlustTurns: 0,
+        rootedTurns: 0,
+        vampirism: 0,
+        regen: 0,
+        swiftness: 0,
+      },
+      enemies: [
+        {
+          id: 'target-1',
+          name: 'Goblin',
+          hp: 10,
+          maxHp: 10,
+          atk: 0,
+          def: 0,
+          xp: 6,
+          gold: 4,
+          x: 6,
+          y: 5,
+          stunnedTurns: 0,
+        },
+        {
+          id: 'target-2',
+          name: 'Goblin',
+          hp: 10,
+          maxHp: 10,
+          atk: 0,
+          def: 0,
+          xp: 6,
+          gold: 4,
+          x: 7,
+          y: 5,
+          stunnedTurns: 0,
+        },
+      ],
+      items: [],
+      traps: [],
+      map: makeMap(),
+      rooms: [{ cx: 5, cy: 5 }],
+      shops: [],
+      ability1Cooldown: 0,
+      ability2Cooldown: 0,
+      turn: 0,
+      gameOver: false,
+      won: false,
+      visible: new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]),
+      seen: new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]),
+    },
+  });
+
+  context.doAbility1();
+
+  assert.strictEqual(context.G.ability1Cooldown, 4);
+  assert.strictEqual(context.G.turn, 1);
+  assert.ok(context.G.enemies[0].hp < 10);
+  assert.ok(context.G.enemies[1].hp < 10);
+});
+
 test('necromancer corpse explosion mark survives the setup turn', () => {
   const context = loadCombat({
     G: {

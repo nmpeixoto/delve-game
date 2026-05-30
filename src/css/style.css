@@ -114,6 +114,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   .hud-center{font-size:.34rem;}
   #map-area{flex:1;min-width:0;}
   #bottom-bar{display:none;}
+  #install-banner{display:none!important;}
   #dpad-area{
     width:150px;flex-shrink:0;
     flex-direction:column;justify-content:center;align-items:center;
