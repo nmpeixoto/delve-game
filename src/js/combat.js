@@ -3,10 +3,10 @@ function tileAttack(id){
   if(!canAct()||G.gameOver||G.won) return;
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
   if(en.dying)return;
-  let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
+  let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 2 : 2;
   let dist=Math.max(Math.abs(en.x-G.player.x),Math.abs(en.y-G.player.y));
   if(dist<=maxRange){
-    let rangedBow = G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹' && dist > 1;
+    let rangedBow = G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹' && dist > 2;
     attackEnemy(id,1,{skipCounter:rangedBow});
   } else {
     if(G.player.rootedTurns > 0) { consumeRootedTurn(); return; }
@@ -58,10 +58,10 @@ function attackEnemy(id,multiplier=1,opts={}){
   }
 
   let edm=Math.max(1,en.atk-gdef()+rand(3));
-  if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm / 2);
-  if(G.player.bloodlustTurns > 0) edm *= 2;
+  if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
+  if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
 
-  if(G.player.class === 'rogue' && ch(.3)) {
+  if(G.player.class === 'rogue' && ch(.4)) {
     addLog(`Dodged ${en.name}'s attack!`, 'log-info');
     popText('💨', G.player.x, G.player.y);
     advanceTurn();
@@ -87,8 +87,8 @@ function killEnemy(en, skipAdvanceTurn) {
     floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
   }
   if(G.player.class === 'necromancer') {
-    G.player.hp = Math.min(G.player.maxHp, G.player.hp + 1);
-    floatText('+1 HP', G.player.x, G.player.y, '#4ade80');
+    G.player.hp = Math.min(G.player.maxHp, G.player.hp + 2);
+    floatText('+2 HP', G.player.x, G.player.y, '#4ade80');
   }
 
   addLog(`${en.name} slain! +${en.xp} XP  +${goldDrop}💰`, 'log-dead');
@@ -155,7 +155,7 @@ function advanceTurn(opts={}){
     floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
   }
 
-  if(G.player.class === 'warrior' && G.turn % 5 === 0 && G.player.hp < G.player.maxHp) {
+  if(G.player.class === 'warrior' && G.turn % 12 === 0 && G.player.hp < G.player.maxHp) {
     G.player.hp = Math.min(G.player.maxHp, G.player.hp + 1);
     floatText('+1 HP', G.player.x, G.player.y, '#4ade80');
   }
@@ -207,10 +207,10 @@ function advanceTurn(opts={}){
         let nx=e.x+sx,ny=e.y+sy;
         if(nx===G.player.x&&ny===G.player.y){
           let edm=Math.max(1,e.atk-gdef()+rand(3));
-          if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm / 2);
-          if(G.player.bloodlustTurns > 0) edm *= 2;
+          if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
+          if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
 
-          if(G.player.class === 'rogue' && ch(.3)) {
+          if(G.player.class === 'rogue' && ch(.4)) {
             addLog(`Dodged ${e.name}'s attack!`, 'log-info');
             popText('💨', G.player.x, G.player.y);
           } else {
@@ -255,7 +255,7 @@ function doAbility1(){
 
   if(p.class === 'warrior') {
     let t=visEnemies.filter(e=>Math.abs(e.x-p.x)<=2&&Math.abs(e.y-p.y)<=2).sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
-    if(t.length) { G.ability1Cooldown = 5; attackEnemy(t[0].id,2); }
+    if(t.length) { G.ability1Cooldown = 5; attackEnemy(t[0].id,1.5); }
     else addLog('No nearby enemies to Bash','log-info');
   }
   else if(p.class === 'rogue') {
@@ -398,7 +398,7 @@ function doAbility2(){
     }
   }
   else if(p.class === 'paladin') {
-    let heal = Math.floor(p.maxHp * 0.3);
+    let heal = Math.floor(p.maxHp * 0.2);
     p.hp = Math.min(p.maxHp, p.hp + heal);
     floatText(`+${heal} HP`, p.x, p.y, '#4ade80');
     G.ability2Cooldown = 15;

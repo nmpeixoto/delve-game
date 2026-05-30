@@ -27,6 +27,11 @@ build/
 # Generated test/playtest artifacts
 bot_findings.json
 screenshot_*.png
+balance_*.json
+balance_logs_*/
+class_logs/
+*.err.log
+*.out.log
 *.trace.json
 *.tmp
 

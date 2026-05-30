@@ -796,10 +796,10 @@ function iDesc(item){
 const gatk=()=>{
   let w = G.player.weapon;
   let watk = typeof weaponPower === 'function' ? weaponPower(w) : (w ? w.atk : 0);
-  if(typeof weaponPower !== 'function' && G.player.class === 'monk' && !w) watk += 2 + Math.floor(G.player.lvl / 2);
-  if(typeof weaponPower !== 'function' && G.player.class === 'mage' && w && w.sym === '♦') watk += Math.floor(watk / 2);
+  if(typeof weaponPower !== 'function' && G.player.class === 'monk' && !w) watk += Math.floor(G.player.lvl / 2);
+  if(typeof weaponPower !== 'function' && G.player.class === 'mage' && w && w.sym === '♦') watk += Math.floor(watk / 5);
   let total = G.player.atk + watk;
-  if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 10);
+  if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 6);
   return total;
 };
 const gdef=()=>{
@@ -823,7 +823,7 @@ function render(){
       if(x===G.player.x&&y===G.player.y){h+=`<div class="tile tile-player" style="${s}">@</div>`;continue;}
       let en=vis?G.enemies.find(e=>e.x===x&&e.y===y):null;
       if(en){
-        let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
+        let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 2 : 2;
         let dist = Math.max(Math.abs(en.x-G.player.x), Math.abs(en.y-G.player.y));
         let canTap = (dist <= maxRange);
         let dyingClass=en.dying?' tile-enemy-dying':'';
@@ -1090,8 +1090,8 @@ function getBestPotions(neededHeal){
 
 function incomingDamageMax(enemy){
   let maxNextHit=Math.max(1, enemy.atk-gdef()+2);
-  if(G.player.shieldWallTurns>0) maxNextHit=Math.ceil(maxNextHit/2);
-  if(G.player.bloodlustTurns>0) maxNextHit*=2;
+  if(G.player.shieldWallTurns>0) maxNextHit=Math.ceil(maxNextHit*3/5);
+  if(G.player.bloodlustTurns>0) maxNextHit=Math.ceil(maxNextHit*23/20);
   return maxNextHit;
 }
 
@@ -1242,10 +1242,10 @@ function canEquip(it) {
 
 function weaponPower(it) {
   if (!it) {
-    return G.player.class === 'monk' ? 2 + Math.floor(G.player.lvl / 2) : 0;
+    return G.player.class === 'monk' ? Math.floor(G.player.lvl / 2) : 0;
   }
   let power = it.atk || 0;
-  if (G.player.class === 'mage' && it.sym === '\u2666') power += Math.floor(power / 2);
+  if (G.player.class === 'mage' && it.sym === '\u2666') power += Math.floor(power / 5);
   return power;
 }
 
@@ -1400,10 +1400,10 @@ function tileAttack(id){
   if(!canAct()||G.gameOver||G.won) return;
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
   if(en.dying)return;
-  let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
+  let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 2 : 2;
   let dist=Math.max(Math.abs(en.x-G.player.x),Math.abs(en.y-G.player.y));
   if(dist<=maxRange){
-    let rangedBow = G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹' && dist > 1;
+    let rangedBow = G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹' && dist > 2;
     attackEnemy(id,1,{skipCounter:rangedBow});
   } else {
     if(G.player.rootedTurns > 0) { consumeRootedTurn(); return; }
@@ -1455,10 +1455,10 @@ function attackEnemy(id,multiplier=1,opts={}){
   }
 
   let edm=Math.max(1,en.atk-gdef()+rand(3));
-  if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm / 2);
-  if(G.player.bloodlustTurns > 0) edm *= 2;
+  if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
+  if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
 
-  if(G.player.class === 'rogue' && ch(.3)) {
+  if(G.player.class === 'rogue' && ch(.4)) {
     addLog(`Dodged ${en.name}'s attack!`, 'log-info');
     popText('💨', G.player.x, G.player.y);
     advanceTurn();
@@ -1484,8 +1484,8 @@ function killEnemy(en, skipAdvanceTurn) {
     floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
   }
   if(G.player.class === 'necromancer') {
-    G.player.hp = Math.min(G.player.maxHp, G.player.hp + 1);
-    floatText('+1 HP', G.player.x, G.player.y, '#4ade80');
+    G.player.hp = Math.min(G.player.maxHp, G.player.hp + 2);
+    floatText('+2 HP', G.player.x, G.player.y, '#4ade80');
   }
 
   addLog(`${en.name} slain! +${en.xp} XP  +${goldDrop}💰`, 'log-dead');
@@ -1552,7 +1552,7 @@ function advanceTurn(opts={}){
     floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
   }
 
-  if(G.player.class === 'warrior' && G.turn % 5 === 0 && G.player.hp < G.player.maxHp) {
+  if(G.player.class === 'warrior' && G.turn % 12 === 0 && G.player.hp < G.player.maxHp) {
     G.player.hp = Math.min(G.player.maxHp, G.player.hp + 1);
     floatText('+1 HP', G.player.x, G.player.y, '#4ade80');
   }
@@ -1604,10 +1604,10 @@ function advanceTurn(opts={}){
         let nx=e.x+sx,ny=e.y+sy;
         if(nx===G.player.x&&ny===G.player.y){
           let edm=Math.max(1,e.atk-gdef()+rand(3));
-          if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm / 2);
-          if(G.player.bloodlustTurns > 0) edm *= 2;
+          if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
+          if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
 
-          if(G.player.class === 'rogue' && ch(.3)) {
+          if(G.player.class === 'rogue' && ch(.4)) {
             addLog(`Dodged ${e.name}'s attack!`, 'log-info');
             popText('💨', G.player.x, G.player.y);
           } else {
@@ -1652,7 +1652,7 @@ function doAbility1(){
 
   if(p.class === 'warrior') {
     let t=visEnemies.filter(e=>Math.abs(e.x-p.x)<=2&&Math.abs(e.y-p.y)<=2).sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
-    if(t.length) { G.ability1Cooldown = 5; attackEnemy(t[0].id,2); }
+    if(t.length) { G.ability1Cooldown = 5; attackEnemy(t[0].id,1.5); }
     else addLog('No nearby enemies to Bash','log-info');
   }
   else if(p.class === 'rogue') {
@@ -1795,7 +1795,7 @@ function doAbility2(){
     }
   }
   else if(p.class === 'paladin') {
-    let heal = Math.floor(p.maxHp * 0.3);
+    let heal = Math.floor(p.maxHp * 0.2);
     p.hp = Math.min(p.maxHp, p.hp + heal);
     floatText(`+${heal} HP`, p.x, p.y, '#4ade80');
     G.ability2Cooldown = 15;
@@ -2178,39 +2178,40 @@ function initGame(playerClass = 'warrior'){
     swiftness: 0
   };
   if(playerClass === 'warrior') {
-    p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 3;
-    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:3, rarity:'common', sym:'◆', price:35};
+    p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 2;
+    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:2, rarity:'common', sym:'◆', price:35};
   } else if(playerClass === 'rogue') {
-    p.hp = 22; p.maxHp = 22; p.atk = 6; p.def = 1;
-    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'†', price:20};
-    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◆', price:20};
+    p.hp = 24; p.maxHp = 24; p.atk = 7; p.def = 2;
+    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:5, rarity:'common', sym:'†', price:20};
+    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:3, rarity:'common', sym:'◆', price:20};
     p.bestWeapon = 'Rusty Dagger';
   } else if(playerClass === 'mage') {
-    p.hp = 15; p.maxHp = 15; p.atk = 5; p.def = 1;
-    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'♦', price:40};
+    p.hp = 15; p.maxHp = 15; p.atk = 4; p.def = 1;
+    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:1, rarity:'common', sym:'♦', price:40};
     p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:25};
     p.bestWeapon = 'Bone Staff';
   } else if(playerClass === 'paladin') {
-    p.hp = 25; p.maxHp = 25; p.atk = 2; p.def = 4;
-    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:45};
+    p.hp = 20; p.maxHp = 20; p.atk = 1; p.def = 1;
+    p.weapon = {id:uid(), name:'Iron Mace', type:'weapon', atk:2, rarity:'common', sym:'⚔', price:40};
+    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:2, rarity:'common', sym:'◆', price:45};
   } else if(playerClass === 'ranger') {
-    p.hp = 17; p.maxHp = 17; p.atk = 4; p.def = 1;
-    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:4, rarity:'common', sym:'🏹', price:30};
-    p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:30};
+    p.hp = 13; p.maxHp = 13; p.atk = 2; p.def = 1;
+    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:1, rarity:'common', sym:'🏹', price:30};
+    p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:0, rarity:'common', sym:'◆', price:30};
     p.bestWeapon = 'Shortbow';
   } else if(playerClass === 'barbarian') {
-    p.hp = 40; p.maxHp = 40; p.atk = 5; p.def = 0;
-    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:40};
-    p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'◆', price:25};
+    p.hp = 42; p.maxHp = 42; p.atk = 5; p.def = 1;
+    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:3, rarity:'common', sym:'⚔', price:40};
+    p.armor = {id:uid(), name:'Furs', type:'armor', def:3, rarity:'common', sym:'◆', price:25};
     p.bestWeapon = 'Great Axe';
   } else if(playerClass === 'necromancer') {
-    p.hp = 16; p.maxHp = 16; p.atk = 3; p.def = 1;
+    p.hp = 18; p.maxHp = 18; p.atk = 4; p.def = 1;
     p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'♦', price:40};
     p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:25};
     p.bestWeapon = 'Skull Rod';
   } else if(playerClass === 'monk') {
-    p.hp = 22; p.maxHp = 22; p.atk = 3; p.def = 2;
-    p.armor = {id:uid(), name:'Gi', type:'armor', def:3, rarity:'common', sym:'◆', price:30};
+    p.hp = 22; p.maxHp = 22; p.atk = 3; p.def = 1;
+    p.armor = {id:uid(), name:'Gi', type:'armor', def:2, rarity:'common', sym:'◆', price:30};
   }
 
   G={
@@ -2307,14 +2308,14 @@ function handleResize(){
 }
 
 const CLASS_DATA = {
-  warrior: { name: 'Warrior', tagline: 'A sturdy fighter who excels in sustained combat.', hp: 30, atk: 3, def: 3, weapon: 'Bare Hands', armor: 'Chain Mail', ability1: 'BASH', desc1: 'Deals 2x damage to a nearby visible enemy. Cooldown: 5', ability2: 'SHIELD WALL', desc2: '(Lvl 5) Reduces incoming damage by 50% for 3 turns. Cooldown: 10', passive: 'Regenerates 1 HP every 5 turns.' },
-  rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 22, atk: 6, def: 1, weapon: 'Rusty Dagger', armor: 'Leather Vest', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 30% of all incoming attacks.' },
-  mage: { name: 'Mage', tagline: 'A fragile spellcaster with potent magic.', hp: 15, atk: 5, def: 1, weapon: 'Bone Staff', armor: 'Apprentice Robe', ability1: 'FIREBALL', desc1: 'Deals damage to all enemies in a 3x3 area around a target. Cooldown: 5', ability2: 'BLINK', desc2: '(Lvl 5) Teleport instantly to a safe, visible tile. Cooldown: 8', passive: 'Magic weapons (♦) deal +50% damage.' },
-  paladin: { name: 'Paladin', tagline: 'A holy champion focused on sustain and defense.', hp: 25, atk: 2, def: 4, weapon: 'Bare Hands', armor: 'Iron Plate', ability1: 'SMITE', desc1: 'Deals damage and stuns the enemy for 1 turn. Cooldown: 5', ability2: 'LAY ON HANDS', desc2: '(Lvl 5) Heals for 30% of Max HP. Cooldown: 15', passive: 'Max HP increases by 2 upon leveling up.' },
-  ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 17, atk: 4, def: 1, weapon: 'Shortbow', armor: 'Ranger Tunic', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 3 tiles away.' },
-  barbarian: { name: 'Barbarian', tagline: 'A fearless brute who thrives in chaos.', hp: 40, atk: 5, def: 0, weapon: 'Great Axe', armor: 'Furs', ability1: 'CLEAVE', desc1: 'Deals damage to all adjacent enemies. Cooldown: 4', ability2: 'BLOODLUST', desc2: '(Lvl 5) For 3 turns, heal 50% of damage dealt, but take 2x damage. Cooldown: 12', passive: 'Deals +1 damage for every 10 missing HP.' },
-  necromancer: { name: 'Necromancer', tagline: 'A dark caster who drains life from foes.', hp: 16, atk: 3, def: 1, weapon: 'Skull Rod', armor: 'Apprentice Robe', ability1: 'SIPHON LIFE', desc1: 'Deals damage and heals yourself for the same amount. Cooldown: 5', ability2: 'CORPSE EXPLOSION', desc2: '(Lvl 5) Mark an enemy for 3 turns. If it dies while marked, it explodes for heavy AoE damage. Cooldown: 8', passive: 'Heals 1 HP whenever an enemy dies.' },
-  monk: { name: 'Monk', tagline: 'A disciplined martial artist.', hp: 22, atk: 3, def: 2, weapon: 'Bare Hands', armor: 'Gi', ability1: 'PUSH KICK', desc1: 'Pushes an enemy 1 tile away. Deals extra damage if they hit a wall. Cooldown: 3', ability2: 'FLURRY OF BLOWS', desc2: '(Lvl 5) Attacks 3 times instantly, but you are rooted for your next turn. Cooldown: 10', passive: 'Gains +2 ATK (scaling with level) when NO weapon is equipped.' }
+  warrior: { name: 'Warrior', tagline: 'A sturdy fighter who excels in sustained combat.', hp: 30, atk: 3, def: 2, weapon: 'Bare Hands', armor: 'Chain Mail', ability1: 'BASH', desc1: 'Deals 1.5x damage to a nearby visible enemy. Cooldown: 5', ability2: 'SHIELD WALL', desc2: '(Lvl 5) Reduces incoming damage by 40% for 3 turns. Cooldown: 10', passive: 'Regenerates 1 HP every 12 turns.' },
+  rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 24, atk: 7, def: 2, weapon: 'Rusty Dagger', armor: 'Leather Vest', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 50% of all incoming attacks.' },
+  mage: { name: 'Mage', tagline: 'A fragile spellcaster with potent magic.', hp: 15, atk: 4, def: 1, weapon: 'Bone Staff', armor: 'Apprentice Robe', ability1: 'FIREBALL', desc1: 'Deals damage to all enemies in a 3x3 area around a target. Cooldown: 5', ability2: 'BLINK', desc2: '(Lvl 5) Teleport instantly to a safe, visible tile. Cooldown: 8', passive: 'Magic weapons (♦) deal about +20% damage.' },
+  paladin: { name: 'Paladin', tagline: 'A holy champion focused on sustain and defense.', hp: 20, atk: 1, def: 1, weapon: 'Iron Mace', armor: 'Iron Plate', ability1: 'SMITE', desc1: 'Deals damage and stuns the enemy for 1 turn. Cooldown: 5', ability2: 'LAY ON HANDS', desc2: '(Lvl 5) Heals for 20% of Max HP. Cooldown: 15', passive: 'Max HP increases by 2 upon leveling up.' },
+  ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 13, atk: 2, def: 1, weapon: 'Shortbow', armor: 'Ranger Tunic', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 2 tiles away, but no longer avoid the counter at max range.' },
+  barbarian: { name: 'Barbarian', tagline: 'A fearless brute who thrives in chaos.', hp: 42, atk: 5, def: 1, weapon: 'Great Axe', armor: 'Furs', ability1: 'CLEAVE', desc1: 'Deals damage to all adjacent enemies. Cooldown: 4', ability2: 'BLOODLUST', desc2: '(Lvl 5) For 3 turns, heal 50% of damage dealt, but take 15% more damage. Cooldown: 12', passive: 'Deals +1 damage for every 6 missing HP.' },
+  necromancer: { name: 'Necromancer', tagline: 'A dark caster who drains life from foes.', hp: 18, atk: 4, def: 1, weapon: 'Skull Rod', armor: 'Apprentice Robe', ability1: 'SIPHON LIFE', desc1: 'Deals damage and heals yourself for the same amount. Cooldown: 5', ability2: 'CORPSE EXPLOSION', desc2: '(Lvl 5) Mark an enemy for 3 turns. If it dies while marked, it explodes for heavy AoE damage. Cooldown: 8', passive: 'Heals 2 HP whenever an enemy dies.' },
+  monk: { name: 'Monk', tagline: 'A disciplined martial artist.', hp: 22, atk: 3, def: 1, weapon: 'Bare Hands', armor: 'Gi', ability1: 'PUSH KICK', desc1: 'Pushes an enemy 1 tile away. Deals extra damage if they hit a wall. Cooldown: 3', ability2: 'FLURRY OF BLOWS', desc2: '(Lvl 5) Attacks 3 times instantly, but you are rooted for your next turn. Cooldown: 10', passive: 'Gains level-based ATK when NO weapon is equipped.' }
 };
 
 let _selectedClass = 'warrior';

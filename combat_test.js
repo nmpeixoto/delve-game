@@ -397,7 +397,7 @@ test('monk flurry leaves the player rooted for the next movement attempt', () =>
   assert.strictEqual(context.G.player.rootedTurns, 1);
 });
 
-test('ranger bow attacks from range do not trigger an immediate counterattack', () => {
+test('ranger bow attacks from 2 tiles away still trigger a counterattack', () => {
   const context = loadCombat({
     G: {
       player: {
@@ -434,7 +434,7 @@ test('ranger bow attacks from range do not trigger an immediate counterattack', 
         def: 0,
         xp: 6,
         gold: 4,
-        x: 8,
+        x: 7,
         y: 5,
         stunnedTurns: 0,
       }],
@@ -448,14 +448,14 @@ test('ranger bow attacks from range do not trigger an immediate counterattack', 
       turn: 0,
       gameOver: false,
       won: false,
-      visible: new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7, 5 * MAP_W + 8]),
-      seen: new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7, 5 * MAP_W + 8]),
+      visible: new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]),
+      seen: new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]),
     },
   });
 
   context.tileAttack('goblin-1');
 
-  assert.strictEqual(context.G.player.hp, 20);
+  assert.strictEqual(context.G.player.hp, 15);
   assert.strictEqual(context.G.turn, 1);
 });
 

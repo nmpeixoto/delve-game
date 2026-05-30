@@ -73,10 +73,10 @@ function iDesc(item){
 const gatk=()=>{
   let w = G.player.weapon;
   let watk = typeof weaponPower === 'function' ? weaponPower(w) : (w ? w.atk : 0);
-  if(typeof weaponPower !== 'function' && G.player.class === 'monk' && !w) watk += 2 + Math.floor(G.player.lvl / 2);
-  if(typeof weaponPower !== 'function' && G.player.class === 'mage' && w && w.sym === '♦') watk += Math.floor(watk / 2);
+  if(typeof weaponPower !== 'function' && G.player.class === 'monk' && !w) watk += Math.floor(G.player.lvl / 2);
+  if(typeof weaponPower !== 'function' && G.player.class === 'mage' && w && w.sym === '♦') watk += Math.floor(watk / 5);
   let total = G.player.atk + watk;
-  if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 10);
+  if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 6);
   return total;
 };
 const gdef=()=>{
@@ -100,7 +100,7 @@ function render(){
       if(x===G.player.x&&y===G.player.y){h+=`<div class="tile tile-player" style="${s}">@</div>`;continue;}
       let en=vis?G.enemies.find(e=>e.x===x&&e.y===y):null;
       if(en){
-        let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
+        let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 2 : 2;
         let dist = Math.max(Math.abs(en.x-G.player.x), Math.abs(en.y-G.player.y));
         let canTap = (dist <= maxRange);
         let dyingClass=en.dying?' tile-enemy-dying':'';

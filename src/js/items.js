@@ -48,10 +48,10 @@ function canEquip(it) {
 
 function weaponPower(it) {
   if (!it) {
-    return G.player.class === 'monk' ? 2 + Math.floor(G.player.lvl / 2) : 0;
+    return G.player.class === 'monk' ? Math.floor(G.player.lvl / 2) : 0;
   }
   let power = it.atk || 0;
-  if (G.player.class === 'mage' && it.sym === '\u2666') power += Math.floor(power / 2);
+  if (G.player.class === 'mage' && it.sym === '\u2666') power += Math.floor(power / 5);
   return power;
 }
 

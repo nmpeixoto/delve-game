@@ -1,0 +1,4 @@
+interface:
+  display_name: "Headless Balance"
+  short_description: "Faithful headless balance runs"
+  default_prompt: "Use $headless-balance to run seeded headless balance batches, compare per-class win rates, and report the findings."

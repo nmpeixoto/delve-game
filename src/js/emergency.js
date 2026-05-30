@@ -17,8 +17,8 @@ function getBestPotions(neededHeal){
 
 function incomingDamageMax(enemy){
   let maxNextHit=Math.max(1, enemy.atk-gdef()+2);
-  if(G.player.shieldWallTurns>0) maxNextHit=Math.ceil(maxNextHit/2);
-  if(G.player.bloodlustTurns>0) maxNextHit*=2;
+  if(G.player.shieldWallTurns>0) maxNextHit=Math.ceil(maxNextHit*3/5);
+  if(G.player.bloodlustTurns>0) maxNextHit=Math.ceil(maxNextHit*23/20);
   return maxNextHit;
 }
 

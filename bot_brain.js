@@ -24,9 +24,9 @@ window.botDecisionLogic = function() {
   const isMagicWeapon = item => item && (item.sym === '♦' || /staff|rod|wand|scythe/i.test(item.name || ''));
   const isBow = item => item && (item.sym === '🏹' || /bow/i.test(item.name || ''));
   const weaponPower = item => {
-    if (!item) return p.class === 'monk' ? 2 + Math.floor(p.lvl / 2) : 0;
+    if (!item) return p.class === 'monk' ? Math.floor(p.lvl / 2) : 0;
     let power = item.atk || 0;
-    if (p.class === 'mage' && isMagicWeapon(item)) power += Math.floor(power / 2);
+    if (p.class === 'mage' && isMagicWeapon(item)) power += Math.floor(power / 5);
     return power;
   };
   const armorPower = item => item ? (item.def || 0) : 0;
@@ -39,18 +39,18 @@ window.botDecisionLogic = function() {
   };
   const attackPower = () => {
     let total = (p.atk || 0) + weaponPower(p.weapon);
-    if (p.class === 'barbarian') total += Math.floor((p.maxHp - p.hp) / 10);
+    if (p.class === 'barbarian') total += Math.floor((p.maxHp - p.hp) / 6);
     return total;
   };
   const strategy = ({
-    warrior: { exitHp: 0.7, potionHp: 0.35, stashPotionHp: 0.3, kiteThreshold: 2 },
-    rogue: { exitHp: 0.65, potionHp: 0.85, stashPotionHp: 0.7, kiteThreshold: 2 },
-    mage: { exitHp: 0.65, potionHp: 0.5, stashPotionHp: 0.4, kiteThreshold: 3 },
+    warrior: { exitHp: 0.6, potionHp: 0.35, stashPotionHp: 0.3, kiteThreshold: 2 },
+    rogue: { exitHp: 0.5, potionHp: 0.75, stashPotionHp: 0.6, kiteThreshold: 2 },
+    mage: { exitHp: 0.55, potionHp: 0.45, stashPotionHp: 0.35, kiteThreshold: 3 },
     paladin: { exitHp: 0.75, potionHp: 0.45, stashPotionHp: 0.35, kiteThreshold: 2 },
-    ranger: { exitHp: 0.75, potionHp: 0.45, stashPotionHp: 0.35, kiteThreshold: 3 },
-    barbarian: { exitHp: 0.6, potionHp: 0.5, stashPotionHp: 0.4, kiteThreshold: 1 },
+    ranger: { exitHp: 0.5, potionHp: 0.35, stashPotionHp: 0.25, kiteThreshold: 1 },
+    barbarian: { exitHp: 0.5, potionHp: 0.55, stashPotionHp: 0.45, kiteThreshold: 1 },
     necromancer: { exitHp: 0.8, potionHp: 0.65, stashPotionHp: 0.55, kiteThreshold: 1 },
-    monk: { exitHp: 0.7, potionHp: 0.4, stashPotionHp: 0.3, kiteThreshold: 2 },
+    monk: { exitHp: 0.6, potionHp: 0.4, stashPotionHp: 0.3, kiteThreshold: 2 },
   }[p.class] || { exitHp: 0.7, potionHp: 0.45, stashPotionHp: 0.35, kiteThreshold: 2 });
   const usefulShopItem = item => {
     if (item.sold || p.gold < item.price) return false;
@@ -225,9 +225,9 @@ window.botDecisionLogic = function() {
   const totalAtk = () => (p.atk || 0) + weaponPower(p.weapon);
   const minNormalDamage = en => Math.max(1, totalAtk() - en.def);
   const maxNormalDamage = en => Math.max(1, totalAtk() - en.def + 2);
-  const minBashDamage = en => minNormalDamage(en) * 2;
+  const minBashDamage = en => minNormalDamage(en) * 1.5;
   const minSneakDamage = en => minNormalDamage(en) * (p.vanishTurns > 0 ? 2 : 1);
-  const tapRange = () => (p.class === 'ranger' && isBow(p.weapon)) ? 3 : 2;
+  const tapRange = () => (p.class === 'ranger' && isBow(p.weapon)) ? 2 : 2;
   const attackMove = en => {
       if (en.x < p.x) return { type: 'key', val: 'ArrowLeft' };
       if (en.x > p.x) return { type: 'key', val: 'ArrowRight' };

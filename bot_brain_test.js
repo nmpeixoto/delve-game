@@ -679,15 +679,13 @@ test('ranger uses bow range on visible enemies before walking toward them', () =
     [5, 5],
     [6, 5],
     [7, 5],
-    [8, 5],
-    [8, 6],
   ]);
-  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7, 5 * MAP_W + 8, 6 * MAP_W + 8]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
   const G = baseGame(map, {
     player: { class: 'ranger', hp: 15, maxHp: 15, weapon: { atk: 3, sym: '🏹' } },
     seen: new Set(visible),
     visible,
-    enemies: [{ id: 'g1', name: 'Goblin', x: 8, y: 6, hp: 10, maxHp: 10, atk: 4, def: 1 }],
+    enemies: [{ id: 'g1', name: 'Goblin', x: 7, y: 5, hp: 10, maxHp: 10, atk: 4, def: 1 }],
     ability1Cooldown: 4,
   });
 
