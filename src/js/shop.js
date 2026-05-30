@@ -32,6 +32,34 @@ function generateShopStock(){
   return stock;
 }
 
+function startActionTouch(e){
+  if(!e.touches || e.touches.length !== 1) return;
+  let t=e.touches[0], el=e.currentTarget;
+  el.dataset.touchStartX=t.clientX;
+  el.dataset.touchStartY=t.clientY;
+  el.dataset.touchMoved='0';
+}
+
+function trackActionTouch(e){
+  if(!e.touches || e.touches.length !== 1) return;
+  let el=e.currentTarget;
+  let sx=parseFloat(el.dataset.touchStartX || e.touches[0].clientX);
+  let sy=parseFloat(el.dataset.touchStartY || e.touches[0].clientY);
+  let dx=e.touches[0].clientX-sx, dy=e.touches[0].clientY-sy;
+  if(Math.sqrt(dx*dx+dy*dy)>12) el.dataset.touchMoved='1';
+}
+
+function finishActionTouch(e){
+  if(e.cancelable) e.preventDefault();
+  e.stopPropagation();
+  let el=e.currentTarget;
+  let moved=el.dataset.touchMoved==='1';
+  delete el.dataset.touchStartX;
+  delete el.dataset.touchStartY;
+  delete el.dataset.touchMoved;
+  return !moved;
+}
+
 function openShop(){
   if(G.gameOver||G.won)return;
   if(!G.shops || G.shops.length===0){addLog('No shop on this floor','log-info');return;}
@@ -61,7 +89,9 @@ function renderShop(){
       let colorCls = getItemColorClass(item);
       h+=`<div class="shop-item${item.sold?' sold':''}"
         onclick="buyItem('${item.id}')"
-        ontouchend="event.preventDefault();event.stopPropagation();buyItem('${item.id}')">
+        ontouchstart="startActionTouch(event)"
+        ontouchmove="trackActionTouch(event)"
+        ontouchend="if(finishActionTouch(event))buyItem('${item.id}')">
         <div class="shop-item-left">
           <div class="shop-item-name ${colorCls}">${item.sym} ${item.name}${item.sold?' (SOLD)':''}</div>
         <div class="shop-item-desc">${desc} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
@@ -140,7 +170,9 @@ function renderSellPanel(){
       let colorCls = getItemColorClass(item);
       h+=`<div class="sell-item"
         onclick="sellItem('${item.id}','${item._equipped||''}')"
-        ontouchend="event.preventDefault();event.stopPropagation();sellItem('${item.id}','${item._equipped||''}')">
+        ontouchstart="startActionTouch(event)"
+        ontouchmove="trackActionTouch(event)"
+        ontouchend="if(finishActionTouch(event))sellItem('${item.id}','${item._equipped||''}')">
         <div class="sell-item-left">
           <div class="sell-item-name ${colorCls}">${item.sym} ${item.name}${equippedTag}${countTag}</div>
           <div class="sell-item-desc">${iDesc(item)} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>

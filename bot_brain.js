@@ -21,13 +21,37 @@ window.botDecisionLogic = function() {
     if (item.reqClass && !item.reqClass.includes(p.class)) return false;
     return true;
   };
+  const isMagicWeapon = item => item && (item.sym === '♦' || /staff|rod|wand|scythe/i.test(item.name || ''));
+  const isBow = item => item && (item.sym === '🏹' || /bow/i.test(item.name || ''));
   const weaponPower = item => {
     if (!item) return p.class === 'monk' ? 2 + Math.floor(p.lvl / 2) : 0;
     let power = item.atk || 0;
-    if (p.class === 'mage' && item.sym === '♦') power += Math.floor(power / 2);
+    if (p.class === 'mage' && isMagicWeapon(item)) power += Math.floor(power / 2);
     return power;
   };
   const armorPower = item => item ? (item.def || 0) : 0;
+  const countVisibleEnemies = () => liveEnemies.filter(e => G.visible.has(e.y * MAP_W + e.x)).length;
+  const countAdjacentEnemies = () => liveEnemies.filter(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y) === 1).length;
+  const countNearbyEnemies = range => liveEnemies.filter(e => Math.abs(e.x - p.x) <= range && Math.abs(e.y - p.y) <= range).length;
+  const visibleClusters = () => {
+    const vis = liveEnemies.filter(e => G.visible.has(e.y * MAP_W + e.x));
+    return vis.filter(a => vis.some(b => a.id !== b.id && Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1));
+  };
+  const attackPower = () => {
+    let total = (p.atk || 0) + weaponPower(p.weapon);
+    if (p.class === 'barbarian') total += Math.floor((p.maxHp - p.hp) / 10);
+    return total;
+  };
+  const strategy = ({
+    warrior: { exitHp: 0.7, potionHp: 0.35, stashPotionHp: 0.3, kiteThreshold: 2 },
+    rogue: { exitHp: 0.65, potionHp: 0.85, stashPotionHp: 0.7, kiteThreshold: 2 },
+    mage: { exitHp: 0.65, potionHp: 0.5, stashPotionHp: 0.4, kiteThreshold: 3 },
+    paladin: { exitHp: 0.75, potionHp: 0.45, stashPotionHp: 0.35, kiteThreshold: 2 },
+    ranger: { exitHp: 0.75, potionHp: 0.45, stashPotionHp: 0.35, kiteThreshold: 3 },
+    barbarian: { exitHp: 0.6, potionHp: 0.5, stashPotionHp: 0.4, kiteThreshold: 1 },
+    necromancer: { exitHp: 0.8, potionHp: 0.65, stashPotionHp: 0.55, kiteThreshold: 1 },
+    monk: { exitHp: 0.7, potionHp: 0.4, stashPotionHp: 0.3, kiteThreshold: 2 },
+  }[p.class] || { exitHp: 0.7, potionHp: 0.45, stashPotionHp: 0.35, kiteThreshold: 2 });
   const usefulShopItem = item => {
     if (item.sold || p.gold < item.price) return false;
     if (item.type === 'upgrade') return true;
@@ -44,7 +68,7 @@ window.botDecisionLogic = function() {
     if (item.type === 'armor') return canEquip(item) && armorPower(item) > armorPower(p.armor);
     return false;
   };
-  const shouldExitWithoutPotion = () => p.hp < p.maxHp * 0.7 && carriedPotions().length === 0;
+  const shouldExitWithoutPotion = () => p.hp < p.maxHp * strategy.exitHp && carriedPotions().length === 0;
   const stairsSeen = () => {
     for (let y = 0; y < MAP_H; y++) {
       for (let x = 0; x < MAP_W; x++) {
@@ -52,6 +76,15 @@ window.botDecisionLogic = function() {
       }
     }
     return false;
+  };
+  const isMapCleared = () => {
+    if (liveEnemies.length > 0) return false;
+    for (let y = 0; y < MAP_H; y++) {
+      for (let x = 0; x < MAP_W; x++) {
+        if (G.map[y][x] !== WALL && !G.seen.has(y * MAP_W + x)) return false;
+      }
+    }
+    return true;
   };
   const hasUsefulShopItem = () => G.shops && G.shops.some(shop => shop.stock.some(usefulShopItem));
 
@@ -95,10 +128,10 @@ window.botDecisionLogic = function() {
       }
 
       // If we are critically low (< 30%) and no perfect potion exists, drink the smallest one to avoid instant death
-      if (!bestPotion && p.hp < p.maxHp * 0.3 && potions.length > 0) {
+      if (!bestPotion && p.hp < p.maxHp * strategy.stashPotionHp && potions.length > 0) {
           bestPotion = potions[potions.length - 1];
       }
-  } else if (p.hp < p.maxHp * 0.35 && potions.length > 0) {
+  } else if (p.hp < p.maxHp * strategy.potionHp && potions.length > 0) {
       // In combat, avoid voluntary attacks while one enemy turn from death.
       const targetHp = p.maxHp * 0.55;
       bestPotion = [...potions].reverse().find(pot => p.hp + pot.heal >= targetHp) || potions[0];
@@ -116,14 +149,9 @@ window.botDecisionLogic = function() {
 
   if (G.map[p.y][p.x] === STAIRS) {
     let dyingWithoutPotion = shouldExitWithoutPotion();
-    let mapCleared = liveEnemies.length === 0;
-    for (let y = 0; y < MAP_H; y++) {
-      for (let x = 0; x < MAP_W; x++) {
-        if (G.map[y][x] !== WALL && !G.seen.has(y * MAP_W + x)) mapCleared = false;
-      }
-    }
+    let mapCleared = isMapCleared();
 
-    if (G.floor >= 5 || mapCleared || dyingWithoutPotion) {
+    if (mapCleared || dyingWithoutPotion) {
         return { type: 'key', val: '>' };
     }
   }
@@ -194,9 +222,11 @@ window.botDecisionLogic = function() {
       return null;
   }
 
-  const totalAtk = () => p.atk + weaponPower(p.weapon);
+  const totalAtk = () => (p.atk || 0) + weaponPower(p.weapon);
   const minNormalDamage = en => Math.max(1, totalAtk() - en.def);
   const minBashDamage = en => minNormalDamage(en) * 2;
+  const minSneakDamage = en => minNormalDamage(en) * (p.vanishTurns > 0 ? 2 : 1);
+  const tapRange = () => (p.class === 'ranger' && isBow(p.weapon)) ? 3 : 2;
   const attackMove = en => {
       if (en.x < p.x) return { type: 'key', val: 'ArrowLeft' };
       if (en.x > p.x) return { type: 'key', val: 'ArrowRight' };
@@ -204,9 +234,33 @@ window.botDecisionLogic = function() {
       if (en.y > p.y) return { type: 'key', val: 'ArrowDown' };
       return null;
   };
+  const rangedAttack = () => {
+      let targets = visEnemies
+        .filter(e => Math.max(Math.abs(e.x - p.x), Math.abs(e.y - p.y)) <= tapRange())
+        .filter(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y) > 1)
+        .sort((a, b) => {
+          let aKill = a.hp <= minSneakDamage(a) ? 0 : 1;
+          let bKill = b.hp <= minSneakDamage(b) ? 0 : 1;
+          let aDist = Math.abs(a.x - p.x) + Math.abs(a.y - p.y);
+          let bDist = Math.abs(b.x - p.x) + Math.abs(b.y - p.y);
+          return aKill - bKill || a.hp - b.hp || aDist - bDist;
+        });
+      if (!targets.length) return null;
 
-  let forcedExit = ((G.floor >= 5 || shouldExitWithoutPotion()) && stairsSeen());
+      let target = targets[0];
+      let killable = target.hp <= minSneakDamage(target);
+      if (p.class === 'ranger' && isBow(p.weapon)) return { type: 'attack', target: target.id };
+      if (killable) return { type: 'attack', target: target.id };
+      return null;
+  };
+
+  let forcedExit = (shouldExitWithoutPotion() && stairsSeen());
   let adjEnemy = liveEnemies.find(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y) === 1);
+  let sneakKillableAdjEnemy = liveEnemies
+    .filter(e => p.vanishTurns > 0 && Math.abs(e.x - p.x) + Math.abs(e.y - p.y) === 1 && e.hp <= minSneakDamage(e))
+    .sort((a, b) => a.hp - b.hp)[0];
+  if (sneakKillableAdjEnemy) return attackMove(sneakKillableAdjEnemy);
+
   let killableAdjEnemy = liveEnemies
     .filter(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y) === 1 && e.hp <= minNormalDamage(e))
     .sort((a, b) => a.hp - b.hp)[0];
@@ -217,16 +271,32 @@ window.botDecisionLogic = function() {
       if (G.ability1Cooldown === 0 && p.class === 'warrior' && adjEnemy.hp <= minBashDamage(adjEnemy)) return { type: 'key', val: 'b' };
   }
   if (forcedExit && !adjEnemy) {
-      if (G.floor < 5) {
-          let shopAction = pathToShop(true);
-          if (shopAction) return shopAction;
-      }
+      let shopAction = pathToShop(true);
+      if (shopAction) return shopAction;
       let exitAction = pathToKnownStairs(true);
       if (exitAction) return exitAction;
   }
 
   // RULE 2: Use Abilities intelligently based on class
   let visEnemies = liveEnemies.filter(e => G.visible.has(e.y*MAP_W + e.x));
+  const ability2Decision = () => {
+      if (G.ability2Cooldown !== 0 || p.lvl < 5) return null;
+      if (p.class === 'warrior' && visEnemies.length >= 2) return { type: 'key', val: 'v' }; // SHIELD WALL
+      if (p.class === 'rogue' && (p.hp < p.maxHp * 0.85 || countAdjacentEnemies() > 0 || visEnemies.length >= 2) && visEnemies.length > 0) return { type: 'key', val: 'v' }; // VANISH
+      if (p.class === 'mage' && (countAdjacentEnemies() > 0 || p.hp < p.maxHp * 0.75) && visEnemies.length > 0) return { type: 'key', val: 'v' }; // BLINK
+      if (p.class === 'paladin' && p.hp < p.maxHp * 0.7) return { type: 'key', val: 'v' }; // LAY ON HANDS
+      if (p.class === 'ranger' && adjEnemy) return { type: 'key', val: 'v' }; // BEAR TRAP
+      if (p.class === 'barbarian' && (visEnemies.length >= 2 || countAdjacentEnemies() >= 1) && p.hp > p.maxHp * 0.7) return { type: 'key', val: 'v' }; // BLOODLUST
+      if (p.class === 'necromancer' && (visibleClusters().length > 0 || visEnemies.length >= 2)) return { type: 'key', val: 'v' }; // CORPSE EXPLOSION
+      if (p.class === 'monk' && adjEnemy && (p.hp > p.maxHp * 0.75 || countAdjacentEnemies() >= 2)) return { type: 'key', val: 'v' }; // FLURRY OF BLOWS
+      return null;
+  };
+  const classesThatPreferAbility2First = new Set(['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk']);
+
+  if (classesThatPreferAbility2First.has(p.class)) {
+      let ability2First = ability2Decision();
+      if (ability2First) return ability2First;
+  }
 
   if (G.ability1Cooldown === 0) {
       if (p.class === 'warrior') {
@@ -234,10 +304,15 @@ window.botDecisionLogic = function() {
          if (target && (!forcedExit || target.hp <= minBashDamage(target))) return { type: 'key', val: 'b' }; // BASH
       }
       else if (p.class === 'rogue') {
-         if (visEnemies.length > 0 && !adjEnemy) return { type: 'key', val: 'b' }; // DASH
+         if (!adjEnemy && p.hp > p.maxHp * 0.6 && (countVisibleEnemies() === 0 || (countVisibleEnemies() === 1 && p.hp > p.maxHp * 0.8))) return { type: 'key', val: 'b' }; // DASH
+         if (adjEnemy) {
+            let adjacentKillable = Math.max(1, attackPower() - (adjEnemy.def || 0) + 2) >= adjEnemy.hp;
+            let canSpendDash = (p.hp > p.maxHp * 0.45 && p.hp < p.maxHp * 0.75) || countAdjacentEnemies() >= 2;
+            if (!adjacentKillable && canSpendDash) return { type: 'key', val: 'b' }; // DASH OUT
+         }
       }
       else if (p.class === 'mage') {
-         if (visEnemies.length >= 2 || (adjEnemy && p.hp < p.maxHp)) return { type: 'key', val: 'b' }; // FIREBALL
+         if (visEnemies.length >= 1 && (visibleClusters().length > 0 || countAdjacentEnemies() > 0 || p.hp < p.maxHp * 0.9)) return { type: 'key', val: 'b' }; // FIREBALL
       }
       else if (p.class === 'paladin') {
          let target = liveEnemies.find(e => Math.abs(e.x - p.x) <= 2 && Math.abs(e.y - p.y) <= 2 && G.visible.has(e.y*MAP_W+e.x));
@@ -261,30 +336,35 @@ window.botDecisionLogic = function() {
          if (liveEnemies.filter(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y) === 1).length >= 1) return { type: 'key', val: 'b' }; // CLEAVE
       }
       else if (p.class === 'necromancer') {
-         let target = liveEnemies.find(e => Math.abs(e.x - p.x) <= 3 && Math.abs(e.y - p.y) <= 3 && G.visible.has(e.y*MAP_W+e.x));
-         if (target && p.hp < p.maxHp) return { type: 'key', val: 'b' }; // SIPHON LIFE
+        let target = liveEnemies
+          .filter(e => Math.abs(e.x - p.x) <= 2 && Math.abs(e.y - p.y) <= 2 && G.visible.has(e.y*MAP_W+e.x))
+          .sort((a, b) => a.hp - b.hp)[0];
+        if (target) return { type: 'key', val: 'b' }; // SIPHON LIFE
       }
       else if (p.class === 'monk') {
          if (adjEnemy) return { type: 'key', val: 'b' }; // PUSH KICK
       }
   }
 
-  if (G.ability2Cooldown === 0 && p.lvl >= 5) {
-      if (p.class === 'warrior' && visEnemies.length >= 2) return { type: 'key', val: 'v' }; // SHIELD WALL
-      else if (p.class === 'rogue' && p.hp < p.maxHp * 0.5 && visEnemies.length > 0) return { type: 'key', val: 'v' }; // VANISH
-      else if (p.class === 'mage' && adjEnemy && p.hp < p.maxHp * 0.5) return { type: 'key', val: 'v' }; // BLINK
-      else if (p.class === 'paladin' && p.hp < p.maxHp * 0.7) return { type: 'key', val: 'v' }; // LAY ON HANDS
-      else if (p.class === 'ranger' && adjEnemy) return { type: 'key', val: 'v' }; // BEAR TRAP
-      else if (p.class === 'barbarian' && visEnemies.length >= 1 && p.hp < p.maxHp * 0.8) return { type: 'key', val: 'v' }; // BLOODLUST
-      else if (p.class === 'necromancer' && visEnemies.length >= 2) return { type: 'key', val: 'v' }; // CORPSE EXPLOSION
-      else if (p.class === 'monk' && adjEnemy) return { type: 'key', val: 'v' }; // FLURRY OF BLOWS
+  let ability2Fallback = ability2Decision();
+  if (ability2Fallback) return ability2Fallback;
+
+  let rangedAction = rangedAttack();
+  if (rangedAction) return rangedAction;
+
+  if (p.class === 'rogue' && adjEnemy && p.hp >= p.maxHp * 0.75) {
+      return attackMove(adjEnemy);
+  }
+
+  if (p.class === 'rogue' && adjEnemy && p.hp <= p.maxHp * 0.45 && carriedPotions().length === 0 && !stairsSeen()) {
+      return attackMove(adjEnemy);
   }
 
   // RULE 3: KITE! Keep distance from enemies!
   if (true) {
      if (visEnemies.length > 0) {
          let closestDist = Math.min(...visEnemies.map(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y)));
-         let kiteThreshold = p.class === 'ranger' || p.class === 'mage' || p.class === 'necromancer' ? 3 : 2;
+         let kiteThreshold = strategy.kiteThreshold;
          if (closestDist <= kiteThreshold) {
             let bestMove = null;
             let bestMinDist = -1;
@@ -310,6 +390,19 @@ window.botDecisionLogic = function() {
   // RULE 3.5: If we are adjacent to an enemy, and we cannot kite (Rule 3 failed), we must fight!
   // This prevents the "Walking Punching Bag" loop where we walk adjacent to enemies and get hit in the back.
   if (adjEnemy) {
+      if (p.class === 'rogue') {
+          let escape = dirs
+            .map(d => {
+              let nx = p.x + d.dx, ny = p.y + d.dy;
+              if (nx < 0 || nx >= MAP_W || ny < 0 || ny >= MAP_H || G.map[ny][nx] === WALL) return null;
+              if (G.enemies.some(e => e.x === nx && e.y === ny)) return null;
+              let minDist = Math.min(...liveEnemies.map(e => Math.abs(e.x - nx) + Math.abs(e.y - ny)));
+              return { k: d.k, minDist };
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.minDist - a.minDist)[0];
+          if (escape && escape.minDist > 1) return { type: 'key', val: escape.k };
+      }
       if (adjEnemy.x < p.x) return { type: 'key', val: 'ArrowLeft' };
       if (adjEnemy.x > p.x) return { type: 'key', val: 'ArrowRight' };
       if (adjEnemy.y < p.y) return { type: 'key', val: 'ArrowUp' };
@@ -333,7 +426,7 @@ window.botDecisionLogic = function() {
         if (curr.path.length > bestDist) break; // We found the closest targets already
 
         let isEnemy = liveEnemies.some(e => e.x === curr.x && e.y === curr.y);
-        let isItem = G.items.some(i => !i.carried && i.x === curr.x && i.y === curr.y);
+        let isItem = bag.length < 12 && G.items.some(i => !i.carried && i.x === curr.x && i.y === curr.y && usefulFloorItem(i));
         let isUnseen = !G.seen.has(curr.y * MAP_W + curr.x);
         let isStairs = G.map[curr.y][curr.x] === STAIRS;
 
@@ -346,19 +439,14 @@ window.botDecisionLogic = function() {
         }
 
         // Determine if map is fully cleared (no enemies, no unseen tiles)
-        let mapCleared = liveEnemies.length === 0;
-        for (let y = 0; y < MAP_H; y++) {
-          for (let x = 0; x < MAP_W; x++) {
-            if (G.map[y][x] !== WALL && !G.seen.has(y * MAP_W + x)) mapCleared = false;
-          }
-        }
+        let mapCleared = isMapCleared();
 
         // Only target stairs if the map is cleared, OR if we are dying and need to escape
-        if (isStairs && !mapCleared && !dyingWithoutPotion && G.floor < 5 && !forceStairs) {
+        if (isStairs && !mapCleared && !dyingWithoutPotion && !forceStairs) {
            isStairs = false;
         }
 
-        if ((dyingWithoutPotion || G.floor >= 5) && knownStairs && !isStairs) {
+        if (dyingWithoutPotion && knownStairs && !isStairs) {
           // At low HP with no healing, stop full-clearing and take the known exit.
           isEnemy = false;
           isItem = false;

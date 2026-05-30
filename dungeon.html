@@ -1135,6 +1135,11 @@ function checkEmergencyPotion(enemy, dmg, afterFn){
   overlay.style.display='flex';
 }
 
+function offerEmergencyPotion(dmg, afterFn){
+  let atk=Math.max(1, dmg + gdef() - 2);
+  checkEmergencyPotion({name:'Incoming hit', atk}, dmg, afterFn);
+}
+
 function resolveEmergency(drink){
   let overlay=document.getElementById('emergency-overlay');
   overlay.style.display='none';
@@ -1869,6 +1874,34 @@ function generateShopStock(){
   return stock;
 }
 
+function startActionTouch(e){
+  if(!e.touches || e.touches.length !== 1) return;
+  let t=e.touches[0], el=e.currentTarget;
+  el.dataset.touchStartX=t.clientX;
+  el.dataset.touchStartY=t.clientY;
+  el.dataset.touchMoved='0';
+}
+
+function trackActionTouch(e){
+  if(!e.touches || e.touches.length !== 1) return;
+  let el=e.currentTarget;
+  let sx=parseFloat(el.dataset.touchStartX || e.touches[0].clientX);
+  let sy=parseFloat(el.dataset.touchStartY || e.touches[0].clientY);
+  let dx=e.touches[0].clientX-sx, dy=e.touches[0].clientY-sy;
+  if(Math.sqrt(dx*dx+dy*dy)>12) el.dataset.touchMoved='1';
+}
+
+function finishActionTouch(e){
+  if(e.cancelable) e.preventDefault();
+  e.stopPropagation();
+  let el=e.currentTarget;
+  let moved=el.dataset.touchMoved==='1';
+  delete el.dataset.touchStartX;
+  delete el.dataset.touchStartY;
+  delete el.dataset.touchMoved;
+  return !moved;
+}
+
 function openShop(){
   if(G.gameOver||G.won)return;
   if(!G.shops || G.shops.length===0){addLog('No shop on this floor','log-info');return;}
@@ -1898,7 +1931,9 @@ function renderShop(){
       let colorCls = getItemColorClass(item);
       h+=`<div class="shop-item${item.sold?' sold':''}"
         onclick="buyItem('${item.id}')"
-        ontouchend="event.preventDefault();event.stopPropagation();buyItem('${item.id}')">
+        ontouchstart="startActionTouch(event)"
+        ontouchmove="trackActionTouch(event)"
+        ontouchend="if(finishActionTouch(event))buyItem('${item.id}')">
         <div class="shop-item-left">
           <div class="shop-item-name ${colorCls}">${item.sym} ${item.name}${item.sold?' (SOLD)':''}</div>
         <div class="shop-item-desc">${desc} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
@@ -1977,7 +2012,9 @@ function renderSellPanel(){
       let colorCls = getItemColorClass(item);
       h+=`<div class="sell-item"
         onclick="sellItem('${item.id}','${item._equipped||''}')"
-        ontouchend="event.preventDefault();event.stopPropagation();sellItem('${item.id}','${item._equipped||''}')">
+        ontouchstart="startActionTouch(event)"
+        ontouchmove="trackActionTouch(event)"
+        ontouchend="if(finishActionTouch(event))sellItem('${item.id}','${item._equipped||''}')">
         <div class="sell-item-left">
           <div class="sell-item-name ${colorCls}">${item.sym} ${item.name}${equippedTag}${countTag}</div>
           <div class="sell-item-desc">${iDesc(item)} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
@@ -2131,8 +2168,9 @@ function initGame(playerClass = 'warrior'){
     p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 3;
     p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◈', price:35};
   } else if(playerClass === 'rogue') {
-    p.hp = 18; p.maxHp = 18; p.atk = 6; p.def = 1;
+    p.hp = 20; p.maxHp = 20; p.atk = 6; p.def = 1;
     p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:2, rarity:'common', sym:'†', price:20};
+    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◈', price:20};
     p.bestWeapon = 'Rusty Dagger';
   } else if(playerClass === 'mage') {
     p.hp = 15; p.maxHp = 15; p.atk = 5; p.def = 1;
@@ -2142,7 +2180,7 @@ function initGame(playerClass = 'warrior'){
     p.hp = 25; p.maxHp = 25; p.atk = 2; p.def = 4;
     p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◈', price:45};
   } else if(playerClass === 'ranger') {
-    p.hp = 15; p.maxHp = 15; p.atk = 4; p.def = 2;
+    p.hp = 15; p.maxHp = 15; p.atk = 3; p.def = 2;
     p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:3, rarity:'common', sym:'🏹', price:30};
     p.bestWeapon = 'Shortbow';
   } else if(playerClass === 'barbarian') {
@@ -2251,10 +2289,10 @@ function handleResize(){
 
 const CLASS_DATA = {
   warrior: { name: 'Warrior', tagline: 'A sturdy fighter who excels in sustained combat.', hp: 30, atk: 3, def: 3, weapon: 'Bare Hands', armor: 'Chain Mail', ability1: 'BASH', desc1: 'Deals 2x damage to a nearby visible enemy. Cooldown: 5', ability2: 'SHIELD WALL', desc2: '(Lvl 5) Reduces incoming damage by 50% for 3 turns. Cooldown: 10', passive: 'Regenerates 1 HP every 5 turns.' },
-  rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 18, atk: 6, def: 1, weapon: 'Rusty Dagger', armor: 'None', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 25% of all incoming attacks.' },
+  rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 20, atk: 6, def: 1, weapon: 'Rusty Dagger', armor: 'Leather Vest', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 25% of all incoming attacks.' },
   mage: { name: 'Mage', tagline: 'A fragile spellcaster with potent magic.', hp: 15, atk: 5, def: 1, weapon: 'Bone Staff', armor: 'None', ability1: 'FIREBALL', desc1: 'Deals damage to all enemies in a 3x3 area around a target. Cooldown: 5', ability2: 'BLINK', desc2: '(Lvl 5) Teleport instantly to a safe, visible tile. Cooldown: 8', passive: 'Magic weapons (♦) deal +50% damage.' },
   paladin: { name: 'Paladin', tagline: 'A holy champion focused on sustain and defense.', hp: 25, atk: 2, def: 4, weapon: 'Bare Hands', armor: 'Iron Plate', ability1: 'SMITE', desc1: 'Deals damage and stuns the enemy for 1 turn. Cooldown: 5', ability2: 'LAY ON HANDS', desc2: '(Lvl 5) Heals for 30% of Max HP. Cooldown: 15', passive: 'Max HP increases by 2 upon leveling up.' },
-  ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 15, atk: 4, def: 2, weapon: 'Shortbow', armor: 'None', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 3 tiles away.' },
+  ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 15, atk: 3, def: 2, weapon: 'Shortbow', armor: 'None', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 3 tiles away.' },
   barbarian: { name: 'Barbarian', tagline: 'A fearless brute who thrives in chaos.', hp: 40, atk: 5, def: 0, weapon: 'Great Axe', armor: 'None', ability1: 'CLEAVE', desc1: 'Deals damage to all adjacent enemies. Cooldown: 4', ability2: 'BLOODLUST', desc2: '(Lvl 5) For 3 turns, heal 50% of damage dealt, but take 2x damage. Cooldown: 12', passive: 'Deals +1 damage for every 10 missing HP.' },
   necromancer: { name: 'Necromancer', tagline: 'A dark caster who drains life from foes.', hp: 15, atk: 3, def: 1, weapon: 'Skull Rod', armor: 'None', ability1: 'SIPHON LIFE', desc1: 'Deals damage and heals yourself for the same amount. Cooldown: 5', ability2: 'CORPSE EXPLOSION', desc2: '(Lvl 5) Mark an enemy for 3 turns. If it dies while marked, it explodes for heavy AoE damage. Cooldown: 8', passive: 'Heals 1 HP whenever an enemy dies.' },
   monk: { name: 'Monk', tagline: 'A disciplined martial artist.', hp: 20, atk: 3, def: 2, weapon: 'Bare Hands', armor: 'None', ability1: 'PUSH KICK', desc1: 'Pushes an enemy 1 tile away. Deals extra damage if they hit a wall. Cooldown: 3', ability2: 'FLURRY OF BLOWS', desc2: '(Lvl 5) Attacks 3 times instantly, but you are rooted for your next turn. Cooldown: 10', passive: 'Gains +2 ATK (scaling with level) when NO weapon is equipped.' }

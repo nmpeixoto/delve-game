@@ -63,6 +63,11 @@ function checkEmergencyPotion(enemy, dmg, afterFn){
   overlay.style.display='flex';
 }
 
+function offerEmergencyPotion(dmg, afterFn){
+  let atk=Math.max(1, dmg + gdef() - 2);
+  checkEmergencyPotion({name:'Incoming hit', atk}, dmg, afterFn);
+}
+
 function resolveEmergency(drink){
   let overlay=document.getElementById('emergency-overlay');
   overlay.style.display='none';

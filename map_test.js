@@ -77,3 +77,24 @@ test('new floors do not inherit seen tiles from the previous floor', () => {
   assert.strictEqual(context.G.seen.has(999999), false);
   assert.ok(context.G.seen.size > 0);
 });
+
+test('rogue starts with light armor for melee survivability', () => {
+  const context = loadMapContext();
+
+  context.initGame('rogue');
+
+  assert.strictEqual(context.G.player.maxHp, 20);
+  assert.ok(context.G.player.armor);
+  assert.strictEqual(context.G.player.armor.name, 'Leather Vest');
+  assert.strictEqual(context.G.player.armor.def, 2);
+});
+
+test('ranger starts with lower base attack now that bow range is fully used', () => {
+  const context = loadMapContext();
+
+  context.initGame('ranger');
+
+  assert.strictEqual(context.G.player.atk, 3);
+  assert.strictEqual(context.G.player.weapon.name, 'Shortbow');
+  assert.strictEqual(context.G.player.weapon.atk, 3);
+});

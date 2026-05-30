@@ -43,8 +43,9 @@ function initGame(playerClass = 'warrior'){
     p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 3;
     p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◈', price:35};
   } else if(playerClass === 'rogue') {
-    p.hp = 18; p.maxHp = 18; p.atk = 6; p.def = 1;
+    p.hp = 20; p.maxHp = 20; p.atk = 6; p.def = 1;
     p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:2, rarity:'common', sym:'†', price:20};
+    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◈', price:20};
     p.bestWeapon = 'Rusty Dagger';
   } else if(playerClass === 'mage') {
     p.hp = 15; p.maxHp = 15; p.atk = 5; p.def = 1;
@@ -54,7 +55,7 @@ function initGame(playerClass = 'warrior'){
     p.hp = 25; p.maxHp = 25; p.atk = 2; p.def = 4;
     p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◈', price:45};
   } else if(playerClass === 'ranger') {
-    p.hp = 15; p.maxHp = 15; p.atk = 4; p.def = 2;
+    p.hp = 15; p.maxHp = 15; p.atk = 3; p.def = 2;
     p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:3, rarity:'common', sym:'🏹', price:30};
     p.bestWeapon = 'Shortbow';
   } else if(playerClass === 'barbarian') {

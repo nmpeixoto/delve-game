@@ -2,10 +2,37 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
+async function waitForServer(url, attempts = 12, delayMs = 500) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, { method: 'HEAD' });
+      if (res.ok) return;
+    } catch (err) {
+      // keep retrying
+    }
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+  }
+  throw new Error(`Server not reachable at ${url}`);
+}
+
 async function waitForGameStable(page) {
   await page.waitForFunction(() => {
     return typeof G === 'undefined' || !G.enemies || !G.enemies.some(e => e.dying);
-  }, { timeout: 1200 }).catch(() => {});
+  }, { timeout: 4000 }).catch(() => {});
+}
+
+function isRetryableStartupResult(result) {
+  if (!result || result.turns !== 0) return false;
+  if (result.status !== 'error' && result.status !== 'fatal_script_error') return false;
+
+  const retryable = [
+    'ERR_CONNECTION_REFUSED',
+    'unknown error occurred when fetching the script',
+    'Waiting failed',
+    'Waiting for selector',
+    'Server not reachable',
+  ];
+  return result.errors.some(err => retryable.some(pattern => err.includes(pattern)));
 }
 
 async function runAutoBot(url, runIndex, heroClass = 'warrior') {
@@ -23,6 +50,7 @@ async function runAutoBot(url, runIndex, heroClass = 'warrior') {
   });
 
   try {
+    await waitForServer(url);
     await page.goto(url, { waitUntil: 'networkidle0' });
 
     // Click NEW GAME
@@ -135,6 +163,8 @@ async function runAutoBot(url, runIndex, heroClass = 'warrior') {
           const el = document.querySelector(sel);
           if (el) el.click();
         }, botDecision.target);
+      } else if (botDecision.type === 'attack') {
+        await page.evaluate((id) => tileAttack(id), botDecision.target);
       } else if (botDecision.type === 'key') {
         await page.keyboard.press(botDecision.val);
       }
@@ -160,6 +190,21 @@ async function runAutoBot(url, runIndex, heroClass = 'warrior') {
   }
 }
 
+async function runAutoBotWithRetries(url, runIndex, heroClass = 'warrior') {
+  const maxAttempts = parseInt(process.env.STARTUP_RETRIES, 10) || 3;
+  let lastResult = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    lastResult = await runAutoBot(url, runIndex, heroClass);
+    if (!isRetryableStartupResult(lastResult)) return lastResult;
+    if (attempt < maxAttempts) {
+      console.log(`   -> Startup retry ${attempt}/${maxAttempts - 1} for ${heroClass.toUpperCase()}: ${lastResult.errors.join(' | ')}`);
+    }
+  }
+
+  return lastResult;
+}
+
 async function runMany(count, classFilter = null) {
   console.log(`Starting ${count} automated bot runs using bot_brain.js...`);
   const results = [];
@@ -168,7 +213,7 @@ async function runMany(count, classFilter = null) {
   for (let i = 1; i <= count; i++) {
     const cls = classes[(i - 1) % classes.length];
     console.log(`[Run ${i}/${count}] Playing as ${cls.toUpperCase()}...`);
-    const res = await runAutoBot('http://127.0.0.1:8080/src/index.html', i, cls);
+    const res = await runAutoBotWithRetries('http://127.0.0.1:8080/src/index.html', i, cls);
     console.log(`   -> Ended with status: ${res.status.toUpperCase()} | Floor: ${res.floor} | Turns: ${res.turns} | Errors: ${res.errors.length}`);
     if (verbose && res.decisions.length > 0) {
       console.log(`   -> Last ${res.decisions.length} decisions: ${JSON.stringify(res.decisions)}`);
@@ -228,6 +273,15 @@ async function runMany(count, classFilter = null) {
 }
 
 // Only run 3 times for the fast iterative learning loop by default, can be modified by the agent.
-const runsArg = parseInt(process.argv[2]) || 3;
-const classArg = process.argv[3] || null;
-runMany(runsArg, classArg).catch(console.error);
+if (require.main === module) {
+  const runsArg = parseInt(process.argv[2]) || 3;
+  const classArg = process.argv[3] || null;
+  runMany(runsArg, classArg).catch(console.error);
+}
+
+module.exports = {
+  isRetryableStartupResult,
+  runAutoBot,
+  runAutoBotWithRetries,
+  runMany,
+};
