@@ -24,6 +24,18 @@ function generateMap(){
   return{map,rooms};
 }
 
+const FLOOR_ENEMY_PROFILES = [
+  { tierMin: 0, tierMax: 1, scale: 1.0 },
+  { tierMin: 1, tierMax: 2, scale: 1.5 },
+  { tierMin: 2, tierMax: 3, scale: 1.9 },
+  { tierMin: 3, tierMax: 4, scale: 2.25 },
+  { tierMin: 4, tierMax: 6, scale: 2.75 },
+];
+
+function getFloorEnemyProfile(floor){
+  return FLOOR_ENEMY_PROFILES[Math.max(0, Math.min(floor - 1, FLOOR_ENEMY_PROFILES.length - 1))];
+}
+
 // ===================== INIT =====================
 function initGame(playerClass = 'warrior'){
   let p = {
@@ -118,9 +130,10 @@ function buildFloor(){
     // Don't spawn enemies in shop rooms or the starting room
     if(G.shops.some(s=>r.cx===s.x&&r.cy===s.y)) continue;
     let ne=rr(1,2+G.floor);
+    let enemyProfile = getFloorEnemyProfile(G.floor);
     for(let e=0;e<ne;e++){
-      let tier=Math.min(Math.floor(G.floor*.8+rand(2)),ENEMIES.length-1);
-      let t=ENEMIES[tier],sc=1+(G.floor-1)*.4;
+      let tier=rr(enemyProfile.tierMin, enemyProfile.tierMax);
+      let t=ENEMIES[tier],sc=enemyProfile.scale;
       // Find a position not visible from player start, with extra distance check
       let ex, ey, attempts=0;
       do {

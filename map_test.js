@@ -109,3 +109,18 @@ test('barbarian starts with furs for full-clear durability', () => {
   assert.strictEqual(context.G.player.armor.name, 'Furs');
   assert.strictEqual(context.G.player.armor.def, 3);
 });
+
+test('floor 5 enemy profile reaches lich tier and a harder stat scale', () => {
+  const context = loadMapContext();
+
+  assert.strictEqual(typeof context.getFloorEnemyProfile, 'function');
+
+  const floor4 = context.getFloorEnemyProfile(4);
+  const floor5 = context.getFloorEnemyProfile(5);
+
+  assert.strictEqual(floor5.tierMin, 4);
+  assert.strictEqual(floor5.tierMax, 6);
+  assert.strictEqual(floor4.tierMax, 4);
+  assert.strictEqual(floor4.scale, 2.25);
+  assert.strictEqual(floor5.scale, 2.75);
+});
