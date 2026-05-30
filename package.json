@@ -1,7 +1,7 @@
 {
   "scripts": {
     "build": "node build.js",
-    "test": "node bot_brain_test.js && node autoplay_runner_test.js && node combat_test.js && node map_test.js"
+    "test": "node bot_brain_test.js && node autoplay_runner_test.js && node combat_test.js && node map_test.js && node shop_test.js"
   },
   "dependencies": {
     "puppeteer": "^25.1.0"

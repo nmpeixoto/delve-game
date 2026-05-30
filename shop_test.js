@@ -1,0 +1,127 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+function loadShopContext(overrides = {}) {
+  const elements = {
+    'shop-gold-val': { textContent: '', innerHTML: '' },
+    'sell-items': { innerHTML: '' },
+    'shop-items': { innerHTML: '' },
+    'tab-buy': { classList: { toggle: () => {} } },
+    'tab-sell': { classList: { toggle: () => {} } },
+    'shop-buy-panel': { style: { display: '' } },
+    'shop-sell-panel': { style: { display: '' } },
+    'shop-overlay': { classList: { add: () => {}, remove: () => {}, toggle: () => {}, contains: () => false } },
+  };
+
+  const context = {
+    G: {
+      player: {
+        class: 'warrior',
+        lvl: 3,
+        gold: 0,
+        weapon: { id: 'current-weapon', name: 'Short Sword', type: 'weapon', atk: 4 },
+        armor: { id: 'current-armor', name: 'Leather Vest', type: 'armor', def: 2 },
+      },
+      items: [],
+    },
+    _lastAction: 0,
+    addLog: () => {},
+    floatText: () => {},
+    fireTip: () => {},
+    updateBestWeapon: () => {},
+    renderSellPanel: () => {},
+    renderShop: () => {},
+    updateHUD: () => {},
+    updateActBtns: () => {},
+    SFX: { sell: () => {} },
+    document: {
+      getElementById: id => elements[id] || { textContent: '', innerHTML: '', style: {}, classList: { toggle: () => {}, add: () => {}, remove: () => {}, contains: () => false } },
+    },
+    Math,
+    Set,
+    ...overrides,
+  };
+
+  context.canAct = overrides.canAct || (() => {
+    const now = Date.now();
+    if (now - context._lastAction < 400) return false;
+    context._lastAction = now;
+    return true;
+  });
+
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, 'src/js/items.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, 'src/js/shop.js'), 'utf8'), context);
+  context.renderSellPanel = () => {};
+  context.renderShop = () => {};
+  return context;
+}
+
+function test(name, fn) {
+  try {
+    fn();
+    console.log(`PASS ${name}`);
+  } catch (err) {
+    console.error(`FAIL ${name}`);
+    console.error(err.stack || err.message);
+    process.exitCode = 1;
+  }
+}
+
+test('sellWeakerGear keeps level-locked upgrades that are stronger than current gear', () => {
+  const context = loadShopContext();
+  context.G.items = [
+    {
+      id: 'future-sword',
+      name: 'Steel Glaive',
+      type: 'weapon',
+      atk: 9,
+      price: 80,
+      reqLvl: 6,
+      carried: true,
+    },
+    {
+      id: 'future-armor',
+      name: 'Mithril Shirt',
+      type: 'armor',
+      def: 7,
+      price: 80,
+      reqLvl: 6,
+      carried: true,
+    },
+  ];
+
+  context.sellWeakerGear();
+
+  assert.strictEqual(context.G.player.gold, 0);
+  assert.strictEqual(context.G.items.length, 2);
+  assert.strictEqual(context.G.items.some(item => item.id === 'future-sword'), true);
+  assert.strictEqual(context.G.items.some(item => item.id === 'future-armor'), true);
+});
+
+test('opening the merchant clears the action lock so sell-all works immediately', () => {
+  const context = loadShopContext();
+  context.G.shops = [{ x: 5, y: 5, stock: [] }];
+  context.G.player.x = 5;
+  context.G.player.y = 5;
+  context.G.items = [
+    {
+      id: 'old-sword',
+      name: 'Rusty Sword',
+      type: 'weapon',
+      atk: 2,
+      price: 10,
+      carried: true,
+    },
+  ];
+
+  context._lastAction = Date.now();
+  context.openShop();
+  context.sellWeakerGear();
+
+  assert.strictEqual(context.G.currentShop, context.G.shops[0]);
+  assert.strictEqual(context.G.player.gold, 5);
+  assert.strictEqual(context.G.items.length, 0);
+});

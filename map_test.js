@@ -83,21 +83,57 @@ test('rogue starts with light armor for melee survivability', () => {
 
   context.initGame('rogue');
 
-  assert.strictEqual(context.G.player.maxHp, 20);
+  assert.strictEqual(context.G.player.maxHp, 22);
+  assert.strictEqual(context.G.player.weapon.atk, 4);
   assert.ok(context.G.player.armor);
   assert.strictEqual(context.G.player.armor.name, 'Leather Vest');
   assert.strictEqual(context.G.player.armor.def, 2);
 });
 
-test('ranger starts with lower base attack now that bow range is fully used', () => {
+test('ranger starts with a tunic and stronger bow ladder', () => {
   const context = loadMapContext();
 
   context.initGame('ranger');
 
-  assert.strictEqual(context.G.player.atk, 3);
+  assert.strictEqual(context.G.player.maxHp, 17);
+  assert.strictEqual(context.G.player.atk, 4);
   assert.strictEqual(context.G.player.def, 1);
   assert.strictEqual(context.G.player.weapon.name, 'Shortbow');
-  assert.strictEqual(context.G.player.weapon.atk, 2);
+  assert.strictEqual(context.G.player.weapon.atk, 4);
+  assert.strictEqual(context.G.player.armor.name, 'Ranger Tunic');
+  assert.strictEqual(context.G.player.armor.def, 3);
+});
+
+test('mage starts with a robe so floor 4 pressure does not erase it instantly', () => {
+  const context = loadMapContext();
+
+  context.initGame('mage');
+
+  assert.ok(context.G.player.armor);
+  assert.strictEqual(context.G.player.armor.name, 'Apprentice Robe');
+  assert.strictEqual(context.G.player.armor.def, 2);
+});
+
+test('necromancer starts with a robe for early floor sustain', () => {
+  const context = loadMapContext();
+
+  context.initGame('necromancer');
+
+  assert.strictEqual(context.G.player.maxHp, 16);
+  assert.ok(context.G.player.armor);
+  assert.strictEqual(context.G.player.armor.name, 'Apprentice Robe');
+  assert.strictEqual(context.G.player.armor.def, 2);
+});
+
+test('monk starts with a gi to survive the late floor melee checks', () => {
+  const context = loadMapContext();
+
+  context.initGame('monk');
+
+  assert.strictEqual(context.G.player.maxHp, 22);
+  assert.ok(context.G.player.armor);
+  assert.strictEqual(context.G.player.armor.name, 'Gi');
+  assert.strictEqual(context.G.player.armor.def, 3);
 });
 
 test('barbarian starts with furs for full-clear durability', () => {
@@ -107,7 +143,7 @@ test('barbarian starts with furs for full-clear durability', () => {
 
   assert.ok(context.G.player.armor);
   assert.strictEqual(context.G.player.armor.name, 'Furs');
-  assert.strictEqual(context.G.player.armor.def, 3);
+  assert.strictEqual(context.G.player.armor.def, 4);
 });
 
 test('floor 5 enemy profile reaches lich tier and a harder stat scale', () => {
@@ -121,6 +157,6 @@ test('floor 5 enemy profile reaches lich tier and a harder stat scale', () => {
   assert.strictEqual(floor5.tierMin, 4);
   assert.strictEqual(floor5.tierMax, 6);
   assert.strictEqual(floor4.tierMax, 4);
-  assert.strictEqual(floor4.scale, 2.25);
-  assert.strictEqual(floor5.scale, 2.75);
+  assert.strictEqual(floor4.scale, 2.0);
+  assert.strictEqual(floor5.scale, 2.4);
 });

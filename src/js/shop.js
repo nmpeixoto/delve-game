@@ -67,6 +67,7 @@ function openShop(){
   let nearShop = G.shops.find(s => Math.abs(p.x-s.x)<=1 && Math.abs(p.y-s.y)<=1);
   if(!nearShop){addLog('Move to a shop ($) to enter','log-shop');return;}
   G.currentShop = nearShop;
+  _lastAction = 0; // entering the merchant should not inherit the map action cooldown
   renderShop();
   switchShopTab('buy');
   document.getElementById('shop-overlay').classList.add('open');
@@ -239,7 +240,6 @@ function sellWeakerGear(){
     }
 
     let shouldSell = false;
-    if ((item.type === 'weapon' || item.type === 'armor') && !canEquip(item)) shouldSell = true;
     if (item.type === 'weapon' && weaponPower(item) < pWeapAtk) shouldSell = true;
     if (item.type === 'armor' && armorPower(item) < pArmDef) shouldSell = true;
 

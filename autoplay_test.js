@@ -18,7 +18,15 @@ async function waitForServer(url, attempts = 12, delayMs = 500) {
 async function waitForGameStable(page) {
   await page.waitForFunction(() => {
     return typeof G === 'undefined' || !G.enemies || !G.enemies.some(e => e.dying);
-  }, { timeout: 4000 }).catch(() => {});
+  }, { timeout: 1500 }).catch(() => {});
+}
+
+async function waitForTurnAdvance(page, previousTurn) {
+  await page.waitForFunction(
+    turn => typeof G === 'undefined' || !G || G.gameOver || G.won || G.turn !== turn,
+    { timeout: 1500 },
+    previousTurn,
+  ).catch(() => {});
 }
 
 function isRetryableStartupResult(result) {
@@ -158,6 +166,9 @@ async function runAutoBot(url, runIndex, heroClass = 'warrior') {
         break;
       }
 
+      const turnKeyActions = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'b', 'v', '.', '>']);
+      const turnBeforeAction = await page.evaluate(() => (typeof G !== 'undefined' && G) ? G.turn : -1);
+
       if (botDecision.type === 'click') {
         await page.evaluate((sel) => {
           const el = document.querySelector(sel);
@@ -167,6 +178,10 @@ async function runAutoBot(url, runIndex, heroClass = 'warrior') {
         await page.evaluate((id) => tileAttack(id), botDecision.target);
       } else if (botDecision.type === 'key') {
         await page.keyboard.press(botDecision.val);
+      }
+
+      if (botDecision.type === 'attack' || (botDecision.type === 'key' && turnKeyActions.has(botDecision.val))) {
+        await waitForTurnAdvance(page, turnBeforeAction);
       }
       await waitForGameStable(page);
 
