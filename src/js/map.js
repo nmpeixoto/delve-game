@@ -49,44 +49,49 @@ function initGame(playerClass = 'warrior'){
     rootedTurns: 0,
     vampirism: 0,
     regen: 0,
-    swiftness: 0
+    swiftness: 0,
+    tilesExplored: 0,
+    critChance: 0,
+    dodgeBonus: 0,
+    goldBonus: 0,
+    xpMult: 0
   };
   if(playerClass === 'warrior') {
     p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 2;
-    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◆', price:35};
+    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◆', price:60};
   } else if(playerClass === 'rogue') {
     p.hp = 24; p.maxHp = 24; p.atk = 7; p.def = 2;
-    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'†', price:15};
-    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◆', price:20};
+    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'†', price:25};
+    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◆', price:35};
     p.bestWeapon = 'Rusty Dagger (ATK+4)';
   } else if(playerClass === 'mage') {
     p.hp = 15; p.maxHp = 15; p.atk = 4; p.def = 1;
-    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'♦', price:40};
-    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:25};
+    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70};
+    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
     p.bestWeapon = 'Bone Staff (ATK+5)';
   } else if(playerClass === 'paladin') {
     p.hp = 20; p.maxHp = 20; p.atk = 1; p.def = 1;
-    p.weapon = {id:uid(), name:'Iron Mace', type:'weapon', atk:5, rarity:'common', sym:'⚔', price:40};
-    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:45};
+    p.weapon = {id:uid(), name:'Iron Mace', type:'weapon', atk:5, rarity:'common', sym:'⚔', price:70};
+    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:80};
     p.bestWeapon = 'Iron Mace (ATK+5)';
   } else if(playerClass === 'ranger') {
     p.hp = 13; p.maxHp = 13; p.atk = 2; p.def = 1;
-    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:4, rarity:'common', sym:'🏹', price:30};
-    p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:30};
+    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:4, rarity:'common', sym:'🏹', price:50};
+    p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
     p.bestWeapon = 'Shortbow (ATK+4)';
   } else if(playerClass === 'barbarian') {
     p.hp = 42; p.maxHp = 42; p.atk = 5; p.def = 1;
-    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:40};
-    p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'◆', price:25};
+    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:70};
+    p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'◆', price:40};
     p.bestWeapon = 'Great Axe (ATK+4)';
   } else if(playerClass === 'necromancer') {
     p.hp = 18; p.maxHp = 18; p.atk = 4; p.def = 1;
-    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'♦', price:40};
-    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:25};
+    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70};
+    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
     p.bestWeapon = 'Skull Rod (ATK+5)';
   } else if(playerClass === 'monk') {
     p.hp = 22; p.maxHp = 22; p.atk = 3; p.def = 1;
-    p.armor = {id:uid(), name:'Gi', type:'armor', def:3, rarity:'common', sym:'◆', price:30};
+    p.armor = {id:uid(), name:'Gi', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
   }
 
   G={

@@ -278,17 +278,31 @@ Emergency potion prompts can offer your best potion automatically when the game 
 
 ## Permanent Shop Upgrades
 
-These upgrades are shop-only items and become available from floor 2 onward. Legendary upgrades do not appear until floor 4.
+These upgrades are shop-only items and exactly 2 will appear in shops from floor 2 onward. Legendary upgrades do not appear until floor 4.
 
-| Name | Effect | Rarity | Price | Availability |
-| --- | --- | --- | ---: | --- |
-| Strength Tonic | +2 ATK permanently | Rare | 50g | Floor 2+ |
-| Iron Skin | +2 DEF permanently | Rare | 50g | Floor 2+ |
-| Vitality Brew | +15 Max HP permanently | Rare | 45g | Floor 2+ |
-| Blessing | +1 ATK, +1 DEF, +10 Max HP | Legendary | 120g | Floor 4+ |
-| Vampiric Ring | Heal 1 HP per kill | Legendary | 150g | Floor 4+ |
-| Troll Blood | Heal 1 HP every 10 turns | Legendary | 160g | Floor 4+ |
-| Hermes Boots | Gain 1 free move every 15 turns | Legendary | 140g | Floor 4+ |
+| Name | Effect | Rarity | Price |
+| --- | --- | --- | ---: |
+| Minor Strength Tonic | +1 ATK permanently | Common | 100g |
+| Strength Tonic | +2 ATK permanently | Rare | 200g |
+| Ogre Strength | +3 ATK permanently | Legendary | 450g |
+| Minor Iron Skin | +1 DEF permanently | Common | 100g |
+| Iron Skin | +2 DEF permanently | Rare | 200g |
+| Titan Shield | +3 DEF permanently | Legendary | 450g |
+| Minor Vitality Brew | +8 Max HP permanently | Common | 90g |
+| Vitality Brew | +15 Max HP permanently | Rare | 180g |
+| Heart of the Mountain | +30 Max HP permanently | Legendary | 400g |
+| Blessing | +1 ATK, +1 DEF, +10 Max HP | Legendary | 450g |
+| Vampiric Ring | Heal 1 HP per kill | Legendary | 500g |
+| Vampiric Amulet | Heal 2 HP per kill | Legendary | 600g |
+| Troll Blood | Heal 1 HP every 10 tiles explored | Legendary | 500g |
+| Troll Heart | Heal 2 HP every 10 tiles explored | Legendary | 600g |
+| Hermes Boots | Gain 1 free move every 15 tiles explored | Legendary | 450g |
+| Assassin's Mark | +5% Critical Hit Chance | Rare | 250g |
+| Deadly Precision | +12% Critical Hit Chance | Legendary | 500g |
+| Thief's Cloak | +5% Dodge Chance | Rare | 250g |
+| Acrobat's Boots | +12% Dodge Chance | Legendary | 500g |
+| Midas Coin | +2 Gold per kill | Rare | 300g |
+| Scholar's Quill | +20% XP from kills | Rare | 300g |
 
 ## Enemies
 
@@ -319,6 +333,8 @@ Enemy stats below are base floor 1 values. Floor scaling uses these profiles:
 - Ranger bows extend ranged taps to 3 tiles and skip the counterattack at range.
 - Damage uses `max(1, ATK - DEF + random 0-2)`.
 - DEF reduces incoming damage by 1 per point before randomness.
+- **Critical Hits**: Players with a Critical Hit chance can occasionally deal 2x damage on attacks.
+- **Dodge**: Players with Dodge chance can occasionally negate incoming enemy attacks completely.
 - Leveling up increases Max HP by 8, ATK by 1, DEF by 1, and the XP requirement scales up by 1.6x.
 - Paladins gain an extra +2 Max HP on level up.
 
@@ -335,7 +351,8 @@ Enemy stats below are base floor 1 values. Floor scaling uses these profiles:
 - Merchants appear in middle rooms on a floor.
 - Shop inventory scales with floor depth.
 - Weapons and armor in the shop are filtered by floor-scaled power limits.
-- Upgrades appear from floor 2 onward, with legendary upgrades starting on floor 4.
+- Exactly **2 upgrades** appear in the shop from floor 2 onward, forcing players to choose among a wide pool of 21 possible upgrades.
+- Legendary upgrades start appearing on floor 4.
 - Selling an item gives 50% of its shop price, rounded down with a minimum of 1 gold.
 
 ### Vision and Presentation

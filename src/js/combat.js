@@ -22,6 +22,10 @@ function attackEnemy(id,multiplier=1,opts={}){
     G.player.vanishTurns = 0;
     addLog('Sneak Attack!', 'log-combat');
   }
+  if(G.player.critChance > 0 && Math.random() < G.player.critChance) {
+    multiplier *= 2;
+    addLog('Critical Hit!', 'log-combat');
+  }
   let dmg=Math.max(1,gatk()-en.def+rand(3));
   if(multiplier>1){dmg*=multiplier;SFX.bash();}else{SFX.hit();}
   en.hp-=dmg;
@@ -61,7 +65,8 @@ function attackEnemy(id,multiplier=1,opts={}){
   if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
   if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
 
-  if(G.player.class === 'rogue' && ch(.4)) {
+  let dodgeChance = (G.player.class === 'rogue' ? 0.4 : 0) + G.player.dodgeBonus;
+  if(dodgeChance > 0 && Math.random() < dodgeChance) {
     addLog(`Dodged ${en.name}'s attack!`, 'log-info');
     popText('💨', G.player.x, G.player.y);
     advanceTurn();
@@ -81,8 +86,9 @@ let _deathBatch = [];
 let _deathTimer = null;
 
 function killEnemy(en, skipAdvanceTurn) {
-  let goldDrop=en.gold+rand(3);
-  G.player.xp+=en.xp;G.player.kills++;G.player.gold+=goldDrop;
+  let goldDrop = en.gold + rand(3) + G.player.goldBonus;
+  let xpDrop = Math.ceil(en.xp * (1 + G.player.xpMult));
+  G.player.xp += xpDrop; G.player.kills++; G.player.gold += goldDrop;
 
   if(G.player.vampirism > 0) {
     let heal = G.player.vampirism;
@@ -94,7 +100,7 @@ function killEnemy(en, skipAdvanceTurn) {
     floatText('+2 HP', G.player.x, G.player.y, '#4ade80');
   }
 
-  addLog(`${en.name} slain! +${en.xp} XP  +${goldDrop}💰`, 'log-dead');
+  addLog(`${en.name} slain! +${xpDrop} XP  +${goldDrop}💰`, 'log-dead');
   floatText(`+${goldDrop}💰`,en.x,en.y,'#fbbf24');
   SFX.enemyDeath();
   fireTip('firstGold');
@@ -162,21 +168,6 @@ function advanceTurn(opts={}){
   }
   G.turn++;
 
-  if(G.player.regen > 0 && G.turn % 10 === 0) {
-    let heal = G.player.regen;
-    G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
-    floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
-  }
-
-  if(G.player.class === 'warrior' && G.turn % 12 === 0 && G.player.hp < G.player.maxHp) {
-    G.player.hp = Math.min(G.player.maxHp, G.player.hp + 1);
-    floatText('+1 HP', G.player.x, G.player.y, '#4ade80');
-  }
-
-  if(G.player.swiftness > 0 && G.turn % 15 === 0) {
-    G.player.freeMoves += G.player.swiftness;
-    addLog(`Swiftness granted ${G.player.swiftness} free move(s)!`, 'log-info');
-  }
 
   if(G.ability1Cooldown>0)G.ability1Cooldown--;
   if(G.ability2Cooldown>0)G.ability2Cooldown--;

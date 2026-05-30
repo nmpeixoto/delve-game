@@ -24,7 +24,7 @@ function generateShopStock(){
   // 2-4 upgrades (floors 2+)
   if(G.floor>=2){
     let ups=UPGRADES.filter(u=>u.rarity!=='legendary'||G.floor>=4).sort(()=>Math.random()-.5);
-    for(let i=0; i<Math.min(ups.length, rr(2,4)); i++) {
+    for(let i=0; i<Math.min(ups.length, 2); i++) {
       stock.push({...ups[i],id:uid(),sold:false});
     }
   }
@@ -271,12 +271,16 @@ function sellWeakerGear(){
 
 function applyUpgrade(item){
   let p=G.player;
-  if(item.stat==='atk'){p.atk+=item.amount;addLog(`Strength Tonic: ATK +${item.amount}!`,'log-level');}
-  else if(item.stat==='def'){p.def+=item.amount;addLog(`Iron Skin: DEF +${item.amount}!`,'log-level');}
-  else if(item.stat==='hp'){p.maxHp+=item.amount;p.hp=Math.min(p.maxHp,p.hp+item.amount);addLog(`Vitality Brew: Max HP +${item.amount}!`,'log-level');}
+  if(item.stat==='atk'){p.atk+=item.amount;addLog(`${item.name}: ATK +${item.amount}!`,'log-level');}
+  else if(item.stat==='def'){p.def+=item.amount;addLog(`${item.name}: DEF +${item.amount}!`,'log-level');}
+  else if(item.stat==='hp'){p.maxHp+=item.amount;p.hp=Math.min(p.maxHp,p.hp+item.amount);addLog(`${item.name}: Max HP +${item.amount}!`,'log-level');}
   else if(item.stat==='all'){p.atk+=1;p.def+=1;p.maxHp+=10;p.hp=Math.min(p.maxHp,p.hp+10);addLog(`Blessing: ATK+1, DEF+1, MaxHP+10!`,'log-level');}
-  else if(item.stat==='vamp'){p.vampirism+=item.amount;addLog(`Vampiric Ring: Heal ${item.amount} HP per kill!`,'log-level');}
-  else if(item.stat==='regen'){p.regen+=item.amount;addLog(`Troll Blood: Heal ${item.amount} HP every 10 turns!`,'log-level');}
-  else if(item.stat==='swift'){p.swiftness+=item.amount;addLog(`Hermes Boots: +${item.amount} free move every 15 turns!`,'log-level');}
+  else if(item.stat==='vamp'){p.vampirism+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP per kill!`,'log-level');}
+  else if(item.stat==='regen'){p.regen+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP every 10 tiles explored!`,'log-level');}
+  else if(item.stat==='swift'){p.swiftness+=item.amount;addLog(`${item.name}: +${item.amount} free move every 15 tiles explored!`,'log-level');}
+  else if(item.stat==='crit'){p.critChance+=item.amount;addLog(`${item.name}: +${item.amount*100}% Critical Hit Chance!`,'log-level');}
+  else if(item.stat==='dodge'){p.dodgeBonus+=item.amount;addLog(`${item.name}: +${item.amount*100}% Dodge Chance!`,'log-level');}
+  else if(item.stat==='goldBonus'){p.goldBonus+=item.amount;addLog(`${item.name}: +${item.amount} Gold per kill!`,'log-level');}
+  else if(item.stat==='xpMult'){p.xpMult+=item.amount;addLog(`${item.name}: +${item.amount*100}% XP from kills!`,'log-level');}
   floatText('UPGRADED!',p.x,p.y,'#c084fc');
 }

@@ -127,7 +127,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   .hud-stat{font-size:.5rem;}
   .hud-center{font-size:.34rem;}
   #map-area{flex:1;min-width:0;}
-  #bottom-bar{display:none;}
+  #bottom-bar{height:24px;overflow:hidden;border-top:1px solid var(--border);}
+  #log{height:24px;padding:2px 8px;font-size:.45rem;overflow:hidden;}
   #install-banner{display:none!important;}
   #dpad-area{
     width:150px;flex-shrink:0;
@@ -527,92 +528,119 @@ const DIRS={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],
 // ===================== DATA =====================
 const WEAPONS=[
   // Universal
-  {name:'Rusty Dagger',  type:'weapon', atk:4, sym:'†', rarity:'common', price:15},
-  {name:'Short Sword',   type:'weapon', atk:4, sym:'†', rarity:'common', price:30},
-  {name:'Broadsword',    type:'weapon', atk:6, sym:'⚔', rarity:'common', price:50, reqLvl:3},
-  {name:'Steel Glaive',  type:'weapon', atk:9, sym:'⚔', rarity:'rare',   price:80, reqLvl:6},
+  {name:'Rusty Dagger',  type:'weapon', atk:4, sym:'†', rarity:'common', price:25},
+  {name:'Short Sword',   type:'weapon', atk:4, sym:'†', rarity:'common', price:50},
+  {name:'Broadsword',    type:'weapon', atk:6, sym:'⚔', rarity:'common', price:85, reqLvl:3},
+  {name:'Steel Glaive',  type:'weapon', atk:9, sym:'⚔', rarity:'rare',   price:140, reqLvl:6},
 
   // Warrior / Paladin
-  {name:'Iron Mace',     type:'weapon', atk:5, sym:'⚔', rarity:'common', price:40, reqClass:['warrior','paladin']},
-  {name:'War Hammer',    type:'weapon', atk:8, sym:'⚔', rarity:'rare',   price:75, reqClass:['warrior','paladin'], reqLvl:5},
-  {name:'Holy Avenger',  type:'weapon', atk:14,sym:'⚔', rarity:'legendary', price:150, reqClass:['paladin'], reqLvl:10},
-  {name:'Champion Blade',type:'weapon', atk:15,sym:'⚔', rarity:'legendary', price:160, reqClass:['warrior'], reqLvl:10},
+  {name:'Iron Mace',     type:'weapon', atk:5, sym:'⚔', rarity:'common', price:70, reqClass:['warrior','paladin']},
+  {name:'War Hammer',    type:'weapon', atk:8, sym:'⚔', rarity:'rare',   price:130, reqClass:['warrior','paladin'], reqLvl:5},
+  {name:'Holy Avenger',  type:'weapon', atk:14,sym:'⚔', rarity:'legendary', price:260, reqClass:['paladin'], reqLvl:10},
+  {name:'Champion Blade',type:'weapon', atk:15,sym:'⚔', rarity:'legendary', price:280, reqClass:['warrior'], reqLvl:10},
 
   // Barbarian
-  {name:'Great Axe',     type:'weapon', atk:4, sym:'⚔', rarity:'common', price:40, reqClass:['barbarian']},
-  {name:'Savage Cleaver',type:'weapon', atk:9, sym:'⚔', rarity:'rare',   price:85, reqClass:['barbarian'], reqLvl:5},
-  {name:'Titan Slayer',  type:'weapon', atk:16,sym:'⚔', rarity:'legendary', price:180, reqClass:['barbarian'], reqLvl:10},
+  {name:'Great Axe',     type:'weapon', atk:4, sym:'⚔', rarity:'common', price:70, reqClass:['barbarian']},
+  {name:'Savage Cleaver',type:'weapon', atk:9, sym:'⚔', rarity:'rare',   price:150, reqClass:['barbarian'], reqLvl:5},
+  {name:'Titan Slayer',  type:'weapon', atk:16,sym:'⚔', rarity:'legendary', price:315, reqClass:['barbarian'], reqLvl:10},
 
   // Rogue
-  {name:'Twin Daggers',  type:'weapon', atk:5, sym:'†', rarity:'common', price:45, reqClass:['rogue']},
-  {name:'Assassin Dirk', type:'weapon', atk:8, sym:'†', rarity:'rare',   price:75, reqClass:['rogue'], reqLvl:5},
-  {name:'Shadow Blade',  type:'weapon', atk:14,sym:'†', rarity:'legendary', price:150, reqClass:['rogue'], reqLvl:10},
+  {name:'Twin Daggers',  type:'weapon', atk:5, sym:'†', rarity:'common', price:80, reqClass:['rogue']},
+  {name:'Assassin Dirk', type:'weapon', atk:8, sym:'†', rarity:'rare',   price:130, reqClass:['rogue'], reqLvl:5},
+  {name:'Shadow Blade',  type:'weapon', atk:14,sym:'†', rarity:'legendary', price:260, reqClass:['rogue'], reqLvl:10},
 
   // Ranger
-  {name:'Shortbow',      type:'weapon', atk:4, sym:'🏹', rarity:'common', price:30, reqClass:['ranger']},
-  {name:'Longbow',       type:'weapon', atk:7, sym:'🏹', rarity:'rare',   price:65, reqClass:['ranger'], reqLvl:4},
-  {name:'Crossbow',      type:'weapon', atk:10, sym:'🏹', rarity:'rare',   price:90, reqClass:['ranger'], reqLvl:7},
-  {name:'Elven Bow',     type:'weapon', atk:14,sym:'🏹', rarity:'legendary', price:140, reqClass:['ranger'], reqLvl:10},
+  {name:'Shortbow',      type:'weapon', atk:4, sym:'🏹', rarity:'common', price:50, reqClass:['ranger']},
+  {name:'Longbow',       type:'weapon', atk:7, sym:'🏹', rarity:'rare',   price:115, reqClass:['ranger'], reqLvl:4},
+  {name:'Crossbow',      type:'weapon', atk:10, sym:'🏹', rarity:'rare',   price:160, reqClass:['ranger'], reqLvl:7},
+  {name:'Elven Bow',     type:'weapon', atk:14,sym:'🏹', rarity:'legendary', price:245, reqClass:['ranger'], reqLvl:10},
 
   // Mage / Necromancer
-  {name:'Bone Staff',    type:'weapon', atk:5, sym:'♦', rarity:'common', price:40, reqClass:['mage','necromancer']},
-  {name:'Skull Rod',     type:'weapon', atk:5, sym:'♦', rarity:'common', price:40, reqClass:['mage','necromancer']},
-  {name:'Arcane Wand',   type:'weapon', atk:8, sym:'♦', rarity:'rare',   price:75, reqClass:['mage','necromancer'], reqLvl:5},
-  {name:'Void Staff',    type:'weapon', atk:12,sym:'♦', rarity:'rare',   price:110, reqClass:['mage','necromancer'], reqLvl:8},
-  {name:'Elder Wand',    type:'weapon', atk:18,sym:'♦', rarity:'legendary', price:200, reqClass:['mage'], reqLvl:12},
-  {name:'Scythe of Death',type:'weapon',atk:17,sym:'♦', rarity:'legendary', price:190, reqClass:['necromancer'], reqLvl:12},
+  {name:'Bone Staff',    type:'weapon', atk:5, sym:'♦', rarity:'common', price:70, reqClass:['mage','necromancer']},
+  {name:'Skull Rod',     type:'weapon', atk:5, sym:'♦', rarity:'common', price:70, reqClass:['mage','necromancer']},
+  {name:'Arcane Wand',   type:'weapon', atk:8, sym:'♦', rarity:'rare',   price:130, reqClass:['mage','necromancer'], reqLvl:5},
+  {name:'Void Staff',    type:'weapon', atk:12,sym:'♦', rarity:'rare',   price:190, reqClass:['mage','necromancer'], reqLvl:8},
+  {name:'Elder Wand',    type:'weapon', atk:18,sym:'♦', rarity:'legendary', price:350, reqClass:['mage'], reqLvl:12},
+  {name:'Scythe of Death',type:'weapon',atk:17,sym:'♦', rarity:'legendary', price:330, reqClass:['necromancer'], reqLvl:12},
 ];
 
 const ARMORS=[
   // Universal light/medium
-  {name:'Cloth Tunic',   type:'armor', def:1, sym:'◆', rarity:'common', price:10},
-  {name:'Leather Vest',  type:'armor', def:2, sym:'◆', rarity:'common', price:20},
-  {name:'Studded Armor', type:'armor', def:4, sym:'◆', rarity:'common', price:40, reqLvl:3},
-  {name:'Mithril Shirt', type:'armor', def:7, sym:'◆', rarity:'rare',   price:80, reqLvl:6},
+  {name:'Cloth Tunic',   type:'armor', def:1, sym:'◆', rarity:'common', price:15},
+  {name:'Leather Vest',  type:'armor', def:2, sym:'◆', rarity:'common', price:35},
+  {name:'Studded Armor', type:'armor', def:4, sym:'◆', rarity:'common', price:70, reqLvl:3},
+  {name:'Mithril Shirt', type:'armor', def:7, sym:'◆', rarity:'rare',   price:140, reqLvl:6},
 
   // Heavy (Warrior/Paladin)
-  {name:'Chain Mail',    type:'armor', def:4, sym:'◆', rarity:'common', price:35, reqClass:['warrior','paladin']},
-  {name:'Iron Plate',    type:'armor', def:5, sym:'◆', rarity:'common', price:45, reqClass:['warrior','paladin']},
-  {name:'Steel Plate',   type:'armor', def:8, sym:'◆', rarity:'rare',   price:80, reqClass:['warrior','paladin'], reqLvl:5},
-  {name:'Dragon Scale',  type:'armor', def:12,sym:'◆', rarity:'legendary', price:150, reqClass:['warrior','paladin'], reqLvl:10},
+  {name:'Chain Mail',    type:'armor', def:4, sym:'◆', rarity:'common', price:60, reqClass:['warrior','paladin']},
+  {name:'Iron Plate',    type:'armor', def:5, sym:'◆', rarity:'common', price:80, reqClass:['warrior','paladin']},
+  {name:'Steel Plate',   type:'armor', def:8, sym:'◆', rarity:'rare',   price:140, reqClass:['warrior','paladin'], reqLvl:5},
+  {name:'Dragon Scale',  type:'armor', def:12,sym:'◆', rarity:'legendary', price:260, reqClass:['warrior','paladin'], reqLvl:10},
 
   // Rogue / Ranger
-  {name:'Ranger Tunic',  type:'armor', def:3, sym:'◆', rarity:'common', price:30, reqClass:['rogue','ranger']},
-  {name:'Shadow Cloak',  type:'armor', def:6, sym:'◆', rarity:'rare',   price:70, reqClass:['rogue','ranger'], reqLvl:5},
-  {name:'Assassin Garb', type:'armor', def:10,sym:'◆', rarity:'legendary', price:130, reqClass:['rogue'], reqLvl:10},
-  {name:'Hunter Vest',   type:'armor', def:10,sym:'◆', rarity:'legendary', price:130, reqClass:['ranger'], reqLvl:10},
+  {name:'Ranger Tunic',  type:'armor', def:3, sym:'◆', rarity:'common', price:50, reqClass:['rogue','ranger']},
+  {name:'Shadow Cloak',  type:'armor', def:6, sym:'◆', rarity:'rare',   price:120, reqClass:['rogue','ranger'], reqLvl:5},
+  {name:'Assassin Garb', type:'armor', def:10,sym:'◆', rarity:'legendary', price:225, reqClass:['rogue'], reqLvl:10},
+  {name:'Hunter Vest',   type:'armor', def:10,sym:'◆', rarity:'legendary', price:225, reqClass:['ranger'], reqLvl:10},
 
   // Barbarian (Low DEF, but they wear it anyway)
-  {name:'Furs',          type:'armor', def:4, sym:'◆', rarity:'common', price:25, reqClass:['barbarian']},
-  {name:'Bone Armor',    type:'armor', def:6, sym:'◆', rarity:'rare',   price:60, reqClass:['barbarian'], reqLvl:5},
+  {name:'Furs',          type:'armor', def:4, sym:'◆', rarity:'common', price:40, reqClass:['barbarian']},
+  {name:'Bone Armor',    type:'armor', def:6, sym:'◆', rarity:'rare',   price:100, reqClass:['barbarian'], reqLvl:5},
 
   // Mage / Necromancer
-  {name:'Apprentice Robe',type:'armor',def:2, sym:'◆', rarity:'common', price:25, reqClass:['mage','necromancer']},
-  {name:'Mystic Robe',   type:'armor', def:5, sym:'◆', rarity:'rare',   price:60, reqClass:['mage','necromancer'], reqLvl:5},
-  {name:'Archmage Robes',type:'armor', def:9, sym:'◆', rarity:'legendary', price:120, reqClass:['mage'], reqLvl:10},
-  {name:'Lich Shroud',   type:'armor', def:9, sym:'◆', rarity:'legendary', price:120, reqClass:['necromancer'], reqLvl:10},
+  {name:'Apprentice Robe',type:'armor',def:2, sym:'◆', rarity:'common', price:40, reqClass:['mage','necromancer']},
+  {name:'Mystic Robe',   type:'armor', def:5, sym:'◆', rarity:'rare',   price:100, reqClass:['mage','necromancer'], reqLvl:5},
+  {name:'Archmage Robes',type:'armor', def:9, sym:'◆', rarity:'legendary', price:210, reqClass:['mage'], reqLvl:10},
+  {name:'Lich Shroud',   type:'armor', def:9, sym:'◆', rarity:'legendary', price:210, reqClass:['necromancer'], reqLvl:10},
 
   // Monk
-  {name:'Gi',            type:'armor', def:3, sym:'◆', rarity:'common', price:30, reqClass:['monk']},
-  {name:'Master Gi',     type:'armor', def:6, sym:'◆', rarity:'rare',   price:70, reqClass:['monk'], reqLvl:5},
-  {name:'Grandmaster Robe',type:'armor',def:11,sym:'◆', rarity:'legendary', price:140, reqClass:['monk'], reqLvl:10},
+  {name:'Gi',            type:'armor', def:3, sym:'◆', rarity:'common', price:50, reqClass:['monk']},
+  {name:'Master Gi',     type:'armor', def:6, sym:'◆', rarity:'rare',   price:120, reqClass:['monk'], reqLvl:5},
+  {name:'Grandmaster Robe',type:'armor',def:11,sym:'◆', rarity:'legendary', price:245, reqClass:['monk'], reqLvl:10},
 ];
 
 const POTIONS=[
-  {name:'Health Potion', type:'potion',heal:15,sym:'!',rarity:'common',   price:15},
-  {name:'Greater Potion',type:'potion',heal:30,sym:'!',rarity:'rare',     price:30},
-  {name:'Elixir of Life',type:'potion',heal:60,sym:'!',rarity:'legendary',price:60},
+  {name:'Health Potion', type:'potion',heal:15,sym:'!',rarity:'common',   price:25},
+  {name:'Greater Potion',type:'potion',heal:30,sym:'!',rarity:'rare',     price:50},
+  {name:'Elixir of Life',type:'potion',heal:60,sym:'!',rarity:'legendary',price:100},
 ];
 
 // Shop-exclusive upgrades
 const UPGRADES=[
-  {name:'Strength Tonic', type:'upgrade',stat:'atk',amount:2,sym:'↑',rarity:'rare',   price:50,  desc:'+2 Attack (permanent)'},
-  {name:'Iron Skin',      type:'upgrade',stat:'def',amount:2,sym:'↑',rarity:'rare',   price:50,  desc:'+2 Defense (permanent)'},
-  {name:'Vitality Brew',  type:'upgrade',stat:'hp', amount:15,sym:'♥',rarity:'rare',  price:45,  desc:'+15 Max HP (permanent)'},
-  {name:'Blessing',       type:'upgrade',stat:'all',amount:1,sym:'★',rarity:'legendary',price:120,desc:'+1 ATK, +1 DEF, +10 Max HP'},
-  {name:'Vampiric Ring',  type:'upgrade',stat:'vamp',amount:1,sym:'💍',rarity:'legendary',price:150,desc:'Heal 1 HP per kill'},
-  {name:'Troll Blood',    type:'upgrade',stat:'regen',amount:1,sym:'♥',rarity:'legendary',price:160,desc:'Heal 1 HP every 10 turns'},
-  {name:'Hermes Boots',   type:'upgrade',stat:'swift',amount:1,sym:'⚡',rarity:'legendary',price:140,desc:'Gain 1 free move every 15 turns'},
+  // Stat variants
+  {name:'Minor Strength Tonic', type:'upgrade',stat:'atk',amount:1,sym:'↑',rarity:'common', price:100, desc:'+1 Attack (permanent)'},
+  {name:'Strength Tonic', type:'upgrade',stat:'atk',amount:2,sym:'↑',rarity:'rare',   price:200, desc:'+2 Attack (permanent)'},
+  {name:'Ogre Strength',  type:'upgrade',stat:'atk',amount:3,sym:'↑',rarity:'legendary', price:450, desc:'+3 Attack (permanent)'},
+
+  {name:'Minor Iron Skin',      type:'upgrade',stat:'def',amount:1,sym:'↑',rarity:'common', price:100, desc:'+1 Defense (permanent)'},
+  {name:'Iron Skin',      type:'upgrade',stat:'def',amount:2,sym:'↑',rarity:'rare',   price:200, desc:'+2 Defense (permanent)'},
+  {name:'Titan Shield',   type:'upgrade',stat:'def',amount:3,sym:'↑',rarity:'legendary', price:450, desc:'+3 Defense (permanent)'},
+
+  {name:'Minor Vitality Brew',  type:'upgrade',stat:'hp', amount:8,sym:'♥',rarity:'common', price:90, desc:'+8 Max HP (permanent)'},
+  {name:'Vitality Brew',  type:'upgrade',stat:'hp', amount:15,sym:'♥',rarity:'rare',  price:180, desc:'+15 Max HP (permanent)'},
+  {name:'Heart of the Mountain',type:'upgrade',stat:'hp', amount:30,sym:'♥',rarity:'legendary', price:400, desc:'+30 Max HP (permanent)'},
+
+  {name:'Blessing',       type:'upgrade',stat:'all',amount:1,sym:'★',rarity:'legendary',price:450, desc:'+1 ATK, +1 DEF, +10 Max HP'},
+
+  // Healing passives
+  {name:'Vampiric Ring',  type:'upgrade',stat:'vamp',amount:1,sym:'💍',rarity:'legendary',price:500, desc:'Heal 1 HP per kill'},
+  {name:'Vampiric Amulet',type:'upgrade',stat:'vamp',amount:2,sym:'💍',rarity:'legendary',price:600, desc:'Heal 2 HP per kill'},
+
+  {name:'Troll Blood',    type:'upgrade',stat:'regen',amount:1,sym:'♥',rarity:'legendary',price:500, desc:'Heal 1 HP every 10 tiles explored'},
+  {name:'Troll Heart',    type:'upgrade',stat:'regen',amount:2,sym:'♥',rarity:'legendary',price:600, desc:'Heal 2 HP every 10 tiles explored'},
+
+  // Speed
+  {name:'Hermes Boots',   type:'upgrade',stat:'swift',amount:1,sym:'⚡',rarity:'legendary',price:450, desc:'Gain 1 free move every 15 tiles explored'},
+
+  // New Mechanics
+  {name:'Assassin\'s Mark', type:'upgrade',stat:'crit',amount:0.05,sym:'🎯',rarity:'rare', price:250, desc:'+5% Critical Hit Chance'},
+  {name:'Deadly Precision', type:'upgrade',stat:'crit',amount:0.12,sym:'🎯',rarity:'legendary', price:500, desc:'+12% Critical Hit Chance'},
+
+  {name:'Thief\'s Cloak',   type:'upgrade',stat:'dodge',amount:0.05,sym:'💨',rarity:'rare', price:250, desc:'+5% Dodge Chance'},
+  {name:'Acrobat\'s Boots', type:'upgrade',stat:'dodge',amount:0.12,sym:'💨',rarity:'legendary', price:500, desc:'+12% Dodge Chance'},
+
+  {name:'Midas Coin',     type:'upgrade',stat:'goldBonus',amount:2,sym:'💰',rarity:'rare', price:300, desc:'+2 Gold per kill'},
+  {name:'Scholar\'s Quill', type:'upgrade',stat:'xpMult',amount:0.20,sym:'📖',rarity:'rare', price:300, desc:'+20% XP from kills'},
 ];
 const ENEMIES=[
   {name:'Rat',    sym:'r',hp:5, atk:2, def:0,xp:3, gold:2, color:'#cd853f'},
@@ -708,13 +736,41 @@ function popText(txt,gx,gy){
 function computeVision(){
   G.visible=new Set();
   let px=G.player.x,py=G.player.y;
+  let newTiles = 0;
   for(let a=0;a<360;a+=3){
     let rad=a*Math.PI/180;
     for(let r=0;r<6;r++){
       let ix=Math.round(px+Math.cos(rad)*r),iy=Math.round(py+Math.sin(rad)*r);
       if(ix<0||ix>=MAP_W||iy<0||iy>=MAP_H) break;
-      let k=iy*MAP_W+ix;G.visible.add(k);G.seen.add(k);
+      let k=iy*MAP_W+ix;
+      G.visible.add(k);
+      if(!G.seen.has(k)){
+        G.seen.add(k);
+        newTiles++;
+      }
       if(G.map[iy][ix]===TILE.WALL) break;
+    }
+  }
+
+  if(newTiles > 0 && G.player && typeof G.player.tilesExplored !== 'undefined'){
+    for(let i=0; i<newTiles; i++){
+      G.player.tilesExplored++;
+      
+      if(G.player.regen > 0 && G.player.tilesExplored % 10 === 0) {
+        let heal = G.player.regen;
+        G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
+        floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
+      }
+
+      if(G.player.class === 'warrior' && G.player.tilesExplored % 12 === 0 && G.player.hp < G.player.maxHp) {
+        G.player.hp = Math.min(G.player.maxHp, G.player.hp + 1);
+        floatText('+1 HP', G.player.x, G.player.y, '#4ade80');
+      }
+
+      if(G.player.swiftness > 0 && G.player.tilesExplored % 15 === 0) {
+        G.player.freeMoves += G.player.swiftness;
+        addLog(`Swiftness granted ${G.player.swiftness} free move(s)!`, 'log-info');
+      }
     }
   }
 }
@@ -823,7 +879,7 @@ function render(){
       if(x===G.player.x&&y===G.player.y){h+=`<div class="tile tile-player" style="${s}">@</div>`;continue;}
       let en=vis?G.enemies.find(e=>e.x===x&&e.y===y):null;
       if(en){
-        let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 2 : 2;
+        let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
         let dist = Math.max(Math.abs(en.x-G.player.x), Math.abs(en.y-G.player.y));
         let canTap = (dist <= maxRange);
         let dyingClass=en.dying?' tile-enemy-dying':'';
@@ -840,7 +896,7 @@ function render(){
       let it=vis?G.items.find(i=>!i.carried&&i.x===x&&i.y===y):null;
       if(it){
         let safeName = it.name.replace(/'/g,"\\'").replace(/"/g,"&quot;");
-        let safeDesc = iDesc(it).replace(/'/g,"\\'").replace(/"/g,"&quot;");
+        let safeDesc = iDesc(it).replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,"\\'").replace(/"/g,"&quot;");
         h+=`<div class="tile tile-item" style="${s}"
           ontouchend="event.preventDefault();tilePickup('${it.id}')"
           ontouchstart="showTip(event,'${safeName}: ${safeDesc}');event.stopPropagation()"
@@ -944,8 +1000,8 @@ function updateInvDrawer(){
   }
   document.getElementById('inventory-list').innerHTML=h;
   let eh='';
-  if(G.player.weapon) eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.weapon.name}</div><div class="inv-type">weapon</div></div><div class="inv-bonus">ATK+${G.player.weapon.atk}</div></div>`;
-  if(G.player.armor)  eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.armor.name}</div><div class="inv-type">armor</div></div><div class="inv-bonus">DEF+${G.player.armor.def}</div></div>`;
+  if(G.player.weapon) eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.weapon.name}</div><div class="inv-type">weapon</div></div><div class="inv-bonus">ATK+${weaponPower(G.player.weapon)}</div></div>`;
+  if(G.player.armor)  eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.armor.name}</div><div class="inv-type">armor</div></div><div class="inv-bonus">DEF+${armorPower(G.player.armor)}</div></div>`;
   if(!G.player.weapon&&!G.player.armor) eh='<div class="inv-empty">Nothing equipped</div>';
   document.getElementById('equipped-list').innerHTML=eh;
 }
@@ -1166,7 +1222,6 @@ function resolveEmergency(drink){
 <script>
 // ===================== MOVEMENT =====================
 function consumeRootedTurn(){
-  G.player.rootedTurns=0;
   addLog('You are rooted and cannot move!', 'log-combat');
   advanceTurn();
 }
@@ -1229,8 +1284,9 @@ function updateBestWeapon(weapon){
   let current=G.player.bestWeapon;
   let match=current.match(/ATK\+(\d+)/);
   let currentAtk=match?parseInt(match[1]):0;
-  if(weapon.atk>currentAtk){
-    G.player.bestWeapon=`${weapon.name} (ATK+${weapon.atk})`;
+  let wp = weaponPower(weapon);
+  if(wp>currentAtk){
+    G.player.bestWeapon=`${weapon.name} (ATK+${wp})`;
   }
 }
 
@@ -1400,13 +1456,13 @@ function tileAttack(id){
   if(!canAct()||G.gameOver||G.won) return;
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
   if(en.dying)return;
-  let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 2 : 2;
+  let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
   let dist=Math.max(Math.abs(en.x-G.player.x),Math.abs(en.y-G.player.y));
   if(dist<=maxRange){
-    let rangedBow = G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹' && dist > 2;
+    let rangedBow = G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹' && dist >= 3;
     attackEnemy(id,1,{skipCounter:rangedBow});
   } else {
-    if(G.player.rootedTurns > 0) { consumeRootedTurn(); return; }
+    if(G.player.rootedTurns > 0) { addLog('You are rooted and cannot move closer!','log-info'); return; }
     move(Math.sign(en.x-G.player.x)||0,Math.sign(en.y-G.player.y)||0);
   }
 }
@@ -1418,6 +1474,10 @@ function attackEnemy(id,multiplier=1,opts={}){
     multiplier *= 2;
     G.player.vanishTurns = 0;
     addLog('Sneak Attack!', 'log-combat');
+  }
+  if(G.player.critChance > 0 && Math.random() < G.player.critChance) {
+    multiplier *= 2;
+    addLog('Critical Hit!', 'log-combat');
   }
   let dmg=Math.max(1,gatk()-en.def+rand(3));
   if(multiplier>1){dmg*=multiplier;SFX.bash();}else{SFX.hit();}
@@ -1458,7 +1518,8 @@ function attackEnemy(id,multiplier=1,opts={}){
   if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
   if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
 
-  if(G.player.class === 'rogue' && ch(.4)) {
+  let dodgeChance = (G.player.class === 'rogue' ? 0.4 : 0) + G.player.dodgeBonus;
+  if(dodgeChance > 0 && Math.random() < dodgeChance) {
     addLog(`Dodged ${en.name}'s attack!`, 'log-info');
     popText('💨', G.player.x, G.player.y);
     advanceTurn();
@@ -1474,9 +1535,13 @@ function attackEnemy(id,multiplier=1,opts={}){
   }
 }
 
+let _deathBatch = [];
+let _deathTimer = null;
+
 function killEnemy(en, skipAdvanceTurn) {
-  let goldDrop=en.gold+rand(3);
-  G.player.xp+=en.xp;G.player.kills++;G.player.gold+=goldDrop;
+  let goldDrop = en.gold + rand(3) + G.player.goldBonus;
+  let xpDrop = Math.ceil(en.xp * (1 + G.player.xpMult));
+  G.player.xp += xpDrop; G.player.kills++; G.player.gold += goldDrop;
 
   if(G.player.vampirism > 0) {
     let heal = G.player.vampirism;
@@ -1488,13 +1553,14 @@ function killEnemy(en, skipAdvanceTurn) {
     floatText('+2 HP', G.player.x, G.player.y, '#4ade80');
   }
 
-  addLog(`${en.name} slain! +${en.xp} XP  +${goldDrop}💰`, 'log-dead');
+  addLog(`${en.name} slain! +${xpDrop} XP  +${goldDrop}💰`, 'log-dead');
   floatText(`+${goldDrop}💰`,en.x,en.y,'#fbbf24');
   SFX.enemyDeath();
   fireTip('firstGold');
   en.dying=true;
 
-  if(en.corpseExplosionTarget) {
+  if(en.corpseExplosionTarget && !en._exploded) {
+    en._exploded = true;
     addLog('CORPSE EXPLOSION!', 'log-combat');
     SFX.bash();
     G.enemies.forEach(o => {
@@ -1507,16 +1573,25 @@ function killEnemy(en, skipAdvanceTurn) {
     });
   }
 
-  render();
-  setTimeout(()=>{
-    G.enemies=G.enemies.filter(e=>e.id!==en.id);
-    if(ch(.2)){
-      let pool=[...WEAPONS,...ARMORS,...POTIONS];
-      G.items.push({...pool[rand(pool.length)],x:en.x,y:en.y,id:uid()});
-    }
-    checkLevelUp();
-    if(!skipAdvanceTurn) advanceTurn();
-  },320);
+  _deathBatch.push({en, skipAdvanceTurn});
+  if(!_deathTimer) {
+    render();
+    _deathTimer = setTimeout(()=>{
+      let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
+      _deathBatch.forEach(d => {
+        G.enemies = G.enemies.filter(e => e.id !== d.en.id);
+        if(ch(.2)){
+          let pool=[...WEAPONS,...ARMORS,...POTIONS];
+          let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
+          G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
+        }
+      });
+      _deathBatch = [];
+      _deathTimer = null;
+      checkLevelUp();
+      if(shouldAdvance) advanceTurn();
+    }, 320);
+  }
 }
 
 function checkLevelUp(){
@@ -1546,21 +1621,6 @@ function advanceTurn(opts={}){
   }
   G.turn++;
 
-  if(G.player.regen > 0 && G.turn % 10 === 0) {
-    let heal = G.player.regen;
-    G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
-    floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
-  }
-
-  if(G.player.class === 'warrior' && G.turn % 12 === 0 && G.player.hp < G.player.maxHp) {
-    G.player.hp = Math.min(G.player.maxHp, G.player.hp + 1);
-    floatText('+1 HP', G.player.x, G.player.y, '#4ade80');
-  }
-
-  if(G.player.swiftness > 0 && G.turn % 15 === 0) {
-    G.player.freeMoves += G.player.swiftness;
-    addLog(`Swiftness granted ${G.player.swiftness} free move(s)!`, 'log-info');
-  }
 
   if(G.ability1Cooldown>0)G.ability1Cooldown--;
   if(G.ability2Cooldown>0)G.ability2Cooldown--;
@@ -1570,7 +1630,7 @@ function advanceTurn(opts={}){
   if(G.player.rootedTurns>0)G.player.rootedTurns--;
 
   G.enemies.forEach(e=>{
-    if(G.gameOver||G.won) return;
+    if(G.gameOver||G.won||G.pendingHit) return;
     if(e.dying) return;
 
     let trapIdx = G.traps.findIndex(t => t.x===e.x && t.y===e.y);
@@ -1754,7 +1814,7 @@ function doAbility1(){
       let dx = Math.sign(en.x - p.x), dy = Math.sign(en.y - p.y);
       let nx = en.x + dx, ny = en.y + dy;
       let dmg = Math.max(1, gatk() - en.def + rand(3));
-      if(G.map[ny] && G.map[ny][nx] !== TILE.WALL && !G.enemies.some(e=>e.x===nx&&e.y===ny)) {
+      if(nx>=0 && nx<MAP_W && ny>=0 && ny<MAP_H && G.map[ny][nx] !== TILE.WALL && !G.enemies.some(e=>e.x===nx&&e.y===ny)) {
         en.x = nx; en.y = ny;
       } else {
         dmg *= 2;
@@ -1775,7 +1835,7 @@ function doAbility2(){
 
   if(p.class === 'warrior') {
     p.shieldWallTurns = 3; G.ability2Cooldown = 10;
-    addLog('Shield Wall active! Damage halved for 3 turns.', 'log-info'); advanceTurn();
+    addLog('Shield Wall active! Damage reduced by 40% for 3 turns.', 'log-info'); advanceTurn();
   }
   else if(p.class === 'rogue') {
     p.vanishTurns = 3; G.ability2Cooldown = 10;
@@ -1814,7 +1874,7 @@ function doAbility2(){
   }
   else if(p.class === 'barbarian') {
     p.bloodlustTurns = 3; G.ability2Cooldown = 12;
-    addLog('Bloodlust! Deal damage to heal, but take double damage!', 'log-combat'); advanceTurn();
+    addLog('Bloodlust! Deal damage to heal, but take 15% more damage!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'necromancer') {
     let visEnemies = G.enemies.filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x));
@@ -1867,7 +1927,7 @@ function generateShopStock(){
   // 2-4 upgrades (floors 2+)
   if(G.floor>=2){
     let ups=UPGRADES.filter(u=>u.rarity!=='legendary'||G.floor>=4).sort(()=>Math.random()-.5);
-    for(let i=0; i<Math.min(ups.length, rr(2,4)); i++) {
+    for(let i=0; i<Math.min(ups.length, 2); i++) {
       stock.push({...ups[i],id:uid(),sold:false});
     }
   }
@@ -1965,11 +2025,13 @@ function buyItem(id){
     G.items.push(clone);
     autoEquip(clone);
     addLog(`Bought ${item.name}`,'log-shop');
+    SFX.buy();
   } else if(item.type==='armor'){
     let clone={...item,carried:true,id:uid()};
     G.items.push(clone);
     autoEquip(clone);
     addLog(`Bought ${item.name}`,'log-shop');
+    SFX.buy();
   } else if(item.type==='upgrade'){
     applyUpgrade(item);
   }
@@ -2112,13 +2174,17 @@ function sellWeakerGear(){
 
 function applyUpgrade(item){
   let p=G.player;
-  if(item.stat==='atk'){p.atk+=item.amount;addLog(`Strength Tonic: ATK +${item.amount}!`,'log-level');}
-  else if(item.stat==='def'){p.def+=item.amount;addLog(`Iron Skin: DEF +${item.amount}!`,'log-level');}
-  else if(item.stat==='hp'){p.maxHp+=item.amount;p.hp=Math.min(p.maxHp,p.hp+item.amount);addLog(`Vitality Brew: Max HP +${item.amount}!`,'log-level');}
+  if(item.stat==='atk'){p.atk+=item.amount;addLog(`${item.name}: ATK +${item.amount}!`,'log-level');}
+  else if(item.stat==='def'){p.def+=item.amount;addLog(`${item.name}: DEF +${item.amount}!`,'log-level');}
+  else if(item.stat==='hp'){p.maxHp+=item.amount;p.hp=Math.min(p.maxHp,p.hp+item.amount);addLog(`${item.name}: Max HP +${item.amount}!`,'log-level');}
   else if(item.stat==='all'){p.atk+=1;p.def+=1;p.maxHp+=10;p.hp=Math.min(p.maxHp,p.hp+10);addLog(`Blessing: ATK+1, DEF+1, MaxHP+10!`,'log-level');}
-  else if(item.stat==='vamp'){p.vampirism+=item.amount;addLog(`Vampiric Ring: Heal ${item.amount} HP per kill!`,'log-level');}
-  else if(item.stat==='regen'){p.regen+=item.amount;addLog(`Troll Blood: Heal ${item.amount} HP every 10 turns!`,'log-level');}
-  else if(item.stat==='swift'){p.swiftness+=item.amount;addLog(`Hermes Boots: +${item.amount} free move every 15 turns!`,'log-level');}
+  else if(item.stat==='vamp'){p.vampirism+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP per kill!`,'log-level');}
+  else if(item.stat==='regen'){p.regen+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP every 10 tiles explored!`,'log-level');}
+  else if(item.stat==='swift'){p.swiftness+=item.amount;addLog(`${item.name}: +${item.amount} free move every 15 tiles explored!`,'log-level');}
+  else if(item.stat==='crit'){p.critChance+=item.amount;addLog(`${item.name}: +${item.amount*100}% Critical Hit Chance!`,'log-level');}
+  else if(item.stat==='dodge'){p.dodgeBonus+=item.amount;addLog(`${item.name}: +${item.amount*100}% Dodge Chance!`,'log-level');}
+  else if(item.stat==='goldBonus'){p.goldBonus+=item.amount;addLog(`${item.name}: +${item.amount} Gold per kill!`,'log-level');}
+  else if(item.stat==='xpMult'){p.xpMult+=item.amount;addLog(`${item.name}: +${item.amount*100}% XP from kills!`,'log-level');}
   floatText('UPGRADED!',p.x,p.y,'#c084fc');
 }
 
@@ -2175,43 +2241,49 @@ function initGame(playerClass = 'warrior'){
     rootedTurns: 0,
     vampirism: 0,
     regen: 0,
-    swiftness: 0
+    swiftness: 0,
+    tilesExplored: 0,
+    critChance: 0,
+    dodgeBonus: 0,
+    goldBonus: 0,
+    xpMult: 0
   };
   if(playerClass === 'warrior') {
     p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 2;
-    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:2, rarity:'common', sym:'◆', price:35};
+    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◆', price:60};
   } else if(playerClass === 'rogue') {
     p.hp = 24; p.maxHp = 24; p.atk = 7; p.def = 2;
-    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:5, rarity:'common', sym:'†', price:20};
-    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:3, rarity:'common', sym:'◆', price:20};
-    p.bestWeapon = 'Rusty Dagger';
+    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'†', price:25};
+    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◆', price:35};
+    p.bestWeapon = 'Rusty Dagger (ATK+4)';
   } else if(playerClass === 'mage') {
     p.hp = 15; p.maxHp = 15; p.atk = 4; p.def = 1;
-    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:1, rarity:'common', sym:'♦', price:40};
-    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:25};
-    p.bestWeapon = 'Bone Staff';
+    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70};
+    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
+    p.bestWeapon = 'Bone Staff (ATK+5)';
   } else if(playerClass === 'paladin') {
     p.hp = 20; p.maxHp = 20; p.atk = 1; p.def = 1;
-    p.weapon = {id:uid(), name:'Iron Mace', type:'weapon', atk:2, rarity:'common', sym:'⚔', price:40};
-    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:2, rarity:'common', sym:'◆', price:45};
+    p.weapon = {id:uid(), name:'Iron Mace', type:'weapon', atk:5, rarity:'common', sym:'⚔', price:70};
+    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:80};
+    p.bestWeapon = 'Iron Mace (ATK+5)';
   } else if(playerClass === 'ranger') {
     p.hp = 13; p.maxHp = 13; p.atk = 2; p.def = 1;
-    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:1, rarity:'common', sym:'🏹', price:30};
-    p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:0, rarity:'common', sym:'◆', price:30};
-    p.bestWeapon = 'Shortbow';
+    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:4, rarity:'common', sym:'🏹', price:50};
+    p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
+    p.bestWeapon = 'Shortbow (ATK+4)';
   } else if(playerClass === 'barbarian') {
     p.hp = 42; p.maxHp = 42; p.atk = 5; p.def = 1;
-    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:3, rarity:'common', sym:'⚔', price:40};
-    p.armor = {id:uid(), name:'Furs', type:'armor', def:3, rarity:'common', sym:'◆', price:25};
-    p.bestWeapon = 'Great Axe';
+    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:70};
+    p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'◆', price:40};
+    p.bestWeapon = 'Great Axe (ATK+4)';
   } else if(playerClass === 'necromancer') {
     p.hp = 18; p.maxHp = 18; p.atk = 4; p.def = 1;
-    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'♦', price:40};
-    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:25};
-    p.bestWeapon = 'Skull Rod';
+    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70};
+    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
+    p.bestWeapon = 'Skull Rod (ATK+5)';
   } else if(playerClass === 'monk') {
     p.hp = 22; p.maxHp = 22; p.atk = 3; p.def = 1;
-    p.armor = {id:uid(), name:'Gi', type:'armor', def:2, rarity:'common', sym:'◆', price:30};
+    p.armor = {id:uid(), name:'Gi', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
   }
 
   G={
@@ -2308,11 +2380,11 @@ function handleResize(){
 }
 
 const CLASS_DATA = {
-  warrior: { name: 'Warrior', tagline: 'A sturdy fighter who excels in sustained combat.', hp: 30, atk: 3, def: 2, weapon: 'Bare Hands', armor: 'Chain Mail', ability1: 'BASH', desc1: 'Deals 1.5x damage to a nearby visible enemy. Cooldown: 5', ability2: 'SHIELD WALL', desc2: '(Lvl 5) Reduces incoming damage by 40% for 3 turns. Cooldown: 10', passive: 'Regenerates 1 HP every 12 turns.' },
-  rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 24, atk: 7, def: 2, weapon: 'Rusty Dagger', armor: 'Leather Vest', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 50% of all incoming attacks.' },
+  warrior: { name: 'Warrior', tagline: 'A sturdy fighter who excels in sustained combat.', hp: 30, atk: 3, def: 2, weapon: 'Bare Hands', armor: 'Chain Mail', ability1: 'BASH', desc1: 'Deals 1.5x damage to a nearby visible enemy. Cooldown: 5', ability2: 'SHIELD WALL', desc2: '(Lvl 5) Reduces incoming damage by 40% for 3 turns. Cooldown: 10', passive: 'Regenerates 1 HP every 12 tiles explored.' },
+  rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 24, atk: 7, def: 2, weapon: 'Rusty Dagger', armor: 'Leather Vest', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 40% of all incoming attacks.' },
   mage: { name: 'Mage', tagline: 'A fragile spellcaster with potent magic.', hp: 15, atk: 4, def: 1, weapon: 'Bone Staff', armor: 'Apprentice Robe', ability1: 'FIREBALL', desc1: 'Deals damage to all enemies in a 3x3 area around a target. Cooldown: 5', ability2: 'BLINK', desc2: '(Lvl 5) Teleport instantly to a safe, visible tile. Cooldown: 8', passive: 'Magic weapons (♦) deal about +20% damage.' },
   paladin: { name: 'Paladin', tagline: 'A holy champion focused on sustain and defense.', hp: 20, atk: 1, def: 1, weapon: 'Iron Mace', armor: 'Iron Plate', ability1: 'SMITE', desc1: 'Deals damage and stuns the enemy for 1 turn. Cooldown: 5', ability2: 'LAY ON HANDS', desc2: '(Lvl 5) Heals for 20% of Max HP. Cooldown: 15', passive: 'Max HP increases by 2 upon leveling up.' },
-  ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 13, atk: 2, def: 1, weapon: 'Shortbow', armor: 'Ranger Tunic', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 2 tiles away, but no longer avoid the counter at max range.' },
+  ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 13, atk: 2, def: 1, weapon: 'Shortbow', armor: 'Ranger Tunic', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 3 tiles away. Avoids counter-attacks at max range.' },
   barbarian: { name: 'Barbarian', tagline: 'A fearless brute who thrives in chaos.', hp: 42, atk: 5, def: 1, weapon: 'Great Axe', armor: 'Furs', ability1: 'CLEAVE', desc1: 'Deals damage to all adjacent enemies. Cooldown: 4', ability2: 'BLOODLUST', desc2: '(Lvl 5) For 3 turns, heal 50% of damage dealt, but take 15% more damage. Cooldown: 12', passive: 'Deals +1 damage for every 6 missing HP.' },
   necromancer: { name: 'Necromancer', tagline: 'A dark caster who drains life from foes.', hp: 18, atk: 4, def: 1, weapon: 'Skull Rod', armor: 'Apprentice Robe', ability1: 'SIPHON LIFE', desc1: 'Deals damage and heals yourself for the same amount. Cooldown: 5', ability2: 'CORPSE EXPLOSION', desc2: '(Lvl 5) Mark an enemy for 3 turns. If it dies while marked, it explodes for heavy AoE damage. Cooldown: 8', passive: 'Heals 2 HP whenever an enemy dies.' },
   monk: { name: 'Monk', tagline: 'A disciplined martial artist.', hp: 22, atk: 3, def: 1, weapon: 'Bare Hands', armor: 'Gi', ability1: 'PUSH KICK', desc1: 'Pushes an enemy 1 tile away. Deals extra damage if they hit a wall. Cooldown: 3', ability2: 'FLURRY OF BLOWS', desc2: '(Lvl 5) Attacks 3 times instantly, but you are rooted for your next turn. Cooldown: 10', passive: 'Gains level-based ATK when NO weapon is equipped.' }
