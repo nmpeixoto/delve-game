@@ -12,6 +12,17 @@ function generateMap(){
     while(cx!==x2){map[cy][cx]=TILE.FLOOR;cx+=(x2>cx?1:-1);}
     while(cy!==y2){map[cy][cx]=TILE.FLOOR;cy+=(y2>cy?1:-1);}
   };
+  const directTunnel=(x1,y1,x2,y2)=>{
+    let cx=x1,cy=y1;
+    let dx=x2-x1, dy=y2-y1;
+    if(Math.abs(dx)>Math.abs(dy)){
+      while(cx!==x2){map[cy][cx]=TILE.FLOOR;cx+=(x2>cx?1:-1);}
+      while(cy!==y2){map[cy][cx]=TILE.FLOOR;cy+=(y2>cy?1:-1);}
+    } else {
+      while(cy!==y2){map[cy][cx]=TILE.FLOOR;cy+=(y2>cy?1:-1);}
+      while(cx!==x2){map[cy][cx]=TILE.FLOOR;cx+=(x2>cx?1:-1);}
+    }
+  };
   let n=rr(14,22),att=0;
   while(rooms.length<n&&att<300){
     att++;
@@ -27,24 +38,13 @@ function generateMap(){
     let j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  if(pool.length > 0) pool[0].type = 'treasure';
-  if(pool.length > 1) pool[1].type = 'armory';
-  if(pool.length > 2) pool[2].type = 'crypt';
-  if(pool.length > 3) pool[3].type = 'shrine';
+  if(pool.length > 0) pool[0].type = 'armory';
+  if(pool.length > 1) pool[1].type = 'crypt';
+  if(pool.length > 2) pool[2].type = 'shrine';
 
-  if(pool.length > 0) {
-    let tr = pool[0];
-    for(let y=tr.y-1; y<=tr.y+tr.h; y++) {
-      for(let x=tr.x-1; x<=tr.x+tr.w; x++) {
-        if(y>=0 && y<MAP_H && x>=0 && x<MAP_W && (x===tr.x-1 || x===tr.x+tr.w || y===tr.y-1 || y===tr.y+tr.h) && map[y][x] === TILE.FLOOR) {
-          map[y][x] = TILE.LOCKED_DOOR;
-        }
-      }
-    }
-  }
-
-  for(let i=0; i<2; i++) {
-    let sw = 3, sh = 3;
+  for(let i=0; i<3; i++) {
+    let isTreasure = (i === 0);
+    let sw = rr(3, 4), sh = rr(3, 4);
     let sx = rr(2, MAP_W-sw-2), sy = rr(2, MAP_H-sh-2);
     let ok = true;
     for(let y=sy-1; y<=sy+sh; y++) {
@@ -54,11 +54,11 @@ function generateMap(){
     }
     if(ok) {
       let connected = false;
-      for(let r=2; r<5 && !connected; r++) {
+      for(let r=2; r<6 && !connected; r++) {
         for(let y=sy-r; y<=sy+sh+r-1; y++) {
           for(let x=sx-r; x<=sx+sw+r-1; x++) {
             if(y>0&&y<MAP_H-1&&x>0&&x<MAP_W-1 && map[y][x] === TILE.FLOOR) {
-              tunnel(sx+1, sy+1, x, y);
+              directTunnel(sx+Math.floor(sw/2), sy+Math.floor(sh/2), x, y);
               connected = true;
               break;
             }
@@ -68,14 +68,15 @@ function generateMap(){
       }
       if(connected) {
         for(let ry=sy;ry<sy+sh;ry++) for(let rx=sx;rx<sx+sw;rx++) map[ry][rx]=TILE.FLOOR;
+        let doorTile = isTreasure ? TILE.LOCKED_DOOR : TILE.SECRET_DOOR;
         for(let y=sy-1; y<=sy+sh; y++) {
           for(let x=sx-1; x<=sx+sw; x++) {
             if((x===sx-1 || x===sx+sw || y===sy-1 || y===sy+sh) && map[y][x] === TILE.FLOOR) {
-              map[y][x] = TILE.SECRET_DOOR;
+              map[y][x] = doorTile;
             }
           }
         }
-        rooms.push({x:sx, y:sy, w:sw, h:sh, cx:sx+1, cy:sy+1, type: 'secret'});
+        rooms.push({x:sx, y:sy, w:sw, h:sh, cx:sx+Math.floor(sw/2), cy:sy+Math.floor(sh/2), type: isTreasure ? 'treasure' : 'secret'});
       }
     }
   }
