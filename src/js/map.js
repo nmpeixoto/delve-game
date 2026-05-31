@@ -84,7 +84,7 @@ function generateMap(){
             map[pd.y][pd.x] = (i === doorIdx) ? doorTile : TILE.WALL;
           }
         }
-        rooms.push({x:sx, y:sy, w:sw, h:sh, cx:sx+Math.floor(sw/2), cy:sy+Math.floor(sh/2), type: isTreasure ? 'treasure' : 'secret'});
+        rooms.splice(rooms.length-1, 0, {x:sx, y:sy, w:sw, h:sh, cx:sx+Math.floor(sw/2), cy:sy+Math.floor(sh/2), type: isTreasure ? 'treasure' : 'secret'});
       }
     }
   }

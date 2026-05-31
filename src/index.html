@@ -102,6 +102,7 @@
     <div id="action-btns">
       <button class="act-btn" id="ability1-btn" onclick="if(!window._lpFiredUI) doAbility1(); window._lpFiredUI=false;" onmouseenter="showAbility1Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a1')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()">ABIL1</button>
       <button class="act-btn" id="ability2-btn" onclick="if(!window._lpFiredUI) doAbility2(); window._lpFiredUI=false;" onmouseenter="showAbility2Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a2')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()" style="display:none">ABIL2</button>
+      <button class="act-btn" id="bomb-btn" onclick="useBombQuickAction()" style="display:none;border-color:var(--orange)!important;color:var(--orange)!important;">BOMB</button>
       <button class="act-btn" id="stairs-btn" onclick="descend()">STAIRS</button>
       <button class="act-btn" id="shop-btn"   onclick="openShop()">SHOP</button>
       <button class="act-btn" id="bag-btn"    onclick="openInv()">BAG</button>

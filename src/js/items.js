@@ -264,6 +264,122 @@ function useItem(id){
     let idx = G.items.findIndex(i=>i.id===id);
     if(idx > -1) G.items.splice(idx,1);
     updateBestWeapon(it);
+    G.player.hp+=h;
+    addLog(`Drank ${it.name}: +${h} HP`,'log-item');
+    floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
+  if(it.type==='potion_buff'){
+    if(it.buff === 'strength') {
+      G.player.strengthTurns = 10;
+      addLog(`Drank ${it.name}: Strength surged!`, 'log-item');
+      floatText('STRENGTH', G.player.x, G.player.y, '#f87171');
+      SFX.levelUp();
+    }
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
+  if(it.type==='bomb'){
+    addLog(`Threw a Bomb!`, 'log-combat');
+    floatText('BOOM!', G.player.x, G.player.y, '#fbbf24');
+    SFX.damage();shakeMap();
+    let killed = 0;
+    for(let y = G.player.y - 1; y <= G.player.y + 1; y++){
+      for(let x = G.player.x - 1; x <= G.player.x + 1; x++){
+        let en = G.enemies.find(e => e.x === x && e.y === y && !e.dying);
+        if(en){
+          en.hp -= 30;
+          floatText('-30', en.x, en.y, '#f87171');
+          if(en.hp <= 0) {
+            killEnemy(en, true);
+            killed++;
+          }
+        }
+      }
+    }
+    if(killed === 0) addLog(`The bomb hit nothing.`, 'log-info');
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
+  if(it.type==='scroll_teleport'){
+    let safeTiles = [];
+    for(let y=1; y<MAP_H-1; y++) {
+      for(let x=1; x<MAP_W-1; x++) {
+        if(G.map[y][x] === TILE.FLOOR && !G.enemies.some(e=>e.x===x&&e.y===y)) {
+          safeTiles.push({x,y});
+        }
+      }
+    }
+    if(safeTiles.length > 0) {
+      let t = safeTiles[Math.floor(Math.random()*safeTiles.length)];
+      G.player.x = t.x; G.player.y = t.y;
+      addLog(`Teleported to a random location!`, 'log-info');
+      floatText('TELEPORT', G.player.x, G.player.y, '#c084fc');
+      SFX.pickup();
+      computeVision();
+    }
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
+  if(it.type==='scroll') {
+    if(it.name==='Scroll of Detection') {
+      let revealedSomething = false;
+      for(let y=0; y<MAP_H; y++) {
+        for(let x=0; x<MAP_W; x++) {
+          if(G.map[y][x] === TILE.SECRET_DOOR) {
+            G.map[y][x] = TILE.FLOOR;
+            revealedSomething = true;
+          }
+          let trap = G.traps.find(t => t.x === x && t.y === y && !t.revealed);
+          if(trap) {
+            trap.revealed = true;
+            revealedSomething = true;
+          }
+        }
+      }
+      if(revealedSomething) {
+        addLog('The scroll revealed hidden secrets nearby!', 'log-info');
+        floatText('REVEALED', G.player.x, G.player.y, '#fbbf24');
+      } else {
+        addLog('The scroll revealed nothing.', 'log-info');
+      }
+      SFX.levelUp();
+    }
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
+  if(!canEquip(it)) {
+    addLog(`Cannot equip ${it.name} (Requires: ${it.reqLvl?'Lvl '+it.reqLvl:''} ${it.reqClass?it.reqClass.join('/'):''})`, 'log-info');
+    return;
+  }
+
+  if(it.type==='weapon'){
+    let prev=G.player.weapon;
+    if(prev){
+      G.items=G.items.filter(i=>i.id!==prev.id);
+      prev.carried=true;prev.x=prev.y=undefined;
+      G.items.push(prev);
+    }
+    G.player.weapon=it;
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    updateBestWeapon(it);
     addLog(`Equipped ${it.name}`,'log-item');
   } else if(it.type==='armor'){
     let prev=G.player.armor;
@@ -278,6 +394,16 @@ function useItem(id){
     addLog(`Equipped ${it.name}`,'log-item');
   }
   advanceTurn();closeInv();
+}
+
+function useBombQuickAction() {
+  if(!canAct()||G.gameOver||G.won) return;
+  let bomb = G.items.find(i => i.name === 'Bomb' && i.carried);
+  if(bomb) {
+    useItem(bomb.id);
+  } else {
+    addLog('You do not have a Bomb!', 'log-info');
+  }
 }
 
 function interactShrine(it) {

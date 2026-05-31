@@ -202,6 +202,14 @@ function updateActBtns(){
   } else {
     a2.style.display = 'none';
   }
+
+  // BOMB
+  let bombBtn=document.getElementById('bomb-btn');
+  if(bombBtn) {
+    let hasBomb=G.items.some(i=>i.name==='Bomb' && i.carried);
+    bombBtn.style.display=hasBomb?'block':'none';
+  }
+
   // STAIRS
   let sb=document.getElementById('stairs-btn');
   let onS=G.map&&G.map[G.player.y][G.player.x]===TILE.STAIRS;

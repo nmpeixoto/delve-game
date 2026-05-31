@@ -643,8 +643,20 @@ function doAbility2(){
     let safeAdj = [[-1,0],[1,0],[0,-1],[0,1]].map(d=>({x:p.x+d[0], y:p.y+d[1]}))
       .filter(t=>G.map[t.y] && G.map[t.y][t.x]===TILE.FLOOR && !G.enemies.some(e=>e.x===t.x&&e.y===t.y));
     if(safeAdj.length) {
-      let best = safeAdj[rand(safeAdj.length)];
-      p.x = best.x; p.y = best.y;
+      let visEnemies = G.enemies.filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x));
+      if(visEnemies.length > 0) {
+        safeAdj.forEach(t => {
+          t.minDist = Math.min(...visEnemies.map(e => Math.abs(e.x - t.x) + Math.abs(e.y - t.y)));
+        });
+        safeAdj.sort((a,b) => b.minDist - a.minDist);
+        let bestDist = safeAdj[0].minDist;
+        let bestTiles = safeAdj.filter(t => t.minDist === bestDist);
+        let best = bestTiles[Math.floor(Math.random() * bestTiles.length)];
+        p.x = best.x; p.y = best.y;
+      } else {
+        let best = safeAdj[Math.floor(Math.random() * safeAdj.length)];
+        p.x = best.x; p.y = best.y;
+      }
     }
     G.ability2Cooldown = 10;
     addLog('Dropped a Bear Trap and jumped back!', 'log-combat'); advanceTurn();
