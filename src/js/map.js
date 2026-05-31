@@ -207,7 +207,9 @@ function buildFloor(){
 
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
 
-  map[rooms[rooms.length-1].cy][rooms[rooms.length-1].cx]=TILE.STAIRS;
+  // Place stairs in last main-path room
+  let stairsRoom = rooms[6];
+  map[stairsRoom.cy][stairsRoom.cx] = TILE.STAIRS;
 
   if(rooms.length>=5){
     let pool = rooms.slice(1, -1).filter(r=>r.type!=='secret'&&r.type!=='treasure'&&r.type!=='crypt');

@@ -22,8 +22,8 @@ Follow these steps exactly when invoked:
 
 ### 1. Run the Bot
 - Ensure a local static server is available for `http://127.0.0.1:8080/src/index.html` before running Puppeteer.
-- Execute a small baseline batch first: `node autoplay_test.js 3` or `node autoplay_test.js 5`.
-- Wait for the run to complete and write `bot_findings.json`.
+- Execute a small baseline batch first: `node autoplay_test.js 3` or `node autoplay_test.js 5`. The runner will print a summary to the console.
+- If you need detailed JSON telemetry for your analysis, run with `KEEP_TEST_ARTIFACTS=1 node autoplay_test.js 3` to write `bot_findings.json`.
 - Treat `bot_findings.json` as a temporary artifact. Read it, summarize the useful data, then delete it before finishing unless the user asks to keep it.
 
 ### 2. Analyze the Findings

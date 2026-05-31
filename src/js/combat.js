@@ -646,7 +646,7 @@ function doAbility2(){
       let visEnemies = G.enemies.filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x));
       if(visEnemies.length > 0) {
         safeAdj.forEach(t => {
-          t.minDist = Math.min(...visEnemies.map(e => Math.abs(e.x - t.x) + Math.abs(e.y - t.y)));
+          t.minDist = Math.min(...visEnemies.map(e => Math.max(Math.abs(e.x - t.x), Math.abs(e.y - t.y))));
         });
         safeAdj.sort((a,b) => b.minDist - a.minDist);
         let bestDist = safeAdj[0].minDist;

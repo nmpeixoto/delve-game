@@ -155,7 +155,7 @@ function renderSellPanel(){
     ...(G.player.weapon?[{...G.player.weapon,_equipped:'weapon'}]:[]),
     ...(G.player.armor?[{...G.player.armor,_equipped:'armor'}]:[]),
   ];
-  let h='<div style="margin-bottom:10px;"><button class="btn" style="width:100%" onclick="sellWeakerGear()">SELL UNWANTED GEAR</button></div>';
+  let h='<div style="margin-bottom:10px;"><button class="act-btn" style="width:100%;margin-bottom:10px;border-color:var(--gold);color:var(--gold)" onclick="sellWeakerGear()">SELL UNWANTED GEAR</button></div>';
   if(!sellable.length){
     h+='<div class="sell-empty">Nothing to sell.</div>';
   } else {
@@ -229,47 +229,53 @@ function sellItem(id, equippedSlot){
 
 function sellWeakerGear(){
   if(!canAct({allowShopOverlay:true})) return;
-  let soldCount = 0;
-  let totalGold = 0;
-
-  let pWeapAtk = weaponPower(G.player.weapon);
-  let pArmDef = armorPower(G.player.armor);
-
+  let toSell = [];
   let newItems = [];
-  for (let i = 0; i < G.items.length; i++) {
-    let item = G.items[i];
-    if (!item.carried) {
-      newItems.push(item);
-      continue;
+
+  G.items.forEach(it=>{
+    if(!it.carried) {
+      newItems.push(it);
+      return;
     }
+    if(it.type==='weapon' || it.type==='armor') {
+      if((G.player.weapon && G.player.weapon.id===it.id) || (G.player.armor && G.player.armor.id===it.id)) {
+        newItems.push(it);
+        return;
+      }
+      let unusable = it.reqClass && !it.reqClass.includes(G.player.class);
+      if(unusable) {
+        toSell.push(it);
+      } else if(it.type==='weapon' && weaponPower(it) < weaponPower(G.player.weapon)) {
+        toSell.push(it);
+      } else if(it.type==='armor' && armorPower(it) < armorPower(G.player.armor)) {
+        toSell.push(it);
+      } else {
+        newItems.push(it);
+      }
+    } else {
+      newItems.push(it);
+    }
+  });
 
-    let shouldSell = false;
-    if (item.type === 'weapon' && weaponPower(item) <= pWeapAtk) shouldSell = true;
-    if (item.type === 'armor' && armorPower(item) <= pArmDef) shouldSell = true;
-    if (item.reqClass && !item.reqClass.includes(G.player.class)) shouldSell = true;
-
-    if (shouldSell) {
+  if (toSell.length > 0) {
+    let totalGold = 0;
+    toSell.forEach(item => {
       let sellPrice = Math.max(1, Math.floor((item.price || 10) / 2));
       totalGold += sellPrice;
-      soldCount++;
-    } else {
-      newItems.push(item);
-    }
-  }
+    });
 
-  if (soldCount > 0) {
     G.items = newItems;
     G.player.gold += totalGold;
-    addLog(`Auto-sold ${soldCount} unwanted gear for ${totalGold}💰`, 'log-shop');
+    addLog(`Auto-sold ${toSell.length} unwanted gear for ${totalGold}💰`, 'log-shop');
     floatText(`+${totalGold}💰`, G.player.x, G.player.y, '#fbbf24');
     SFX.sell();
     document.getElementById('shop-gold-val').textContent=G.player.gold;
     updateHUD();
+    updateActBtns();
     if(typeof updateInvDrawer === 'function') updateInvDrawer();
     renderSellPanel();
-    renderShop();
   } else {
-    addLog(`No unwanted gear found to sell.`, 'log-shop');
+    addLog('No unwanted gear to sell.', 'log-info');
   }
 }
 

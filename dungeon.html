@@ -98,7 +98,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .dpad-btn{background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:1.1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;transition:background .1s,border-color .1s;user-select:none;touch-action:none;}
 .dpad-btn:active{background:var(--border);border-color:var(--accent);}
 .dpad-center{background:rgba(192,132,252,.05);border-color:var(--dim);font-size:.5rem;color:var(--dim);}
-#action-btns{display:flex;flex-direction:column;gap:5px;flex-shrink:0;}
+#action-btns{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;flex-shrink:0;}
 .act-btn{font-family:'Press Start 2P',monospace;font-size:.36rem;padding:9px 10px;background:var(--panel);border:1px solid var(--border);color:var(--dim);cursor:pointer;letter-spacing:.08em;border-radius:3px;transition:all .15s;min-width:76px;text-align:center;}
 .act-btn:active{background:var(--border);}
 .bash-ready{border-color:var(--orange)!important;color:var(--orange)!important;}
@@ -128,7 +128,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   .hud-center{font-size:.34rem;}
   #map-area{flex:1;min-width:0;}
   #bottom-bar{display:none;}
-  #log{height:24px;padding:2px 8px;font-size:.45rem;overflow:hidden;}
+  #log{height:46px;padding:2px 8px;font-size:.45rem;overflow-y:auto;scrollbar-width:none;}
   #install-banner{display:none!important;}
   #dpad-area{
     width:150px;flex-shrink:0;
@@ -137,7 +137,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     padding:10px max(10px,env(safe-area-inset-right)) 10px 10px;
     gap:10px;
   }
-  #action-btns{flex-direction:column;gap:5px;}
+  #action-btns{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;}
   .act-btn{min-width:68px;font-size:.32rem;padding:8px 6px;}
 }
 
@@ -1167,17 +1167,17 @@ function render(){
 
 function updateHUD(){
   let p=G.player;
-  document.getElementById('hp-bar').style.width=(p.hp/p.maxHp*100)+'%';
-  document.getElementById('hp-val').textContent=`${p.hp}/${p.maxHp}`;
-  document.getElementById('xp-bar').style.width=(p.xp/p.xpNext*100)+'%';
-  document.getElementById('xp-val').textContent=`${p.xp}/${p.xpNext}`;
-  document.getElementById('atk-val').textContent=gatk();
-  document.getElementById('def-val').textContent=gdef();
-  document.getElementById('per-val').textContent=getStat('perception');
-  document.getElementById('lvl-val').textContent=p.lvl;
-  document.getElementById('class-val').textContent=p.class;
-  document.getElementById('gold-val').textContent=p.gold;
-  document.getElementById('floor-label').textContent=`FLOOR ${G.floor}`;
+  let hpBar=document.getElementById('hp-bar'); if(hpBar) hpBar.style.width=Math.max(0,p.hp/p.maxHp*100)+'%';
+  let hpVal=document.getElementById('hp-val'); if(hpVal) hpVal.textContent=`${p.hp}/${p.maxHp}`;
+  let xpBar=document.getElementById('xp-bar'); if(xpBar) xpBar.style.width=Math.min(100,p.xp/p.xpNext*100)+'%';
+  let xpVal=document.getElementById('xp-val'); if(xpVal) xpVal.textContent=`${p.xp}/${p.xpNext}`;
+  let atkVal=document.getElementById('atk-val'); if(atkVal) atkVal.textContent=gatk();
+  let defVal=document.getElementById('def-val'); if(defVal) defVal.textContent=gdef();
+  let perVal=document.getElementById('per-val'); if(perVal) perVal.textContent=getStat('perception');
+  let lvlVal=document.getElementById('lvl-val'); if(lvlVal) lvlVal.textContent=p.lvl;
+  let classVal=document.getElementById('class-val'); if(classVal) classVal.textContent=p.class;
+  let goldVal=document.getElementById('gold-val'); if(goldVal) goldVal.textContent=p.gold;
+  let floorLabel=document.getElementById('floor-label'); if(floorLabel) floorLabel.textContent=`FLOOR ${G.floor}`;
 }
 
 function updateActBtns(){
@@ -1186,19 +1186,23 @@ function updateActBtns(){
 
   // ABILITY 1
   let a1=document.getElementById('ability1-btn');
-  let a1Name = A1[G.player.class] || 'ABIL1';
-  a1.className='act-btn'+(G.ability1Cooldown===0?' bash-ready':'');
-  a1.textContent=G.ability1Cooldown>0?`${a1Name} ${G.ability1Cooldown}`:`⚡${a1Name}`;
+  if(a1) {
+    let a1Name = A1[G.player.class] || 'ABIL1';
+    a1.className='act-btn'+(G.ability1Cooldown===0?' bash-ready':'');
+    a1.textContent=G.ability1Cooldown>0?`${a1Name} ${G.ability1Cooldown}`:`⚡${a1Name}`;
+  }
 
   // ABILITY 2
   let a2=document.getElementById('ability2-btn');
-  if(G.player.lvl >= 5) {
-    a2.style.display = 'block';
-    let a2Name = A2[G.player.class] || 'ABIL2';
-    a2.className='act-btn'+(G.ability2Cooldown===0?' bash-ready':'');
-    a2.textContent=G.ability2Cooldown>0?`${a2Name} ${G.ability2Cooldown}`:`⚡${a2Name}`;
-  } else {
-    a2.style.display = 'none';
+  if(a2) {
+    if(G.player.lvl >= 5) {
+      a2.style.display = 'block';
+      let a2Name = A2[G.player.class] || 'ABIL2';
+      a2.className='act-btn'+(G.ability2Cooldown===0?' bash-ready':'');
+      a2.textContent=G.ability2Cooldown>0?`${a2Name} ${G.ability2Cooldown}`:`⚡${a2Name}`;
+    } else {
+      a2.style.display = 'none';
+    }
   }
 
   // BOMB
@@ -2037,9 +2041,6 @@ function useItem(id){
       }
       SFX.levelUp();
     }
-    G.player.hp+=h;
-    addLog(`Drank ${it.name}: +${h} HP`,'log-item');
-    floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
     let idx = G.items.findIndex(i=>i.id===id);
     if(idx > -1) G.items.splice(idx,1);
     advanceTurn();closeInv();
@@ -3392,7 +3393,15 @@ function buildFloor(){
 
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
 
-  map[rooms[rooms.length-1].cy][rooms[rooms.length-1].cx]=TILE.STAIRS;
+  // Ensure stairs are placed in a normal room, not a secret or treasure room
+  let stairsRoom = rooms[rooms.length-1];
+  for(let i = rooms.length-1; i >= 1; i--) {
+    if(rooms[i].type !== 'secret' && rooms[i].type !== 'treasure' && rooms[i].type !== 'crypt') {
+      stairsRoom = rooms[i];
+      break;
+    }
+  }
+  map[stairsRoom.cy][stairsRoom.cx] = TILE.STAIRS;
 
   if(rooms.length>=5){
     let pool = rooms.slice(1, -1).filter(r=>r.type!=='secret'&&r.type!=='treasure'&&r.type!=='crypt');

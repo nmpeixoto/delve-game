@@ -242,9 +242,6 @@ function useItem(id){
       }
       SFX.levelUp();
     }
-    G.player.hp+=h;
-    addLog(`Drank ${it.name}: +${h} HP`,'log-item');
-    floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
     let idx = G.items.findIndex(i=>i.id===id);
     if(idx > -1) G.items.splice(idx,1);
     advanceTurn();closeInv();

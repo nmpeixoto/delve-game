@@ -20,6 +20,7 @@ const DEFAULT_CLASSES = [
 const SOURCE_FILES = [
   'src/js/constants.js',
   'src/js/data.js',
+  'src/js/main.js',
   'src/js/state.js',
   'src/js/vision.js',
   'src/js/emergency.js',
@@ -719,6 +720,11 @@ function createRuntime(seed, options = {}) {
       if (invMatch) {
         context.useItem(invMatch[1]);
         return { kind: 'click', label: `use:${invMatch[1]}` };
+      }
+
+      if (target === 'button[onclick="sellWeakerGear()"]') {
+        if (typeof context.sellWeakerGear === 'function') context.sellWeakerGear();
+        return { kind: 'click', label: 'sell-unwanted-gear' };
       }
 
       return { kind: 'click', label: target || 'unknown-click' };

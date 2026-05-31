@@ -169,17 +169,17 @@ function render(){
 
 function updateHUD(){
   let p=G.player;
-  document.getElementById('hp-bar').style.width=(p.hp/p.maxHp*100)+'%';
-  document.getElementById('hp-val').textContent=`${p.hp}/${p.maxHp}`;
-  document.getElementById('xp-bar').style.width=(p.xp/p.xpNext*100)+'%';
-  document.getElementById('xp-val').textContent=`${p.xp}/${p.xpNext}`;
-  document.getElementById('atk-val').textContent=gatk();
-  document.getElementById('def-val').textContent=gdef();
-  document.getElementById('per-val').textContent=getStat('perception');
-  document.getElementById('lvl-val').textContent=p.lvl;
-  document.getElementById('class-val').textContent=p.class;
-  document.getElementById('gold-val').textContent=p.gold;
-  document.getElementById('floor-label').textContent=`FLOOR ${G.floor}`;
+  let hpBar=document.getElementById('hp-bar'); if(hpBar) hpBar.style.width=Math.max(0,p.hp/p.maxHp*100)+'%';
+  let hpVal=document.getElementById('hp-val'); if(hpVal) hpVal.textContent=`${Math.max(0, p.hp)}/${p.maxHp}`;
+  let xpBar=document.getElementById('xp-bar'); if(xpBar) xpBar.style.width=Math.min(100,p.xp/p.xpNext*100)+'%';
+  let xpVal=document.getElementById('xp-val'); if(xpVal) xpVal.textContent=`${p.xp}/${p.xpNext}`;
+  let atkVal=document.getElementById('atk-val'); if(atkVal) atkVal.textContent=gatk();
+  let defVal=document.getElementById('def-val'); if(defVal) defVal.textContent=gdef();
+  let perVal=document.getElementById('per-val'); if(perVal) perVal.textContent=getStat('perception');
+  let lvlVal=document.getElementById('lvl-val'); if(lvlVal) lvlVal.textContent=p.lvl;
+  let classVal=document.getElementById('class-val'); if(classVal) classVal.textContent=p.class;
+  let goldVal=document.getElementById('gold-val'); if(goldVal) goldVal.textContent=p.gold;
+  let floorLabel=document.getElementById('floor-label'); if(floorLabel) floorLabel.textContent=`FLOOR ${G.floor}`;
 }
 
 function updateActBtns(){
@@ -188,19 +188,23 @@ function updateActBtns(){
 
   // ABILITY 1
   let a1=document.getElementById('ability1-btn');
-  let a1Name = A1[G.player.class] || 'ABIL1';
-  a1.className='act-btn'+(G.ability1Cooldown===0?' bash-ready':'');
-  a1.textContent=G.ability1Cooldown>0?`${a1Name} ${G.ability1Cooldown}`:`⚡${a1Name}`;
+  if(a1) {
+    let a1Name = A1[G.player.class] || 'ABIL1';
+    a1.className='act-btn'+(G.ability1Cooldown===0?' bash-ready':'');
+    a1.textContent=G.ability1Cooldown>0?`${a1Name} ${G.ability1Cooldown}`:`⚡${a1Name}`;
+  }
 
   // ABILITY 2
   let a2=document.getElementById('ability2-btn');
-  if(G.player.lvl >= 5) {
-    a2.style.display = 'block';
-    let a2Name = A2[G.player.class] || 'ABIL2';
-    a2.className='act-btn'+(G.ability2Cooldown===0?' bash-ready':'');
-    a2.textContent=G.ability2Cooldown>0?`${a2Name} ${G.ability2Cooldown}`:`⚡${a2Name}`;
-  } else {
-    a2.style.display = 'none';
+  if(a2) {
+    if(G.player.lvl >= 5) {
+      a2.style.display = 'block';
+      let a2Name = A2[G.player.class] || 'ABIL2';
+      a2.className='act-btn'+(G.ability2Cooldown===0?' bash-ready':'');
+      a2.textContent=G.ability2Cooldown>0?`${a2Name} ${G.ability2Cooldown}`:`⚡${a2Name}`;
+    } else {
+      a2.style.display = 'none';
+    }
   }
 
   // BOMB
