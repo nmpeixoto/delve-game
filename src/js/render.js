@@ -89,6 +89,7 @@ const gatk=()=>{
   let total = G.player.atk + watk;
   if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 6);
   if(G.player.strengthTurns > 0) total += 10;
+  if(G.player.magicMult && w && w.sym === '♦') total = Math.floor(total * G.player.magicMult);
   return total;
 };
 const gdef=()=>{

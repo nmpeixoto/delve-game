@@ -172,7 +172,18 @@ function killEnemy(en, skipAdvanceTurn) {
       let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
       _deathBatch.forEach(d => {
         G.enemies = G.enemies.filter(e => e.id !== d.en.id);
-        if(ch(.2)){
+        if(d.en.boss) {
+          G.won = true;
+          showVictory();
+          return;
+        }
+        if(d.en.isElite) {
+          if(ch(.5)) {
+            let pool=[...WEAPONS,...ARMORS,...POTIONS,...LEGENDARIES];
+            let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
+            G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
+          }
+        } else if(ch(.2)){
           let pool=[...WEAPONS,...ARMORS,...POTIONS];
           let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
           G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
@@ -192,7 +203,18 @@ function flushDeathBatch() {
     let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
     _deathBatch.forEach(d => {
       G.enemies = G.enemies.filter(e => e.id !== d.en.id);
-      if(ch(.2)){
+      if(d.en.boss) {
+        G.won = true;
+        showVictory();
+        return;
+      }
+      if(d.en.isElite) {
+        if(ch(.5)) {
+          let pool=[...WEAPONS,...ARMORS,...POTIONS,...LEGENDARIES];
+          let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
+          G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
+        }
+      } else if(ch(.2)){
         let pool=[...WEAPONS,...ARMORS,...POTIONS];
         let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
         G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
@@ -319,6 +341,23 @@ function processEnemyTurns(index) {
       e.hp += heal;
       floatText(`+${heal}`, e.x, e.y, '#4ade80');
       popText('✨', e.x, e.y);
+    }
+  }
+
+  if(e.boss && e.phase === 1 && e.hp <= e.maxHp / 2) {
+    e.phase = 2;
+    e.name = "Dungeon Lord (Enraged)";
+    addLog("Dungeon Lord enters Phase 2! Dark magic surges!", "log-combat");
+    e.atk = Math.round(e.atk * 1.5);
+    e.def = Math.round(e.def * 1.5);
+    e.color = "#ff00ff";
+    popText('🔥', e.x, e.y);
+    for(let i=0; i<2; i++) {
+      let t=ENEMIES.find(n=>n.name==='Skeleton');
+      let sx=e.x+rand(3)-1, sy=e.y+rand(3)-1;
+      if(sx>=0&&sx<MAP_W&&sy>=0&&sy<MAP_H&&G.map[sy][sx]!==TILE.WALL) {
+        G.enemies.push({...t, hp:t.hp, maxHp:t.hp, x:sx, y:sy, id:uid(), stunnedTurns:0});
+      }
     }
   }
 

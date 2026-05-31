@@ -65,13 +65,14 @@ function selectClass(id) {
 
 function confirmClassSelect() {
   closeClassSelect();
-  startGame(_selectedClass);
+  let hm = document.getElementById('hard-mode-toggle').checked;
+  startGame(_selectedClass, hm);
 }
 
-function startGame(playerClass = 'warrior'){
+function startGame(playerClass = 'warrior', hardMode = false){
   document.getElementById('title-screen').classList.add('hidden');
   document.getElementById('game-screen').classList.remove('hidden');
-  initGame(playerClass);
+  initGame(playerClass, hardMode);
   if(!_resizeHandlerBound){
     window.addEventListener('resize',handleResize);
     _resizeHandlerBound=true;
@@ -102,6 +103,9 @@ function showDeath(){
 function showVictory(){
   let p=G.player,o=document.createElement('div');
   o.className='overlay';
+  let diffMult = G.hardMode ? 1.5 : 1.0;
+  let baseScore = G.floor * p.kills * p.lvl;
+  let score = Math.floor(baseScore * diffMult);
   o.innerHTML=`<div class="modal victory">
     <h2>★ VICTORY ★</h2>
     <p>You escaped the dungeon!</p>
@@ -113,7 +117,12 @@ function showVictory(){
       Gold: <span>${p.gold}💰</span><br>
       Turns: <span>${G.turn}</span>
     </div>
-    <button class="btn btn-gold" onclick="this.closest('.overlay').remove();openClassSelect()">CHOOSE CLASS</button>
+    <div class="stats-list" style="margin-top:10px; border-top:1px dashed var(--dim); padding-top:10px;">
+      Base Score (Flr×Kills×Lvl): <span>${baseScore}</span><br>
+      Difficulty Multiplier: <span>${diffMult}x</span><br>
+      <strong style="color:var(--gold);font-size:1.1em;">Final Score: ${score}</strong>
+    </div>
+    <button class="btn btn-gold" onclick="this.closest('.overlay').remove();openClassSelect()" style="margin-top:15px;">CHOOSE CLASS</button>
   </div>`;
   document.body.appendChild(o);
 }

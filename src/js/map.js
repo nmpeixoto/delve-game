@@ -183,6 +183,33 @@ function buildFloor(){
   G.visible = new Set();
   G.seen = new Set();
   G.items=G.items.filter(i=>i.carried);
+  
+  if(G.floor === FLOORS) {
+    map = Array(MAP_H).fill(0).map(()=>Array(MAP_W).fill(TILE.WALL));
+    let bw = Math.max(10, Math.floor(MAP_W * 0.6));
+    let bh = Math.max(10, Math.floor(MAP_H * 0.6));
+    let bx = Math.floor((MAP_W - bw) / 2);
+    let by = Math.floor((MAP_H - bh) / 2);
+    rooms = [{x: bx, y: by, w: bw, h: bh, cx: bx + Math.floor(bw/2), cy: by + Math.floor(bh/2)}];
+    for(let y=by; y<by+bh; y++) {
+      for(let x=bx; x<bx+bw; x++) {
+        map[y][x] = TILE.FLOOR;
+      }
+    }
+    G.map = map; G.rooms = rooms;
+    G.player.x = rooms[0].cx; G.player.y = by + bh - 2;
+    
+    let bossTemp = ENEMIES.find(e=>e.boss);
+    let boss = {...bossTemp, 
+       hp: Math.round(bossTemp.hp * (G.hardMode?1.2:1)), maxHp: Math.round(bossTemp.hp * (G.hardMode?1.2:1)), 
+       atk: Math.round(bossTemp.atk * (G.hardMode?1.2:1)), def: Math.round(bossTemp.def * (G.hardMode?1.2:1)), 
+       x: rooms[0].cx, y: by + 2, id: uid(), stunnedTurns: 0};
+    G.enemies.push(boss);
+    computeVision(); render();
+    addLog(`You have reached the Dungeon Lord's lair. There is no escape.`, 'log-level');
+    return;
+  }
+
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
 
   map[rooms[rooms.length-1].cy][rooms[rooms.length-1].cx]=TILE.STAIRS;
@@ -193,7 +220,7 @@ function buildFloor(){
       let j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    let numShops = Math.min(3, pool.length);
+    let numShops = Math.min(G.hardMode ? 1 : 3, pool.length);
     for(let i=0; i<numShops; i++){
       let sr = pool[i];
       sr.type = 'shop';
@@ -239,6 +266,7 @@ function buildFloor(){
       let tier=rr(enemyProfile.tierMin, enemyProfile.tierMax);
       let t=ENEMIES[tier],sc=enemyProfile.scale;
       if(isCrypt) sc *= 1.2;
+      if(G.hardMode) sc *= 1.2;
       
       let ex, ey, attempts=0;
       do {
@@ -249,10 +277,11 @@ function buildFloor(){
       } while(attempts<30);
       if(startVisible.has(ey*MAP_W+ex)) if(Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y)<=8) continue;
       
+      let goldMult = G.hardMode ? 0.7 : 1;
       let enemy = {...t,
         hp:Math.round(t.hp*sc),maxHp:Math.round(t.hp*sc),
         atk:Math.round(t.atk*sc),def:Math.round(t.def*sc),
-        xp:Math.round(t.xp*(isCrypt?1.5:1)*sc),gold:Math.round(t.gold*sc),
+        xp:Math.round(t.xp*(isCrypt?1.5:1)*sc),gold:Math.round(t.gold*sc*goldMult),
         x:ex,y:ey,id:uid(), stunnedTurns: 0};
         
       if(isElite) {

@@ -278,6 +278,8 @@ function applyUpgrade(item){
   else if(item.stat==='def'){p.def+=item.amount;addLog(`${item.name}: DEF +${item.amount}!`,'log-level');}
   else if(item.stat==='hp'){p.maxHp+=item.amount;p.hp=Math.min(p.maxHp,p.hp+item.amount);addLog(`${item.name}: Max HP +${item.amount}!`,'log-level');}
   else if(item.stat==='all'){p.atk+=1;p.def+=1;p.maxHp+=10;p.hp=Math.min(p.maxHp,p.hp+10);addLog(`Blessing: ATK+1, DEF+1, MaxHP+10!`,'log-level');}
+  else if(item.stat==='all5'){p.atk+=5;p.def+=5;p.maxHp+=50;p.hp=Math.min(p.maxHp,p.hp+50);addLog(`Ring of the Fallen: ATK+5, DEF+5, MaxHP+50!`,'log-level');}
+  else if(item.stat==='magicMult'){p.magicMult=(p.magicMult||1)*item.amount;addLog(`${item.name}: ${item.amount}x Magic Damage!`,'log-level');}
   else if(item.stat==='vamp'){p.vampirism+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP per kill!`,'log-level');}
   else if(item.stat==='regen'){p.regen+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP every 10 tiles explored!`,'log-level');}
   else if(item.stat==='swift'){p.swiftness+=item.amount;addLog(`${item.name}: +${item.amount} free move every 15 tiles explored!`,'log-level');}
