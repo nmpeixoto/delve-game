@@ -65,7 +65,7 @@ Ranger bows extend tap/click attack range to 3 tiles and skip the enemy countera
 ## Classes
 
 ### Warrior
-Base stats: HP 30, ATK 3, DEF 3
+Base stats: HP 30, ATK 3, DEF 3, CRIT 5%
 
 Starting gear: Bare Hands, Chain Mail
 
