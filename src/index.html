@@ -70,7 +70,7 @@
       <div class="hud-stats">
         <div class="hud-stat"><span class="hud-label">ATK</span><span id="atk-val" style="color:var(--orange)">4</span></div>
         <div class="hud-stat"><span class="hud-label">DEF</span><span id="def-val" style="color:var(--blue)">1</span></div>
-        <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span> <span id="class-val" style="color:var(--dim);text-transform:uppercase;font-size:.45rem;margin-left:2px;"></span></div>
+        <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span> <span id="class-val" style="color:var(--dim);text-transform:uppercase;font-size:.45rem;margin-left:2px;" onmouseenter="showClassTip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'class')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()"></span></div>
         <div class="hud-stat"><span class="hud-label" style="color:var(--gold)">GP</span><span id="gold-val" style="color:var(--gold)">0</span></div>
       </div>
     </div>
@@ -98,8 +98,8 @@
       <div></div>
     </div>
     <div id="action-btns">
-      <button class="act-btn" id="ability1-btn" onclick="doAbility1()">ABIL1</button>
-      <button class="act-btn" id="ability2-btn" onclick="doAbility2()" style="display:none">ABIL2</button>
+      <button class="act-btn" id="ability1-btn" onclick="if(!window._lpFiredUI) doAbility1(); window._lpFiredUI=false;" onmouseenter="showAbility1Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a1')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()">ABIL1</button>
+      <button class="act-btn" id="ability2-btn" onclick="if(!window._lpFiredUI) doAbility2(); window._lpFiredUI=false;" onmouseenter="showAbility2Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a2')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()" style="display:none">ABIL2</button>
       <button class="act-btn" id="stairs-btn" onclick="descend()">STAIRS</button>
       <button class="act-btn" id="shop-btn"   onclick="openShop()">SHOP</button>
       <button class="act-btn" id="bag-btn"    onclick="openInv()">BAG</button>

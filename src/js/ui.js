@@ -22,6 +22,35 @@ function hideTip(){
   document.getElementById('tooltip').style.display='none';
 }
 
+window._lpFiredUI = false;
+let _uiLpTimer = null;
+function startUILongPress(e, type) {
+  window._lpFiredUI = false;
+  _uiLpTimer = setTimeout(() => {
+    window._lpFiredUI = true;
+    if(type === 'class') showClassTip(e);
+    else if(type === 'a1') showAbility1Tip(e);
+    else if(type === 'a2') showAbility2Tip(e);
+    if(navigator.vibrate) navigator.vibrate(40);
+  }, 480);
+}
+function cancelUILongPress() {
+  clearTimeout(_uiLpTimer);
+}
+function showClassTip(e) {
+  let info = CLASS_INFO[G.player.class];
+  if(info) showTip(e, `${G.player.class.toUpperCase()} PASSIVE<br><span style="color:var(--dim);font-weight:normal">${info.passive}</span>`);
+}
+function showAbility1Tip(e) {
+  let info = CLASS_INFO[G.player.class];
+  if(info) showTip(e, `${info.a1.name}<br><span style="color:var(--dim);font-weight:normal">${info.a1.desc}</span>`);
+}
+function showAbility2Tip(e) {
+  let info = CLASS_INFO[G.player.class];
+  if(info && G.player.lvl >= 5) showTip(e, `${info.a2.name}<br><span style="color:var(--dim);font-weight:normal">${info.a2.desc}</span>`);
+  else if(info) showTip(e, `???<br><span style="color:var(--dim);font-weight:normal">Unlocks at Level 5</span>`);
+}
+
 // ===================== LOG =====================
 function addLog(msg,cls=''){
   G.log.unshift({msg,cls});if(G.log.length>40)G.log.pop();
@@ -109,8 +138,8 @@ function resetTips(){
 
 // Hide tooltip on any tap outside enemy/item/shop tiles
 document.addEventListener('touchstart', e=>{
-  if(!e.target.closest('.tile-enemy,.tile-item,.shop-item,.sell-item,.shop-tab')) hideTip();
+  if(!e.target.closest('.tile-enemy,.tile-item,.shop-item,.sell-item,.shop-tab,#class-val,.act-btn')) hideTip();
 },{passive:true});
 document.addEventListener('click', e=>{
-  if(!e.target.closest('.tile-enemy,.tile-item')) hideTip();
+  if(!e.target.closest('.tile-enemy,.tile-item,#class-val,.act-btn')) hideTip();
 },{passive:true});

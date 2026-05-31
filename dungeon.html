@@ -322,7 +322,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div class="hud-stats">
         <div class="hud-stat"><span class="hud-label">ATK</span><span id="atk-val" style="color:var(--orange)">4</span></div>
         <div class="hud-stat"><span class="hud-label">DEF</span><span id="def-val" style="color:var(--blue)">1</span></div>
-        <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span> <span id="class-val" style="color:var(--dim);text-transform:uppercase;font-size:.45rem;margin-left:2px;"></span></div>
+        <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span> <span id="class-val" style="color:var(--dim);text-transform:uppercase;font-size:.45rem;margin-left:2px;" onmouseenter="showClassTip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'class')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()"></span></div>
         <div class="hud-stat"><span class="hud-label" style="color:var(--gold)">GP</span><span id="gold-val" style="color:var(--gold)">0</span></div>
       </div>
     </div>
@@ -350,8 +350,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div></div>
     </div>
     <div id="action-btns">
-      <button class="act-btn" id="ability1-btn" onclick="doAbility1()">ABIL1</button>
-      <button class="act-btn" id="ability2-btn" onclick="doAbility2()" style="display:none">ABIL2</button>
+      <button class="act-btn" id="ability1-btn" onclick="if(!window._lpFiredUI) doAbility1(); window._lpFiredUI=false;" onmouseenter="showAbility1Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a1')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()">ABIL1</button>
+      <button class="act-btn" id="ability2-btn" onclick="if(!window._lpFiredUI) doAbility2(); window._lpFiredUI=false;" onmouseenter="showAbility2Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a2')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()" style="display:none">ABIL2</button>
       <button class="act-btn" id="stairs-btn" onclick="descend()">STAIRS</button>
       <button class="act-btn" id="shop-btn"   onclick="openShop()">SHOP</button>
       <button class="act-btn" id="bag-btn"    onclick="openInv()">BAG</button>
@@ -522,6 +522,16 @@ const MAP_W=56,MAP_H=36,FLOORS=5;
 const TILE={WALL:0,FLOOR:1,STAIRS:2,SHOP:3};
 const DIRS={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],
             w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],W:[0,-1],S:[0,1],A:[-1,0],D:[1,0]};
+const CLASS_INFO = {
+  warrior: { passive: 'Heal 1 HP every 12 tiles explored.', a1: { name: 'BASH', desc: 'Deal 1.5x damage to a nearby enemy.' }, a2: { name: 'SHIELD WALL', desc: 'Damage taken reduced by 40% for 3 turns.' } },
+  rogue: { passive: '40% base chance to dodge attacks.', a1: { name: 'DASH', desc: 'Gain 2 free moves.' }, a2: { name: 'VANISH', desc: 'Become invisible for 3 turns. Next attack deals 2x damage.' } },
+  mage: { passive: 'Wands (♦) grant +20% ATK.', a1: { name: 'FIREBALL', desc: 'Damage target and all adjacent enemies.' }, a2: { name: 'BLINK', desc: 'Teleport to a random safe visible tile.' } },
+  paladin: { passive: '+2 Max HP per level.', a1: { name: 'SMITE', desc: 'Stun and damage an enemy for 1 turn.' }, a2: { name: 'LAY ON HANDS', desc: 'Heal 20% of your Max HP.' } },
+  ranger: { passive: 'Bows (🏹) have range 3.', a1: { name: 'PIERCING SHOT', desc: 'Damage all enemies in a line.' }, a2: { name: 'BEAR TRAP', desc: 'Drop a trap and jump back to safety.' } },
+  barbarian: { passive: 'Gain ATK as your HP gets lower.', a1: { name: 'CLEAVE', desc: 'Damage all adjacent enemies.' }, a2: { name: 'BLOODLUST', desc: 'Deal damage to heal, but take 15% more damage for 3 turns.' } },
+  necromancer: { passive: 'Heal 2 HP when an enemy dies.', a1: { name: 'SIPHON LIFE', desc: 'Damage an enemy and heal for the same amount.' }, a2: { name: 'CORPSE EXPLOSION', desc: 'Targeted enemy explodes on death, damaging adjacent enemies.' } },
+  monk: { passive: 'Unarmed damage scales with your level.', a1: { name: 'PUSH KICK', desc: 'Knock an enemy back. Double damage if they hit a wall.' }, a2: { name: 'FLURRY OF BLOWS', desc: 'Attack 3 times but root yourself for 2 turns.' } }
+};
 
 </script>
 <script>
@@ -1032,6 +1042,35 @@ function hideTip(){
   document.getElementById('tooltip').style.display='none';
 }
 
+window._lpFiredUI = false;
+let _uiLpTimer = null;
+function startUILongPress(e, type) {
+  window._lpFiredUI = false;
+  _uiLpTimer = setTimeout(() => {
+    window._lpFiredUI = true;
+    if(type === 'class') showClassTip(e);
+    else if(type === 'a1') showAbility1Tip(e);
+    else if(type === 'a2') showAbility2Tip(e);
+    if(navigator.vibrate) navigator.vibrate(40);
+  }, 480);
+}
+function cancelUILongPress() {
+  clearTimeout(_uiLpTimer);
+}
+function showClassTip(e) {
+  let info = CLASS_INFO[G.player.class];
+  if(info) showTip(e, `${G.player.class.toUpperCase()} PASSIVE<br><span style="color:var(--dim);font-weight:normal">${info.passive}</span>`);
+}
+function showAbility1Tip(e) {
+  let info = CLASS_INFO[G.player.class];
+  if(info) showTip(e, `${info.a1.name}<br><span style="color:var(--dim);font-weight:normal">${info.a1.desc}</span>`);
+}
+function showAbility2Tip(e) {
+  let info = CLASS_INFO[G.player.class];
+  if(info && G.player.lvl >= 5) showTip(e, `${info.a2.name}<br><span style="color:var(--dim);font-weight:normal">${info.a2.desc}</span>`);
+  else if(info) showTip(e, `???<br><span style="color:var(--dim);font-weight:normal">Unlocks at Level 5</span>`);
+}
+
 // ===================== LOG =====================
 function addLog(msg,cls=''){
   G.log.unshift({msg,cls});if(G.log.length>40)G.log.pop();
@@ -1119,10 +1158,10 @@ function resetTips(){
 
 // Hide tooltip on any tap outside enemy/item/shop tiles
 document.addEventListener('touchstart', e=>{
-  if(!e.target.closest('.tile-enemy,.tile-item,.shop-item,.sell-item,.shop-tab')) hideTip();
+  if(!e.target.closest('.tile-enemy,.tile-item,.shop-item,.sell-item,.shop-tab,#class-val,.act-btn')) hideTip();
 },{passive:true});
 document.addEventListener('click', e=>{
-  if(!e.target.closest('.tile-enemy,.tile-item')) hideTip();
+  if(!e.target.closest('.tile-enemy,.tile-item,#class-val,.act-btn')) hideTip();
 },{passive:true});
 
 </script>
