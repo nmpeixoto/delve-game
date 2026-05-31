@@ -79,7 +79,7 @@ function iDesc(item){
   }
   if(item.type==='potion') return `Heal ${item.heal} HP`;
   if(item.type==='upgrade')return item.desc||'';
-  return '';
+  return item.desc || '';
 }
 const gatk=()=>{
   let w = G.player.weapon;
