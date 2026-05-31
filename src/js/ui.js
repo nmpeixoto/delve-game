@@ -104,13 +104,14 @@ function showShrinePrompt(shrine) {
   document.getElementById('shrine-title').textContent = shrine.shrineType ? `${shrine.shrineType.toUpperCase()} SHRINE` : 'SHRINE';
   let msg = '';
   if(shrine.shrineType === 'Blood') {
-    msg = 'Sacrifice 30% of your Max HP permanently to gain +1 ATK permanently?';
+    let cost = Math.max(1, Math.floor(G.player.maxHp * 0.3));
+    msg = `Sacrifice ${cost} Max HP permanently to gain +1 ATK permanently? (HP: ${G.player.hp}/${G.player.maxHp})`;
   } else if(shrine.shrineType === 'Greed') {
-    msg = 'Sacrifice all your current Gold to instantly gain 2 Levels?';
+    msg = `Sacrifice all your current Gold to instantly gain 2 Levels? (Gold: ${G.player.gold})`;
   } else if(shrine.shrineType === 'Cursed') {
-    msg = 'Fully heal your HP, but instantly summon 3 Elite enemies surrounding you?';
+    msg = `Fully heal your HP, but instantly summon 3 Elite enemies surrounding you? (HP: ${G.player.hp}/${G.player.maxHp})`;
   } else {
-    msg = 'Touch the shrine?'; // Fallback
+    msg = `Touch the shrine? (HP: ${G.player.hp}/${G.player.maxHp})`; // Fallback
   }
   document.getElementById('shrine-msg').textContent = msg;
   document.getElementById('shrine-overlay').style.display = 'flex';
