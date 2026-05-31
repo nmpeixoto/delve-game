@@ -7,12 +7,12 @@ function handleResize(){
 
 const CLASS_DATA = {
   warrior: { name: 'Warrior', tagline: 'A sturdy fighter who excels in sustained combat.', hp: 30, atk: 3, def: 2, weapon: 'Bare Hands', armor: 'Chain Mail', ability1: 'BASH', desc1: 'Deals 1.5x damage to a nearby visible enemy. Cooldown: 5', ability2: 'SHIELD WALL', desc2: '(Lvl 5) Reduces incoming damage by 40% for 3 turns. Cooldown: 10', passive: 'Regenerates 1 HP every 12 tiles explored.' },
-  rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 24, atk: 7, def: 2, weapon: 'Rusty Dagger', armor: 'Leather Vest', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 40% of all incoming attacks.' },
+  rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 24, atk: 7, def: 2, weapon: 'Rusty Dagger', armor: 'Leather Vest', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 40% of all incoming attacks.', dodgeBonus: 0.4 },
   mage: { name: 'Mage', tagline: 'A fragile spellcaster with potent magic.', hp: 15, atk: 4, def: 1, weapon: 'Bone Staff', armor: 'Apprentice Robe', ability1: 'FIREBALL', desc1: 'Deals damage to all enemies in a 3x3 area around a target. Cooldown: 5', ability2: 'BLINK', desc2: '(Lvl 5) Teleport instantly to a safe, visible tile. Cooldown: 8', passive: 'Magic weapons (♦) deal about +20% damage.' },
   paladin: { name: 'Paladin', tagline: 'A holy champion focused on sustain and defense.', hp: 20, atk: 1, def: 1, weapon: 'Iron Mace', armor: 'Iron Plate', ability1: 'SMITE', desc1: 'Deals damage and stuns the enemy for 1 turn. Cooldown: 5', ability2: 'LAY ON HANDS', desc2: '(Lvl 5) Heals for 20% of Max HP. Cooldown: 15', passive: 'Max HP increases by 2 upon leveling up.' },
-  ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 13, atk: 2, def: 1, weapon: 'Shortbow', armor: 'Ranger Tunic', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 3 tiles away. Avoids counter-attacks at max range.' },
+  ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 13, atk: 2, def: 1, weapon: 'Shortbow', armor: 'Ranger Tunic', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 3 tiles away. Avoids counter-attacks at max range.', perception: 1 },
   barbarian: { name: 'Barbarian', tagline: 'A fearless brute who thrives in chaos.', hp: 42, atk: 5, def: 1, weapon: 'Great Axe', armor: 'Furs', ability1: 'CLEAVE', desc1: 'Deals damage to all adjacent enemies. Cooldown: 4', ability2: 'BLOODLUST', desc2: '(Lvl 5) For 3 turns, heal 50% of damage dealt, but take 15% more damage. Cooldown: 12', passive: 'Deals +1 damage for every 6 missing HP.' },
-  necromancer: { name: 'Necromancer', tagline: 'A dark caster who drains life from foes.', hp: 18, atk: 4, def: 1, weapon: 'Skull Rod', armor: 'Apprentice Robe', ability1: 'SIPHON LIFE', desc1: 'Deals damage and heals yourself for the same amount. Cooldown: 5', ability2: 'CORPSE EXPLOSION', desc2: '(Lvl 5) Mark an enemy for 3 turns. If it dies while marked, it explodes for heavy AoE damage. Cooldown: 8', passive: 'Heals 2 HP whenever an enemy dies.' },
+  necromancer: { name: 'Necromancer', tagline: 'A dark caster who drains life from foes.', hp: 18, atk: 4, def: 1, weapon: 'Skull Rod', armor: 'Apprentice Robe', ability1: 'SIPHON LIFE', desc1: 'Deals damage and heals yourself for the same amount. Cooldown: 5', ability2: 'RAISE CORPSE', desc2: '(Lvl 5) Mark an enemy for 3 turns. If it dies while marked, it becomes a loyal pet with 50% HP for 25 turns. Cooldown: 8', passive: 'Heals 2 HP whenever an enemy dies.' },
   monk: { name: 'Monk', tagline: 'A disciplined martial artist.', hp: 22, atk: 3, def: 1, weapon: 'Bare Hands', armor: 'Gi', ability1: 'PUSH KICK', desc1: 'Pushes an enemy 1 tile away. Deals extra damage if they hit a wall. Cooldown: 3', ability2: 'FLURRY OF BLOWS', desc2: '(Lvl 5) Attacks 3 times instantly, but you are rooted for your next turn. Cooldown: 10', passive: 'Gains level-based ATK when NO weapon is equipped.' }
 };
 
@@ -38,6 +38,13 @@ function selectClass(id) {
   document.getElementById(`cbtn-${id}`).classList.add('selected');
 
   let c = CLASS_DATA[id];
+  let wp = WEAPONS.find(w=>w.name===c.weapon) || {};
+  let ar = ARMORS.find(a=>a.name===c.armor) || {};
+  
+  let dodge = (c.dodgeBonus||0) + (wp.dodgeBonus||0) + (ar.dodgeBonus||0);
+  let crit = (c.critChance||0) + (wp.critChance||0) + (ar.critChance||0);
+  let per = (c.perception||0) + (wp.perception||0) + (ar.perception||0);
+
   let h = `
     <div class="class-title">${c.name}</div>
     <div class="class-tagline">${c.tagline}</div>
@@ -45,6 +52,11 @@ function selectClass(id) {
       <div class="c-stat"><div class="c-stat-lbl">HP</div><div class="c-stat-val" style="color:var(--red)">${c.hp}</div></div>
       <div class="c-stat"><div class="c-stat-lbl">ATK</div><div class="c-stat-val" style="color:var(--orange)">${c.atk}</div></div>
       <div class="c-stat"><div class="c-stat-lbl">DEF</div><div class="c-stat-val" style="color:var(--blue)">${c.def}</div></div>
+    </div>
+    <div class="class-stat-box" style="margin-top:8px;">
+      <div class="c-stat"><div class="c-stat-lbl">PER</div><div class="c-stat-val" style="color:var(--green)">${per}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">CRIT</div><div class="c-stat-val" style="color:#fbbf24">${Math.round(crit*100)}%</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">DODGE</div><div class="c-stat-val" style="color:#a78bfa">${Math.round(dodge*100)}%</div></div>
     </div>
     <div class="c-section">
       <div class="c-sec-title">STARTING GEAR</div>

@@ -105,7 +105,8 @@ function getFloorEnemyProfile(floor){
 }
 
 // ===================== INIT =====================
-function initGame(playerClass = 'warrior'){
+function initGame(playerClass = 'warrior', hardMode = false){
+  let cData = CLASS_DATA[playerClass] || {};
   let p = {
     x:0,y:0,lvl:1,xp:0,xpNext:10,
     weapon:null,armor:null,kills:0,gold:0,damageDealt:0,bestWeapon:'Bare hands',
@@ -115,51 +116,45 @@ function initGame(playerClass = 'warrior'){
     freeMoves: 0,
     bloodlustTurns: 0,
     rootedTurns: 0,
-    vampirism: 0,
-    regen: 0,
-    swiftness: 0,
+    vampirism: cData.vampirism || 0,
+    regen: cData.regen || 0,
+    swiftness: cData.swiftness || 0,
     tilesExplored: 0,
-    critChance: 0,
-    dodgeBonus: 0,
-    goldBonus: 0,
-    xpMult: 0,
-    perception: 0
+    critChance: cData.critChance || 0,
+    dodgeBonus: cData.dodgeBonus || 0,
+    goldBonus: cData.goldBonus || 0,
+    xpMult: cData.xpMult || 0,
+    perception: cData.perception || 0
   };
+  p.hp = cData.hp || 20; p.maxHp = cData.hp || 20; 
+  p.atk = cData.atk || 1; p.def = cData.def || 0;
   if(playerClass === 'warrior') {
-    p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 2;
     p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◆', price:60};
   } else if(playerClass === 'rogue') {
-    p.hp = 24; p.maxHp = 24; p.atk = 7; p.def = 2; p.perception = 1;
     p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'†', price:25};
     p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◆', price:35};
     p.bestWeapon = 'Rusty Dagger (ATK+4)';
   } else if(playerClass === 'mage') {
-    p.hp = 15; p.maxHp = 15; p.atk = 4; p.def = 1;
     p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70};
     p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
     p.bestWeapon = 'Bone Staff (ATK+5)';
   } else if(playerClass === 'paladin') {
-    p.hp = 20; p.maxHp = 20; p.atk = 1; p.def = 1;
     p.weapon = {id:uid(), name:'Iron Mace', type:'weapon', atk:5, rarity:'common', sym:'⚔', price:70};
     p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:80};
     p.bestWeapon = 'Iron Mace (ATK+5)';
   } else if(playerClass === 'ranger') {
-    p.hp = 13; p.maxHp = 13; p.atk = 2; p.def = 1; p.perception = 1;
     p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:4, rarity:'common', sym:'🏹', price:50};
     p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
     p.bestWeapon = 'Shortbow (ATK+4)';
   } else if(playerClass === 'barbarian') {
-    p.hp = 42; p.maxHp = 42; p.atk = 5; p.def = 1;
     p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:70};
     p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'◆', price:40};
     p.bestWeapon = 'Great Axe (ATK+4)';
   } else if(playerClass === 'necromancer') {
-    p.hp = 18; p.maxHp = 18; p.atk = 4; p.def = 1;
     p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70};
     p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
     p.bestWeapon = 'Skull Rod (ATK+5)';
   } else if(playerClass === 'monk') {
-    p.hp = 22; p.maxHp = 22; p.atk = 3; p.def = 1;
     p.armor = {id:uid(), name:'Gi', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
   }
 

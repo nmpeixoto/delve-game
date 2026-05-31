@@ -31,7 +31,17 @@ function move(dx,dy){
   }
 
   let en=G.enemies.find(e=>e.x===nx&&e.y===ny);
-  if(en){if(en.dying)return;attackEnemy(en.id);return;}
+  if(en){
+    if(en.dying)return;
+    if(en.isPet) {
+      en.x = G.player.x; en.y = G.player.y;
+      G.player.x = nx; G.player.y = ny;
+      advanceTurn();
+      return;
+    }
+    attackEnemy(en.id);
+    return;
+  }
 
   let trap = G.traps.find(t=>t.x===nx&&t.y===ny&&!t.triggered);
   if(trap && trap.type === 'bear') trap = null; // Bear traps only trigger on enemies

@@ -3,6 +3,18 @@ function tileAttack(id){
   if(!canAct()||G.gameOver||G.won) return;
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
   if(en.dying)return;
+  if(en.isPet) {
+    let dx = en.x - G.player.x, dy = en.y - G.player.y;
+    if(Math.abs(dx) <= 1 && Math.abs(dy) <= 1) {
+      en.x = G.player.x; en.y = G.player.y;
+      G.player.x += dx; G.player.y += dy;
+      advanceTurn();
+    } else {
+      if(G.player.rootedTurns > 0) { addLog('You are rooted and cannot move!', 'log-info'); return; }
+      move(Math.sign(dx)||0,Math.sign(dy)||0);
+    }
+    return;
+  }
   let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
   let dist=Math.max(Math.abs(en.x-G.player.x),Math.abs(en.y-G.player.y));
   if(dist<=maxRange){
@@ -95,7 +107,7 @@ function attackEnemy(id,multiplier=1,opts={}){
   if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
   if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
 
-  let dodgeChance = (G.player.class === 'rogue' ? 0.4 : 0) + getStat('dodgeBonus');
+  let dodgeChance = getStat('dodgeBonus');
   if(dodgeChance > 0 && Math.random() < dodgeChance) {
     addLog(`Dodged ${en.name}'s attack!`, 'log-info');
     popText('💨', G.player.x, G.player.y);
@@ -131,6 +143,16 @@ let _deathBatch = [];
 let _deathTimer = null;
 
 function killEnemy(en, skipAdvanceTurn) {
+  if(en.isPet) {
+    addLog(`${en.name} crumbled to dust.`, 'log-dead');
+    en.dying = true;
+    _deathBatch.push({en, skipAdvanceTurn});
+    if(!_deathTimer) {
+      render();
+      _deathTimer = setTimeout(flushDeathBatch, 150);
+    }
+    return;
+  }
   let goldDrop = en.gold + rand(3) + getStat('goldBonus');
   let xpDrop = Math.ceil(en.xp * (1 + getStat('xpMult')));
   G.player.xp += xpDrop; G.player.kills++; G.player.gold += goldDrop;
@@ -151,80 +173,56 @@ function killEnemy(en, skipAdvanceTurn) {
   fireTip('firstGold');
   en.dying=true;
 
-  if(en.corpseExplosionTarget && !en._exploded) {
-    en._exploded = true;
-    addLog('CORPSE EXPLOSION!', 'log-combat');
-    SFX.bash();
-    G.enemies.forEach(o => {
-      if(o.id !== en.id && !o.dying && Math.abs(o.x - en.x) <= 1 && Math.abs(o.y - en.y) <= 1) {
-        let dmg = 10 + G.player.lvl * 2;
-        o.hp -= dmg;
-        floatText(`-${dmg}`, o.x, o.y, '#f87171');
-        if(o.hp <= 0) killEnemy(o, true);
-      }
-    });
-  }
-
   _deathBatch.push({en, skipAdvanceTurn});
   if(!_deathTimer) {
     render();
-    _deathTimer = setTimeout(()=>{
-      let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
-      _deathBatch.forEach(d => {
-        G.enemies = G.enemies.filter(e => e.id !== d.en.id);
-        if(d.en.boss) {
-          G.won = true;
-          showVictory();
-          return;
-        }
-        if(d.en.isElite) {
-          if(ch(.5)) {
-            let pool=[...WEAPONS,...ARMORS,...POTIONS,...LEGENDARIES];
-            let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
-            G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
-          }
-        } else if(ch(.2)){
-          let pool=[...WEAPONS,...ARMORS,...POTIONS];
-          let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
-          G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
-        }
-      });
-      _deathBatch = [];
-      _deathTimer = null;
-      checkLevelUp();
-      if(shouldAdvance) advanceTurn();
-    }, 320);
+    _deathTimer = setTimeout(flushDeathBatch, 150);
   }
 }
 
 function flushDeathBatch() {
   if(_deathTimer) {
     clearTimeout(_deathTimer);
-    let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
-    _deathBatch.forEach(d => {
-      G.enemies = G.enemies.filter(e => e.id !== d.en.id);
-      if(d.en.boss) {
-        G.won = true;
-        showVictory();
-        return;
-      }
-      if(d.en.isElite) {
-        if(ch(.5)) {
-          let pool=[...WEAPONS,...ARMORS,...POTIONS,...LEGENDARIES];
-          let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
-          G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
-        }
-      } else if(ch(.2)){
-        let pool=[...WEAPONS,...ARMORS,...POTIONS];
+  }
+  let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
+  _deathBatch.forEach(d => {
+    if(d.en.raiseCorpseTarget && !d.en.boss && !d.en.isPet) {
+      addLog(`${d.en.name} rises to fight for you!`, 'log-combat');
+      popText('🧟', d.en.x, d.en.y);
+      d.en.name = `Pet ${d.en.name}`;
+      d.en.isPet = true;
+      d.en.dying = false;
+      d.en.raiseCorpseTarget = false;
+      d.en.hp = Math.ceil(d.en.maxHp / 2);
+      d.en.maxHp = Math.ceil(d.en.maxHp / 2);
+      d.en.lifespanTurns = 25;
+      d.en.color = '#a78bfa';
+      return;
+    }
+    
+    G.enemies = G.enemies.filter(e => e.id !== d.en.id);
+    if(d.en.boss) {
+      G.won = true;
+      showVictory();
+      return;
+    }
+    if(d.en.isElite) {
+      if(ch(.5)) {
+        let pool=[...WEAPONS,...ARMORS,...POTIONS,...LEGENDARIES];
         let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
         G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
       }
-    });
-    _deathBatch = [];
-    _deathTimer = null;
-    checkLevelUp();
-    if(shouldAdvance) advanceTurn();
-  }
+    } else if(ch(.2)){
+      let pool=[...WEAPONS,...ARMORS,...POTIONS];
+      let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
+      G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
+    }
+  });
+  _deathBatch = [];
+  _deathTimer = null;
+  checkLevelUp();
+  render();
+  if(shouldAdvance) advanceTurn();
 }
 
 function checkLevelUp(){
@@ -285,10 +283,18 @@ function processEnemyTurns(index) {
   if(G.gameOver||G.won) return;
   if(index >= G.enemies.length) {
     G.enemies.forEach(e=>{
-      if(e.corpseExplosionTurns>0){
-        e.corpseExplosionTurns--;
-        if(e.corpseExplosionTurns<=0){
-          e.corpseExplosionTarget=false;
+      if(e.raiseCorpseTurns>0){
+        e.raiseCorpseTurns--;
+        if(e.raiseCorpseTurns<=0){
+          e.raiseCorpseTarget=false;
+        }
+      }
+      if(e.isPet && e.lifespanTurns !== undefined) {
+        e.lifespanTurns--;
+        if(e.lifespanTurns <= 0) {
+          addLog(`${e.name} crumbled to dust.`, 'log-combat');
+          e.hp = 0;
+          killEnemy(e, true);
         }
       }
     });
@@ -372,52 +378,100 @@ function processEnemyTurns(index) {
     }
     return processEnemyTurns(index + 1);
   } else {
-    let dx=G.player.x-e.x,dy=G.player.y-e.y;
+    let target = {x: G.player.x, y: G.player.y, isPlayer: true};
+    if(e.isPet) {
+      let enemies = G.enemies.filter(o => !o.isPet && !o.dying && G.visible.has(o.y*MAP_W+o.x));
+      if(enemies.length) {
+        target = enemies.sort((a,b) => (Math.abs(a.x-e.x)+Math.abs(a.y-e.y)) - (Math.abs(b.x-e.x)+Math.abs(b.y-e.y)))[0];
+      } else {
+        if(Math.abs(G.player.x-e.x) <= 2 && Math.abs(G.player.y-e.y) <= 2) {
+          return processEnemyTurns(index + 1);
+        }
+      }
+    } else {
+      let targets = [{x: G.player.x, y: G.player.y, isPlayer: true}];
+      G.enemies.filter(o => o.isPet && !o.dying).forEach(p => targets.push(p));
+      target = targets.sort((a,b) => (Math.abs(a.x-e.x)+Math.abs(a.y-e.y)) - (Math.abs(b.x-e.x)+Math.abs(b.y-e.y)))[0];
+    }
+
+    let dx=target.x-e.x, dy=target.y-e.y;
     let steps=Math.abs(dx)>Math.abs(dy)?[[Math.sign(dx),0],[0,Math.sign(dy)]]:[[0,Math.sign(dy)],[Math.sign(dx),0]];
     for(let[sx,sy] of steps){
       let nx=e.x+sx,ny=e.y+sy;
-      if(nx===G.player.x&&ny===G.player.y){
-        let edm=Math.max(1,e.atk-gdef()+rand(3));
-        if(e.enrage && e.hp <= e.maxHp / 2) edm = Math.floor(edm * 1.5);
-        if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
-        if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
+      if(nx===target.x&&ny===target.y){
+        if(target.isPlayer) {
+          let edm=Math.max(1,e.atk-gdef()+rand(3));
+          if(e.enrage && e.hp <= e.maxHp / 2) edm = Math.floor(edm * 1.5);
+          if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
+          if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
 
-        if(G.player.class === 'rogue' && ch(.4)) {
-          addLog(`Dodged ${e.name}'s attack!`, 'log-info');
-          popText('💨', G.player.x, G.player.y);
-          return processEnemyTurns(index + 1);
-        } else {
-          checkEmergencyPotion(e, edm, ()=>{
-            G.player.hp=Math.max(0,G.player.hp-edm);
-            addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
-            SFX.damage();shakeMap();flashDamage();
-            popText('🩸', G.player.x, G.player.y);
-            floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
-            
-            if(e.vampiric && edm > 0) {
-              let heal = Math.floor(edm * e.vampiric);
-              if(heal > 0) {
-                e.hp = Math.min(e.maxHp, e.hp + heal);
-                floatText(`+${heal}`, e.x, e.y, '#4ade80');
-                popText('🦇', e.x, e.y);
+          let dChance = getStat('dodgeBonus');
+          if(dChance > 0 && Math.random() < dChance) {
+            addLog(`Dodged ${e.name}'s attack!`, 'log-info');
+            popText('💨', G.player.x, G.player.y);
+            return processEnemyTurns(index + 1);
+          } else {
+            checkEmergencyPotion(e, edm, ()=>{
+              G.player.hp=Math.max(0,G.player.hp-edm);
+              addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
+              SFX.damage();shakeMap();flashDamage();
+              popText('🩸', G.player.x, G.player.y);
+              floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
+              
+              if(e.vampiric && edm > 0) {
+                let heal = Math.floor(edm * e.vampiric);
+                if(heal > 0) {
+                  e.hp = Math.min(e.maxHp, e.hp + heal);
+                  floatText(`+${heal}`, e.x, e.y, '#4ade80');
+                  popText('🦇', e.x, e.y);
+                }
               }
-            }
-            if(e.freezeChance && Math.random() < e.freezeChance) {
-              G.player.rootedTurns = 2;
-              addLog(`The ${e.name} froze you!`, 'log-combat');
-              floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
-              popText('❄️', G.player.x, G.player.y);
-            }
+              if(e.freezeChance && Math.random() < e.freezeChance) {
+                G.player.rootedTurns = 2;
+                addLog(`The ${e.name} froze you!`, 'log-combat');
+                floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
+                popText('❄️', G.player.x, G.player.y);
+              }
 
-            if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
-            computeVision();render();
-            processEnemyTurns(index + 1);
-          });
-          return; // WAIT for checkEmergencyPotion to call the callback
+              if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
+              computeVision();render();
+              processEnemyTurns(index + 1);
+            });
+            return;
+          }
+        } else {
+          if(target.dodge && Math.random() < target.dodge) {
+            addLog(`${target.name} dodged ${e.name}'s attack!`, 'log-info');
+            popText('💨', target.x, target.y);
+            return processEnemyTurns(index + 1);
+          }
+
+          let edm = Math.max(1, e.atk - (target.def || 0) + rand(3));
+          if(e.enrage && e.hp <= e.maxHp / 2) edm = Math.floor(edm * 1.5);
+
+          target.hp -= edm;
+          addLog(`${e.name} attacks ${target.name}! -${edm} HP`, 'log-combat');
+          SFX.damage();
+          popText('🩸', target.x, target.y);
+          floatText(`-${edm}`, target.x, target.y, '#f87171');
+
+          if(e.vampiric && edm > 0) {
+            let heal = Math.floor(edm * e.vampiric);
+            if(heal > 0) {
+              e.hp = Math.min(e.maxHp, e.hp + heal);
+              floatText(`+${heal}`, e.x, e.y, '#4ade80');
+              popText('🦇', e.x, e.y);
+            }
+          }
+
+          if(target.hp <= 0) {
+            killEnemy(target, true);
+          }
+          return processEnemyTurns(index + 1);
         }
       }
       if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
-         !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;break;}
+         !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)&&!(nx===G.player.x&&ny===G.player.y)){e.x=nx;e.y=ny;break;}
     }
     return processEnemyTurns(index + 1);
   }
@@ -603,10 +657,10 @@ function doAbility2(){
     let visEnemies = G.enemies.filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x));
     let t=visEnemies.sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
     if(t.length) {
-      t[0].corpseExplosionTarget = true;
-      t[0].corpseExplosionTurns = 3;
+      t[0].raiseCorpseTarget = true;
+      t[0].raiseCorpseTurns = 3;
       G.ability2Cooldown = 8;
-      addLog(`Targeted ${t[0].name} for Corpse Explosion!`, 'log-combat'); advanceTurn();
+      addLog(`Targeted ${t[0].name} for Raise Corpse!`, 'log-combat'); advanceTurn();
     } else addLog('No visible enemies to target', 'log-info');
   }
   else if(p.class === 'monk') {

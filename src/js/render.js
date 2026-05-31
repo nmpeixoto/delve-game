@@ -118,7 +118,8 @@ function render(){
         let canTap = (dist <= maxRange);
         let dyingClass=en.dying?' tile-enemy-dying':'';
         let eliteClass=en.isElite?' tile-elite':'';
-        h+=`<div class="tile tile-enemy${dyingClass}${eliteClass}" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
+        let petClass=en.isPet?' tile-pet':'';
+        h+=`<div class="tile tile-enemy${dyingClass}${eliteClass}${petClass}" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
           onmouseenter="showTip(event,'${en.name}',${en.hp},${en.maxHp},${en.atk})"
           onmouseleave="hideTip()"
           onclick="${en.dying||!canTap?'':`tileAttack('${en.id}')`}"
