@@ -141,6 +141,25 @@ function killEnemy(en, skipAdvanceTurn) {
   }
 }
 
+function flushDeathBatch() {
+  if(_deathTimer) {
+    clearTimeout(_deathTimer);
+    let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
+    _deathBatch.forEach(d => {
+      G.enemies = G.enemies.filter(e => e.id !== d.en.id);
+      if(ch(.2)){
+        let pool=[...WEAPONS,...ARMORS,...POTIONS];
+        let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
+        G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
+      }
+    });
+    _deathBatch = [];
+    _deathTimer = null;
+    checkLevelUp();
+    if(shouldAdvance) advanceTurn();
+  }
+}
+
 function checkLevelUp(){
   let leveled = false;
   while(G.player.xp>=G.player.xpNext){
@@ -168,7 +187,6 @@ function advanceTurn(opts={}){
   }
   G.turn++;
 
-
   if(G.ability1Cooldown>0)G.ability1Cooldown--;
   if(G.ability2Cooldown>0)G.ability2Cooldown--;
   if(G.player.shieldWallTurns>0)G.player.shieldWallTurns--;
@@ -191,79 +209,92 @@ function advanceTurn(opts={}){
     }
   }
 
-  G.enemies.forEach(e=>{
-    if(G.gameOver||G.won||G.pendingHit) return;
-    if(e.dying) return;
-
-    let trapIdx = G.traps.findIndex(t => t.type === 'bear' && t.x===e.x && t.y===e.y);
-    if(trapIdx !== -1) {
-      G.traps.splice(trapIdx, 1);
-      e.stunnedTurns = 5;
-      e.hp -= 5;
-      floatText(`-5`, e.x, e.y, '#f87171');
-      addLog(`${e.name} stepped on a Bear Trap!`, 'log-combat');
-      if(e.hp<=0) { killEnemy(e, true); return; }
-    }
-
-    if(e.stunnedTurns>0) {
-      e.stunnedTurns--;
-      return;
-    }
-
-    let seesPlayer = G.visible.has(e.y*MAP_W+e.x) && G.player.vanishTurns === 0;
-    if(!seesPlayer){
-      if(ch(.4)){
-        let ds=[[-1,0],[1,0],[0,-1],[0,1]];let[dx,dy]=ds[rand(4)];
-        let nx=e.x+dx,ny=e.y+dy;
-        if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
-           !(nx===G.player.x&&ny===G.player.y)&&
-           !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;}
-      }
-    } else {
-      let dx=G.player.x-e.x,dy=G.player.y-e.y;
-      let steps=Math.abs(dx)>Math.abs(dy)?[[Math.sign(dx),0],[0,Math.sign(dy)]]:[[0,Math.sign(dy)],[Math.sign(dx),0]];
-      for(let[sx,sy] of steps){
-        let nx=e.x+sx,ny=e.y+sy;
-        if(nx===G.player.x&&ny===G.player.y){
-          let edm=Math.max(1,e.atk-gdef()+rand(3));
-          if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
-          if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
-
-          if(G.player.class === 'rogue' && ch(.4)) {
-            addLog(`Dodged ${e.name}'s attack!`, 'log-info');
-            popText('💨', G.player.x, G.player.y);
-          } else {
-            checkEmergencyPotion(e, edm, ()=>{
-              G.player.hp=Math.max(0,G.player.hp-edm);
-              addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
-              SFX.damage();shakeMap();flashDamage();
-              popText('💢', G.player.x, G.player.y);
-              floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
-              if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
-              computeVision();render();
-            });
-          }
-          break;
-        }
-        if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
-           !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;break;}
-      }
-    }
-  });
-  G.enemies.forEach(e=>{
-    if(e.corpseExplosionTurns>0){
-      e.corpseExplosionTurns--;
-      if(e.corpseExplosionTurns<=0){
-        e.corpseExplosionTarget=false;
-      }
-    }
-  });
-  computeVision();render();
-  if(!TIPS.firstEnemy.shown && G.enemies.some(e=>G.visible.has(e.y*MAP_W+e.x))) fireTip('firstEnemy');
-  if(!TIPS.firstStairs.shown && G.rooms.length &&
-     G.visible.has(G.rooms[G.rooms.length-1].cy*MAP_W+G.rooms[G.rooms.length-1].cx)) fireTip('firstStairs');
-  if(!TIPS.firstShop.shown && G.shops && G.shops.some(s=>G.visible.has(s.y*MAP_W+s.x))) fireTip('firstShop');
+  processEnemyTurns(0);
 }
+
+function processEnemyTurns(index) {
+  if(G.gameOver||G.won) return;
+  if(index >= G.enemies.length) {
+    G.enemies.forEach(e=>{
+      if(e.corpseExplosionTurns>0){
+        e.corpseExplosionTurns--;
+        if(e.corpseExplosionTurns<=0){
+          e.corpseExplosionTarget=false;
+        }
+      }
+    });
+    computeVision();render();
+    if(!TIPS.firstEnemy.shown && G.enemies.some(e=>G.visible.has(e.y*MAP_W+e.x))) fireTip('firstEnemy');
+    if(!TIPS.firstStairs.shown && G.rooms && G.rooms.length &&
+       G.visible.has(G.rooms[G.rooms.length-1].cy*MAP_W+G.rooms[G.rooms.length-1].cx)) fireTip('firstStairs');
+    if(!TIPS.firstShop.shown && G.shops && G.shops.some(s=>G.visible.has(s.y*MAP_W+s.x))) fireTip('firstShop');
+    return;
+  }
+
+  let e = G.enemies[index];
+  if(e.dying) return processEnemyTurns(index + 1);
+
+  let trapIdx = G.traps.findIndex(t => t.type === 'bear' && t.x===e.x && t.y===e.y);
+  if(trapIdx !== -1) {
+    G.traps.splice(trapIdx, 1);
+    e.stunnedTurns = 5;
+    e.hp -= 5;
+    floatText(`-5`, e.x, e.y, '#f87171');
+    addLog(`${e.name} stepped on a Bear Trap!`, 'log-combat');
+    if(e.hp<=0) killEnemy(e, true);
+    return processEnemyTurns(index + 1);
+  }
+
+  if(e.stunnedTurns>0) {
+    e.stunnedTurns--;
+    return processEnemyTurns(index + 1);
+  }
+
+  let seesPlayer = G.visible.has(e.y*MAP_W+e.x) && G.player.vanishTurns === 0;
+  if(!seesPlayer){
+    if(ch(.4)){
+      let ds=[[-1,0],[1,0],[0,-1],[0,1]];let[dx,dy]=ds[rand(4)];
+      let nx=e.x+dx,ny=e.y+dy;
+      if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
+         !(nx===G.player.x&&ny===G.player.y)&&
+         !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;}
+    }
+    return processEnemyTurns(index + 1);
+  } else {
+    let dx=G.player.x-e.x,dy=G.player.y-e.y;
+    let steps=Math.abs(dx)>Math.abs(dy)?[[Math.sign(dx),0],[0,Math.sign(dy)]]:[[0,Math.sign(dy)],[Math.sign(dx),0]];
+    for(let[sx,sy] of steps){
+      let nx=e.x+sx,ny=e.y+sy;
+      if(nx===G.player.x&&ny===G.player.y){
+        let edm=Math.max(1,e.atk-gdef()+rand(3));
+        if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
+        if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
+
+        if(G.player.class === 'rogue' && ch(.4)) {
+          addLog(`Dodged ${e.name}'s attack!`, 'log-info');
+          popText('💨', G.player.x, G.player.y);
+          return processEnemyTurns(index + 1);
+        } else {
+          checkEmergencyPotion(e, edm, ()=>{
+            G.player.hp=Math.max(0,G.player.hp-edm);
+            addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
+            SFX.damage();shakeMap();flashDamage();
+            popText('💢', G.player.x, G.player.y);
+            floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
+            if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
+            computeVision();render();
+            processEnemyTurns(index + 1);
+          });
+          return; // WAIT for checkEmergencyPotion to call the callback
+        }
+      }
+      if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
+         !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;break;}
+    }
+    return processEnemyTurns(index + 1);
+  }
+}
+
 
 function doAbility1(){
   if(G.gameOver||G.won)return;
@@ -424,7 +455,7 @@ function doAbility2(){
     addLog('Lay on Hands: Healed!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'ranger') {
-    G.traps.push({x: p.x, y: p.y, type: 'bear'});
+    G.traps.push({x: p.x, y: p.y, type: 'bear', revealed: true});
     let safeAdj = [[-1,0],[1,0],[0,-1],[0,1]].map(d=>({x:p.x+d[0], y:p.y+d[1]}))
       .filter(t=>G.map[t.y] && G.map[t.y][t.x]===TILE.FLOOR && !G.enemies.some(e=>e.x===t.x&&e.y===t.y));
     if(safeAdj.length) {

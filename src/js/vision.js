@@ -14,7 +14,7 @@ function computeVision(){
         G.seen.add(k);
         newTiles++;
       }
-      if(G.map[iy][ix]===TILE.WALL) break;
+      if(G.map[iy][ix]===TILE.WALL||G.map[iy][ix]===TILE.SECRET_DOOR||G.map[iy][ix]===TILE.LOCKED_DOOR) break;
     }
   }
 

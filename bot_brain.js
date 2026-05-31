@@ -12,8 +12,20 @@ window.botDecisionLogic = function() {
 
   const MAP_H = G.map ? G.map.length : 36;
   const MAP_W = G.map && G.map[0] ? G.map[0].length : 56;
-  const WALL = 0, STAIRS = 2, SHOP = 3;
+  const WALL = 0, STAIRS = 2, SHOP = 3, LOCKED_DOOR = 4, SECRET_DOOR = 5;
   const p = G.player;
+  const hasKey = () => G.items.some(i => i.carried && i.type === 'key');
+  const isDangerousTrap = (x, y) => {
+      let t = G.traps && G.traps.find(tr => tr.x === x && tr.y === y);
+      return t && t.revealed && !t.triggered && t.type !== 'bear';
+  };
+  const isPassable = (x, y) => {
+      let t = G.map[y][x];
+      if (t === WALL) return false;
+      if (t === LOCKED_DOOR && !hasKey()) return false;
+      if (isDangerousTrap(x, y)) return false;
+      return true;
+  };
   const liveEnemies = G.enemies.filter(e => !e.dying);
   const carriedPotions = () => G.items.filter(i => i.carried && i.type === 'potion');
   const canEquip = item => {
@@ -66,6 +78,8 @@ window.botDecisionLogic = function() {
     if (item.type === 'upgrade') return true;
     if (item.type === 'weapon') return canEquip(item) && weaponPower(item) > weaponPower(p.weapon);
     if (item.type === 'armor') return canEquip(item) && armorPower(item) > armorPower(p.armor);
+    if (item.type === 'key') return true;
+    if (item.type === 'shrine' && !item.used) return true;
     return false;
   };
   const shouldExitWithoutPotion = () => p.hp < p.maxHp * strategy.exitHp && carriedPotions().length === 0;
@@ -81,7 +95,8 @@ window.botDecisionLogic = function() {
     if (liveEnemies.length > 0) return false;
     for (let y = 0; y < MAP_H; y++) {
       for (let x = 0; x < MAP_W; x++) {
-        if (G.map[y][x] !== WALL && !G.seen.has(y * MAP_W + x)) return false;
+        let t = G.map[y][x];
+        if (t !== WALL && t !== SECRET_DOOR && !G.seen.has(y * MAP_W + x)) return false;
       }
     }
     return true;
@@ -375,7 +390,7 @@ window.botDecisionLogic = function() {
             let bestMinDist = -1;
             for (let d of dirs) {
                 let nx = p.x + d.dx, ny = p.y + d.dy;
-                if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && G.map[ny][nx] !== WALL) {
+                if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && isPassable(nx, ny)) {
                     if (G.enemies.some(e => e.x === nx && e.y === ny)) continue; // don't step ON an enemy
 
                     let minDist = Math.min(...visEnemies.map(e => Math.abs(e.x - nx) + Math.abs(e.y - ny)));
@@ -399,7 +414,7 @@ window.botDecisionLogic = function() {
           let escape = dirs
             .map(d => {
               let nx = p.x + d.dx, ny = p.y + d.dy;
-              if (nx < 0 || nx >= MAP_W || ny < 0 || ny >= MAP_H || G.map[ny][nx] === WALL) return null;
+              if (nx < 0 || nx >= MAP_W || ny < 0 || ny >= MAP_H || !isPassable(nx, ny)) return null;
               if (G.enemies.some(e => e.x === nx && e.y === ny)) return null;
               let minDist = Math.min(...liveEnemies.map(e => Math.abs(e.x - nx) + Math.abs(e.y - ny)));
               return { k: d.k, minDist };
@@ -467,7 +482,7 @@ window.botDecisionLogic = function() {
 
         for (let d of dirs) {
           let nx = curr.x + d.dx, ny = curr.y + d.dy;
-          if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && G.map[ny][nx] !== WALL) {
+          if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && isPassable(nx, ny)) {
             let isEnemyTile = liveEnemies.some(e => e.x === nx && e.y === ny);
             let isDyingEnemyTile = G.enemies.some(e => e.dying && e.x === nx && e.y === ny);
             if (isDyingEnemyTile) continue;
@@ -485,7 +500,6 @@ window.botDecisionLogic = function() {
       }
       return null;
   }
-
   let action = bfsPath(dyingWithoutPotion);
   if (!action && dyingWithoutPotion) {
       // Pass 2: If we couldn't escape safely, fight our way out!
@@ -510,7 +524,7 @@ window.botDecisionLogic = function() {
   let validMoves = dirs.filter(d => {
     let nx = p.x + d.dx, ny = p.y + d.dy;
     let occupied = G.enemies.some(e => e.x === nx && e.y === ny);
-    return nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && G.map[ny][nx] !== WALL && !occupied;
+    return nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && isPassable(nx, ny) && !occupied;
   });
 
   if(validMoves.length > 0) {

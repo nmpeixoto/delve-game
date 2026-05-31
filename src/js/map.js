@@ -69,11 +69,19 @@ function generateMap(){
       if(connected) {
         for(let ry=sy;ry<sy+sh;ry++) for(let rx=sx;rx<sx+sw;rx++) map[ry][rx]=TILE.FLOOR;
         let doorTile = isTreasure ? TILE.LOCKED_DOOR : TILE.SECRET_DOOR;
+        let potentialDoors = [];
         for(let y=sy-1; y<=sy+sh; y++) {
           for(let x=sx-1; x<=sx+sw; x++) {
             if((x===sx-1 || x===sx+sw || y===sy-1 || y===sy+sh) && map[y][x] === TILE.FLOOR) {
-              map[y][x] = doorTile;
+              potentialDoors.push({x,y});
             }
+          }
+        }
+        if(potentialDoors.length > 0) {
+          let doorIdx = Math.floor(Math.random() * potentialDoors.length);
+          for(let i=0; i<potentialDoors.length; i++) {
+            let pd = potentialDoors[i];
+            map[pd.y][pd.x] = (i === doorIdx) ? doorTile : TILE.WALL;
           }
         }
         rooms.push({x:sx, y:sy, w:sw, h:sh, cx:sx+Math.floor(sw/2), cy:sy+Math.floor(sh/2), type: isTreasure ? 'treasure' : 'secret'});
@@ -261,7 +269,11 @@ function buildFloor(){
     if(rooms.length <= 1) break;
     let r = rooms[rr(1, rooms.length-1)];
     if(r.type === 'shop' || r.type === 'treasure') continue;
-    let tx = r.x+rr(1,r.w-2), ty = r.y+rr(1,r.h-2);
+    let tx, ty, attempts = 0;
+    do {
+      tx = r.x+rr(1,r.w-2); ty = r.y+rr(1,r.h-2);
+      attempts++;
+    } while(r.type === 'shrine' && tx === r.cx && ty === r.cy && attempts < 10);
     let type = ch(0.5) ? 'spike' : (ch(0.5) ? 'gas' : 'alarm');
     G.traps.push({x:tx, y:ty, type, triggered: false});
   }

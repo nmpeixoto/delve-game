@@ -26,5 +26,6 @@ const SFX=(function(){
     sell:       ()=>play(440,'sine',0.12,0.15),
     bash:       ()=>{play(150,'sawtooth',0.1,0.4);setTimeout(()=>play(100,'square',0.15,0.3),50);},
     playerDeath:()=>{[300,250,200,150,100].forEach((f,i)=>setTimeout(()=>play(f,'sawtooth',0.3,0.3),i*120));},
+    click:      ()=>play(300,'sine',0.05,0.1),
   };
 })();

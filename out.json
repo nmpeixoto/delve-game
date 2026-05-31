@@ -1,0 +1,295 @@
+{
+  "generatedAt": "2026-05-31T12:12:10.983Z",
+  "config": {
+    "classes": "warrior,rogue,mage,paladin,ranger,barbarian,necromancer,monk",
+    "perClass": 1,
+    "seedBase": 1,
+    "maxTurns": 100,
+    "output": "out.json",
+    "trace": false,
+    "verbose": false,
+    "help": false,
+    "classList": [
+      "warrior",
+      "rogue",
+      "mage",
+      "paladin",
+      "ranger",
+      "barbarian",
+      "necromancer",
+      "monk"
+    ]
+  },
+  "overall": {
+    "runs": 8,
+    "wins": 0,
+    "losses": 0,
+    "timeouts": 6,
+    "stuck": 0,
+    "errors": 2,
+    "winRate": 0,
+    "floor5Rate": 0,
+    "avgFloor": 1,
+    "avgTurns": 90.8,
+    "avgSteps": 97.9,
+    "maxFloor": 1,
+    "minFloor": 1,
+    "statuses": {}
+  },
+  "byClass": {
+    "warrior": {
+      "runs": 1,
+      "wins": 0,
+      "losses": 0,
+      "timeouts": 1,
+      "stuck": 0,
+      "errors": 0,
+      "winRate": 0,
+      "floor5Rate": 0,
+      "avgFloor": 1,
+      "avgTurns": 97,
+      "avgSteps": 100,
+      "maxFloor": 1,
+      "minFloor": 1,
+      "statuses": {
+        "max_turns": 1
+      }
+    },
+    "rogue": {
+      "runs": 1,
+      "wins": 0,
+      "losses": 0,
+      "timeouts": 0,
+      "stuck": 0,
+      "errors": 1,
+      "winRate": 0,
+      "floor5Rate": 0,
+      "avgFloor": 1,
+      "avgTurns": 45,
+      "avgSteps": 90,
+      "maxFloor": 1,
+      "minFloor": 1,
+      "statuses": {
+        "fatal_script_error": 1
+      }
+    },
+    "mage": {
+      "runs": 1,
+      "wins": 0,
+      "losses": 0,
+      "timeouts": 1,
+      "stuck": 0,
+      "errors": 0,
+      "winRate": 0,
+      "floor5Rate": 0,
+      "avgFloor": 1,
+      "avgTurns": 100,
+      "avgSteps": 100,
+      "maxFloor": 1,
+      "minFloor": 1,
+      "statuses": {
+        "max_turns": 1
+      }
+    },
+    "paladin": {
+      "runs": 1,
+      "wins": 0,
+      "losses": 0,
+      "timeouts": 1,
+      "stuck": 0,
+      "errors": 0,
+      "winRate": 0,
+      "floor5Rate": 0,
+      "avgFloor": 1,
+      "avgTurns": 97,
+      "avgSteps": 100,
+      "maxFloor": 1,
+      "minFloor": 1,
+      "statuses": {
+        "max_turns": 1
+      }
+    },
+    "ranger": {
+      "runs": 1,
+      "wins": 0,
+      "losses": 0,
+      "timeouts": 0,
+      "stuck": 0,
+      "errors": 1,
+      "winRate": 0,
+      "floor5Rate": 0,
+      "avgFloor": 1,
+      "avgTurns": 93,
+      "avgSteps": 93,
+      "maxFloor": 1,
+      "minFloor": 1,
+      "statuses": {
+        "fatal_script_error": 1
+      }
+    },
+    "barbarian": {
+      "runs": 1,
+      "wins": 0,
+      "losses": 0,
+      "timeouts": 1,
+      "stuck": 0,
+      "errors": 0,
+      "winRate": 0,
+      "floor5Rate": 0,
+      "avgFloor": 1,
+      "avgTurns": 97,
+      "avgSteps": 100,
+      "maxFloor": 1,
+      "minFloor": 1,
+      "statuses": {
+        "max_turns": 1
+      }
+    },
+    "necromancer": {
+      "runs": 1,
+      "wins": 0,
+      "losses": 0,
+      "timeouts": 1,
+      "stuck": 0,
+      "errors": 0,
+      "winRate": 0,
+      "floor5Rate": 0,
+      "avgFloor": 1,
+      "avgTurns": 97,
+      "avgSteps": 100,
+      "maxFloor": 1,
+      "minFloor": 1,
+      "statuses": {
+        "max_turns": 1
+      }
+    },
+    "monk": {
+      "runs": 1,
+      "wins": 0,
+      "losses": 0,
+      "timeouts": 1,
+      "stuck": 0,
+      "errors": 0,
+      "winRate": 0,
+      "floor5Rate": 0,
+      "avgFloor": 1,
+      "avgTurns": 100,
+      "avgSteps": 100,
+      "maxFloor": 1,
+      "minFloor": 1,
+      "statuses": {
+        "max_turns": 1
+      }
+    }
+  },
+  "runs": [
+    {
+      "class": "warrior",
+      "seed": 1,
+      "status": "max_turns",
+      "decisionSteps": 100,
+      "gameTurns": 97,
+      "finalFloor": 1,
+      "floor5Reached": false,
+      "maxHp": 46,
+      "hp": 46,
+      "gold": 4,
+      "errors": []
+    },
+    {
+      "class": "rogue",
+      "seed": 100001,
+      "status": "fatal_script_error",
+      "decisionSteps": 90,
+      "gameTurns": 45,
+      "finalFloor": 1,
+      "floor5Reached": false,
+      "maxHp": 32,
+      "hp": 32,
+      "gold": 20,
+      "errors": [
+        "SFX.click is not a function"
+      ]
+    },
+    {
+      "class": "mage",
+      "seed": 200001,
+      "status": "max_turns",
+      "decisionSteps": 100,
+      "gameTurns": 100,
+      "finalFloor": 1,
+      "floor5Reached": false,
+      "maxHp": 39,
+      "hp": 39,
+      "gold": 51,
+      "errors": []
+    },
+    {
+      "class": "paladin",
+      "seed": 300001,
+      "status": "max_turns",
+      "decisionSteps": 100,
+      "gameTurns": 97,
+      "finalFloor": 1,
+      "floor5Reached": false,
+      "maxHp": 40,
+      "hp": 32,
+      "gold": 15,
+      "errors": []
+    },
+    {
+      "class": "ranger",
+      "seed": 400001,
+      "status": "fatal_script_error",
+      "decisionSteps": 93,
+      "gameTurns": 93,
+      "finalFloor": 1,
+      "floor5Reached": false,
+      "maxHp": 29,
+      "hp": 29,
+      "gold": 24,
+      "errors": [
+        "SFX.click is not a function"
+      ]
+    },
+    {
+      "class": "barbarian",
+      "seed": 500001,
+      "status": "max_turns",
+      "decisionSteps": 100,
+      "gameTurns": 97,
+      "finalFloor": 1,
+      "floor5Reached": false,
+      "maxHp": 66,
+      "hp": 63,
+      "gold": 14,
+      "errors": []
+    },
+    {
+      "class": "necromancer",
+      "seed": 600001,
+      "status": "max_turns",
+      "decisionSteps": 100,
+      "gameTurns": 97,
+      "finalFloor": 1,
+      "floor5Reached": false,
+      "maxHp": 34,
+      "hp": 34,
+      "gold": 9,
+      "errors": []
+    },
+    {
+      "class": "monk",
+      "seed": 700001,
+      "status": "max_turns",
+      "decisionSteps": 100,
+      "gameTurns": 100,
+      "finalFloor": 1,
+      "floor5Reached": false,
+      "maxHp": 30,
+      "hp": 28,
+      "gold": 15,
+      "errors": []
+    }
+  ]
+}

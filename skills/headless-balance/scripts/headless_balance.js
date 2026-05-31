@@ -467,6 +467,7 @@ function createRuntime(seed, options = {}) {
       buy() {},
       sell() {},
       playerDeath() {},
+      click() {},
     },
   };
 
@@ -619,13 +620,13 @@ function createRuntime(seed, options = {}) {
     const emergencyOverlay = document.getElementById('emergency-overlay');
     const helpOverlay = document.getElementById('help-overlay');
     const itemsHash = (G.items || [])
-      .map(i => `${i.id}:${i.type}:${i.carried ? 1 : 0}:${i.name}:${i.x ?? ''},${i.y ?? ''}:${i.sold ? 1 : 0}`)
+      .map(i => `${i.id}:${i.type}:${i.carried ? 1 : 0}:${i.name}:${i.x ?? ''},${i.y ?? ''}:${i.sold ? 1 : 0}:${i.used ? 1 : 0}`)
       .join('|');
     const enemyHash = (G.enemies || [])
       .map(e => `${e.id}:${e.name}:${e.hp}:${e.x},${e.y}:${e.dying ? 1 : 0}:${e.stunnedTurns || 0}:${e.corpseExplosionTurns || 0}:${e.corpseExplosionTarget ? 1 : 0}`)
       .join('|');
     const trapHash = (G.traps || [])
-      .map(t => `${t.x},${t.y}`)
+      .map(t => `${t.x},${t.y}:${t.type}:${t.revealed?1:0}:${t.triggered?1:0}`)
       .join('|');
 
     return {
@@ -653,6 +654,7 @@ function createRuntime(seed, options = {}) {
       vanishTurns: p.vanishTurns || 0,
       bloodlustTurns: p.bloodlustTurns || 0,
       rootedTurns: p.rootedTurns || 0,
+      poisonedTurns: p.poisonedTurns || 0,
       vampirism: p.vampirism || 0,
       regen: p.regen || 0,
       swiftness: p.swiftness || 0,

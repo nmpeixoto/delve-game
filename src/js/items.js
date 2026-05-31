@@ -263,6 +263,8 @@ function descend(){
   if(G.map[G.player.y][G.player.x]!==TILE.STAIRS){addLog('Find the stairs (>) first','log-info');return;}
   G.floor++;
   if(G.floor>FLOORS){G.won=true;showVictory();return;}
+  if(typeof flushDeathBatch === 'function') flushDeathBatch();
   G.player.hp=Math.min(G.player.maxHp,G.player.hp+10);
+  G.player.poisonedTurns=0;
   buildFloor();
 }

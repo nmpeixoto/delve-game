@@ -34,6 +34,7 @@ function move(dx,dy){
   if(en){if(en.dying)return;attackEnemy(en.id);return;}
 
   let trap = G.traps.find(t=>t.x===nx&&t.y===ny&&!t.triggered);
+  if(trap && trap.type === 'bear') trap = null; // Bear traps only trigger on enemies
   if(trap && trap.revealed) {
     let disarmChance = 0.3 + (G.player.perception * 0.15) + (G.player.class === 'rogue' ? 0.20 : 0);
     if(ch(disarmChance)) {

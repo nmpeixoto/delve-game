@@ -68,6 +68,7 @@ function openShop(){
   if(!nearShop){addLog('Move to a shop ($) to enter','log-shop');return;}
   G.currentShop = nearShop;
   _lastAction = 0; // entering the merchant should not inherit the map action cooldown
+  if(typeof closeInv === 'function') closeInv();
   renderShop();
   switchShopTab('buy');
   document.getElementById('shop-overlay').classList.add('open');
@@ -221,6 +222,7 @@ function sellItem(id, equippedSlot){
   document.getElementById('shop-gold-val').textContent=G.player.gold;
   updateHUD();
   updateActBtns();
+  if(typeof updateInvDrawer === 'function') updateInvDrawer();
   renderSellPanel();
   renderShop(); // refresh buy tab so affordability colours are up to date
 }
@@ -262,6 +264,7 @@ function sellWeakerGear(){
     SFX.sell();
     document.getElementById('shop-gold-val').textContent=G.player.gold;
     updateHUD();
+    if(typeof updateInvDrawer === 'function') updateInvDrawer();
     renderSellPanel();
     renderShop();
   } else {
