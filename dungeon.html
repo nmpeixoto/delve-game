@@ -2023,28 +2023,6 @@ function useItem(id){
       }
       SFX.levelUp();
     }
-    let idx = G.items.findIndex(i=>i.id===id);
-    if(idx > -1) G.items.splice(idx,1);
-    advanceTurn();closeInv();
-    return;
-  }
-
-  if(!canEquip(it)) {
-    addLog(`Cannot equip ${it.name} (Requires: ${it.reqLvl?'Lvl '+it.reqLvl:''} ${it.reqClass?it.reqClass.join('/'):''})`, 'log-info');
-    return;
-  }
-
-  if(it.type==='weapon'){
-    let prev=G.player.weapon;
-    if(prev){
-      G.items=G.items.filter(i=>i.id!==prev.id);
-      prev.carried=true;prev.x=prev.y=undefined;
-      G.items.push(prev);
-    }
-    G.player.weapon=it;
-    let idx = G.items.findIndex(i=>i.id===id);
-    if(idx > -1) G.items.splice(idx,1);
-    updateBestWeapon(it);
     G.player.hp+=h;
     addLog(`Drank ${it.name}: +${h} HP`,'log-item');
     floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
