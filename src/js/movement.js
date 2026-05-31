@@ -33,47 +33,38 @@ function move(dx,dy){
   let en=G.enemies.find(e=>e.x===nx&&e.y===ny);
   if(en){if(en.dying)return;attackEnemy(en.id);return;}
 
-  G.player.x=nx;G.player.y=ny;
-  computeVision();
-
   let trap = G.traps.find(t=>t.x===nx&&t.y===ny&&!t.triggered);
-  if(trap) {
-    if(trap.revealed) {
-      let disarmChance = 0.3 + (G.player.perception * 0.15) + (G.player.class === 'rogue' ? 0.20 : 0);
-      if(ch(disarmChance)) {
-        trap.triggered = true;
-        let tIdx = G.traps.findIndex(t => t.x===nx && t.y===ny);
-        if(tIdx > -1) G.traps.splice(tIdx, 1);
-        addLog('You successfully disarmed the trap!', 'log-info');
-        floatText('DISARMED', nx, ny, '#4ade80');
-        SFX.click();
-        trap = null;
-      } else {
-        addLog('You failed to disarm the trap!', 'log-combat');
-        floatText('FAILED', nx, ny, '#f87171');
-      }
-    }
-    
-    if(trap) {
+  if(trap && trap.revealed) {
+    let disarmChance = 0.3 + (G.player.perception * 0.15) + (G.player.class === 'rogue' ? 0.20 : 0);
+    if(ch(disarmChance)) {
+      trap.triggered = true;
+      let tIdx = G.traps.findIndex(t => t.x===nx && t.y===ny);
+      if(tIdx > -1) G.traps.splice(tIdx, 1);
+      addLog('You successfully disarmed the trap!', 'log-info');
+      floatText('DISARMED', nx, ny, '#4ade80');
+      SFX.click();
+    } else {
+      addLog('You failed to disarm the trap and triggered it!', 'log-combat');
+      floatText('FAILED', nx, ny, '#f87171');
       trap.triggered = true;
       if(G.player.class === 'rogue' && ch(0.5)) {
-        addLog('You agilely dodged a trap!', 'log-info');
+        addLog('You agilely dodged the trap!', 'log-info');
         floatText('DODGED', nx, ny, '#fbbf24');
       } else {
         if(trap.type === 'spike') {
           let dmg = Math.floor(G.player.maxHp * 0.15) + 2;
           G.player.hp -= dmg;
-          addLog(`You stepped on a spike trap! Took ${dmg} damage.`, 'log-combat');
+          addLog(`Spike trap triggered! Took ${dmg} damage.`, 'log-combat');
           floatText(`-${dmg}`, nx, ny, '#f87171');
           flashDamage();
           SFX.hit();
         } else if(trap.type === 'gas') {
           G.player.poisonedTurns = 5;
-          addLog('You triggered a poison gas trap!', 'log-combat');
+          addLog('Poison gas trap triggered!', 'log-combat');
           floatText('POISONED', nx, ny, '#a855f7');
           SFX.hit();
         } else if(trap.type === 'alarm') {
-          addLog('You triggered an alarm! Enemies are alerted.', 'log-combat');
+          addLog('Alarm triggered! Enemies are alerted.', 'log-combat');
           floatText('ALARM!', nx, ny, '#f87171');
           SFX.hit();
           // Awake enemies
@@ -81,6 +72,41 @@ function move(dx,dy){
             if(!e.dying && e.stunnedTurns) e.stunnedTurns = 0;
           });
         }
+      }
+    }
+    advanceTurn();
+    return;
+  }
+
+  G.player.x=nx;G.player.y=ny;
+  computeVision();
+
+  if(trap) {
+    trap.triggered = true;
+    if(G.player.class === 'rogue' && ch(0.5)) {
+      addLog('You agilely dodged a trap!', 'log-info');
+      floatText('DODGED', nx, ny, '#fbbf24');
+    } else {
+      if(trap.type === 'spike') {
+        let dmg = Math.floor(G.player.maxHp * 0.15) + 2;
+        G.player.hp -= dmg;
+        addLog(`You stepped on a spike trap! Took ${dmg} damage.`, 'log-combat');
+        floatText(`-${dmg}`, nx, ny, '#f87171');
+        flashDamage();
+        SFX.hit();
+      } else if(trap.type === 'gas') {
+        G.player.poisonedTurns = 5;
+        addLog('You triggered a poison gas trap!', 'log-combat');
+        floatText('POISONED', nx, ny, '#a855f7');
+        SFX.hit();
+      } else if(trap.type === 'alarm') {
+        addLog('You triggered an alarm! Enemies are alerted.', 'log-combat');
+        floatText('ALARM!', nx, ny, '#f87171');
+        SFX.hit();
+        // Awake enemies
+        G.enemies.forEach(e => {
+          if(!e.dying && e.stunnedTurns) e.stunnedTurns = 0;
+        });
       }
     }
   }

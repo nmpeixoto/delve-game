@@ -266,6 +266,16 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .tile-elite { text-shadow: 0 0 10px var(--red), 0 0 20px var(--accent); animation: shopPulse 2s ease-in-out infinite; }
 #minimap { position: absolute; top: 5px; right: 5px; width: 112px; height: 72px; border: 1px solid var(--border); background: rgba(10, 10, 15, 0.85); opacity: 0.8; pointer-events: none; z-index: 15; image-rendering: pixelated; }
 
+@media (min-width: 800px) and (min-height: 600px) {
+  #minimap { width: 168px; height: 108px; top: 15px; right: 15px; opacity: 0.9; }
+}
+@media (min-width: 1200px) and (min-height: 800px) {
+  #minimap { width: 224px; height: 144px; top: 20px; right: 20px; border-width: 2px; opacity: 0.95; }
+}
+@media (min-width: 1600px) and (min-height: 1000px) {
+  #minimap { width: 336px; height: 216px; top: 30px; right: 30px; border-width: 3px; opacity: 1; }
+}
+
 </style>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -325,6 +335,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div class="hud-stats">
         <div class="hud-stat"><span class="hud-label">ATK</span><span id="atk-val" style="color:var(--orange)">4</span></div>
         <div class="hud-stat"><span class="hud-label">DEF</span><span id="def-val" style="color:var(--blue)">1</span></div>
+        <div class="hud-stat"><span class="hud-label">PER</span><span id="per-val" style="color:var(--green)">0</span></div>
         <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span> <span id="class-val" style="color:var(--dim);text-transform:uppercase;font-size:.45rem;margin-left:2px;" onmouseenter="showClassTip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'class')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()"></span></div>
         <div class="hud-stat"><span class="hud-label" style="color:var(--gold)">GP</span><span id="gold-val" style="color:var(--gold)">0</span></div>
       </div>
@@ -995,6 +1006,7 @@ function updateHUD(){
   document.getElementById('xp-val').textContent=`${p.xp}/${p.xpNext}`;
   document.getElementById('atk-val').textContent=gatk();
   document.getElementById('def-val').textContent=gdef();
+  document.getElementById('per-val').textContent=p.perception||0;
   document.getElementById('lvl-val').textContent=p.lvl;
   document.getElementById('class-val').textContent=p.class;
   document.getElementById('gold-val').textContent=p.gold;
@@ -1374,47 +1386,38 @@ function move(dx,dy){
   let en=G.enemies.find(e=>e.x===nx&&e.y===ny);
   if(en){if(en.dying)return;attackEnemy(en.id);return;}
 
-  G.player.x=nx;G.player.y=ny;
-  computeVision();
-
   let trap = G.traps.find(t=>t.x===nx&&t.y===ny&&!t.triggered);
-  if(trap) {
-    if(trap.revealed) {
-      let disarmChance = 0.3 + (G.player.perception * 0.15) + (G.player.class === 'rogue' ? 0.20 : 0);
-      if(ch(disarmChance)) {
-        trap.triggered = true;
-        let tIdx = G.traps.findIndex(t => t.x===nx && t.y===ny);
-        if(tIdx > -1) G.traps.splice(tIdx, 1);
-        addLog('You successfully disarmed the trap!', 'log-info');
-        floatText('DISARMED', nx, ny, '#4ade80');
-        SFX.click();
-        trap = null;
-      } else {
-        addLog('You failed to disarm the trap!', 'log-combat');
-        floatText('FAILED', nx, ny, '#f87171');
-      }
-    }
-    
-    if(trap) {
+  if(trap && trap.revealed) {
+    let disarmChance = 0.3 + (G.player.perception * 0.15) + (G.player.class === 'rogue' ? 0.20 : 0);
+    if(ch(disarmChance)) {
+      trap.triggered = true;
+      let tIdx = G.traps.findIndex(t => t.x===nx && t.y===ny);
+      if(tIdx > -1) G.traps.splice(tIdx, 1);
+      addLog('You successfully disarmed the trap!', 'log-info');
+      floatText('DISARMED', nx, ny, '#4ade80');
+      SFX.click();
+    } else {
+      addLog('You failed to disarm the trap and triggered it!', 'log-combat');
+      floatText('FAILED', nx, ny, '#f87171');
       trap.triggered = true;
       if(G.player.class === 'rogue' && ch(0.5)) {
-        addLog('You agilely dodged a trap!', 'log-info');
+        addLog('You agilely dodged the trap!', 'log-info');
         floatText('DODGED', nx, ny, '#fbbf24');
       } else {
         if(trap.type === 'spike') {
           let dmg = Math.floor(G.player.maxHp * 0.15) + 2;
           G.player.hp -= dmg;
-          addLog(`You stepped on a spike trap! Took ${dmg} damage.`, 'log-combat');
+          addLog(`Spike trap triggered! Took ${dmg} damage.`, 'log-combat');
           floatText(`-${dmg}`, nx, ny, '#f87171');
           flashDamage();
           SFX.hit();
         } else if(trap.type === 'gas') {
           G.player.poisonedTurns = 5;
-          addLog('You triggered a poison gas trap!', 'log-combat');
+          addLog('Poison gas trap triggered!', 'log-combat');
           floatText('POISONED', nx, ny, '#a855f7');
           SFX.hit();
         } else if(trap.type === 'alarm') {
-          addLog('You triggered an alarm! Enemies are alerted.', 'log-combat');
+          addLog('Alarm triggered! Enemies are alerted.', 'log-combat');
           floatText('ALARM!', nx, ny, '#f87171');
           SFX.hit();
           // Awake enemies
@@ -1422,6 +1425,41 @@ function move(dx,dy){
             if(!e.dying && e.stunnedTurns) e.stunnedTurns = 0;
           });
         }
+      }
+    }
+    advanceTurn();
+    return;
+  }
+
+  G.player.x=nx;G.player.y=ny;
+  computeVision();
+
+  if(trap) {
+    trap.triggered = true;
+    if(G.player.class === 'rogue' && ch(0.5)) {
+      addLog('You agilely dodged a trap!', 'log-info');
+      floatText('DODGED', nx, ny, '#fbbf24');
+    } else {
+      if(trap.type === 'spike') {
+        let dmg = Math.floor(G.player.maxHp * 0.15) + 2;
+        G.player.hp -= dmg;
+        addLog(`You stepped on a spike trap! Took ${dmg} damage.`, 'log-combat');
+        floatText(`-${dmg}`, nx, ny, '#f87171');
+        flashDamage();
+        SFX.hit();
+      } else if(trap.type === 'gas') {
+        G.player.poisonedTurns = 5;
+        addLog('You triggered a poison gas trap!', 'log-combat');
+        floatText('POISONED', nx, ny, '#a855f7');
+        SFX.hit();
+      } else if(trap.type === 'alarm') {
+        addLog('You triggered an alarm! Enemies are alerted.', 'log-combat');
+        floatText('ALARM!', nx, ny, '#f87171');
+        SFX.hit();
+        // Awake enemies
+        G.enemies.forEach(e => {
+          if(!e.dying && e.stunnedTurns) e.stunnedTurns = 0;
+        });
       }
     }
   }
@@ -1465,7 +1503,8 @@ function tilePickup(id){
   if(Math.abs(it.x-G.player.x)>1||Math.abs(it.y-G.player.y)>1){
     move(Math.sign(it.x-G.player.x)||0,Math.sign(it.y-G.player.y)||0);return;
   }
-  pickupItem(id);
+  if(it.type === 'shrine') interactShrine(it);
+  else pickupItem(id);
 }
 
 function pickupItem(id, opts={}){
@@ -1614,10 +1653,9 @@ function useItem(id){
 
   if(it.type==='scroll') {
     if(it.name==='Scroll of Detection') {
-      let r = 8;
       let revealedSomething = false;
-      for(let y=Math.max(0, G.player.y-r); y<=Math.min(MAP_H-1, G.player.y+r); y++) {
-        for(let x=Math.max(0, G.player.x-r); x<=Math.min(MAP_W-1, G.player.x+r); x++) {
+      for(let y=0; y<MAP_H; y++) {
+        for(let x=0; x<MAP_W; x++) {
           if(G.map[y][x] === TILE.SECRET_DOOR) {
             G.map[y][x] = TILE.FLOOR;
             revealedSomething = true;

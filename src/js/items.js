@@ -12,7 +12,8 @@ function tilePickup(id){
   if(Math.abs(it.x-G.player.x)>1||Math.abs(it.y-G.player.y)>1){
     move(Math.sign(it.x-G.player.x)||0,Math.sign(it.y-G.player.y)||0);return;
   }
-  pickupItem(id);
+  if(it.type === 'shrine') interactShrine(it);
+  else pickupItem(id);
 }
 
 function pickupItem(id, opts={}){
@@ -161,10 +162,9 @@ function useItem(id){
 
   if(it.type==='scroll') {
     if(it.name==='Scroll of Detection') {
-      let r = 8;
       let revealedSomething = false;
-      for(let y=Math.max(0, G.player.y-r); y<=Math.min(MAP_H-1, G.player.y+r); y++) {
-        for(let x=Math.max(0, G.player.x-r); x<=Math.min(MAP_W-1, G.player.x+r); x++) {
+      for(let y=0; y<MAP_H; y++) {
+        for(let x=0; x<MAP_W; x++) {
           if(G.map[y][x] === TILE.SECRET_DOOR) {
             G.map[y][x] = TILE.FLOOR;
             revealedSomething = true;

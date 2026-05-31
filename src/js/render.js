@@ -160,6 +160,7 @@ function updateHUD(){
   document.getElementById('xp-val').textContent=`${p.xp}/${p.xpNext}`;
   document.getElementById('atk-val').textContent=gatk();
   document.getElementById('def-val').textContent=gdef();
+  document.getElementById('per-val').textContent=p.perception||0;
   document.getElementById('lvl-val').textContent=p.lvl;
   document.getElementById('class-val').textContent=p.class;
   document.getElementById('gold-val').textContent=p.gold;
