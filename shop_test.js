@@ -26,6 +26,12 @@ function loadShopContext(overrides = {}) {
       },
       items: [],
     },
+    getStat: (statName) => {
+      let base = context.G.player[statName] || 0;
+      let w = context.G.player.weapon ? (context.G.player.weapon[statName] || 0) : 0;
+      let a = context.G.player.armor ? (context.G.player.armor[statName] || 0) : 0;
+      return base + w + a;
+    },
     _lastAction: 0,
     addLog: () => {},
     floatText: () => {},

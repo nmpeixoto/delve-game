@@ -238,7 +238,7 @@ Named boss: the Dungeon Lord. Multi-phase health pool, unique attack patterns. S
 
 __Unique Legendary Drops__
 
-Boss-only items: Ring of the Fallen (\+5 all stats), Cloak of Shadows (50% dodge), Necronomicon (doubles magic damage).
+Boss-only items: Ring of the Fallen (\+5 all stats), Cloak of Shadows (50% dodge), Necronomicon (doubles magic damage). these should only be found in secret rooms and such.
 
 __Hard Mode Unlock__
 

@@ -62,6 +62,12 @@ function loadCombat(overrides = {}) {
       firstShop: { shown: false },
     },
     gatk: () => 4,
+    getStat: (statName) => {
+      let base = context.G.player[statName] || 0;
+      let w = context.G.player.weapon ? (context.G.player.weapon[statName] || 0) : 0;
+      let a = context.G.player.armor ? (context.G.player.armor[statName] || 0) : 0;
+      return base + w + a;
+    },
     gdef: () => 1,
     rand: () => 0,
     ch: () => false,

@@ -12,3 +12,9 @@ function canAct(){
   if(now-_lastAction<120) return false;
   _lastAction=now; return true;
 }
+function getStat(statName) {
+  let base = G.player[statName] || 0;
+  let w = G.player.weapon ? (G.player.weapon[statName] || 0) : 0;
+  let a = G.player.armor ? (G.player.armor[statName] || 0) : 0;
+  return base + w + a;
+}

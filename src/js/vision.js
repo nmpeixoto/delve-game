@@ -22,8 +22,8 @@ function computeVision(){
     for(let i=0; i<newTiles; i++){
       G.player.tilesExplored++;
       
-      if(G.player.regen > 0 && G.player.tilesExplored % 10 === 0) {
-        let heal = G.player.regen;
+      if(getStat('regen') > 0 && G.player.tilesExplored % 10 === 0) {
+        let heal = getStat('regen');
         G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
         floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
       }
@@ -33,15 +33,15 @@ function computeVision(){
         floatText('+1 HP', G.player.x, G.player.y, '#4ade80');
       }
 
-      if(G.player.swiftness > 0 && G.player.tilesExplored % 15 === 0) {
-        G.player.freeMoves += G.player.swiftness;
-        addLog(`Swiftness granted ${G.player.swiftness} free move(s)!`, 'log-info');
+      if(getStat('swiftness') > 0 && G.player.tilesExplored % 15 === 0) {
+        G.player.freeMoves += getStat('swiftness');
+        addLog(`Swiftness granted ${getStat('swiftness')} free move(s)!`, 'log-info');
       }
     }
   }
 
-  if(G.player.perception > 0) {
-    let p = G.player.perception;
+  if(getStat('perception') > 0) {
+    let p = getStat('perception');
     for(let y=Math.max(0, py-p); y<=Math.min(MAP_H-1, py+p); y++) {
       for(let x=Math.max(0, px-p); x<=Math.min(MAP_W-1, px+p); x++) {
         if(!G.visible.has(y*MAP_W+x)) continue;

@@ -316,13 +316,24 @@ Enemy stats below are base floor 1 values. Floor scaling uses these profiles:
 
 | Enemy | Symbol | HP | ATK | DEF | XP | Gold | First Appears |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Rat | R | 5 | 2 | 0 | 3 | 2 | Floor 1 |
-| Goblin | G | 10 | 4 | 1 | 6 | 4 | Floor 1 |
-| Skeleton | S | 15 | 6 | 2 | 10 | 6 | Floor 1-2 |
-| Orc | O | 25 | 8 | 3 | 15 | 10 | Floor 2-3 |
-| Troll | T | 40 | 12 | 4 | 25 | 15 | Floor 3-4 |
-| Demon | D | 55 | 15 | 5 | 35 | 22 | Floor 4-5 |
-| Lich | L | 70 | 18 | 6 | 50 | 30 | Floor 4-5 |
+| Rat | R | 8 | 3 | 0 | 3 | 2 | Floor 1 |
+| Goblin | G | 15 | 6 | 1 | 6 | 4 | Floor 1 |
+| Skeleton | S | 25 | 9 | 2 | 10 | 6 | Floor 1-2 |
+| Orc | O | 40 | 12 | 3 | 15 | 10 | Floor 2-3 |
+| Troll | T | 60 | 18 | 4 | 25 | 15 | Floor 3-4 |
+| Demon | D | 85 | 22 | 5 | 35 | 22 | Floor 4-5 |
+| Lich | L | 120 | 26 | 6 | 50 | 30 | Floor 4-5 |
+
+### Enemy Abilities
+
+Enemies possess distinct mechanical challenges:
+
+- **Goblin**: *Dodge* — 20% chance to completely negate a player's attack.
+- **Skeleton**: *Revive* — Collapses into bones when killed. If not destroyed within two turns, it revives with 50% HP.
+- **Orc**: *Enrage* — At 50% HP or lower, its attack damage is permanently multiplied by 1.5x.
+- **Troll**: *Regeneration* — Passively heals for 10% of max HP every turn.
+- **Demon**: *Vampiric* — Heals itself for 50% of the damage it deals to the player.
+- **Lich**: *Freeze* — 25% chance per attack to freeze the player in place for 2 turns.
 
 ## Systems Reference
 
@@ -333,10 +344,14 @@ Enemy stats below are base floor 1 values. Floor scaling uses these profiles:
 - Ranger bows extend ranged taps to 3 tiles and skip the counterattack at range.
 - Damage uses `max(1, ATK - DEF + random 0-2)`.
 - DEF reduces incoming damage by 1 per point before randomness.
-- **Critical Hits**: Players with a Critical Hit chance can occasionally deal 2x damage on attacks.
-- **Dodge**: Players with Dodge chance can occasionally negate incoming enemy attacks completely.
+- **Secondary Stats**: Gear and passives can grant secondary stats like Critical Hit chance (2x damage), Dodge chance (negate attacks), Vampirism (heal on kill/damage), Perception (vision range and trap disarm), Regeneration, and Swiftness (free moves).
 - Leveling up increases Max HP by 8, ATK by 1, DEF by 1, and the XP requirement scales up by 1.6x.
 - Paladins gain an extra +2 Max HP on level up.
+
+### Hazards and Exploration
+
+- Traps deal damage based on max HP.
+- Players with Perception and Dodge can disarm or evade traps. Successfully disarming a trap yields salvaged gold or hidden items.
 
 ### Inventory and Gear
 

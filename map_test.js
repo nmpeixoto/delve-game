@@ -34,6 +34,12 @@ function loadMapContext() {
     MAP_H,
     TILE,
     FLOORS: 6,
+    getStat: (statName) => {
+      let base = context.G.player[statName] || 0;
+      let w = context.G.player.weapon ? (context.G.player.weapon[statName] || 0) : 0;
+      let a = context.G.player.armor ? (context.G.player.armor[statName] || 0) : 0;
+      return base + w + a;
+    },
     rr: (a, b) => a + Math.floor(deterministicMath.random() * (b - a + 1)),
     rand: n => Math.floor(deterministicMath.random() * n),
     ch: () => false,

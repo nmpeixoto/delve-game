@@ -36,19 +36,31 @@ function move(dx,dy){
   let trap = G.traps.find(t=>t.x===nx&&t.y===ny&&!t.triggered);
   if(trap && trap.type === 'bear') trap = null; // Bear traps only trigger on enemies
   if(trap && trap.revealed) {
-    let disarmChance = 0.3 + (G.player.perception * 0.15) + (G.player.class === 'rogue' ? 0.20 : 0);
+    let disarmChance = 0.3 + (getStat('perception') * 0.15) + (G.player.class === 'rogue' ? 0.20 : 0);
     if(ch(disarmChance)) {
       trap.triggered = true;
       let tIdx = G.traps.findIndex(t => t.x===nx && t.y===ny);
       if(tIdx > -1) G.traps.splice(tIdx, 1);
-      addLog('You successfully disarmed the trap!', 'log-info');
+      
+      if(ch(0.5)) {
+        let lootGold = rr(3, 10);
+        G.player.gold += lootGold;
+        addLog(`You successfully disarmed the trap and salvaged ${lootGold} gold!`, 'log-info');
+      } else {
+        addLog('You successfully disarmed the trap!', 'log-info');
+        if(ch(0.2)) {
+          spawnItem({x:nx, y:ny}, null, false);
+          addLog('You found an item hidden in the trap mechanism!', 'log-info');
+        }
+      }
       floatText('DISARMED', nx, ny, '#4ade80');
       SFX.click();
     } else {
       addLog('You failed to disarm the trap and triggered it!', 'log-combat');
       floatText('FAILED', nx, ny, '#f87171');
       trap.triggered = true;
-      if(G.player.class === 'rogue' && ch(0.5)) {
+      let trapDodge = (G.player.class === 'rogue' ? 0.5 : 0) + getStat('dodgeBonus');
+      if(ch(trapDodge)) {
         addLog('You agilely dodged the trap!', 'log-info');
         floatText('DODGED', nx, ny, '#fbbf24');
       } else {
@@ -82,9 +94,10 @@ function move(dx,dy){
   G.player.x=nx;G.player.y=ny;
   computeVision();
 
-  if(trap) {
+  if(trap && trap.type!=='bear'){
     trap.triggered = true;
-    if(G.player.class === 'rogue' && ch(0.5)) {
+    let trapDodge = (G.player.class === 'rogue' ? 0.5 : 0) + getStat('dodgeBonus');
+    if(ch(trapDodge)) {
       addLog('You agilely dodged a trap!', 'log-info');
       floatText('DODGED', nx, ny, '#fbbf24');
     } else {

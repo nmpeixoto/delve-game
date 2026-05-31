@@ -27,6 +27,17 @@ function positionMapOnPlayer(){
   }
   wrap.style.transform=`translate(${Math.round(tx)}px,${Math.round(ty)}px)`;
 }
+function formatSecStats(item) {
+  let s = [];
+  if(item.critChance) s.push(`+${Math.round(item.critChance*100)}% Crit`);
+  if(item.dodgeBonus) s.push(`+${Math.round(item.dodgeBonus*100)}% Dodge`);
+  if(item.perception) s.push(`+${item.perception} PER`);
+  if(item.vampirism) s.push(`+${item.vampirism} Vamp`);
+  if(item.regen) s.push(`+${item.regen} Regen`);
+  if(item.swiftness) s.push(`+${item.swiftness} Swift`);
+  return s.length > 0 ? ` <span class="sec-stats" style="color:var(--accent);font-size:0.7em;">(${s.join(', ')})</span>` : '';
+}
+
 function iDesc(item){
   let reqs = [];
   let canEverEquip = !item.reqClass || item.reqClass.includes(G.player.class);
@@ -58,13 +69,13 @@ function iDesc(item){
     let pAtk = typeof weaponPower === 'function' ? weaponPower(G.player.weapon) : (G.player.weapon ? G.player.weapon.atk : 0);
     let itemAtk = typeof weaponPower === 'function' ? weaponPower(item) : item.atk;
     let up = itemAtk > pAtk ? ' <span class=green>▲</span>' : '';
-    return `ATK+${item.atk}${up} ${rStr}`;
+    return `ATK+${item.atk}${up}${formatSecStats(item)} ${rStr}`;
   }
   if(item.type==='armor') {
     let pDef = typeof armorPower === 'function' ? armorPower(G.player.armor) : (G.player.armor ? G.player.armor.def : 0);
     let itemDef = typeof armorPower === 'function' ? armorPower(item) : item.def;
     let up = itemDef > pDef ? ' <span class=green>▲</span>' : '';
-    return `DEF+${item.def}${up} ${rStr}`;
+    return `DEF+${item.def}${up}${formatSecStats(item)} ${rStr}`;
   }
   if(item.type==='potion') return `Heal ${item.heal} HP`;
   if(item.type==='upgrade')return item.desc||'';
@@ -160,7 +171,7 @@ function updateHUD(){
   document.getElementById('xp-val').textContent=`${p.xp}/${p.xpNext}`;
   document.getElementById('atk-val').textContent=gatk();
   document.getElementById('def-val').textContent=gdef();
-  document.getElementById('per-val').textContent=p.perception||0;
+  document.getElementById('per-val').textContent=getStat('perception');
   document.getElementById('lvl-val').textContent=p.lvl;
   document.getElementById('class-val').textContent=p.class;
   document.getElementById('gold-val').textContent=p.gold;
