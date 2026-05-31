@@ -73,7 +73,9 @@ const ARMORS=[
 ];
 
 function spawnItem(r, itemFilter=null, forceHighTier=false){
-  let cx=r.x+rr(1,r.w-2),cy=r.y+rr(1,r.h-2);
+  let hasRoomBounds = Number.isFinite(r.w) && Number.isFinite(r.h);
+  let cx=hasRoomBounds?r.x+rr(1,r.w-2):r.x;
+  let cy=hasRoomBounds?r.y+rr(1,r.h-2):r.y;
   let pool=[];
   if(ch(.3)||forceHighTier) pool.push(...WEAPONS.filter(w=>(!w.reqLvl||G.player.lvl>=w.reqLvl-2)&&(!w.reqClass||w.reqClass.includes(G.player.class))));
   if(ch(.3)||forceHighTier) pool.push(...ARMORS.filter(a=>(!a.reqLvl||G.player.lvl>=a.reqLvl-2)&&(!a.reqClass||a.reqClass.includes(G.player.class))));

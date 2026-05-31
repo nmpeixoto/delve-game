@@ -387,11 +387,76 @@ async function runMobileInterfaceTest(url, name) {
   }
 }
 
+async function runMobileLandscapeInterfaceTest(url, name) {
+  console.log(`\n=== Testing ${name} mobile landscape interface ===`);
+  const browser = await puppeteer.launch({ headless: 'new' });
+  const page = await browser.newPage();
+
+  await page.setViewport({
+    width: 844,
+    height: 390,
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 2
+  });
+
+  const errors = [];
+  page.on('console', msg => {
+    if (msg.type() === 'error') errors.push(`[Console Error]: ${msg.text()}`);
+  });
+  page.on('pageerror', error => {
+    errors.push(`[Page Error]: ${error.message}`);
+  });
+  page.on('requestfailed', request => {
+    errors.push(`[Request Failed]: ${request.url()} - ${request.failure()?.errorText}`);
+  });
+
+  try {
+    console.log(`Navigating to ${url}...`);
+    await page.goto(url, { waitUntil: 'networkidle0', timeout: 5000 });
+    await startWarriorRun(page);
+    await page.waitForSelector('#map .tile-player', { timeout: 2000 });
+
+    const layout = await page.evaluate(() => {
+      const map = document.getElementById('map-area').getBoundingClientRect();
+      const dpad = document.getElementById('dpad-area').getBoundingClientRect();
+      const logDisplay = getComputedStyle(document.getElementById('bottom-bar')).display;
+      return {
+        viewportWidth: window.innerWidth,
+        mapRight: map.right,
+        dpadLeft: dpad.left,
+        logDisplay
+      };
+    });
+
+    if (layout.logDisplay !== 'none') {
+      throw new Error(`Landscape log strip should be hidden, got display=${layout.logDisplay}`);
+    }
+    if (Math.abs(layout.mapRight - layout.dpadLeft) > 1) {
+      throw new Error(`Landscape map should meet controls without a dead column: ${JSON.stringify(layout)}`);
+    }
+
+    if (errors.length > 0) {
+      errors.forEach(e => console.error(e));
+      throw new Error(`${name} mobile landscape emitted ${errors.length} browser error(s)`);
+    }
+    console.log(`${name} mobile landscape interface test passed successfully.`);
+  } catch (err) {
+    console.error(`\nError during ${name} mobile landscape interface test:`);
+    console.error(err.message);
+    process.exitCode = 1;
+  } finally {
+    await browser.close();
+  }
+}
+
 async function main() {
   await runTest('http://127.0.0.1:8080/src/index.html', 'src');
   await runTest('http://127.0.0.1:8080/dungeon.html', 'production');
   await runMobileInterfaceTest('http://127.0.0.1:8080/src/index.html', 'src');
   await runMobileInterfaceTest('http://127.0.0.1:8080/dungeon.html', 'production');
+  await runMobileLandscapeInterfaceTest('http://127.0.0.1:8080/src/index.html', 'src');
+  await runMobileLandscapeInterfaceTest('http://127.0.0.1:8080/dungeon.html', 'production');
 }
 
 main().catch(console.error);

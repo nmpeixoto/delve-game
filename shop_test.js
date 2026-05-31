@@ -41,7 +41,7 @@ function loadShopContext(overrides = {}) {
     renderShop: () => {},
     updateHUD: () => {},
     updateActBtns: () => {},
-    SFX: { sell: () => {} },
+    SFX: { buy: () => {}, sell: () => {} },
     document: {
       getElementById: id => elements[id] || { textContent: '', innerHTML: '', style: {}, classList: { toggle: () => {}, add: () => {}, remove: () => {}, contains: () => false } },
     },
@@ -130,4 +130,47 @@ test('opening the merchant clears the action lock so sell-all works immediately'
   assert.strictEqual(context.G.currentShop, context.G.shops[0]);
   assert.strictEqual(context.G.player.gold, 5);
   assert.strictEqual(context.G.items.length, 0);
+});
+
+test('shop actions opt into the shop overlay action guard', () => {
+  const context = loadShopContext({
+    canAct: opts => opts && opts.allowShopOverlay === true,
+    uid: () => 'new-item-id',
+  });
+  context.G.player.gold = 100;
+  context.G.currentShop = {
+    x: 5,
+    y: 5,
+    stock: [{
+      id: 'shop-potion',
+      name: 'Health Potion',
+      type: 'potion',
+      heal: 15,
+      sym: '!',
+      rarity: 'common',
+      price: 25,
+      sold: false,
+    }],
+  };
+  context.G.items = [{
+    id: 'sell-potion',
+    name: 'Sell Potion',
+    type: 'potion',
+    heal: 15,
+    sym: '!',
+    rarity: 'common',
+    price: 20,
+    carried: true,
+  }];
+
+  context.buyItem('shop-potion');
+
+  assert.strictEqual(context.G.player.gold, 75);
+  assert.strictEqual(context.G.currentShop.stock[0].sold, true);
+  assert.strictEqual(context.G.items.filter(item => item.carried).length, 2);
+
+  context.sellItem('sell-potion', '');
+
+  assert.strictEqual(context.G.player.gold, 85);
+  assert.strictEqual(context.G.items.some(item => item.id === 'sell-potion'), false);
 });

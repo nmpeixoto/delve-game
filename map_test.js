@@ -64,6 +64,26 @@ function loadMapContext() {
   return context;
 }
 
+function loadSpawnContext() {
+  const context = {
+    G: {
+      player: { class: 'warrior', lvl: 1 },
+      items: [],
+    },
+    rr: (a) => a,
+    rand: () => 0,
+    ch: () => false,
+    uid: () => 'spawned-item',
+    Math,
+    Set,
+  };
+
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, 'src/js/data.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, 'src/js/items.js'), 'utf8'), context);
+  return context;
+}
+
 function test(name, fn) {
   try {
     fn();
@@ -186,4 +206,22 @@ test('floor 5 enemy profile reaches lich tier and a harder stat scale', () => {
   assert.strictEqual(floor4.tierMax, 4);
   assert.strictEqual(floor4.scale, 2.0);
   assert.strictEqual(floor5.scale, 2.4);
+});
+
+test('spawnItem keeps data-layer filtering and supports exact coordinate spawns', () => {
+  const context = loadSpawnContext();
+
+  context.spawnItem({ x: 10, y: 11 }, item => item.type === 'potion', false);
+
+  assert.strictEqual(context.G.items.length, 1);
+  assert.strictEqual(context.G.items[0].type, 'potion');
+  assert.strictEqual(context.G.items[0].x, 10);
+  assert.strictEqual(context.G.items[0].y, 11);
+
+  context.spawnItem({ x: 20, y: 20, w: 5, h: 5 }, item => item.type === 'armor', true);
+
+  assert.strictEqual(context.G.items.length, 2);
+  assert.strictEqual(context.G.items[1].type, 'armor');
+  assert.ok(Number.isFinite(context.G.items[1].x));
+  assert.ok(Number.isFinite(context.G.items[1].y));
 });

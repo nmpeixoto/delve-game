@@ -105,7 +105,7 @@ function renderShop(){
 }
 
 function buyItem(id){
-  if(!canAct() || !G.currentShop) return;
+  if(!canAct({allowShopOverlay:true}) || !G.currentShop) return;
   let item=G.currentShop.stock.find(i=>i.id==id);
   if(!item||item.sold)return;
   if(G.player.gold<item.price){addLog('Not enough gold!','log-shop');return;}
@@ -189,7 +189,7 @@ function renderSellPanel(){
 }
 
 function sellItem(id, equippedSlot){
-  if(!canAct()) return;
+  if(!canAct({allowShopOverlay:true})) return;
   // Prevent double-sell: mark item as selling immediately
   let item, isEquipped=false;
   if(equippedSlot==='weapon' && G.player.weapon && String(G.player.weapon.id)===String(id)){
@@ -228,7 +228,7 @@ function sellItem(id, equippedSlot){
 }
 
 function sellWeakerGear(){
-  if(!canAct()) return;
+  if(!canAct({allowShopOverlay:true})) return;
   let soldCount = 0;
   let totalGold = 0;
 

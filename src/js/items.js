@@ -1,11 +1,4 @@
 // ===================== ITEMS =====================
-function spawnItem(r){
-  let pool=[...WEAPONS,...ARMORS,...POTIONS];
-  let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
-  let t=w[rand(w.length)];
-  G.items.push({...t,x:r.x+rr(1,r.w-2),y:r.y+rr(1,r.h-2),id:uid()});
-}
-
 function tilePickup(id){
   if(!canAct()||G.gameOver||G.won) return;
   let it=G.items.find(i=>i.id==id);if(!it||it.carried)return;
@@ -150,6 +143,10 @@ function autoEquip(it){
 function useItem(id){
   let it=G.items.find(i=>i.id==id);if(!it)return;
   if(it.type==='potion'){
+    if(G.player.hp >= G.player.maxHp){
+      addLog('Already at full HP.','log-info');
+      return;
+    }
     let h=Math.min(it.heal,G.player.maxHp-G.player.hp);
     G.player.hp+=h;
     addLog(`Drank ${it.name}: +${h} HP`,'log-item');

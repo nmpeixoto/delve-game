@@ -5,6 +5,12 @@ function isOverlayOpen(){
     || document.getElementById('inv-drawer').classList.contains('open')
     || document.getElementById('emergency-overlay').style.display==='flex';
 }
+function isShopActionOverlayOpen(){
+  return document.getElementById('shop-overlay').classList.contains('open')
+    && document.getElementById('help-overlay').style.display!=='flex'
+    && !document.getElementById('inv-drawer').classList.contains('open')
+    && document.getElementById('emergency-overlay').style.display!=='flex';
+}
 document.addEventListener('keydown',e=>{
   if(G.gameOver||G.won)return;
   if(document.getElementById('game-screen').classList.contains('hidden'))return;

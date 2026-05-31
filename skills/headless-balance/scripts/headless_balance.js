@@ -541,6 +541,16 @@ function createRuntime(seed, options = {}) {
     ensureElement('drawer-backdrop').classList.remove('open');
   };
 
+  sandbox.showShrinePrompt = shrine => {
+    if (!sandbox.G || !shrine) return;
+    const idx = sandbox.G.items.findIndex(item => item.id === shrine.id);
+    if (idx > -1) sandbox.G.items.splice(idx, 1);
+    sandbox.addLog(`Ignored ${shrine.name || 'Shrine'} in headless run.`, 'log-info');
+    if (typeof sandbox.advanceTurn === 'function') {
+      sandbox.advanceTurn({ allowFreeMove: true });
+    }
+  };
+
   sandbox.showDeath = () => {
     state.deathShown = true;
     state.gameOver = true;

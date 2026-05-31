@@ -251,7 +251,7 @@ function advanceTurn(opts={}){
     SFX.hit();
     if(G.player.hp <= 0) {
       G.gameOver = true;
-      showGameOver('Poison Gas');
+      showDeath();
       return;
     }
   }
@@ -527,14 +527,16 @@ function doAbility2(){
     let safeTiles = [];
     for(let y=0;y<MAP_H;y++) for(let x=0;x<MAP_W;x++) {
       if(G.visible.has(y*MAP_W+x) && G.map[y][x] === TILE.FLOOR) {
-        if(!G.enemies.some(e=>e.x===x&&e.y===y)) safeTiles.push({x,y});
+        if((x !== p.x || y !== p.y) &&
+           !G.enemies.some(e=>e.x===x&&e.y===y) &&
+           !(G.traps && G.traps.some(t=>t.x===x&&t.y===y&&!t.triggered))) safeTiles.push({x,y});
       }
     }
     if(safeTiles.length) {
       let t = safeTiles[rand(safeTiles.length)];
       p.x = t.x; p.y = t.y; G.ability2Cooldown = 8;
       addLog('Blinked to a safe location!', 'log-combat'); advanceTurn();
-    }
+    } else addLog('No safe visible tile to Blink to', 'log-info');
   }
   else if(p.class === 'paladin') {
     let heal = Math.floor(p.maxHp * 0.2);

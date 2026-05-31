@@ -127,7 +127,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   .hud-stat{font-size:.5rem;}
   .hud-center{font-size:.34rem;}
   #map-area{flex:1;min-width:0;}
-  #bottom-bar{height:24px;overflow:hidden;border-top:1px solid var(--border);}
+  #bottom-bar{display:none;}
   #log{height:24px;padding:2px 8px;font-size:.45rem;overflow:hidden;}
   #install-banner{display:none!important;}
   #dpad-area{
@@ -637,7 +637,9 @@ const ARMORS=[
 ];
 
 function spawnItem(r, itemFilter=null, forceHighTier=false){
-  let cx=r.x+rr(1,r.w-2),cy=r.y+rr(1,r.h-2);
+  let hasRoomBounds = Number.isFinite(r.w) && Number.isFinite(r.h);
+  let cx=hasRoomBounds?r.x+rr(1,r.w-2):r.x;
+  let cy=hasRoomBounds?r.y+rr(1,r.h-2):r.y;
   let pool=[];
   if(ch(.3)||forceHighTier) pool.push(...WEAPONS.filter(w=>(!w.reqLvl||G.player.lvl>=w.reqLvl-2)&&(!w.reqClass||w.reqClass.includes(G.player.class))));
   if(ch(.3)||forceHighTier) pool.push(...ARMORS.filter(a=>(!a.reqLvl||G.player.lvl>=a.reqLvl-2)&&(!a.reqClass||a.reqClass.includes(G.player.class))));
@@ -723,8 +725,10 @@ let _idCounter=0;
 const uid=()=>`${Date.now().toString(36)}-${(++_idCounter).toString(36)}-${Math.random().toString(36).slice(2,8)}`;
 const ch=p=>Math.random()<p;
 // Debounce tile actions — 400ms safety net against double-fire
-function canAct(){
-  if(typeof isOverlayOpen === 'function' && isOverlayOpen()) return false;
+function canAct(opts={}){
+  if(typeof isOverlayOpen === 'function' && isOverlayOpen()){
+    if(!opts.allowShopOverlay || typeof isShopActionOverlayOpen !== 'function' || !isShopActionOverlayOpen()) return false;
+  }
   const now=Date.now();
   if(now-_lastAction<120) return false;
   _lastAction=now; return true;
@@ -1630,13 +1634,6 @@ function dpadRelease(){clearInterval(_dpadTimer);_dpadTimer=null;}
 </script>
 <script>
 // ===================== ITEMS =====================
-function spawnItem(r){
-  let pool=[...WEAPONS,...ARMORS,...POTIONS];
-  let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
-  let t=w[rand(w.length)];
-  G.items.push({...t,x:r.x+rr(1,r.w-2),y:r.y+rr(1,r.h-2),id:uid()});
-}
-
 function tilePickup(id){
   if(!canAct()||G.gameOver||G.won) return;
   let it=G.items.find(i=>i.id==id);if(!it||it.carried)return;
@@ -1781,6 +1778,10 @@ function autoEquip(it){
 function useItem(id){
   let it=G.items.find(i=>i.id==id);if(!it)return;
   if(it.type==='potion'){
+    if(G.player.hp >= G.player.maxHp){
+      addLog('Already at full HP.','log-info');
+      return;
+    }
     let h=Math.min(it.heal,G.player.maxHp-G.player.hp);
     G.player.hp+=h;
     addLog(`Drank ${it.name}: +${h} HP`,'log-item');
@@ -2184,7 +2185,7 @@ function advanceTurn(opts={}){
     SFX.hit();
     if(G.player.hp <= 0) {
       G.gameOver = true;
-      showGameOver('Poison Gas');
+      showDeath();
       return;
     }
   }
@@ -2460,14 +2461,16 @@ function doAbility2(){
     let safeTiles = [];
     for(let y=0;y<MAP_H;y++) for(let x=0;x<MAP_W;x++) {
       if(G.visible.has(y*MAP_W+x) && G.map[y][x] === TILE.FLOOR) {
-        if(!G.enemies.some(e=>e.x===x&&e.y===y)) safeTiles.push({x,y});
+        if((x !== p.x || y !== p.y) &&
+           !G.enemies.some(e=>e.x===x&&e.y===y) &&
+           !(G.traps && G.traps.some(t=>t.x===x&&t.y===y&&!t.triggered))) safeTiles.push({x,y});
       }
     }
     if(safeTiles.length) {
       let t = safeTiles[rand(safeTiles.length)];
       p.x = t.x; p.y = t.y; G.ability2Cooldown = 8;
       addLog('Blinked to a safe location!', 'log-combat'); advanceTurn();
-    }
+    } else addLog('No safe visible tile to Blink to', 'log-info');
   }
   else if(p.class === 'paladin') {
     let heal = Math.floor(p.maxHp * 0.2);
@@ -2623,7 +2626,7 @@ function renderShop(){
 }
 
 function buyItem(id){
-  if(!canAct() || !G.currentShop) return;
+  if(!canAct({allowShopOverlay:true}) || !G.currentShop) return;
   let item=G.currentShop.stock.find(i=>i.id==id);
   if(!item||item.sold)return;
   if(G.player.gold<item.price){addLog('Not enough gold!','log-shop');return;}
@@ -2707,7 +2710,7 @@ function renderSellPanel(){
 }
 
 function sellItem(id, equippedSlot){
-  if(!canAct()) return;
+  if(!canAct({allowShopOverlay:true})) return;
   // Prevent double-sell: mark item as selling immediately
   let item, isEquipped=false;
   if(equippedSlot==='weapon' && G.player.weapon && String(G.player.weapon.id)===String(id)){
@@ -2746,7 +2749,7 @@ function sellItem(id, equippedSlot){
 }
 
 function sellWeakerGear(){
-  if(!canAct()) return;
+  if(!canAct({allowShopOverlay:true})) return;
   let soldCount = 0;
   let totalGold = 0;
 
@@ -3238,6 +3241,12 @@ function isOverlayOpen(){
     || document.getElementById('help-overlay').style.display==='flex'
     || document.getElementById('inv-drawer').classList.contains('open')
     || document.getElementById('emergency-overlay').style.display==='flex';
+}
+function isShopActionOverlayOpen(){
+  return document.getElementById('shop-overlay').classList.contains('open')
+    && document.getElementById('help-overlay').style.display!=='flex'
+    && !document.getElementById('inv-drawer').classList.contains('open')
+    && document.getElementById('emergency-overlay').style.display!=='flex';
 }
 document.addEventListener('keydown',e=>{
   if(G.gameOver||G.won)return;

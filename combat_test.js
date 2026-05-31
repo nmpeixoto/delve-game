@@ -595,6 +595,41 @@ test('ranger piercing shot does not fire when no visible enemy is in line', () =
   assert.strictEqual(context.G.enemies[0].hp, 20);
 });
 
+test('lethal poison shows the death screen without calling an undefined game-over path', () => {
+  let deaths = 0;
+  const context = loadCombat({
+    showDeath: () => { deaths += 1; },
+  });
+  context.G.player.hp = 1;
+  context.G.player.poisonedTurns = 1;
+  context.G.enemies = [];
+
+  context.advanceTurn();
+
+  assert.strictEqual(context.G.gameOver, true);
+  assert.strictEqual(deaths, 1);
+});
+
+test('mage blink does not spend a turn or cooldown when no alternate safe visible tile exists', () => {
+  const context = loadCombat();
+  context.G.player.class = 'mage';
+  context.G.player.lvl = 5;
+  context.G.player.x = 5;
+  context.G.player.y = 5;
+  context.G.map = makeMap(TILE.WALL);
+  context.G.map[5][5] = TILE.FLOOR;
+  context.G.visible = new Set([5 * MAP_W + 5]);
+  context.G.seen = new Set([5 * MAP_W + 5]);
+  context.G.enemies = [];
+
+  context.doAbility2();
+
+  assert.strictEqual(context.G.player.x, 5);
+  assert.strictEqual(context.G.player.y, 5);
+  assert.strictEqual(context.G.turn, 0);
+  assert.strictEqual(context.G.ability2Cooldown, 0);
+});
+
 function loadItems(overrides = {}) {
   const context = {
     G: {
@@ -630,6 +665,44 @@ test('monk does not auto-equip a weapon weaker than unarmed scaling', () => {
 
   assert.strictEqual(context.G.player.weapon, null);
   assert.strictEqual(context.G.items[0].carried, true);
+});
+
+test('full-health potion use is ignored instead of wasting the potion and a turn', () => {
+  let turns = 0;
+  const logs = [];
+  const context = loadItems({
+    G: {
+      player: {
+        class: 'warrior',
+        lvl: 1,
+        x: 5,
+        y: 5,
+        hp: 20,
+        maxHp: 20,
+        weapon: null,
+        armor: null,
+        bestWeapon: 'Bare hands',
+      },
+      items: [{
+        id: 'potion-1',
+        name: 'Health Potion',
+        type: 'potion',
+        heal: 15,
+        carried: true,
+      }],
+    },
+    addLog: msg => logs.push(msg),
+    floatText: () => {},
+    advanceTurn: () => { turns += 1; },
+    closeInv: () => {},
+  });
+
+  context.useItem('potion-1');
+
+  assert.strictEqual(context.G.items.length, 1);
+  assert.strictEqual(context.G.player.hp, 20);
+  assert.strictEqual(turns, 0);
+  assert.strictEqual(logs[0], 'Already at full HP.');
 });
 
 function loadEmergency(overrides = {}) {

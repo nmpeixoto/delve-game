@@ -6,8 +6,10 @@ let _idCounter=0;
 const uid=()=>`${Date.now().toString(36)}-${(++_idCounter).toString(36)}-${Math.random().toString(36).slice(2,8)}`;
 const ch=p=>Math.random()<p;
 // Debounce tile actions — 400ms safety net against double-fire
-function canAct(){
-  if(typeof isOverlayOpen === 'function' && isOverlayOpen()) return false;
+function canAct(opts={}){
+  if(typeof isOverlayOpen === 'function' && isOverlayOpen()){
+    if(!opts.allowShopOverlay || typeof isShopActionOverlayOpen !== 'function' || !isShopActionOverlayOpen()) return false;
+  }
   const now=Date.now();
   if(now-_lastAction<120) return false;
   _lastAction=now; return true;
