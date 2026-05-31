@@ -155,7 +155,7 @@ function renderSellPanel(){
     ...(G.player.weapon?[{...G.player.weapon,_equipped:'weapon'}]:[]),
     ...(G.player.armor?[{...G.player.armor,_equipped:'armor'}]:[]),
   ];
-  let h='<div style="margin-bottom:10px;"><button class="btn" style="width:100%" onclick="sellWeakerGear()">SELL WEAKER GEAR</button></div>';
+  let h='<div style="margin-bottom:10px;"><button class="btn" style="width:100%" onclick="sellWeakerGear()">SELL UNWANTED GEAR</button></div>';
   if(!sellable.length){
     h+='<div class="sell-empty">Nothing to sell.</div>';
   } else {
@@ -246,6 +246,7 @@ function sellWeakerGear(){
     let shouldSell = false;
     if (item.type === 'weapon' && weaponPower(item) <= pWeapAtk) shouldSell = true;
     if (item.type === 'armor' && armorPower(item) <= pArmDef) shouldSell = true;
+    if (item.reqClass && !item.reqClass.includes(G.player.class)) shouldSell = true;
 
     if (shouldSell) {
       let sellPrice = Math.max(1, Math.floor((item.price || 10) / 2));
@@ -259,7 +260,7 @@ function sellWeakerGear(){
   if (soldCount > 0) {
     G.items = newItems;
     G.player.gold += totalGold;
-    addLog(`Auto-sold ${soldCount} weaker gear for ${totalGold}💰`, 'log-shop');
+    addLog(`Auto-sold ${soldCount} unwanted gear for ${totalGold}💰`, 'log-shop');
     floatText(`+${totalGold}💰`, G.player.x, G.player.y, '#fbbf24');
     SFX.sell();
     document.getElementById('shop-gold-val').textContent=G.player.gold;
@@ -268,7 +269,7 @@ function sellWeakerGear(){
     renderSellPanel();
     renderShop();
   } else {
-    addLog(`No weaker gear found to sell.`, 'log-shop');
+    addLog(`No unwanted gear found to sell.`, 'log-shop');
   }
 }
 

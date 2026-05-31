@@ -82,7 +82,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* LOG */
 #bottom-bar{flex-shrink:0;background:var(--panel);border-top:1px solid var(--border);}
-#log{padding:5px 10px;height:50px;overflow-y:auto;font-size:.58rem;line-height:1.65;scrollbar-width:thin;scrollbar-color:var(--dim) transparent;}
+#log{padding:5px 10px;height:65px;overflow-y:auto;font-size:.58rem;line-height:1.65;scrollbar-width:thin;scrollbar-color:var(--dim) transparent;}
 .log-entry{opacity:.75;}
 .log-entry.new{opacity:1;color:var(--text);}
 .log-combat{color:var(--red);}
@@ -249,18 +249,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .c-stat-lbl { font-size:.45rem; color:var(--dim); margin-bottom:4px; }
 .c-stat-val { font-family:'Press Start 2P',monospace; font-size:.5rem; color:var(--text); }
 .c-section { margin-bottom:12px; }
-  #log{height:24px;padding:2px 8px;font-size:.45rem;overflow:hidden;}
-  #install-banner{display:none!important;}
-  #dpad-area{
-    width:150px;flex-shrink:0;
-    flex-direction:column;justify-content:center;align-items:center;
-    border-top:none;border-left:1px solid var(--border);
-    padding:10px max(10px,env(safe-area-inset-right)) 10px 10px;
-    gap:10px;
-  }
-  #action-btns{flex-direction:column;gap:5px;}
-  .act-btn{min-width:68px;font-size:.32rem;padding:8px 6px;}
-}
 
 /* ── INVENTORY DRAWER ── */
 #inv-drawer{position:fixed;bottom:0;left:0;right:0;z-index:80;background:var(--panel);border-top:2px solid var(--accent);transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);max-height:65vh;overflow-y:auto;padding:14px 16px max(16px,env(safe-area-inset-bottom));}
@@ -2918,7 +2906,7 @@ function renderSellPanel(){
     ...(G.player.weapon?[{...G.player.weapon,_equipped:'weapon'}]:[]),
     ...(G.player.armor?[{...G.player.armor,_equipped:'armor'}]:[]),
   ];
-  let h='<div style="margin-bottom:10px;"><button class="btn" style="width:100%" onclick="sellWeakerGear()">SELL WEAKER GEAR</button></div>';
+  let h='<div style="margin-bottom:10px;"><button class="btn" style="width:100%" onclick="sellWeakerGear()">SELL UNWANTED GEAR</button></div>';
   if(!sellable.length){
     h+='<div class="sell-empty">Nothing to sell.</div>';
   } else {
@@ -3009,6 +2997,7 @@ function sellWeakerGear(){
     let shouldSell = false;
     if (item.type === 'weapon' && weaponPower(item) <= pWeapAtk) shouldSell = true;
     if (item.type === 'armor' && armorPower(item) <= pArmDef) shouldSell = true;
+    if (item.reqClass && !item.reqClass.includes(G.player.class)) shouldSell = true;
 
     if (shouldSell) {
       let sellPrice = Math.max(1, Math.floor((item.price || 10) / 2));
@@ -3022,7 +3011,7 @@ function sellWeakerGear(){
   if (soldCount > 0) {
     G.items = newItems;
     G.player.gold += totalGold;
-    addLog(`Auto-sold ${soldCount} weaker gear for ${totalGold}💰`, 'log-shop');
+    addLog(`Auto-sold ${soldCount} unwanted gear for ${totalGold}💰`, 'log-shop');
     floatText(`+${totalGold}💰`, G.player.x, G.player.y, '#fbbf24');
     SFX.sell();
     document.getElementById('shop-gold-val').textContent=G.player.gold;
@@ -3031,7 +3020,7 @@ function sellWeakerGear(){
     renderSellPanel();
     renderShop();
   } else {
-    addLog(`No weaker gear found to sell.`, 'log-shop');
+    addLog(`No unwanted gear found to sell.`, 'log-shop');
   }
 }
 

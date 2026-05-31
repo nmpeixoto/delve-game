@@ -41,7 +41,7 @@ The production build is a single self-contained `dungeon.html` file. The modular
 - Carried items persist between floors.
 - Better gear auto-equips when picked up or bought.
 - Unequipped weapons, armor, and potions stay in the bag.
-- `Sell Weaker Gear` sells only carried weapons and armor that are weaker than your current equipped gear.
+- `Sell Unwanted Gear` sells carried weapons and armor that are weaker than your current equipped gear, as well as gear you can never equip due to class restrictions.
 
 ## Controls
 
@@ -360,7 +360,7 @@ Enemies possess distinct mechanical challenges:
 - Older equipped gear is moved back into the bag.
 - Potions remain bag items until used manually or triggered by the emergency prompt.
 - Unequipped gear and potions carry over between floors.
-- The `Sell Weaker Gear` button only checks current power, not future equip requirements.
+- The `Sell Unwanted Gear` button sells weaker gear based on current power, and also sells items whose class requirements do not match your current class.
 
 ### Shop Logic
 
