@@ -159,6 +159,37 @@ function useItem(id){
     return;
   }
 
+  if(it.type==='scroll') {
+    if(it.name==='Scroll of Detection') {
+      let r = 8;
+      let revealedSomething = false;
+      for(let y=Math.max(0, G.player.y-r); y<=Math.min(MAP_H-1, G.player.y+r); y++) {
+        for(let x=Math.max(0, G.player.x-r); x<=Math.min(MAP_W-1, G.player.x+r); x++) {
+          if(G.map[y][x] === TILE.SECRET_DOOR) {
+            G.map[y][x] = TILE.FLOOR;
+            revealedSomething = true;
+          }
+          let trap = G.traps.find(t => t.x === x && t.y === y && !t.revealed);
+          if(trap) {
+            trap.revealed = true;
+            revealedSomething = true;
+          }
+        }
+      }
+      if(revealedSomething) {
+        addLog('The scroll revealed hidden secrets nearby!', 'log-info');
+        floatText('REVEALED', G.player.x, G.player.y, '#fbbf24');
+      } else {
+        addLog('The scroll revealed nothing.', 'log-info');
+      }
+      SFX.levelUp();
+    }
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
   if(!canEquip(it)) {
     addLog(`Cannot equip ${it.name} (Requires: ${it.reqLvl?'Lvl '+it.reqLvl:''} ${it.reqClass?it.reqClass.join('/'):''})`, 'log-info');
     return;
@@ -189,6 +220,42 @@ function useItem(id){
     addLog(`Equipped ${it.name}`,'log-item');
   }
   advanceTurn();closeInv();
+}
+
+function interactShrine(it) {
+  let idx = G.items.findIndex(i => i.id === it.id);
+  if(idx > -1) G.items.splice(idx, 1);
+  
+  if(ch(0.75)) {
+    let buffType = ch(0.5) ? 'atk' : 'def';
+    if(buffType === 'atk') {
+      G.player.atk += 1;
+      addLog('The shrine blessed you! +1 ATK', 'log-info');
+      floatText('+1 ATK', G.player.x, G.player.y, '#fbbf24');
+    } else {
+      G.player.def += 1;
+      addLog('The shrine blessed you! +1 DEF', 'log-info');
+      floatText('+1 DEF', G.player.x, G.player.y, '#4ade80');
+    }
+  } else {
+    let debuffType = ch(0.5) ? 'maxHp' : 'atk';
+    if(debuffType === 'maxHp') {
+      let loss = Math.max(1, Math.floor(G.player.maxHp * 0.1));
+      G.player.maxHp -= loss;
+      if(G.player.hp > G.player.maxHp) G.player.hp = G.player.maxHp;
+      addLog(`The shrine cursed you! -${loss} Max HP`, 'log-combat');
+      floatText(`-${loss} MAX HP`, G.player.x, G.player.y, '#f87171');
+      flashDamage();
+    } else {
+      let loss = 1;
+      G.player.atk = Math.max(1, G.player.atk - loss);
+      addLog('The shrine cursed you! -1 ATK', 'log-combat');
+      floatText('-1 ATK', G.player.x, G.player.y, '#f87171');
+      flashDamage();
+    }
+  }
+  SFX.click();
+  advanceTurn({allowFreeMove:true});
 }
 
 function descend(){

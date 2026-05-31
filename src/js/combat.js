@@ -176,11 +176,26 @@ function advanceTurn(opts={}){
   if(G.player.bloodlustTurns>0)G.player.bloodlustTurns--;
   if(G.player.rootedTurns>0)G.player.rootedTurns--;
 
+  if(G.player.poisonedTurns>0) {
+    G.player.poisonedTurns--;
+    let pdmg = Math.max(1, Math.floor(G.player.maxHp * 0.05));
+    G.player.hp -= pdmg;
+    addLog(`Poison damage: -${pdmg} HP`, 'log-combat');
+    floatText(`-${pdmg} HP`, G.player.x, G.player.y, '#a855f7');
+    flashDamage();
+    SFX.hit();
+    if(G.player.hp <= 0) {
+      G.gameOver = true;
+      showGameOver('Poison Gas');
+      return;
+    }
+  }
+
   G.enemies.forEach(e=>{
     if(G.gameOver||G.won||G.pendingHit) return;
     if(e.dying) return;
 
-    let trapIdx = G.traps.findIndex(t => t.x===e.x && t.y===e.y);
+    let trapIdx = G.traps.findIndex(t => t.type === 'bear' && t.x===e.x && t.y===e.y);
     if(trapIdx !== -1) {
       G.traps.splice(trapIdx, 1);
       e.stunnedTurns = 5;
@@ -409,7 +424,7 @@ function doAbility2(){
     addLog('Lay on Hands: Healed!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'ranger') {
-    G.traps.push({x: p.x, y: p.y});
+    G.traps.push({x: p.x, y: p.y, type: 'bear'});
     let safeAdj = [[-1,0],[1,0],[0,-1],[0,1]].map(d=>({x:p.x+d[0], y:p.y+d[1]}))
       .filter(t=>G.map[t.y] && G.map[t.y][t.x]===TILE.FLOOR && !G.enemies.some(e=>e.x===t.x&&e.y===t.y));
     if(safeAdj.length) {

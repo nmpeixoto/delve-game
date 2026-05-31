@@ -248,3 +248,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .item-never { color: var(--red) !important; text-shadow: 0 0 5px var(--red); }
 .item-wait { color: var(--orange) !important; text-shadow: 0 0 5px var(--orange); }
 .item-upgrade { color: var(--green) !important; text-shadow: 0 0 5px var(--green); }
+
+.tile-elite { text-shadow: 0 0 10px var(--red), 0 0 20px var(--accent); animation: shopPulse 2s ease-in-out infinite; }
+#minimap { position: absolute; top: 5px; right: 5px; width: 112px; height: 72px; border: 1px solid var(--border); background: rgba(10, 10, 15, 0.85); opacity: 0.8; pointer-events: none; z-index: 15; image-rendering: pixelated; }

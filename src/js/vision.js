@@ -39,4 +39,25 @@ function computeVision(){
       }
     }
   }
+
+  if(G.player.perception > 0) {
+    let p = G.player.perception;
+    for(let y=Math.max(0, py-p); y<=Math.min(MAP_H-1, py+p); y++) {
+      for(let x=Math.max(0, px-p); x<=Math.min(MAP_W-1, px+p); x++) {
+        if(!G.visible.has(y*MAP_W+x)) continue;
+        if(G.map[y][x] === TILE.SECRET_DOOR) {
+          G.map[y][x] = TILE.FLOOR;
+          addLog('Your perception revealed a secret door!', 'log-info');
+          floatText('SECRET', x, y, '#fbbf24');
+          SFX.click();
+        }
+        let trap = G.traps.find(t => t.x === x && t.y === y && !t.revealed);
+        if(trap) {
+          trap.revealed = true;
+          addLog('Your perception revealed a trap!', 'log-info');
+          floatText('TRAP', x, y, '#fbbf24');
+        }
+      }
+    }
+  }
 }

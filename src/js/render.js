@@ -89,7 +89,7 @@ function render(){
   const cs=getCellSize();
   mapEl.style.gridTemplateColumns=`repeat(${MAP_W},${cs}px)`;
   mapEl.style.fontSize=`${cs*.72}px`;
-  const CH={[TILE.WALL]:'█',[TILE.FLOOR]:'·',[TILE.STAIRS]:'>',[TILE.SHOP]:'$'};
+  const CH={[TILE.WALL]:'█',[TILE.FLOOR]:'·',[TILE.STAIRS]:'>',[TILE.SHOP]:'$',[TILE.LOCKED_DOOR]:'🔒',[TILE.SECRET_DOOR]:'█'};
   let h='';
   for(let y=0;y<MAP_H;y++){
     for(let x=0;x<MAP_W;x++){
@@ -104,7 +104,8 @@ function render(){
         let dist = Math.max(Math.abs(en.x-G.player.x), Math.abs(en.y-G.player.y));
         let canTap = (dist <= maxRange);
         let dyingClass=en.dying?' tile-enemy-dying':'';
-        h+=`<div class="tile tile-enemy${dyingClass}" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
+        let eliteClass=en.isElite?' tile-elite':'';
+        h+=`<div class="tile tile-enemy${dyingClass}${eliteClass}" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
           onmouseenter="showTip(event,'${en.name}',${en.hp},${en.maxHp},${en.atk})"
           onmouseleave="hideTip()"
           onclick="${en.dying||!canTap?'':`tileAttack('${en.id}')`}"
@@ -127,8 +128,13 @@ function render(){
         continue;
       }
       let trap=seen&&G.traps?G.traps.find(t=>t.x===x&&t.y===y):null;
-      if(trap){
-        h+=`<div class="tile tile-trap" style="${s}">^</div>`;continue;
+      if(trap && (trap.triggered || trap.revealed)){
+        let trapSym = trap.type === 'spike' ? '^' : trap.type === 'gas' ? '*' : '!';
+        let trapColor = trap.type === 'spike' ? 'var(--orange)' : trap.type === 'gas' ? 'var(--green)' : 'var(--red)';
+        let opacity = trap.triggered ? '1' : '0.5';
+        h+=`<div class="tile tile-trap" style="${s}color:${trapColor};text-shadow:0 0 5px ${trapColor};opacity:${opacity}"
+            onmouseenter="showTip(event,'${trap.type.toUpperCase()} TRAP (Revealed)')"
+            onmouseleave="hideTip()">${trapSym}</div>`;continue;
       }
       if(t===TILE.STAIRS&&seen){
         h+=`<div class="tile tile-stairs" style="${s}" onclick="descend()" ontouchend="event.preventDefault();descend()">></div>`;continue;
@@ -137,11 +143,12 @@ function render(){
         h+=`<div class="tile tile-shop" style="${s}" onclick="openShop()" ontouchend="event.preventDefault();openShop()">$</div>`;continue;
       }
       let sc=(seen&&!vis)?' tile-seen':'';
-      h+=`<div class="tile ${t===TILE.WALL?'tile-wall':'tile-floor'}${sc}" style="${s}">${CH[t]||' '}</div>`;
+      h+=`<div class="tile ${(t===TILE.WALL||t===TILE.SECRET_DOOR)?'tile-wall':'tile-floor'}${sc}" style="${s}">${CH[t]||' '}</div>`;
     }
   }
   mapEl.innerHTML=h;
   positionMapOnPlayer();
+  drawMinimap();
   updateHUD();updateInvDrawer();updateActBtns();
 }
 
@@ -225,4 +232,31 @@ function updateInvDrawer(){
   if(G.player.armor)  eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.armor.name}</div><div class="inv-type">armor</div></div><div class="inv-bonus">DEF+${armorPower(G.player.armor)}</div></div>`;
   if(!G.player.weapon&&!G.player.armor) eh='<div class="inv-empty">Nothing equipped</div>';
   document.getElementById('equipped-list').innerHTML=eh;
+}
+
+function drawMinimap() {
+  const cvs = document.getElementById('minimap');
+  if(!cvs || !G.map) return;
+  const ctx = cvs.getContext('2d');
+  ctx.clearRect(0,0,112,72);
+  const pxSize = 2;
+  for(let y=0; y<MAP_H; y++){
+    for(let x=0; x<MAP_W; x++){
+      let k = y*MAP_W+x;
+      if(!G.seen.has(k)) continue;
+      
+      let t = G.map[y][x];
+      let vis = G.visible.has(k);
+      
+      if(t===TILE.WALL || t===TILE.SECRET_DOOR) ctx.fillStyle = vis ? '#333' : '#111';
+      else if(t===TILE.STAIRS) ctx.fillStyle = vis ? '#4ade80' : '#225533';
+      else if(t===TILE.SHOP) ctx.fillStyle = vis ? '#fbbf24' : '#665511';
+      else if(t===TILE.LOCKED_DOOR) ctx.fillStyle = vis ? '#f87171' : '#662222';
+      else ctx.fillStyle = vis ? '#7e7ea3' : '#333344';
+      
+      ctx.fillRect(x*pxSize, y*pxSize, pxSize, pxSize);
+    }
+  }
+  ctx.fillStyle = '#4ade80'; // Player
+  ctx.fillRect(G.player.x*pxSize, G.player.y*pxSize, pxSize, pxSize);
 }

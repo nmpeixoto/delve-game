@@ -72,10 +72,29 @@ const ARMORS=[
   {name:'Grandmaster Robe',type:'armor',def:11,sym:'◆', rarity:'legendary', price:245, reqClass:['monk'], reqLvl:10},
 ];
 
+function spawnItem(r, itemFilter=null, forceHighTier=false){
+  let cx=r.x+rr(1,r.w-2),cy=r.y+rr(1,r.h-2);
+  let pool=[];
+  if(ch(.3)||forceHighTier) pool.push(...WEAPONS.filter(w=>(!w.reqLvl||G.player.lvl>=w.reqLvl-2)&&(!w.reqClass||w.reqClass.includes(G.player.class))));
+  if(ch(.3)||forceHighTier) pool.push(...ARMORS.filter(a=>(!a.reqLvl||G.player.lvl>=a.reqLvl-2)&&(!a.reqClass||a.reqClass.includes(G.player.class))));
+  if(!forceHighTier) pool.push(...POTIONS);
+  
+  if(itemFilter) pool = pool.filter(itemFilter);
+  if(!pool.length) pool = POTIONS;
+  
+  let i=pool[rr(0,pool.length-1)];
+  if(forceHighTier) {
+    let rares = pool.filter(x=>x.rarity==='rare'||x.rarity==='legendary');
+    if(rares.length) i = rares[rr(0, rares.length-1)];
+  }
+  G.items.push({...i,x:cx,y:cy,id:uid(),carried:false});
+}
+
 const POTIONS=[
   {name:'Health Potion', type:'potion',heal:15,sym:'!',rarity:'common',   price:25},
   {name:'Greater Potion',type:'potion',heal:30,sym:'!',rarity:'rare',     price:50},
   {name:'Elixir of Life',type:'potion',heal:60,sym:'!',rarity:'legendary',price:100},
+  {name:'Scroll of Detection',type:'scroll',sym:'📜',rarity:'common',price:200},
 ];
 
 // Shop-exclusive upgrades
@@ -102,8 +121,10 @@ const UPGRADES=[
   {name:'Troll Blood',    type:'upgrade',stat:'regen',amount:1,sym:'♥',rarity:'legendary',price:500, desc:'Heal 1 HP every 10 tiles explored'},
   {name:'Troll Heart',    type:'upgrade',stat:'regen',amount:2,sym:'♥',rarity:'legendary',price:600, desc:'Heal 2 HP every 10 tiles explored'},
 
-  // Speed
+  // Speed & Perception
   {name:'Hermes Boots',   type:'upgrade',stat:'swift',amount:1,sym:'⚡',rarity:'legendary',price:450, desc:'Gain 1 free move every 15 tiles explored'},
+  {name:'Dungeoneer\'s Kit',type:'upgrade',stat:'perception',amount:1,sym:'👁',rarity:'common',price:100, desc:'+1 Perception (Detects nearby traps/secrets)'},
+  {name:'Third Eye',        type:'upgrade',stat:'perception',amount:2,sym:'👁',rarity:'rare',price:250, desc:'+2 Perception (Detects distant traps/secrets)'},
 
   // New Mechanics
   {name:'Assassin\'s Mark', type:'upgrade',stat:'crit',amount:0.05,sym:'🎯',rarity:'rare', price:250, desc:'+5% Critical Hit Chance'},

@@ -5,7 +5,7 @@ function generateMap(){
   const carve=(x,y,w,h)=>{
     for(let ry=y;ry<y+h;ry++) for(let rx=x;rx<x+w;rx++)
       if(ry>0&&ry<MAP_H-1&&rx>0&&rx<MAP_W-1) map[ry][rx]=TILE.FLOOR;
-    rooms.push({x,y,w,h,cx:Math.floor(x+w/2),cy:Math.floor(y+h/2)});
+    rooms.push({x,y,w,h,cx:Math.floor(x+w/2),cy:Math.floor(y+h/2),type:'normal'});
   };
   const tunnel=(x1,y1,x2,y2)=>{
     let cx=x1,cy=y1;
@@ -21,6 +21,65 @@ function generateMap(){
     if(ok) carve(rx,ry,rw,rh);
   }
   for(let i=1;i<rooms.length;i++) tunnel(rooms[i-1].cx,rooms[i-1].cy,rooms[i].cx,rooms[i].cy);
+
+  let pool = rooms.slice(1, -1);
+  for (let i = pool.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  if(pool.length > 0) pool[0].type = 'treasure';
+  if(pool.length > 1) pool[1].type = 'armory';
+  if(pool.length > 2) pool[2].type = 'crypt';
+  if(pool.length > 3) pool[3].type = 'shrine';
+
+  if(pool.length > 0) {
+    let tr = pool[0];
+    for(let y=tr.y-1; y<=tr.y+tr.h; y++) {
+      for(let x=tr.x-1; x<=tr.x+tr.w; x++) {
+        if(y>=0 && y<MAP_H && x>=0 && x<MAP_W && (x===tr.x-1 || x===tr.x+tr.w || y===tr.y-1 || y===tr.y+tr.h) && map[y][x] === TILE.FLOOR) {
+          map[y][x] = TILE.LOCKED_DOOR;
+        }
+      }
+    }
+  }
+
+  for(let i=0; i<2; i++) {
+    let sw = 3, sh = 3;
+    let sx = rr(2, MAP_W-sw-2), sy = rr(2, MAP_H-sh-2);
+    let ok = true;
+    for(let y=sy-1; y<=sy+sh; y++) {
+      for(let x=sx-1; x<=sx+sw; x++) {
+        if(map[y][x] !== TILE.WALL) ok = false;
+      }
+    }
+    if(ok) {
+      let connected = false;
+      for(let r=2; r<5 && !connected; r++) {
+        for(let y=sy-r; y<=sy+sh+r-1; y++) {
+          for(let x=sx-r; x<=sx+sw+r-1; x++) {
+            if(y>0&&y<MAP_H-1&&x>0&&x<MAP_W-1 && map[y][x] === TILE.FLOOR) {
+              tunnel(sx+1, sy+1, x, y);
+              connected = true;
+              break;
+            }
+          }
+          if(connected) break;
+        }
+      }
+      if(connected) {
+        for(let ry=sy;ry<sy+sh;ry++) for(let rx=sx;rx<sx+sw;rx++) map[ry][rx]=TILE.FLOOR;
+        for(let y=sy-1; y<=sy+sh; y++) {
+          for(let x=sx-1; x<=sx+sw; x++) {
+            if((x===sx-1 || x===sx+sw || y===sy-1 || y===sy+sh) && map[y][x] === TILE.FLOOR) {
+              map[y][x] = TILE.SECRET_DOOR;
+            }
+          }
+        }
+        rooms.push({x:sx, y:sy, w:sw, h:sh, cx:sx+1, cy:sy+1, type: 'secret'});
+      }
+    }
+  }
+
   return{map,rooms};
 }
 
@@ -54,13 +113,14 @@ function initGame(playerClass = 'warrior'){
     critChance: 0,
     dodgeBonus: 0,
     goldBonus: 0,
-    xpMult: 0
+    xpMult: 0,
+    perception: 0
   };
   if(playerClass === 'warrior') {
     p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 2;
     p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◆', price:60};
   } else if(playerClass === 'rogue') {
-    p.hp = 24; p.maxHp = 24; p.atk = 7; p.def = 2;
+    p.hp = 24; p.maxHp = 24; p.atk = 7; p.def = 2; p.perception = 1;
     p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'†', price:25};
     p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◆', price:35};
     p.bestWeapon = 'Rusty Dagger (ATK+4)';
@@ -75,7 +135,7 @@ function initGame(playerClass = 'warrior'){
     p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:80};
     p.bestWeapon = 'Iron Mace (ATK+5)';
   } else if(playerClass === 'ranger') {
-    p.hp = 13; p.maxHp = 13; p.atk = 2; p.def = 1;
+    p.hp = 13; p.maxHp = 13; p.atk = 2; p.def = 1; p.perception = 1;
     p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:4, rarity:'common', sym:'🏹', price:50};
     p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
     p.bestWeapon = 'Shortbow (ATK+4)';
@@ -113,67 +173,112 @@ function buildFloor(){
   G.map=map;G.rooms=rooms;G.enemies=[];G.shops=[];G.traps=[];G.currentShop=null;
   G.visible = new Set();
   G.seen = new Set();
-  // Preserve carried items (bag contents) across floor transitions; only clear floor items.
   G.items=G.items.filter(i=>i.carried);
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
 
-  // Stairs in last room
   map[rooms[rooms.length-1].cy][rooms[rooms.length-1].cx]=TILE.STAIRS;
 
-  // Shops in middle rooms, up to 3
   if(rooms.length>=5){
-    let pool = rooms.slice(1, -1).sort(()=>Math.random()-.5);
+    let pool = rooms.slice(1, -1).filter(r=>r.type!=='secret'&&r.type!=='treasure'&&r.type!=='crypt');
+    for (let i = pool.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
     let numShops = Math.min(3, pool.length);
     for(let i=0; i<numShops; i++){
       let sr = pool[i];
+      sr.type = 'shop';
       G.shops.push({x:sr.cx, y:sr.cy, stock:generateShopStock()});
       map[sr.cy][sr.cx]=TILE.SHOP;
     }
   }
 
-  // Enemies & items in remaining rooms
-  // Compute initial vision to avoid spawning enemies the player can see
   computeVision();
   const startVisible = new Set(G.visible);
 
   for(let i=1;i<rooms.length;i++){
     let r=rooms[i];
-    // Don't spawn enemies in shop rooms or the starting room
-    if(G.shops.some(s=>r.cx===s.x&&r.cy===s.y)) continue;
-    let ne=rr(1,1+Math.min(G.floor,4));
+    if(r.type === 'shop') continue;
+    
+    let ne = 0;
+    let baseEnemies = rr(1,1+Math.min(G.floor,4));
+    let guaranteedItems = 0;
+    let itemFilter = null;
+    let isElite = false;
+    let isCrypt = false;
+
+    if(r.type === 'treasure') {
+      ne = 1; isElite = true; guaranteedItems = 2 + rr(0,1);
+    } else if(r.type === 'armory') {
+      ne = rr(3,4); guaranteedItems = 1 + rr(0,1); itemFilter = (it) => it.type === 'weapon' || it.type === 'armor';
+    } else if(r.type === 'crypt') {
+      ne = baseEnemies * 3; isCrypt = true; guaranteedItems = 1;
+    } else if(r.type === 'shrine') {
+      ne = rr(1,2);
+      G.items.push({id:uid(), x:r.cx, y:r.cy, name:'Shrine', type:'shrine', rarity:'legendary', sym:'⛊', carried:false});
+    } else if(r.type === 'secret') {
+      ne = 0; guaranteedItems = 1 + rr(0,1);
+    } else {
+      ne = baseEnemies;
+      if(ch(.65)) guaranteedItems = 1;
+    }
+
     let enemyProfile = getFloorEnemyProfile(G.floor);
     for(let e=0;e<ne;e++){
       let tier=rr(enemyProfile.tierMin, enemyProfile.tierMax);
       let t=ENEMIES[tier],sc=enemyProfile.scale;
-      // Find a position not visible from player start, with extra distance check
+      if(isCrypt) sc *= 1.2;
+      
       let ex, ey, attempts=0;
       do {
-        ex=r.x+rr(1,r.w-2);
-        ey=r.y+rr(1,r.h-2);
+        ex=r.x+rr(1,r.w-2); ey=r.y+rr(1,r.h-2);
         attempts++;
         let dist=Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y);
         if(!startVisible.has(ey*MAP_W+ex) && dist>8) break;
       } while(attempts<30);
-      // Only place if clearly out of starting vision
-      if(startVisible.has(ey*MAP_W+ex)) {
-        // Last resort: skip this enemy rather than spawn it visible
-        if(Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y)<=8) continue;
-      }
-      G.enemies.push({...t,
+      if(startVisible.has(ey*MAP_W+ex)) if(Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y)<=8) continue;
+      
+      let enemy = {...t,
         hp:Math.round(t.hp*sc),maxHp:Math.round(t.hp*sc),
         atk:Math.round(t.atk*sc),def:Math.round(t.def*sc),
-        xp:Math.round(t.xp*sc),gold:Math.round(t.gold*sc),
-        x:ex,y:ey,id:uid(), stunnedTurns: 0});
+        xp:Math.round(t.xp*(isCrypt?1.5:1)*sc),gold:Math.round(t.gold*sc),
+        x:ex,y:ey,id:uid(), stunnedTurns: 0};
+        
+      if(isElite) {
+        enemy.hp *= 2; enemy.maxHp *= 2; enemy.atk *= 2; enemy.isElite = true; enemy.name = "Elite " + enemy.name;
+      }
+      G.enemies.push(enemy);
     }
-    if(ch(.65)) spawnItem(r);
+    
+    for(let g=0;g<guaranteedItems;g++) {
+      spawnItem(r, itemFilter, (r.type==='treasure'||r.type==='crypt'||r.type==='secret')); 
+    }
   }
+
+  let numTraps = rr(3, 7 + G.floor);
+  for(let i=0; i<numTraps; i++) {
+    if(rooms.length <= 1) break;
+    let r = rooms[rr(1, rooms.length-1)];
+    if(r.type === 'shop' || r.type === 'treasure') continue;
+    let tx = r.x+rr(1,r.w-2), ty = r.y+rr(1,r.h-2);
+    let type = ch(0.5) ? 'spike' : (ch(0.5) ? 'gas' : 'alarm');
+    G.traps.push({x:tx, y:ty, type, triggered: false});
+  }
+
+  for(let i=0; i<rr(1, 2); i++) {
+    if(rooms.length <= 1) break;
+    let r = rooms[rr(1, rooms.length-1)];
+    if(r.type === 'normal') {
+      G.items.push({id:uid(), x:r.x+rr(1,r.w-2), y:r.y+rr(1,r.h-2), name:'Key', type:'key', rarity:'common', sym:'⚷', carried:false});
+    }
+  }
+
   computeVision();render();
   addLog(`Floor ${G.floor}. ${G.shops.length?'Merchants await nearby...':''}`, G.shops.length?'log-shop':'log-info');
-  // Fire tips for anything visible on spawn
   setTimeout(()=>{
     if(!TIPS.firstEnemy.shown && G.enemies.some(e=>G.visible.has(e.y*MAP_W+e.x))) fireTip('firstEnemy');
     if(!TIPS.firstShop.shown && G.shops.some(s=>G.visible.has(s.y*MAP_W+s.x))) fireTip('firstShop');
     if(!TIPS.firstStairs.shown && G.map[G.rooms[G.rooms.length-1].cy][G.rooms[G.rooms.length-1].cx]===TILE.STAIRS &&
        G.visible.has(G.rooms[G.rooms.length-1].cy*MAP_W+G.rooms[G.rooms.length-1].cx)) fireTip('firstStairs');
-  }, 600); // slight delay so floor message shows first
+  }, 600);
 }

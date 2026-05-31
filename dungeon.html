@@ -263,6 +263,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .item-wait { color: var(--orange) !important; text-shadow: 0 0 5px var(--orange); }
 .item-upgrade { color: var(--green) !important; text-shadow: 0 0 5px var(--green); }
 
+.tile-elite { text-shadow: 0 0 10px var(--red), 0 0 20px var(--accent); animation: shopPulse 2s ease-in-out infinite; }
+#minimap { position: absolute; top: 5px; right: 5px; width: 112px; height: 72px; border: 1px solid var(--border); background: rgba(10, 10, 15, 0.85); opacity: 0.8; pointer-events: none; z-index: 15; image-rendering: pixelated; }
+
 </style>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -331,6 +334,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <!-- MAP -->
   <div id="map-area">
     <div id="map-wrap"><div id="map"></div></div>
+    <canvas id="minimap" width="112" height="72"></canvas>
   </div>
 
   <!-- LOG (portrait only) -->
@@ -519,7 +523,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <script>
 // ===================== CONSTANTS =====================
 const MAP_W=56,MAP_H=36,FLOORS=5;
-const TILE={WALL:0,FLOOR:1,STAIRS:2,SHOP:3};
+const TILE={WALL:0,FLOOR:1,STAIRS:2,SHOP:3,LOCKED_DOOR:4,SECRET_DOOR:5};
 const DIRS={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],
             w:[0,-1],s:[0,1],a:[-1,0],d:[1,0],W:[0,-1],S:[0,1],A:[-1,0],D:[1,0]};
 const CLASS_INFO = {
@@ -609,10 +613,29 @@ const ARMORS=[
   {name:'Grandmaster Robe',type:'armor',def:11,sym:'◆', rarity:'legendary', price:245, reqClass:['monk'], reqLvl:10},
 ];
 
+function spawnItem(r, itemFilter=null, forceHighTier=false){
+  let cx=r.x+rr(1,r.w-2),cy=r.y+rr(1,r.h-2);
+  let pool=[];
+  if(ch(.3)||forceHighTier) pool.push(...WEAPONS.filter(w=>(!w.reqLvl||G.player.lvl>=w.reqLvl-2)&&(!w.reqClass||w.reqClass.includes(G.player.class))));
+  if(ch(.3)||forceHighTier) pool.push(...ARMORS.filter(a=>(!a.reqLvl||G.player.lvl>=a.reqLvl-2)&&(!a.reqClass||a.reqClass.includes(G.player.class))));
+  if(!forceHighTier) pool.push(...POTIONS);
+  
+  if(itemFilter) pool = pool.filter(itemFilter);
+  if(!pool.length) pool = POTIONS;
+  
+  let i=pool[rr(0,pool.length-1)];
+  if(forceHighTier) {
+    let rares = pool.filter(x=>x.rarity==='rare'||x.rarity==='legendary');
+    if(rares.length) i = rares[rr(0, rares.length-1)];
+  }
+  G.items.push({...i,x:cx,y:cy,id:uid(),carried:false});
+}
+
 const POTIONS=[
   {name:'Health Potion', type:'potion',heal:15,sym:'!',rarity:'common',   price:25},
   {name:'Greater Potion',type:'potion',heal:30,sym:'!',rarity:'rare',     price:50},
   {name:'Elixir of Life',type:'potion',heal:60,sym:'!',rarity:'legendary',price:100},
+  {name:'Scroll of Detection',type:'scroll',sym:'📜',rarity:'common',price:200},
 ];
 
 // Shop-exclusive upgrades
@@ -639,8 +662,10 @@ const UPGRADES=[
   {name:'Troll Blood',    type:'upgrade',stat:'regen',amount:1,sym:'♥',rarity:'legendary',price:500, desc:'Heal 1 HP every 10 tiles explored'},
   {name:'Troll Heart',    type:'upgrade',stat:'regen',amount:2,sym:'♥',rarity:'legendary',price:600, desc:'Heal 2 HP every 10 tiles explored'},
 
-  // Speed
+  // Speed & Perception
   {name:'Hermes Boots',   type:'upgrade',stat:'swift',amount:1,sym:'⚡',rarity:'legendary',price:450, desc:'Gain 1 free move every 15 tiles explored'},
+  {name:'Dungeoneer\'s Kit',type:'upgrade',stat:'perception',amount:1,sym:'👁',rarity:'common',price:100, desc:'+1 Perception (Detects nearby traps/secrets)'},
+  {name:'Third Eye',        type:'upgrade',stat:'perception',amount:2,sym:'👁',rarity:'rare',price:250, desc:'+2 Perception (Detects distant traps/secrets)'},
 
   // New Mechanics
   {name:'Assassin\'s Mark', type:'upgrade',stat:'crit',amount:0.05,sym:'🎯',rarity:'rare', price:250, desc:'+5% Critical Hit Chance'},
@@ -783,6 +808,27 @@ function computeVision(){
       }
     }
   }
+
+  if(G.player.perception > 0) {
+    let p = G.player.perception;
+    for(let y=Math.max(0, py-p); y<=Math.min(MAP_H-1, py+p); y++) {
+      for(let x=Math.max(0, px-p); x<=Math.min(MAP_W-1, px+p); x++) {
+        if(!G.visible.has(y*MAP_W+x)) continue;
+        if(G.map[y][x] === TILE.SECRET_DOOR) {
+          G.map[y][x] = TILE.FLOOR;
+          addLog('Your perception revealed a secret door!', 'log-info');
+          floatText('SECRET', x, y, '#fbbf24');
+          SFX.click();
+        }
+        let trap = G.traps.find(t => t.x === x && t.y === y && !t.revealed);
+        if(trap) {
+          trap.revealed = true;
+          addLog('Your perception revealed a trap!', 'log-info');
+          floatText('TRAP', x, y, '#fbbf24');
+        }
+      }
+    }
+  }
 }
 
 </script>
@@ -878,7 +924,7 @@ function render(){
   const cs=getCellSize();
   mapEl.style.gridTemplateColumns=`repeat(${MAP_W},${cs}px)`;
   mapEl.style.fontSize=`${cs*.72}px`;
-  const CH={[TILE.WALL]:'█',[TILE.FLOOR]:'·',[TILE.STAIRS]:'>',[TILE.SHOP]:'$'};
+  const CH={[TILE.WALL]:'█',[TILE.FLOOR]:'·',[TILE.STAIRS]:'>',[TILE.SHOP]:'$',[TILE.LOCKED_DOOR]:'🔒',[TILE.SECRET_DOOR]:'█'};
   let h='';
   for(let y=0;y<MAP_H;y++){
     for(let x=0;x<MAP_W;x++){
@@ -893,7 +939,8 @@ function render(){
         let dist = Math.max(Math.abs(en.x-G.player.x), Math.abs(en.y-G.player.y));
         let canTap = (dist <= maxRange);
         let dyingClass=en.dying?' tile-enemy-dying':'';
-        h+=`<div class="tile tile-enemy${dyingClass}" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
+        let eliteClass=en.isElite?' tile-elite':'';
+        h+=`<div class="tile tile-enemy${dyingClass}${eliteClass}" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
           onmouseenter="showTip(event,'${en.name}',${en.hp},${en.maxHp},${en.atk})"
           onmouseleave="hideTip()"
           onclick="${en.dying||!canTap?'':`tileAttack('${en.id}')`}"
@@ -916,8 +963,13 @@ function render(){
         continue;
       }
       let trap=seen&&G.traps?G.traps.find(t=>t.x===x&&t.y===y):null;
-      if(trap){
-        h+=`<div class="tile tile-trap" style="${s}">^</div>`;continue;
+      if(trap && (trap.triggered || trap.revealed)){
+        let trapSym = trap.type === 'spike' ? '^' : trap.type === 'gas' ? '*' : '!';
+        let trapColor = trap.type === 'spike' ? 'var(--orange)' : trap.type === 'gas' ? 'var(--green)' : 'var(--red)';
+        let opacity = trap.triggered ? '1' : '0.5';
+        h+=`<div class="tile tile-trap" style="${s}color:${trapColor};text-shadow:0 0 5px ${trapColor};opacity:${opacity}"
+            onmouseenter="showTip(event,'${trap.type.toUpperCase()} TRAP (Revealed)')"
+            onmouseleave="hideTip()">${trapSym}</div>`;continue;
       }
       if(t===TILE.STAIRS&&seen){
         h+=`<div class="tile tile-stairs" style="${s}" onclick="descend()" ontouchend="event.preventDefault();descend()">></div>`;continue;
@@ -926,11 +978,12 @@ function render(){
         h+=`<div class="tile tile-shop" style="${s}" onclick="openShop()" ontouchend="event.preventDefault();openShop()">$</div>`;continue;
       }
       let sc=(seen&&!vis)?' tile-seen':'';
-      h+=`<div class="tile ${t===TILE.WALL?'tile-wall':'tile-floor'}${sc}" style="${s}">${CH[t]||' '}</div>`;
+      h+=`<div class="tile ${(t===TILE.WALL||t===TILE.SECRET_DOOR)?'tile-wall':'tile-floor'}${sc}" style="${s}">${CH[t]||' '}</div>`;
     }
   }
   mapEl.innerHTML=h;
   positionMapOnPlayer();
+  drawMinimap();
   updateHUD();updateInvDrawer();updateActBtns();
 }
 
@@ -1014,6 +1067,33 @@ function updateInvDrawer(){
   if(G.player.armor)  eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.armor.name}</div><div class="inv-type">armor</div></div><div class="inv-bonus">DEF+${armorPower(G.player.armor)}</div></div>`;
   if(!G.player.weapon&&!G.player.armor) eh='<div class="inv-empty">Nothing equipped</div>';
   document.getElementById('equipped-list').innerHTML=eh;
+}
+
+function drawMinimap() {
+  const cvs = document.getElementById('minimap');
+  if(!cvs || !G.map) return;
+  const ctx = cvs.getContext('2d');
+  ctx.clearRect(0,0,112,72);
+  const pxSize = 2;
+  for(let y=0; y<MAP_H; y++){
+    for(let x=0; x<MAP_W; x++){
+      let k = y*MAP_W+x;
+      if(!G.seen.has(k)) continue;
+      
+      let t = G.map[y][x];
+      let vis = G.visible.has(k);
+      
+      if(t===TILE.WALL || t===TILE.SECRET_DOOR) ctx.fillStyle = vis ? '#333' : '#111';
+      else if(t===TILE.STAIRS) ctx.fillStyle = vis ? '#4ade80' : '#225533';
+      else if(t===TILE.SHOP) ctx.fillStyle = vis ? '#fbbf24' : '#665511';
+      else if(t===TILE.LOCKED_DOOR) ctx.fillStyle = vis ? '#f87171' : '#662222';
+      else ctx.fillStyle = vis ? '#7e7ea3' : '#333344';
+      
+      ctx.fillRect(x*pxSize, y*pxSize, pxSize, pxSize);
+    }
+  }
+  ctx.fillStyle = '#4ade80'; // Player
+  ctx.fillRect(G.player.x*pxSize, G.player.y*pxSize, pxSize, pxSize);
 }
 
 </script>
@@ -1270,11 +1350,96 @@ function move(dx,dy){
   if(G.player.rootedTurns > 0) { consumeRootedTurn(); return; }
   let nx=G.player.x+dx,ny=G.player.y+dy;
   if(nx<0||nx>=MAP_W||ny<0||ny>=MAP_H||G.map[ny][nx]===TILE.WALL)return;
+
+  if(G.map[ny][nx]===TILE.SECRET_DOOR){
+    G.map[ny][nx] = TILE.FLOOR;
+    addLog('You found a secret door!', 'log-info');
+    SFX.click();
+    return;
+  }
+  
+  if(G.map[ny][nx]===TILE.LOCKED_DOOR){
+    let keyIdx = G.items.findIndex(i => i.carried && i.type === 'key');
+    if(keyIdx !== -1) {
+      G.items.splice(keyIdx, 1);
+      G.map[ny][nx] = TILE.FLOOR;
+      addLog('Unlocked the door.', 'log-info');
+      SFX.click();
+    } else {
+      addLog('The door is locked. You need a Key.', 'log-combat');
+    }
+    return;
+  }
+
   let en=G.enemies.find(e=>e.x===nx&&e.y===ny);
   if(en){if(en.dying)return;attackEnemy(en.id);return;}
+
+  G.player.x=nx;G.player.y=ny;
+  computeVision();
+
+  let trap = G.traps.find(t=>t.x===nx&&t.y===ny&&!t.triggered);
+  if(trap) {
+    if(trap.revealed) {
+      let disarmChance = 0.3 + (G.player.perception * 0.15) + (G.player.class === 'rogue' ? 0.20 : 0);
+      if(ch(disarmChance)) {
+        trap.triggered = true;
+        let tIdx = G.traps.findIndex(t => t.x===nx && t.y===ny);
+        if(tIdx > -1) G.traps.splice(tIdx, 1);
+        addLog('You successfully disarmed the trap!', 'log-info');
+        floatText('DISARMED', nx, ny, '#4ade80');
+        SFX.click();
+        trap = null;
+      } else {
+        addLog('You failed to disarm the trap!', 'log-combat');
+        floatText('FAILED', nx, ny, '#f87171');
+      }
+    }
+    
+    if(trap) {
+      trap.triggered = true;
+      if(G.player.class === 'rogue' && ch(0.5)) {
+        addLog('You agilely dodged a trap!', 'log-info');
+        floatText('DODGED', nx, ny, '#fbbf24');
+      } else {
+        if(trap.type === 'spike') {
+          let dmg = Math.floor(G.player.maxHp * 0.15) + 2;
+          G.player.hp -= dmg;
+          addLog(`You stepped on a spike trap! Took ${dmg} damage.`, 'log-combat');
+          floatText(`-${dmg}`, nx, ny, '#f87171');
+          flashDamage();
+          SFX.hit();
+        } else if(trap.type === 'gas') {
+          G.player.poisonedTurns = 5;
+          addLog('You triggered a poison gas trap!', 'log-combat');
+          floatText('POISONED', nx, ny, '#a855f7');
+          SFX.hit();
+        } else if(trap.type === 'alarm') {
+          addLog('You triggered an alarm! Enemies are alerted.', 'log-combat');
+          floatText('ALARM!', nx, ny, '#f87171');
+          SFX.hit();
+          // Awake enemies
+          G.enemies.forEach(e => {
+            if(!e.dying && e.stunnedTurns) e.stunnedTurns = 0;
+          });
+        }
+      }
+    }
+  }
+
   let it=G.items.find(i=>!i.carried&&i.x===nx&&i.y===ny);
-  G.player.x=nx;G.player.y=ny;computeVision();
-  if(it)pickupItem(it.id,{allowFreeMove:true});else advanceTurn({allowFreeMove:true});
+  if(it) {
+    if(it.type === 'key') {
+      pickupItem(it.id, {allowFreeMove:true, silent:true});
+      addLog('Picked up a Key.', 'log-info');
+      floatText('+KEY', nx, ny, '#fbbf24');
+    } else if(it.type === 'shrine') {
+      interactShrine(it);
+    } else {
+      pickupItem(it.id,{allowFreeMove:true});
+    }
+  } else {
+    advanceTurn({allowFreeMove:true});
+  }
 }
 
 function dpadPress(dx,dy){
@@ -1447,6 +1612,37 @@ function useItem(id){
     return;
   }
 
+  if(it.type==='scroll') {
+    if(it.name==='Scroll of Detection') {
+      let r = 8;
+      let revealedSomething = false;
+      for(let y=Math.max(0, G.player.y-r); y<=Math.min(MAP_H-1, G.player.y+r); y++) {
+        for(let x=Math.max(0, G.player.x-r); x<=Math.min(MAP_W-1, G.player.x+r); x++) {
+          if(G.map[y][x] === TILE.SECRET_DOOR) {
+            G.map[y][x] = TILE.FLOOR;
+            revealedSomething = true;
+          }
+          let trap = G.traps.find(t => t.x === x && t.y === y && !t.revealed);
+          if(trap) {
+            trap.revealed = true;
+            revealedSomething = true;
+          }
+        }
+      }
+      if(revealedSomething) {
+        addLog('The scroll revealed hidden secrets nearby!', 'log-info');
+        floatText('REVEALED', G.player.x, G.player.y, '#fbbf24');
+      } else {
+        addLog('The scroll revealed nothing.', 'log-info');
+      }
+      SFX.levelUp();
+    }
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
   if(!canEquip(it)) {
     addLog(`Cannot equip ${it.name} (Requires: ${it.reqLvl?'Lvl '+it.reqLvl:''} ${it.reqClass?it.reqClass.join('/'):''})`, 'log-info');
     return;
@@ -1477,6 +1673,42 @@ function useItem(id){
     addLog(`Equipped ${it.name}`,'log-item');
   }
   advanceTurn();closeInv();
+}
+
+function interactShrine(it) {
+  let idx = G.items.findIndex(i => i.id === it.id);
+  if(idx > -1) G.items.splice(idx, 1);
+  
+  if(ch(0.75)) {
+    let buffType = ch(0.5) ? 'atk' : 'def';
+    if(buffType === 'atk') {
+      G.player.atk += 1;
+      addLog('The shrine blessed you! +1 ATK', 'log-info');
+      floatText('+1 ATK', G.player.x, G.player.y, '#fbbf24');
+    } else {
+      G.player.def += 1;
+      addLog('The shrine blessed you! +1 DEF', 'log-info');
+      floatText('+1 DEF', G.player.x, G.player.y, '#4ade80');
+    }
+  } else {
+    let debuffType = ch(0.5) ? 'maxHp' : 'atk';
+    if(debuffType === 'maxHp') {
+      let loss = Math.max(1, Math.floor(G.player.maxHp * 0.1));
+      G.player.maxHp -= loss;
+      if(G.player.hp > G.player.maxHp) G.player.hp = G.player.maxHp;
+      addLog(`The shrine cursed you! -${loss} Max HP`, 'log-combat');
+      floatText(`-${loss} MAX HP`, G.player.x, G.player.y, '#f87171');
+      flashDamage();
+    } else {
+      let loss = 1;
+      G.player.atk = Math.max(1, G.player.atk - loss);
+      addLog('The shrine cursed you! -1 ATK', 'log-combat');
+      floatText('-1 ATK', G.player.x, G.player.y, '#f87171');
+      flashDamage();
+    }
+  }
+  SFX.click();
+  advanceTurn({allowFreeMove:true});
 }
 
 function descend(){
@@ -1668,11 +1900,26 @@ function advanceTurn(opts={}){
   if(G.player.bloodlustTurns>0)G.player.bloodlustTurns--;
   if(G.player.rootedTurns>0)G.player.rootedTurns--;
 
+  if(G.player.poisonedTurns>0) {
+    G.player.poisonedTurns--;
+    let pdmg = Math.max(1, Math.floor(G.player.maxHp * 0.05));
+    G.player.hp -= pdmg;
+    addLog(`Poison damage: -${pdmg} HP`, 'log-combat');
+    floatText(`-${pdmg} HP`, G.player.x, G.player.y, '#a855f7');
+    flashDamage();
+    SFX.hit();
+    if(G.player.hp <= 0) {
+      G.gameOver = true;
+      showGameOver('Poison Gas');
+      return;
+    }
+  }
+
   G.enemies.forEach(e=>{
     if(G.gameOver||G.won||G.pendingHit) return;
     if(e.dying) return;
 
-    let trapIdx = G.traps.findIndex(t => t.x===e.x && t.y===e.y);
+    let trapIdx = G.traps.findIndex(t => t.type === 'bear' && t.x===e.x && t.y===e.y);
     if(trapIdx !== -1) {
       G.traps.splice(trapIdx, 1);
       e.stunnedTurns = 5;
@@ -1901,7 +2148,7 @@ function doAbility2(){
     addLog('Lay on Hands: Healed!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'ranger') {
-    G.traps.push({x: p.x, y: p.y});
+    G.traps.push({x: p.x, y: p.y, type: 'bear'});
     let safeAdj = [[-1,0],[1,0],[0,-1],[0,1]].map(d=>({x:p.x+d[0], y:p.y+d[1]}))
       .filter(t=>G.map[t.y] && G.map[t.y][t.x]===TILE.FLOOR && !G.enemies.some(e=>e.x===t.x&&e.y===t.y));
     if(safeAdj.length) {
@@ -2236,7 +2483,7 @@ function generateMap(){
   const carve=(x,y,w,h)=>{
     for(let ry=y;ry<y+h;ry++) for(let rx=x;rx<x+w;rx++)
       if(ry>0&&ry<MAP_H-1&&rx>0&&rx<MAP_W-1) map[ry][rx]=TILE.FLOOR;
-    rooms.push({x,y,w,h,cx:Math.floor(x+w/2),cy:Math.floor(y+h/2)});
+    rooms.push({x,y,w,h,cx:Math.floor(x+w/2),cy:Math.floor(y+h/2),type:'normal'});
   };
   const tunnel=(x1,y1,x2,y2)=>{
     let cx=x1,cy=y1;
@@ -2252,6 +2499,65 @@ function generateMap(){
     if(ok) carve(rx,ry,rw,rh);
   }
   for(let i=1;i<rooms.length;i++) tunnel(rooms[i-1].cx,rooms[i-1].cy,rooms[i].cx,rooms[i].cy);
+
+  let pool = rooms.slice(1, -1);
+  for (let i = pool.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  if(pool.length > 0) pool[0].type = 'treasure';
+  if(pool.length > 1) pool[1].type = 'armory';
+  if(pool.length > 2) pool[2].type = 'crypt';
+  if(pool.length > 3) pool[3].type = 'shrine';
+
+  if(pool.length > 0) {
+    let tr = pool[0];
+    for(let y=tr.y-1; y<=tr.y+tr.h; y++) {
+      for(let x=tr.x-1; x<=tr.x+tr.w; x++) {
+        if(y>=0 && y<MAP_H && x>=0 && x<MAP_W && (x===tr.x-1 || x===tr.x+tr.w || y===tr.y-1 || y===tr.y+tr.h) && map[y][x] === TILE.FLOOR) {
+          map[y][x] = TILE.LOCKED_DOOR;
+        }
+      }
+    }
+  }
+
+  for(let i=0; i<2; i++) {
+    let sw = 3, sh = 3;
+    let sx = rr(2, MAP_W-sw-2), sy = rr(2, MAP_H-sh-2);
+    let ok = true;
+    for(let y=sy-1; y<=sy+sh; y++) {
+      for(let x=sx-1; x<=sx+sw; x++) {
+        if(map[y][x] !== TILE.WALL) ok = false;
+      }
+    }
+    if(ok) {
+      let connected = false;
+      for(let r=2; r<5 && !connected; r++) {
+        for(let y=sy-r; y<=sy+sh+r-1; y++) {
+          for(let x=sx-r; x<=sx+sw+r-1; x++) {
+            if(y>0&&y<MAP_H-1&&x>0&&x<MAP_W-1 && map[y][x] === TILE.FLOOR) {
+              tunnel(sx+1, sy+1, x, y);
+              connected = true;
+              break;
+            }
+          }
+          if(connected) break;
+        }
+      }
+      if(connected) {
+        for(let ry=sy;ry<sy+sh;ry++) for(let rx=sx;rx<sx+sw;rx++) map[ry][rx]=TILE.FLOOR;
+        for(let y=sy-1; y<=sy+sh; y++) {
+          for(let x=sx-1; x<=sx+sw; x++) {
+            if((x===sx-1 || x===sx+sw || y===sy-1 || y===sy+sh) && map[y][x] === TILE.FLOOR) {
+              map[y][x] = TILE.SECRET_DOOR;
+            }
+          }
+        }
+        rooms.push({x:sx, y:sy, w:sw, h:sh, cx:sx+1, cy:sy+1, type: 'secret'});
+      }
+    }
+  }
+
   return{map,rooms};
 }
 
@@ -2285,13 +2591,14 @@ function initGame(playerClass = 'warrior'){
     critChance: 0,
     dodgeBonus: 0,
     goldBonus: 0,
-    xpMult: 0
+    xpMult: 0,
+    perception: 0
   };
   if(playerClass === 'warrior') {
     p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 2;
     p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◆', price:60};
   } else if(playerClass === 'rogue') {
-    p.hp = 24; p.maxHp = 24; p.atk = 7; p.def = 2;
+    p.hp = 24; p.maxHp = 24; p.atk = 7; p.def = 2; p.perception = 1;
     p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'†', price:25};
     p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◆', price:35};
     p.bestWeapon = 'Rusty Dagger (ATK+4)';
@@ -2306,7 +2613,7 @@ function initGame(playerClass = 'warrior'){
     p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:80};
     p.bestWeapon = 'Iron Mace (ATK+5)';
   } else if(playerClass === 'ranger') {
-    p.hp = 13; p.maxHp = 13; p.atk = 2; p.def = 1;
+    p.hp = 13; p.maxHp = 13; p.atk = 2; p.def = 1; p.perception = 1;
     p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:4, rarity:'common', sym:'🏹', price:50};
     p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
     p.bestWeapon = 'Shortbow (ATK+4)';
@@ -2344,69 +2651,114 @@ function buildFloor(){
   G.map=map;G.rooms=rooms;G.enemies=[];G.shops=[];G.traps=[];G.currentShop=null;
   G.visible = new Set();
   G.seen = new Set();
-  // Preserve carried items (bag contents) across floor transitions; only clear floor items.
   G.items=G.items.filter(i=>i.carried);
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
 
-  // Stairs in last room
   map[rooms[rooms.length-1].cy][rooms[rooms.length-1].cx]=TILE.STAIRS;
 
-  // Shops in middle rooms, up to 3
   if(rooms.length>=5){
-    let pool = rooms.slice(1, -1).sort(()=>Math.random()-.5);
+    let pool = rooms.slice(1, -1).filter(r=>r.type!=='secret'&&r.type!=='treasure'&&r.type!=='crypt');
+    for (let i = pool.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
     let numShops = Math.min(3, pool.length);
     for(let i=0; i<numShops; i++){
       let sr = pool[i];
+      sr.type = 'shop';
       G.shops.push({x:sr.cx, y:sr.cy, stock:generateShopStock()});
       map[sr.cy][sr.cx]=TILE.SHOP;
     }
   }
 
-  // Enemies & items in remaining rooms
-  // Compute initial vision to avoid spawning enemies the player can see
   computeVision();
   const startVisible = new Set(G.visible);
 
   for(let i=1;i<rooms.length;i++){
     let r=rooms[i];
-    // Don't spawn enemies in shop rooms or the starting room
-    if(G.shops.some(s=>r.cx===s.x&&r.cy===s.y)) continue;
-    let ne=rr(1,1+Math.min(G.floor,4));
+    if(r.type === 'shop') continue;
+    
+    let ne = 0;
+    let baseEnemies = rr(1,1+Math.min(G.floor,4));
+    let guaranteedItems = 0;
+    let itemFilter = null;
+    let isElite = false;
+    let isCrypt = false;
+
+    if(r.type === 'treasure') {
+      ne = 1; isElite = true; guaranteedItems = 2 + rr(0,1);
+    } else if(r.type === 'armory') {
+      ne = rr(3,4); guaranteedItems = 1 + rr(0,1); itemFilter = (it) => it.type === 'weapon' || it.type === 'armor';
+    } else if(r.type === 'crypt') {
+      ne = baseEnemies * 3; isCrypt = true; guaranteedItems = 1;
+    } else if(r.type === 'shrine') {
+      ne = rr(1,2);
+      G.items.push({id:uid(), x:r.cx, y:r.cy, name:'Shrine', type:'shrine', rarity:'legendary', sym:'⛊', carried:false});
+    } else if(r.type === 'secret') {
+      ne = 0; guaranteedItems = 1 + rr(0,1);
+    } else {
+      ne = baseEnemies;
+      if(ch(.65)) guaranteedItems = 1;
+    }
+
     let enemyProfile = getFloorEnemyProfile(G.floor);
     for(let e=0;e<ne;e++){
       let tier=rr(enemyProfile.tierMin, enemyProfile.tierMax);
       let t=ENEMIES[tier],sc=enemyProfile.scale;
-      // Find a position not visible from player start, with extra distance check
+      if(isCrypt) sc *= 1.2;
+      
       let ex, ey, attempts=0;
       do {
-        ex=r.x+rr(1,r.w-2);
-        ey=r.y+rr(1,r.h-2);
+        ex=r.x+rr(1,r.w-2); ey=r.y+rr(1,r.h-2);
         attempts++;
         let dist=Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y);
         if(!startVisible.has(ey*MAP_W+ex) && dist>8) break;
       } while(attempts<30);
-      // Only place if clearly out of starting vision
-      if(startVisible.has(ey*MAP_W+ex)) {
-        // Last resort: skip this enemy rather than spawn it visible
-        if(Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y)<=8) continue;
-      }
-      G.enemies.push({...t,
+      if(startVisible.has(ey*MAP_W+ex)) if(Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y)<=8) continue;
+      
+      let enemy = {...t,
         hp:Math.round(t.hp*sc),maxHp:Math.round(t.hp*sc),
         atk:Math.round(t.atk*sc),def:Math.round(t.def*sc),
-        xp:Math.round(t.xp*sc),gold:Math.round(t.gold*sc),
-        x:ex,y:ey,id:uid(), stunnedTurns: 0});
+        xp:Math.round(t.xp*(isCrypt?1.5:1)*sc),gold:Math.round(t.gold*sc),
+        x:ex,y:ey,id:uid(), stunnedTurns: 0};
+        
+      if(isElite) {
+        enemy.hp *= 2; enemy.maxHp *= 2; enemy.atk *= 2; enemy.isElite = true; enemy.name = "Elite " + enemy.name;
+      }
+      G.enemies.push(enemy);
     }
-    if(ch(.65)) spawnItem(r);
+    
+    for(let g=0;g<guaranteedItems;g++) {
+      spawnItem(r, itemFilter, (r.type==='treasure'||r.type==='crypt'||r.type==='secret')); 
+    }
   }
+
+  let numTraps = rr(3, 7 + G.floor);
+  for(let i=0; i<numTraps; i++) {
+    if(rooms.length <= 1) break;
+    let r = rooms[rr(1, rooms.length-1)];
+    if(r.type === 'shop' || r.type === 'treasure') continue;
+    let tx = r.x+rr(1,r.w-2), ty = r.y+rr(1,r.h-2);
+    let type = ch(0.5) ? 'spike' : (ch(0.5) ? 'gas' : 'alarm');
+    G.traps.push({x:tx, y:ty, type, triggered: false});
+  }
+
+  for(let i=0; i<rr(1, 2); i++) {
+    if(rooms.length <= 1) break;
+    let r = rooms[rr(1, rooms.length-1)];
+    if(r.type === 'normal') {
+      G.items.push({id:uid(), x:r.x+rr(1,r.w-2), y:r.y+rr(1,r.h-2), name:'Key', type:'key', rarity:'common', sym:'⚷', carried:false});
+    }
+  }
+
   computeVision();render();
   addLog(`Floor ${G.floor}. ${G.shops.length?'Merchants await nearby...':''}`, G.shops.length?'log-shop':'log-info');
-  // Fire tips for anything visible on spawn
   setTimeout(()=>{
     if(!TIPS.firstEnemy.shown && G.enemies.some(e=>G.visible.has(e.y*MAP_W+e.x))) fireTip('firstEnemy');
     if(!TIPS.firstShop.shown && G.shops.some(s=>G.visible.has(s.y*MAP_W+s.x))) fireTip('firstShop');
     if(!TIPS.firstStairs.shown && G.map[G.rooms[G.rooms.length-1].cy][G.rooms[G.rooms.length-1].cx]===TILE.STAIRS &&
        G.visible.has(G.rooms[G.rooms.length-1].cy*MAP_W+G.rooms[G.rooms.length-1].cx)) fireTip('firstStairs');
-  }, 600); // slight delay so floor message shows first
+  }, 600);
 }
 
 </script>
