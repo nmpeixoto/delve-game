@@ -26,6 +26,7 @@ The production build is a single self-contained `dungeon.html` file. The modular
 ## At A Glance
 
 - Five floors total; floor 5 is the final floor
+- Hard Mode toggle for stronger enemies, fewer shops, less gold, and a 1.5x score multiplier
 - Eight playable classes with unique abilities and passives
 - Procedural rooms, tunnels, fog of war, loot, merchants, and floor scaling
 - Weapons, armor, potions, and permanent shop upgrades
@@ -86,7 +87,7 @@ Ability 2: Vanish. Unlocked at level 5. Grants invisibility for 3 turns; the nex
 Passive: Dodges 30% of incoming attacks.
 
 ### Mage
-Base stats: HP 15, ATK 5, DEF 1
+Base stats: HP 15, ATK 5, DEF 1, CRIT 10%
 
 Starting gear: Bone Staff, Apprentice Robe
 
@@ -97,7 +98,7 @@ Ability 2: Blink. Unlocked at level 5. Teleports to a safe visible floor tile. C
 Passive: Magic weapons deal 50% bonus damage.
 
 ### Paladin
-Base stats: HP 25, ATK 2, DEF 4
+Base stats: HP 25, ATK 2, DEF 4, CRIT 5%
 
 Starting gear: Bare Hands, Iron Plate
 
@@ -119,7 +120,7 @@ Ability 2: Bear Trap. Unlocked at level 5. Drops a trap that stuns and damages a
 Passive: Bows allow attacks from up to 3 tiles away.
 
 ### Barbarian
-Base stats: HP 40, ATK 5, DEF 0
+Base stats: HP 40, ATK 5, DEF 0, CRIT 10%
 
 Starting gear: Great Axe, Furs
 
@@ -130,7 +131,7 @@ Ability 2: Bloodlust. Unlocked at level 5. For 3 turns, heal for 50% of damage d
 Passive: Deals +1 damage for every 10 missing HP.
 
 ### Necromancer
-Base stats: HP 15, ATK 3, DEF 1
+Base stats: HP 15, ATK 3, DEF 1, CRIT 5%
 
 Starting gear: Skull Rod, Apprentice Robe
 
@@ -141,7 +142,7 @@ Ability 2: Corpse Explosion. Unlocked at level 5. Marks an enemy for 3 turns; if
 Passive: Heals 1 HP whenever an enemy dies.
 
 ### Monk
-Base stats: HP 20, ATK 3, DEF 2
+Base stats: HP 20, ATK 3, DEF 2, CRIT 5%
 
 Starting gear: Bare Hands, Gi
 

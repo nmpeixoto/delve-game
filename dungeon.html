@@ -249,6 +249,127 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .c-stat-lbl { font-size:.45rem; color:var(--dim); margin-bottom:4px; }
 .c-stat-val { font-family:'Press Start 2P',monospace; font-size:.5rem; color:var(--text); }
 .c-section { margin-bottom:12px; }
+  #log{height:24px;padding:2px 8px;font-size:.45rem;overflow:hidden;}
+  #install-banner{display:none!important;}
+  #dpad-area{
+    width:150px;flex-shrink:0;
+    flex-direction:column;justify-content:center;align-items:center;
+    border-top:none;border-left:1px solid var(--border);
+    padding:10px max(10px,env(safe-area-inset-right)) 10px 10px;
+    gap:10px;
+  }
+  #action-btns{flex-direction:column;gap:5px;}
+  .act-btn{min-width:68px;font-size:.32rem;padding:8px 6px;}
+}
+
+/* ── INVENTORY DRAWER ── */
+#inv-drawer{position:fixed;bottom:0;left:0;right:0;z-index:80;background:var(--panel);border-top:2px solid var(--accent);transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);max-height:65vh;overflow-y:auto;padding:14px 16px max(16px,env(safe-area-inset-bottom));}
+#inv-drawer.open{transform:translateY(0);}
+@media(orientation:landscape) and (max-height:600px){
+  #inv-drawer{max-height:80vh;}
+}
+.drawer-handle{width:40px;height:4px;background:var(--dim);border-radius:2px;margin:0 auto 14px;}
+.panel-title{font-family:'Press Start 2P',monospace;font-size:.38rem;color:var(--accent);letter-spacing:.2em;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:8px;}
+.inv-section{margin-bottom:14px;}
+.inv-slot{padding:8px 10px;border:1px solid var(--border);margin-bottom:5px;cursor:pointer;transition:all .12s;display:flex;justify-content:space-between;align-items:center;gap:8px;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+.inv-slot:active{border-color:var(--gold);background:rgba(251,191,36,.07);}
+.inv-slot.equipped{border-color:var(--accent);background:rgba(192,132,252,.08);}
+.inv-name{color:var(--text);font-size:.65rem;}
+.inv-type{color:var(--dim);font-size:.52rem;}
+.inv-bonus{color:var(--green);font-size:.6rem;white-space:nowrap;}
+.inv-empty{color:var(--dim);font-size:.62rem;font-style:italic;padding:4px 0;}
+.inv-close-row{text-align:center;margin-top:8px;}
+#drawer-backdrop{position:fixed;inset:0;z-index:75;background:rgba(0,0,0,.5);display:none;}
+#drawer-backdrop.open{display:block;}
+
+/* ── SHOP OVERLAY ── */
+#shop-overlay{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:16px;animation:fadeIn .3s;}
+#shop-overlay.open{display:flex;}
+#shop-modal{background:var(--panel);border:2px solid var(--gold);padding:20px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 60px rgba(251,191,36,.25);touch-action:pan-y;}
+#shop-modal h2{font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--gold);text-align:center;margin-bottom:4px;}
+.shop-subtitle{color:var(--dim);font-size:.58rem;text-align:center;margin-bottom:14px;}
+.shop-gold-display{font-size:.7rem;color:var(--gold);text-align:center;margin-bottom:14px;}
+.shop-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);margin-bottom:6px;cursor:pointer;transition:all .15s;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+.shop-item:active,.shop-item:hover{border-color:var(--gold);background:rgba(251,191,36,.06);}
+.shop-item.sold{opacity:.35;pointer-events:none;}
+.shop-item-left{flex:1;}
+.shop-item-name{color:var(--text);font-size:.65rem;}
+.shop-item-desc{color:var(--dim);font-size:.65rem;margin-top:2px;}
+.shop-item-price{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--gold);white-space:nowrap;}
+.shop-item-price.cant-afford{color:var(--red);}
+.shop-tabs{display:flex;gap:6px;margin-bottom:12px;}
+.shop-tab{font-family:'Press Start 2P',monospace;font-size:.4rem;padding:8px 16px;background:transparent;border:1px solid var(--border);color:var(--dim);cursor:pointer;flex:1;transition:all .15s;letter-spacing:.1em;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+.shop-tab.active{border-color:var(--gold);color:var(--gold);background:rgba(251,191,36,.08);}
+.shop-tab:active{background:var(--border);}
+#shop-buy-panel,#shop-sell-panel{padding-bottom:24px;}
+.sell-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);margin-bottom:6px;cursor:pointer;transition:all .15s;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+.sell-item:active,.sell-item:hover{border-color:var(--green);background:rgba(74,222,128,.06);}
+.sell-item-left{flex:1;}
+.sell-item-name{color:var(--text);font-size:.65rem;}
+.sell-item-desc{color:var(--dim);font-size:.65rem;margin-top:2px;}
+.sell-item-price{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--green);white-space:nowrap;}
+.sell-empty{color:var(--dim);font-size:.62rem;font-style:italic;padding:8px 0;text-align:center;}
+.emergency-potion-row{display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--green);background:rgba(74,222,128,.06);}
+.emergency-potion-name{color:var(--text);font-size:.65rem;}
+.emergency-potion-heal{color:var(--green);font-family:'Press Start 2P',monospace;font-size:.45rem;}
+.emergency-warn{color:var(--red);font-size:.55rem;text-align:center;margin-top:6px;}
+.help-table{width:100%;border-collapse:collapse;font-size:.62rem;}
+.help-table tr{border-bottom:1px solid var(--border);}
+.help-table tr:last-child{border-bottom:none;}
+.help-table td{padding:8px 6px;vertical-align:top;line-height:1.7;color:#9ca3af;}
+.help-table td:last-child{color:var(--text);}
+.help-key{color:var(--accent)!important;font-family:'Press Start 2P',monospace;font-size:.38rem;white-space:nowrap;width:70px;padding-right:10px!important;}
+.help-sym{font-family:'Share Tech Mono',monospace!important;font-size:.7rem!important;}
+.green{color:var(--green)!important;}
+.gold-c{color:var(--gold)!important;}
+
+/* ── OTHER OVERLAYS ── */
+.overlay{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;animation:fadeIn .3s;padding:16px;}
+.modal{background:var(--panel);border:2px solid var(--accent);padding:28px 24px;text-align:center;max-width:360px;width:100%;box-shadow:0 0 60px rgba(192,132,252,.3);}
+.modal h2{font-family:'Press Start 2P',monospace;font-size:.9rem;margin-bottom:14px;color:var(--accent);}
+.modal.death h2{color:var(--red);}
+.modal.victory h2{color:var(--gold);}
+.modal p{font-size:.65rem;line-height:2;color:var(--dim);margin-bottom:16px;}
+.modal .stats-list{font-size:.62rem;line-height:2.4;margin-bottom:18px;}
+.modal .stats-list span{color:var(--text);}
+#tooltip{position:fixed;background:var(--panel);border:1px solid var(--accent);padding:7px 11px;font-size:.6rem;line-height:1.9;pointer-events:none;z-index:90;display:none;max-width:160px;}
+
+/* FX */
+#map-wrap.shake{animation:shake .18s ease;}
+.float-text{position:fixed;font-family:'Press Start 2P',monospace;font-size:.45rem;pointer-events:none;z-index:200;animation:floatup .85s ease forwards;}
+#damage-flash{position:fixed;inset:0;z-index:300;background:rgba(248,113,113,0.35);pointer-events:none;opacity:0;}
+#damage-flash.flash{animation:damageFlash .4s ease-out forwards;}
+@keyframes damageFlash{0%{opacity:1;}100%{opacity:0;}}
+@keyframes enemyDeath{0%{filter:brightness(3) saturate(0);}100%{filter:brightness(0);opacity:0;}}
+.tile-enemy-dying{animation:enemyDeath .3s ease-out forwards;pointer-events:none;}
+@keyframes pulse{0%,100%{text-shadow:0 0 40px rgba(192,132,252,.6)}50%{text-shadow:0 0 80px rgba(192,132,252,.95),0 0 120px rgba(192,132,252,.4)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@keyframes floatup{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-28px)}}
+.pop-text{position:fixed;font-size:1.4rem;pointer-events:none;z-index:200;animation:popAnim .4s ease-out forwards;text-shadow:0 0 10px rgba(255,255,255,0.5);}
+@keyframes popAnim{0%{opacity:0;transform:scale(0.2) translateY(10px)}30%{opacity:1;transform:scale(1.2) translateY(-5px)}100%{opacity:0;transform:scale(1.5) translateY(-15px)}}
+@keyframes shopPulse{0%,100%{opacity:1}50%{opacity:.6}}
+@keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
+.hidden{display:none!important;}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--dim);}
+.req-tag{display:inline-block;background:rgba(248,113,113,0.15);border:1px solid var(--red);color:#ff9999;padding:1px 4px;border-radius:2px;font-size:0.5rem;margin-left:4px;vertical-align:middle;}
+.req-tag.req-match{background:rgba(74,222,128,0.15);border-color:var(--green);color:#86efac;}
+.req-tag.req-wait{background:rgba(251,146,60,0.15);border-color:var(--orange);color:#fdba74;}
+.req-tag.req-dim-match{background:rgba(74,222,128,0.05);border-color:#4a5a4a;color:#7a9a7a;}
+
+/* ── CLASS SELECT ── */
+#class-select-body { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+#class-list { width:100%; height:130px; border-bottom:1px solid var(--border); overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:6px; padding:10px; flex-shrink:0; }
+#class-details { flex:1; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
+.class-btn { font-family:'Press Start 2P',monospace; font-size:.45rem; padding:12px 6px; background:var(--bg); border:1px solid var(--border); color:var(--dim); cursor:pointer; text-align:center; transition:all .15s; user-select:none; }
+.class-btn.selected { border-color:var(--accent); color:var(--text); background:rgba(192,132,252,.1); }
+.class-title { font-family:'Press Start 2P',monospace; font-size:.7rem; color:var(--accent); margin-bottom:4px; text-transform:uppercase; }
+.class-tagline { font-size:.55rem; color:var(--dim); margin-bottom:12px; }
+.class-stat-box { background:var(--bg); border:1px solid var(--border); padding:10px; display:flex; justify-content:space-between; margin-bottom:10px; }
+.c-stat { text-align:center; flex:1; }
+.c-stat-lbl { font-size:.45rem; color:var(--dim); margin-bottom:4px; }
+.c-stat-val { font-family:'Press Start 2P',monospace; font-size:.5rem; color:var(--text); }
+.c-section { margin-bottom:12px; }
 .c-sec-title { font-size:.5rem; color:var(--dim); text-transform:uppercase; margin-bottom:6px; letter-spacing:.1em; }
 .c-ability { background:rgba(255,255,255,.03); border:1px solid var(--border); padding:8px; margin-bottom:6px; }
 .c-ab-name { font-family:'Press Start 2P',monospace; font-size:.4rem; color:var(--gold); margin-bottom:4px; }
@@ -264,6 +385,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .item-upgrade { color: var(--green) !important; text-shadow: 0 0 5px var(--green); }
 
 .tile-elite { text-shadow: 0 0 10px var(--red), 0 0 20px var(--accent); animation: shopPulse 2s ease-in-out infinite; }
+.tile-pet { text-shadow: 0 0 10px #4ade80, 0 0 15px #a78bfa !important; border: 1px solid #a78bfa; border-radius: 4px; z-index: 5; }
+
 #minimap { position: absolute; top: 5px; right: 5px; width: 112px; height: 72px; border: 1px solid var(--border); background: rgba(10, 10, 15, 0.85); opacity: 0.8; pointer-events: none; z-index: 15; image-rendering: pixelated; }
 
 @media (min-width: 800px) and (min-height: 600px) {
@@ -335,7 +458,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div class="hud-stats">
         <div class="hud-stat"><span class="hud-label">ATK</span><span id="atk-val" style="color:var(--orange)">4</span></div>
         <div class="hud-stat"><span class="hud-label">DEF</span><span id="def-val" style="color:var(--blue)">1</span></div>
-        <div class="hud-stat"><span class="hud-label">PER</span><span id="per-val" style="color:var(--green)">0</span></div>
+        <div class="hud-stat"><span class="hud-label">PERC</span><span id="per-val" style="color:var(--green)">0</span></div>
         <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span> <span id="class-val" style="color:var(--dim);text-transform:uppercase;font-size:.45rem;margin-left:2px;" onmouseenter="showClassTip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'class')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()"></span></div>
         <div class="hud-stat"><span class="hud-label" style="color:var(--gold)">GP</span><span id="gold-val" style="color:var(--gold)">0</span></div>
       </div>
@@ -533,6 +656,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <!-- Right side: Details -->
       <div id="class-details"></div>
     </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);text-align:center;" id="hard-mode-container">
+      <label style="color:var(--text);font-size:.5rem;cursor:pointer;font-family:'Press Start 2P',monospace;display:inline-block;margin-bottom:6px;">
+        <input type="checkbox" id="hard-mode-toggle" style="vertical-align:middle;margin-right:8px;transform:scale(1.2);"> HARD MODE
+      </label>
+      <div style="font-size:.45rem;color:var(--dim);line-height:1.4;">Stronger enemies, fewer shops, less gold. 1.5x Final Score!</div>
+    </div>
     <div style="padding:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;">
       <button class="btn" style="flex:1;min-width:0;padding:16px 8px;font-size:.5rem" onclick="closeClassSelect()">CANCEL</button>
       <button class="btn btn-gold" style="flex:2;min-width:0;padding:16px 8px;font-size:.55rem" onclick="confirmClassSelect()">START</button>
@@ -713,6 +842,13 @@ const ENEMIES=[
   {name:'Troll',  sym:'T',hp:60,atk:18,def:4,xp:25,gold:15,color:'#22d3ee', regen: 0.1},
   {name:'Demon',  sym:'D',hp:85,atk:22,def:5,xp:35,gold:22,color:'#f87171', vampiric: 0.5},
   {name:'Lich',   sym:'L',hp:120,atk:26,def:6,xp:50,gold:30,color:'#a78bfa', freezeChance: 0.25},
+  {name:'Dungeon Lord', sym:'M', hp:300, atk:28, def:8, xp:250, gold:150, color:'#ef4444', boss:true, phase:1},
+];
+
+const LEGENDARIES=[
+  {name:'Ring of the Fallen', type:'upgrade', stat:'all5', amount:5, sym:'💍', rarity:'legendary', price:1000, desc:'+5 All Stats (permanent)'},
+  {name:'Cloak of Shadows', type:'armor', def:15, sym:'◆', rarity:'legendary', price:1000, dodgeBonus:0.25},
+  {name:'Necronomicon', type:'upgrade', stat:'magicMult', amount:1.5, sym:'📖', rarity:'legendary', price:1000, desc:'1.5x Magic Damage (permanent)'}
 ];
 
 </script>
@@ -904,7 +1040,7 @@ function formatSecStats(item) {
   let s = [];
   if(item.critChance) s.push(`+${Math.round(item.critChance*100)}% Crit`);
   if(item.dodgeBonus) s.push(`+${Math.round(item.dodgeBonus*100)}% Dodge`);
-  if(item.perception) s.push(`+${item.perception} PER`);
+  if(item.perception) s.push(`+${item.perception} PERC`);
   if(item.vampirism) s.push(`+${item.vampirism} Vamp`);
   if(item.regen) s.push(`+${item.regen} Regen`);
   if(item.swiftness) s.push(`+${item.swiftness} Swift`);
@@ -962,6 +1098,7 @@ const gatk=()=>{
   let total = G.player.atk + watk;
   if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 6);
   if(G.player.strengthTurns > 0) total += 10;
+  if(G.player.magicMult && w && w.sym === '♦') total = Math.floor(total * G.player.magicMult);
   return total;
 };
 const gdef=()=>{
@@ -990,7 +1127,8 @@ function render(){
         let canTap = (dist <= maxRange);
         let dyingClass=en.dying?' tile-enemy-dying':'';
         let eliteClass=en.isElite?' tile-elite':'';
-        h+=`<div class="tile tile-enemy${dyingClass}${eliteClass}" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
+        let petClass=en.isPet?' tile-pet':'';
+        h+=`<div class="tile tile-enemy${dyingClass}${eliteClass}${petClass}" style="${s}color:${en.color};text-shadow:0 0 5px ${en.color}"
           onmouseenter="showTip(event,'${en.name}',${en.hp},${en.maxHp},${en.atk})"
           onmouseleave="hideTip()"
           onclick="${en.dying||!canTap?'':`tileAttack('${en.id}')`}"
@@ -1256,13 +1394,14 @@ function showShrinePrompt(shrine) {
   document.getElementById('shrine-title').textContent = shrine.shrineType ? `${shrine.shrineType.toUpperCase()} SHRINE` : 'SHRINE';
   let msg = '';
   if(shrine.shrineType === 'Blood') {
-    msg = 'Sacrifice 30% of your Max HP permanently to gain +1 ATK permanently?';
+    let cost = Math.max(1, Math.floor(G.player.maxHp * 0.3));
+    msg = `Sacrifice ${cost} Max HP permanently to gain +1 ATK permanently? (HP: ${G.player.hp}/${G.player.maxHp})`;
   } else if(shrine.shrineType === 'Greed') {
-    msg = 'Sacrifice all your current Gold to instantly gain 2 Levels?';
+    msg = `Sacrifice all your current Gold to instantly gain 2 Levels? (Gold: ${G.player.gold})`;
   } else if(shrine.shrineType === 'Cursed') {
-    msg = 'Fully heal your HP, but instantly summon 3 Elite enemies surrounding you?';
+    msg = `Fully heal your HP, but instantly summon 3 Elite enemies surrounding you? (HP: ${G.player.hp}/${G.player.maxHp})`;
   } else {
-    msg = 'Touch the shrine?'; // Fallback
+    msg = `Touch the shrine? (HP: ${G.player.hp}/${G.player.maxHp})`; // Fallback
   }
   document.getElementById('shrine-msg').textContent = msg;
   document.getElementById('shrine-overlay').style.display = 'flex';
@@ -1512,7 +1651,17 @@ function move(dx,dy){
   }
 
   let en=G.enemies.find(e=>e.x===nx&&e.y===ny);
-  if(en){if(en.dying)return;attackEnemy(en.id);return;}
+  if(en){
+    if(en.dying)return;
+    if(en.isPet) {
+      en.x = G.player.x; en.y = G.player.y;
+      G.player.x = nx; G.player.y = ny;
+      advanceTurn();
+      return;
+    }
+    attackEnemy(en.id);
+    return;
+  }
 
   let trap = G.traps.find(t=>t.x===nx&&t.y===ny&&!t.triggered);
   if(trap && trap.type === 'bear') trap = null; // Bear traps only trigger on enemies
@@ -1937,6 +2086,18 @@ function tileAttack(id){
   if(!canAct()||G.gameOver||G.won) return;
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
   if(en.dying)return;
+  if(en.isPet) {
+    let dx = en.x - G.player.x, dy = en.y - G.player.y;
+    if(Math.abs(dx) <= 1 && Math.abs(dy) <= 1) {
+      en.x = G.player.x; en.y = G.player.y;
+      G.player.x += dx; G.player.y += dy;
+      advanceTurn();
+    } else {
+      if(G.player.rootedTurns > 0) { addLog('You are rooted and cannot move!', 'log-info'); return; }
+      move(Math.sign(dx)||0,Math.sign(dy)||0);
+    }
+    return;
+  }
   let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
   let dist=Math.max(Math.abs(en.x-G.player.x),Math.abs(en.y-G.player.y));
   if(dist<=maxRange){
@@ -2029,7 +2190,7 @@ function attackEnemy(id,multiplier=1,opts={}){
   if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
   if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
 
-  let dodgeChance = (G.player.class === 'rogue' ? 0.4 : 0) + getStat('dodgeBonus');
+  let dodgeChance = getStat('dodgeBonus');
   if(dodgeChance > 0 && Math.random() < dodgeChance) {
     addLog(`Dodged ${en.name}'s attack!`, 'log-info');
     popText('💨', G.player.x, G.player.y);
@@ -2065,6 +2226,16 @@ let _deathBatch = [];
 let _deathTimer = null;
 
 function killEnemy(en, skipAdvanceTurn) {
+  if(en.isPet) {
+    addLog(`${en.name} crumbled to dust.`, 'log-dead');
+    en.dying = true;
+    _deathBatch.push({en, skipAdvanceTurn});
+    if(!_deathTimer) {
+      render();
+      _deathTimer = setTimeout(flushDeathBatch, 150);
+    }
+    return;
+  }
   let goldDrop = en.gold + rand(3) + getStat('goldBonus');
   let xpDrop = Math.ceil(en.xp * (1 + getStat('xpMult')));
   G.player.xp += xpDrop; G.player.kills++; G.player.gold += goldDrop;
@@ -2085,58 +2256,56 @@ function killEnemy(en, skipAdvanceTurn) {
   fireTip('firstGold');
   en.dying=true;
 
-  if(en.corpseExplosionTarget && !en._exploded) {
-    en._exploded = true;
-    addLog('CORPSE EXPLOSION!', 'log-combat');
-    SFX.bash();
-    G.enemies.forEach(o => {
-      if(o.id !== en.id && !o.dying && Math.abs(o.x - en.x) <= 1 && Math.abs(o.y - en.y) <= 1) {
-        let dmg = 10 + G.player.lvl * 2;
-        o.hp -= dmg;
-        floatText(`-${dmg}`, o.x, o.y, '#f87171');
-        if(o.hp <= 0) killEnemy(o, true);
-      }
-    });
-  }
-
   _deathBatch.push({en, skipAdvanceTurn});
   if(!_deathTimer) {
     render();
-    _deathTimer = setTimeout(()=>{
-      let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
-      _deathBatch.forEach(d => {
-        G.enemies = G.enemies.filter(e => e.id !== d.en.id);
-        if(ch(.2)){
-          let pool=[...WEAPONS,...ARMORS,...POTIONS];
-          let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
-          G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
-        }
-      });
-      _deathBatch = [];
-      _deathTimer = null;
-      checkLevelUp();
-      if(shouldAdvance) advanceTurn();
-    }, 320);
+    _deathTimer = setTimeout(flushDeathBatch, 150);
   }
 }
 
 function flushDeathBatch() {
   if(_deathTimer) {
     clearTimeout(_deathTimer);
-    let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
-    _deathBatch.forEach(d => {
-      G.enemies = G.enemies.filter(e => e.id !== d.en.id);
-      if(ch(.2)){
-        let pool=[...WEAPONS,...ARMORS,...POTIONS];
+  }
+  let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
+  _deathBatch.forEach(d => {
+    if(d.en.raiseCorpseTarget && !d.en.boss && !d.en.isPet) {
+      addLog(`${d.en.name} rises to fight for you!`, 'log-combat');
+      popText('🧟', d.en.x, d.en.y);
+      d.en.name = `Pet ${d.en.name}`;
+      d.en.isPet = true;
+      d.en.dying = false;
+      d.en.raiseCorpseTarget = false;
+      d.en.hp = Math.ceil(d.en.maxHp / 2);
+      d.en.maxHp = Math.ceil(d.en.maxHp / 2);
+      d.en.lifespanTurns = 25;
+      d.en.color = '#a78bfa';
+      return;
+    }
+    
+    G.enemies = G.enemies.filter(e => e.id !== d.en.id);
+    if(d.en.boss) {
+      G.won = true;
+      showVictory();
+      return;
+    }
+    if(d.en.isElite) {
+      if(ch(.5)) {
+        let pool=[...WEAPONS,...ARMORS,...POTIONS,...LEGENDARIES];
         let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
         G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
       }
-    });
-    _deathBatch = [];
-    _deathTimer = null;
-    checkLevelUp();
-    if(shouldAdvance) advanceTurn();
-  }
+    } else if(ch(.2)){
+      let pool=[...WEAPONS,...ARMORS,...POTIONS];
+      let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
+      G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
+    }
+  });
+  _deathBatch = [];
+  _deathTimer = null;
+  checkLevelUp();
+  render();
+  if(shouldAdvance) advanceTurn();
 }
 
 function checkLevelUp(){
@@ -2197,10 +2366,18 @@ function processEnemyTurns(index) {
   if(G.gameOver||G.won) return;
   if(index >= G.enemies.length) {
     G.enemies.forEach(e=>{
-      if(e.corpseExplosionTurns>0){
-        e.corpseExplosionTurns--;
-        if(e.corpseExplosionTurns<=0){
-          e.corpseExplosionTarget=false;
+      if(e.raiseCorpseTurns>0){
+        e.raiseCorpseTurns--;
+        if(e.raiseCorpseTurns<=0){
+          e.raiseCorpseTarget=false;
+        }
+      }
+      if(e.isPet && e.lifespanTurns !== undefined) {
+        e.lifespanTurns--;
+        if(e.lifespanTurns <= 0) {
+          addLog(`${e.name} crumbled to dust.`, 'log-combat');
+          e.hp = 0;
+          killEnemy(e, true);
         }
       }
     });
@@ -2256,6 +2433,23 @@ function processEnemyTurns(index) {
     }
   }
 
+  if(e.boss && e.phase === 1 && e.hp <= e.maxHp / 2) {
+    e.phase = 2;
+    e.name = "Dungeon Lord (Enraged)";
+    addLog("Dungeon Lord enters Phase 2! Dark magic surges!", "log-combat");
+    e.atk = Math.round(e.atk * 1.5);
+    e.def = Math.round(e.def * 1.5);
+    e.color = "#ff00ff";
+    popText('🔥', e.x, e.y);
+    for(let i=0; i<2; i++) {
+      let t=ENEMIES.find(n=>n.name==='Skeleton');
+      let sx=e.x+rand(3)-1, sy=e.y+rand(3)-1;
+      if(sx>=0&&sx<MAP_W&&sy>=0&&sy<MAP_H&&G.map[sy][sx]!==TILE.WALL) {
+        G.enemies.push({...t, hp:t.hp, maxHp:t.hp, x:sx, y:sy, id:uid(), stunnedTurns:0});
+      }
+    }
+  }
+
   let seesPlayer = (G.visible.has(e.y*MAP_W+e.x) || G.alarmedTurns > 0) && G.player.vanishTurns === 0;
   if(!seesPlayer){
     if(ch(.4)){
@@ -2267,52 +2461,100 @@ function processEnemyTurns(index) {
     }
     return processEnemyTurns(index + 1);
   } else {
-    let dx=G.player.x-e.x,dy=G.player.y-e.y;
+    let target = {x: G.player.x, y: G.player.y, isPlayer: true};
+    if(e.isPet) {
+      let enemies = G.enemies.filter(o => !o.isPet && !o.dying && G.visible.has(o.y*MAP_W+o.x));
+      if(enemies.length) {
+        target = enemies.sort((a,b) => (Math.abs(a.x-e.x)+Math.abs(a.y-e.y)) - (Math.abs(b.x-e.x)+Math.abs(b.y-e.y)))[0];
+      } else {
+        if(Math.abs(G.player.x-e.x) <= 2 && Math.abs(G.player.y-e.y) <= 2) {
+          return processEnemyTurns(index + 1);
+        }
+      }
+    } else {
+      let targets = [{x: G.player.x, y: G.player.y, isPlayer: true}];
+      G.enemies.filter(o => o.isPet && !o.dying).forEach(p => targets.push(p));
+      target = targets.sort((a,b) => (Math.abs(a.x-e.x)+Math.abs(a.y-e.y)) - (Math.abs(b.x-e.x)+Math.abs(b.y-e.y)))[0];
+    }
+
+    let dx=target.x-e.x, dy=target.y-e.y;
     let steps=Math.abs(dx)>Math.abs(dy)?[[Math.sign(dx),0],[0,Math.sign(dy)]]:[[0,Math.sign(dy)],[Math.sign(dx),0]];
     for(let[sx,sy] of steps){
       let nx=e.x+sx,ny=e.y+sy;
-      if(nx===G.player.x&&ny===G.player.y){
-        let edm=Math.max(1,e.atk-gdef()+rand(3));
-        if(e.enrage && e.hp <= e.maxHp / 2) edm = Math.floor(edm * 1.5);
-        if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
-        if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
+      if(nx===target.x&&ny===target.y){
+        if(target.isPlayer) {
+          let edm=Math.max(1,e.atk-gdef()+rand(3));
+          if(e.enrage && e.hp <= e.maxHp / 2) edm = Math.floor(edm * 1.5);
+          if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
+          if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
 
-        if(G.player.class === 'rogue' && ch(.4)) {
-          addLog(`Dodged ${e.name}'s attack!`, 'log-info');
-          popText('💨', G.player.x, G.player.y);
-          return processEnemyTurns(index + 1);
-        } else {
-          checkEmergencyPotion(e, edm, ()=>{
-            G.player.hp=Math.max(0,G.player.hp-edm);
-            addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
-            SFX.damage();shakeMap();flashDamage();
-            popText('🩸', G.player.x, G.player.y);
-            floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
-            
-            if(e.vampiric && edm > 0) {
-              let heal = Math.floor(edm * e.vampiric);
-              if(heal > 0) {
-                e.hp = Math.min(e.maxHp, e.hp + heal);
-                floatText(`+${heal}`, e.x, e.y, '#4ade80');
-                popText('🦇', e.x, e.y);
+          let dChance = getStat('dodgeBonus');
+          if(dChance > 0 && Math.random() < dChance) {
+            addLog(`Dodged ${e.name}'s attack!`, 'log-info');
+            popText('💨', G.player.x, G.player.y);
+            return processEnemyTurns(index + 1);
+          } else {
+            checkEmergencyPotion(e, edm, ()=>{
+              G.player.hp=Math.max(0,G.player.hp-edm);
+              addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
+              SFX.damage();shakeMap();flashDamage();
+              popText('🩸', G.player.x, G.player.y);
+              floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
+              
+              if(e.vampiric && edm > 0) {
+                let heal = Math.floor(edm * e.vampiric);
+                if(heal > 0) {
+                  e.hp = Math.min(e.maxHp, e.hp + heal);
+                  floatText(`+${heal}`, e.x, e.y, '#4ade80');
+                  popText('🦇', e.x, e.y);
+                }
               }
-            }
-            if(e.freezeChance && Math.random() < e.freezeChance) {
-              G.player.rootedTurns = 2;
-              addLog(`The ${e.name} froze you!`, 'log-combat');
-              floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
-              popText('❄️', G.player.x, G.player.y);
-            }
+              if(e.freezeChance && Math.random() < e.freezeChance) {
+                G.player.rootedTurns = 2;
+                addLog(`The ${e.name} froze you!`, 'log-combat');
+                floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
+                popText('❄️', G.player.x, G.player.y);
+              }
 
-            if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
-            computeVision();render();
-            processEnemyTurns(index + 1);
-          });
-          return; // WAIT for checkEmergencyPotion to call the callback
+              if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
+              computeVision();render();
+              processEnemyTurns(index + 1);
+            });
+            return;
+          }
+        } else {
+          if(target.dodge && Math.random() < target.dodge) {
+            addLog(`${target.name} dodged ${e.name}'s attack!`, 'log-info');
+            popText('💨', target.x, target.y);
+            return processEnemyTurns(index + 1);
+          }
+
+          let edm = Math.max(1, e.atk - (target.def || 0) + rand(3));
+          if(e.enrage && e.hp <= e.maxHp / 2) edm = Math.floor(edm * 1.5);
+
+          target.hp -= edm;
+          addLog(`${e.name} attacks ${target.name}! -${edm} HP`, 'log-combat');
+          SFX.damage();
+          popText('🩸', target.x, target.y);
+          floatText(`-${edm}`, target.x, target.y, '#f87171');
+
+          if(e.vampiric && edm > 0) {
+            let heal = Math.floor(edm * e.vampiric);
+            if(heal > 0) {
+              e.hp = Math.min(e.maxHp, e.hp + heal);
+              floatText(`+${heal}`, e.x, e.y, '#4ade80');
+              popText('🦇', e.x, e.y);
+            }
+          }
+
+          if(target.hp <= 0) {
+            killEnemy(target, true);
+          }
+          return processEnemyTurns(index + 1);
         }
       }
       if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
-         !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;break;}
+         !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)&&!(nx===G.player.x&&ny===G.player.y)){e.x=nx;e.y=ny;break;}
     }
     return processEnemyTurns(index + 1);
   }
@@ -2498,10 +2740,10 @@ function doAbility2(){
     let visEnemies = G.enemies.filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x));
     let t=visEnemies.sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
     if(t.length) {
-      t[0].corpseExplosionTarget = true;
-      t[0].corpseExplosionTurns = 3;
+      t[0].raiseCorpseTarget = true;
+      t[0].raiseCorpseTurns = 3;
       G.ability2Cooldown = 8;
-      addLog(`Targeted ${t[0].name} for Corpse Explosion!`, 'log-combat'); advanceTurn();
+      addLog(`Targeted ${t[0].name} for Raise Corpse!`, 'log-combat'); advanceTurn();
     } else addLog('No visible enemies to target', 'log-info');
   }
   else if(p.class === 'monk') {
@@ -2799,6 +3041,8 @@ function applyUpgrade(item){
   else if(item.stat==='def'){p.def+=item.amount;addLog(`${item.name}: DEF +${item.amount}!`,'log-level');}
   else if(item.stat==='hp'){p.maxHp+=item.amount;p.hp=Math.min(p.maxHp,p.hp+item.amount);addLog(`${item.name}: Max HP +${item.amount}!`,'log-level');}
   else if(item.stat==='all'){p.atk+=1;p.def+=1;p.maxHp+=10;p.hp=Math.min(p.maxHp,p.hp+10);addLog(`Blessing: ATK+1, DEF+1, MaxHP+10!`,'log-level');}
+  else if(item.stat==='all5'){p.atk+=5;p.def+=5;p.maxHp+=50;p.hp=Math.min(p.maxHp,p.hp+50);addLog(`Ring of the Fallen: ATK+5, DEF+5, MaxHP+50!`,'log-level');}
+  else if(item.stat==='magicMult'){p.magicMult=(p.magicMult||1)*item.amount;addLog(`${item.name}: ${item.amount}x Magic Damage!`,'log-level');}
   else if(item.stat==='vamp'){p.vampirism+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP per kill!`,'log-level');}
   else if(item.stat==='regen'){p.regen+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP every 10 tiles explored!`,'log-level');}
   else if(item.stat==='swift'){p.swiftness+=item.amount;addLog(`${item.name}: +${item.amount} free move every 15 tiles explored!`,'log-level');}
@@ -2918,7 +3162,8 @@ function getFloorEnemyProfile(floor){
 }
 
 // ===================== INIT =====================
-function initGame(playerClass = 'warrior'){
+function initGame(playerClass = 'warrior', hardMode = false){
+  let cData = CLASS_DATA[playerClass] || {};
   let p = {
     x:0,y:0,lvl:1,xp:0,xpNext:10,
     weapon:null,armor:null,kills:0,gold:0,damageDealt:0,bestWeapon:'Bare hands',
@@ -2928,51 +3173,45 @@ function initGame(playerClass = 'warrior'){
     freeMoves: 0,
     bloodlustTurns: 0,
     rootedTurns: 0,
-    vampirism: 0,
-    regen: 0,
-    swiftness: 0,
+    vampirism: cData.vampirism || 0,
+    regen: cData.regen || 0,
+    swiftness: cData.swiftness || 0,
     tilesExplored: 0,
-    critChance: 0,
-    dodgeBonus: 0,
-    goldBonus: 0,
-    xpMult: 0,
-    perception: 0
+    critChance: cData.critChance || 0,
+    dodgeBonus: cData.dodgeBonus || 0,
+    goldBonus: cData.goldBonus || 0,
+    xpMult: cData.xpMult || 0,
+    perception: cData.perception || 0
   };
+  p.hp = cData.hp || 20; p.maxHp = cData.hp || 20; 
+  p.atk = cData.atk || 1; p.def = cData.def || 0;
   if(playerClass === 'warrior') {
-    p.hp = 30; p.maxHp = 30; p.atk = 3; p.def = 2;
     p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◆', price:60};
   } else if(playerClass === 'rogue') {
-    p.hp = 24; p.maxHp = 24; p.atk = 7; p.def = 2; p.perception = 1;
     p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'†', price:25};
     p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◆', price:35};
     p.bestWeapon = 'Rusty Dagger (ATK+4)';
   } else if(playerClass === 'mage') {
-    p.hp = 15; p.maxHp = 15; p.atk = 4; p.def = 1;
     p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70};
     p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
     p.bestWeapon = 'Bone Staff (ATK+5)';
   } else if(playerClass === 'paladin') {
-    p.hp = 20; p.maxHp = 20; p.atk = 1; p.def = 1;
     p.weapon = {id:uid(), name:'Iron Mace', type:'weapon', atk:5, rarity:'common', sym:'⚔', price:70};
     p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:80};
     p.bestWeapon = 'Iron Mace (ATK+5)';
   } else if(playerClass === 'ranger') {
-    p.hp = 13; p.maxHp = 13; p.atk = 2; p.def = 1; p.perception = 1;
     p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:4, rarity:'common', sym:'🏹', price:50};
     p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
     p.bestWeapon = 'Shortbow (ATK+4)';
   } else if(playerClass === 'barbarian') {
-    p.hp = 42; p.maxHp = 42; p.atk = 5; p.def = 1;
     p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:70};
     p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'◆', price:40};
     p.bestWeapon = 'Great Axe (ATK+4)';
   } else if(playerClass === 'necromancer') {
-    p.hp = 18; p.maxHp = 18; p.atk = 4; p.def = 1;
     p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70};
     p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
     p.bestWeapon = 'Skull Rod (ATK+5)';
   } else if(playerClass === 'monk') {
-    p.hp = 22; p.maxHp = 22; p.atk = 3; p.def = 1;
     p.armor = {id:uid(), name:'Gi', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
   }
 
@@ -2996,6 +3235,33 @@ function buildFloor(){
   G.visible = new Set();
   G.seen = new Set();
   G.items=G.items.filter(i=>i.carried);
+  
+  if(G.floor === FLOORS) {
+    map = Array(MAP_H).fill(0).map(()=>Array(MAP_W).fill(TILE.WALL));
+    let bw = Math.max(10, Math.floor(MAP_W * 0.6));
+    let bh = Math.max(10, Math.floor(MAP_H * 0.6));
+    let bx = Math.floor((MAP_W - bw) / 2);
+    let by = Math.floor((MAP_H - bh) / 2);
+    rooms = [{x: bx, y: by, w: bw, h: bh, cx: bx + Math.floor(bw/2), cy: by + Math.floor(bh/2)}];
+    for(let y=by; y<by+bh; y++) {
+      for(let x=bx; x<bx+bw; x++) {
+        map[y][x] = TILE.FLOOR;
+      }
+    }
+    G.map = map; G.rooms = rooms;
+    G.player.x = rooms[0].cx; G.player.y = by + bh - 2;
+    
+    let bossTemp = ENEMIES.find(e=>e.boss);
+    let boss = {...bossTemp, 
+       hp: Math.round(bossTemp.hp * (G.hardMode?1.2:1)), maxHp: Math.round(bossTemp.hp * (G.hardMode?1.2:1)), 
+       atk: Math.round(bossTemp.atk * (G.hardMode?1.2:1)), def: Math.round(bossTemp.def * (G.hardMode?1.2:1)), 
+       x: rooms[0].cx, y: by + 2, id: uid(), stunnedTurns: 0};
+    G.enemies.push(boss);
+    computeVision(); render();
+    addLog(`You have reached the Dungeon Lord's lair. There is no escape.`, 'log-level');
+    return;
+  }
+
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
 
   map[rooms[rooms.length-1].cy][rooms[rooms.length-1].cx]=TILE.STAIRS;
@@ -3006,7 +3272,7 @@ function buildFloor(){
       let j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    let numShops = Math.min(3, pool.length);
+    let numShops = Math.min(G.hardMode ? 1 : 3, pool.length);
     for(let i=0; i<numShops; i++){
       let sr = pool[i];
       sr.type = 'shop';
@@ -3052,6 +3318,7 @@ function buildFloor(){
       let tier=rr(enemyProfile.tierMin, enemyProfile.tierMax);
       let t=ENEMIES[tier],sc=enemyProfile.scale;
       if(isCrypt) sc *= 1.2;
+      if(G.hardMode) sc *= 1.2;
       
       let ex, ey, attempts=0;
       do {
@@ -3062,10 +3329,11 @@ function buildFloor(){
       } while(attempts<30);
       if(startVisible.has(ey*MAP_W+ex)) if(Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y)<=8) continue;
       
+      let goldMult = G.hardMode ? 0.7 : 1;
       let enemy = {...t,
         hp:Math.round(t.hp*sc),maxHp:Math.round(t.hp*sc),
         atk:Math.round(t.atk*sc),def:Math.round(t.def*sc),
-        xp:Math.round(t.xp*(isCrypt?1.5:1)*sc),gold:Math.round(t.gold*sc),
+        xp:Math.round(t.xp*(isCrypt?1.5:1)*sc),gold:Math.round(t.gold*sc*goldMult),
         x:ex,y:ey,id:uid(), stunnedTurns: 0};
         
       if(isElite) {
@@ -3122,13 +3390,13 @@ function handleResize(){
 
 const CLASS_DATA = {
   warrior: { name: 'Warrior', tagline: 'A sturdy fighter who excels in sustained combat.', hp: 30, atk: 3, def: 2, weapon: 'Bare Hands', armor: 'Chain Mail', ability1: 'BASH', desc1: 'Deals 1.5x damage to a nearby visible enemy. Cooldown: 5', ability2: 'SHIELD WALL', desc2: '(Lvl 5) Reduces incoming damage by 40% for 3 turns. Cooldown: 10', passive: 'Regenerates 1 HP every 12 tiles explored.' },
-  rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 24, atk: 7, def: 2, weapon: 'Rusty Dagger', armor: 'Leather Vest', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 40% of all incoming attacks.' },
-  mage: { name: 'Mage', tagline: 'A fragile spellcaster with potent magic.', hp: 15, atk: 4, def: 1, weapon: 'Bone Staff', armor: 'Apprentice Robe', ability1: 'FIREBALL', desc1: 'Deals damage to all enemies in a 3x3 area around a target. Cooldown: 5', ability2: 'BLINK', desc2: '(Lvl 5) Teleport instantly to a safe, visible tile. Cooldown: 8', passive: 'Magic weapons (♦) deal about +20% damage.' },
-  paladin: { name: 'Paladin', tagline: 'A holy champion focused on sustain and defense.', hp: 20, atk: 1, def: 1, weapon: 'Iron Mace', armor: 'Iron Plate', ability1: 'SMITE', desc1: 'Deals damage and stuns the enemy for 1 turn. Cooldown: 5', ability2: 'LAY ON HANDS', desc2: '(Lvl 5) Heals for 20% of Max HP. Cooldown: 15', passive: 'Max HP increases by 2 upon leveling up.' },
-  ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 13, atk: 2, def: 1, weapon: 'Shortbow', armor: 'Ranger Tunic', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 3 tiles away. Avoids counter-attacks at max range.' },
-  barbarian: { name: 'Barbarian', tagline: 'A fearless brute who thrives in chaos.', hp: 42, atk: 5, def: 1, weapon: 'Great Axe', armor: 'Furs', ability1: 'CLEAVE', desc1: 'Deals damage to all adjacent enemies. Cooldown: 4', ability2: 'BLOODLUST', desc2: '(Lvl 5) For 3 turns, heal 50% of damage dealt, but take 15% more damage. Cooldown: 12', passive: 'Deals +1 damage for every 6 missing HP.' },
-  necromancer: { name: 'Necromancer', tagline: 'A dark caster who drains life from foes.', hp: 18, atk: 4, def: 1, weapon: 'Skull Rod', armor: 'Apprentice Robe', ability1: 'SIPHON LIFE', desc1: 'Deals damage and heals yourself for the same amount. Cooldown: 5', ability2: 'CORPSE EXPLOSION', desc2: '(Lvl 5) Mark an enemy for 3 turns. If it dies while marked, it explodes for heavy AoE damage. Cooldown: 8', passive: 'Heals 2 HP whenever an enemy dies.' },
-  monk: { name: 'Monk', tagline: 'A disciplined martial artist.', hp: 22, atk: 3, def: 1, weapon: 'Bare Hands', armor: 'Gi', ability1: 'PUSH KICK', desc1: 'Pushes an enemy 1 tile away. Deals extra damage if they hit a wall. Cooldown: 3', ability2: 'FLURRY OF BLOWS', desc2: '(Lvl 5) Attacks 3 times instantly, but you are rooted for your next turn. Cooldown: 10', passive: 'Gains level-based ATK when NO weapon is equipped.' }
+  rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 24, atk: 7, def: 2, weapon: 'Rusty Dagger', armor: 'Leather Vest', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 40% of all incoming attacks.', dodgeBonus: 0.4 },
+  mage: { name: 'Mage', tagline: 'A fragile spellcaster with potent magic.', hp: 15, atk: 4, def: 1, weapon: 'Bone Staff', armor: 'Apprentice Robe', ability1: 'FIREBALL', desc1: 'Deals damage to all enemies in a 3x3 area around a target. Cooldown: 5', ability2: 'BLINK', desc2: '(Lvl 5) Teleport instantly to a safe, visible tile. Cooldown: 8', passive: 'Magic weapons (♦) deal about +20% damage.', critChance: 0.1 },
+  paladin: { name: 'Paladin', tagline: 'A holy champion focused on sustain and defense.', hp: 20, atk: 1, def: 1, weapon: 'Iron Mace', armor: 'Iron Plate', ability1: 'SMITE', desc1: 'Deals damage and stuns the enemy for 1 turn. Cooldown: 5', ability2: 'LAY ON HANDS', desc2: '(Lvl 5) Heals for 20% of Max HP. Cooldown: 15', passive: 'Max HP increases by 2 upon leveling up.', critChance: 0.05 },
+  ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 13, atk: 2, def: 1, weapon: 'Shortbow', armor: 'Ranger Tunic', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 3 tiles away. Avoids counter-attacks at max range.', perception: 1 },
+  barbarian: { name: 'Barbarian', tagline: 'A fearless brute who thrives in chaos.', hp: 42, atk: 5, def: 1, weapon: 'Great Axe', armor: 'Furs', ability1: 'CLEAVE', desc1: 'Deals damage to all adjacent enemies. Cooldown: 4', ability2: 'BLOODLUST', desc2: '(Lvl 5) For 3 turns, heal 50% of damage dealt, but take 15% more damage. Cooldown: 12', passive: 'Deals +1 damage for every 6 missing HP.', critChance: 0.1 },
+  necromancer: { name: 'Necromancer', tagline: 'A dark caster who drains life from foes.', hp: 18, atk: 4, def: 1, weapon: 'Skull Rod', armor: 'Apprentice Robe', ability1: 'SIPHON LIFE', desc1: 'Deals damage and heals yourself for the same amount. Cooldown: 5', ability2: 'RAISE CORPSE', desc2: '(Lvl 5) Mark an enemy for 3 turns. If it dies while marked, it becomes a loyal pet with 50% HP for 25 turns. Cooldown: 8', passive: 'Heals 2 HP whenever an enemy dies.', critChance: 0.05 },
+  monk: { name: 'Monk', tagline: 'A disciplined martial artist.', hp: 22, atk: 3, def: 1, weapon: 'Bare Hands', armor: 'Gi', ability1: 'PUSH KICK', desc1: 'Pushes an enemy 1 tile away. Deals extra damage if they hit a wall. Cooldown: 3', ability2: 'FLURRY OF BLOWS', desc2: '(Lvl 5) Attacks 3 times instantly, but you are rooted for your next turn. Cooldown: 10', passive: 'Gains level-based ATK when NO weapon is equipped.', critChance: 0.05 }
 };
 
 let _selectedClass = 'warrior';
@@ -3153,6 +3421,13 @@ function selectClass(id) {
   document.getElementById(`cbtn-${id}`).classList.add('selected');
 
   let c = CLASS_DATA[id];
+  let wp = WEAPONS.find(w=>w.name===c.weapon) || {};
+  let ar = ARMORS.find(a=>a.name===c.armor) || {};
+  
+  let dodge = (c.dodgeBonus||0) + (wp.dodgeBonus||0) + (ar.dodgeBonus||0);
+  let crit = (c.critChance||0) + (wp.critChance||0) + (ar.critChance||0);
+  let per = (c.perception||0) + (wp.perception||0) + (ar.perception||0);
+
   let h = `
     <div class="class-title">${c.name}</div>
     <div class="class-tagline">${c.tagline}</div>
@@ -3160,6 +3435,11 @@ function selectClass(id) {
       <div class="c-stat"><div class="c-stat-lbl">HP</div><div class="c-stat-val" style="color:var(--red)">${c.hp}</div></div>
       <div class="c-stat"><div class="c-stat-lbl">ATK</div><div class="c-stat-val" style="color:var(--orange)">${c.atk}</div></div>
       <div class="c-stat"><div class="c-stat-lbl">DEF</div><div class="c-stat-val" style="color:var(--blue)">${c.def}</div></div>
+    </div>
+    <div class="class-stat-box" style="margin-top:8px;">
+      <div class="c-stat"><div class="c-stat-lbl">PERC</div><div class="c-stat-val" style="color:var(--green)">${per}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">CRIT</div><div class="c-stat-val" style="color:#fbbf24">${Math.round(crit*100)}%</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">DODGE</div><div class="c-stat-val" style="color:#a78bfa">${Math.round(dodge*100)}%</div></div>
     </div>
     <div class="c-section">
       <div class="c-sec-title">STARTING GEAR</div>
@@ -3180,13 +3460,14 @@ function selectClass(id) {
 
 function confirmClassSelect() {
   closeClassSelect();
-  startGame(_selectedClass);
+  let hm = document.getElementById('hard-mode-toggle').checked;
+  startGame(_selectedClass, hm);
 }
 
-function startGame(playerClass = 'warrior'){
+function startGame(playerClass = 'warrior', hardMode = false){
   document.getElementById('title-screen').classList.add('hidden');
   document.getElementById('game-screen').classList.remove('hidden');
-  initGame(playerClass);
+  initGame(playerClass, hardMode);
   if(!_resizeHandlerBound){
     window.addEventListener('resize',handleResize);
     _resizeHandlerBound=true;
@@ -3217,6 +3498,9 @@ function showDeath(){
 function showVictory(){
   let p=G.player,o=document.createElement('div');
   o.className='overlay';
+  let diffMult = G.hardMode ? 1.5 : 1.0;
+  let baseScore = G.floor * p.kills * p.lvl;
+  let score = Math.floor(baseScore * diffMult);
   o.innerHTML=`<div class="modal victory">
     <h2>★ VICTORY ★</h2>
     <p>You escaped the dungeon!</p>
@@ -3228,7 +3512,12 @@ function showVictory(){
       Gold: <span>${p.gold}💰</span><br>
       Turns: <span>${G.turn}</span>
     </div>
-    <button class="btn btn-gold" onclick="this.closest('.overlay').remove();openClassSelect()">CHOOSE CLASS</button>
+    <div class="stats-list" style="margin-top:10px; border-top:1px dashed var(--dim); padding-top:10px;">
+      Base Score (Flr×Kills×Lvl): <span>${baseScore}</span><br>
+      Difficulty Multiplier: <span>${diffMult}x</span><br>
+      <strong style="color:var(--gold);font-size:1.1em;">Final Score: ${score}</strong>
+    </div>
+    <button class="btn btn-gold" onclick="this.closest('.overlay').remove();openClassSelect()" style="margin-top:15px;">CHOOSE CLASS</button>
   </div>`;
   document.body.appendChild(o);
 }
@@ -3250,7 +3539,37 @@ function isShopActionOverlayOpen(){
 }
 document.addEventListener('keydown',e=>{
   if(G.gameOver||G.won)return;
-  if(document.getElementById('game-screen').classList.contains('hidden'))return;
+  if(document.getElementById('game-screen').classList.contains('hidden')){
+    if(!document.getElementById('title-screen').classList.contains('hidden')) {
+      if(document.getElementById('class-select-overlay').style.display === 'flex') {
+        let keys = Object.keys(CLASS_DATA);
+        let idx = keys.indexOf(_selectedClass);
+        if(e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+          idx = (idx - 1 + keys.length) % keys.length;
+          selectClass(keys[idx]);
+          let btn = document.getElementById(`cbtn-${keys[idx]}`);
+          if(btn) btn.scrollIntoView({block: 'nearest'});
+        } else if(e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+          idx = (idx + 1) % keys.length;
+          selectClass(keys[idx]);
+          let btn = document.getElementById(`cbtn-${keys[idx]}`);
+          if(btn) btn.scrollIntoView({block: 'nearest'});
+        } else if(e.key === 'Enter') {
+          confirmClassSelect();
+        } else if(e.key === 'h' || e.key === 'H') {
+          let toggle = document.getElementById('hard-mode-toggle');
+          if(toggle) toggle.checked = !toggle.checked;
+        } else if(e.key === 'Escape') {
+          closeClassSelect();
+        }
+      } else {
+        if(e.key === 'Enter') {
+          openClassSelect();
+        }
+      }
+    }
+    return;
+  }
   // Allow closing overlays with Escape
   if(e.key==='Escape'){
     if(document.getElementById('shop-overlay').classList.contains('open')){closeShop();return;}
