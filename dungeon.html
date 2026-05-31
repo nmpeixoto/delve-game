@@ -2765,8 +2765,8 @@ function sellWeakerGear(){
     }
 
     let shouldSell = false;
-    if (item.type === 'weapon' && weaponPower(item) < pWeapAtk) shouldSell = true;
-    if (item.type === 'armor' && armorPower(item) < pArmDef) shouldSell = true;
+    if (item.type === 'weapon' && weaponPower(item) <= pWeapAtk) shouldSell = true;
+    if (item.type === 'armor' && armorPower(item) <= pArmDef) shouldSell = true;
 
     if (shouldSell) {
       let sellPrice = Math.max(1, Math.floor((item.price || 10) / 2));
