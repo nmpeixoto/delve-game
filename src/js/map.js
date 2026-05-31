@@ -224,7 +224,9 @@ function buildFloor(){
       ne = baseEnemies * 3; isCrypt = true; guaranteedItems = 1;
     } else if(r.type === 'shrine') {
       ne = rr(1,2);
-      G.items.push({id:uid(), x:r.cx, y:r.cy, name:'Shrine', type:'shrine', rarity:'legendary', sym:'⛊', carried:false});
+      let shrineTypes = ['Blood', 'Greed', 'Cursed'];
+      let sType = shrineTypes[Math.floor(Math.random() * shrineTypes.length)];
+      G.items.push({id:uid(), x:r.cx, y:r.cy, name: sType + ' Shrine', type:'shrine', shrineType: sType, rarity:'legendary', sym:'⛊', carried:false});
     } else if(r.type === 'secret') {
       ne = 0; guaranteedItems = 1 + rr(0,1);
     } else {

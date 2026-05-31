@@ -96,6 +96,94 @@ function closeInv(){
   document.getElementById('drawer-backdrop').classList.remove('open');
 }
 
+// ===================== SHRINE OVERLAY =====================
+let _currentShrine = null;
+
+function showShrinePrompt(shrine) {
+  _currentShrine = shrine;
+  document.getElementById('shrine-title').textContent = shrine.shrineType ? `${shrine.shrineType.toUpperCase()} SHRINE` : 'SHRINE';
+  let msg = '';
+  if(shrine.shrineType === 'Blood') {
+    msg = 'Sacrifice 30% of your Max HP permanently to gain +1 ATK permanently?';
+  } else if(shrine.shrineType === 'Greed') {
+    msg = 'Sacrifice all your current Gold to instantly gain 2 Levels?';
+  } else if(shrine.shrineType === 'Cursed') {
+    msg = 'Fully heal your HP, but instantly summon 3 Elite enemies surrounding you?';
+  } else {
+    msg = 'Touch the shrine?'; // Fallback
+  }
+  document.getElementById('shrine-msg').textContent = msg;
+  document.getElementById('shrine-overlay').style.display = 'flex';
+}
+
+function closeShrinePrompt() {
+  document.getElementById('shrine-overlay').style.display = 'none';
+  _currentShrine = null;
+}
+
+document.getElementById('shrine-accept-btn').addEventListener('click', () => {
+  if(!_currentShrine) return;
+  let shrine = _currentShrine;
+  closeShrinePrompt();
+
+  let idx = G.items.findIndex(i => i.id === shrine.id);
+  if(idx > -1) G.items.splice(idx, 1);
+
+  if(shrine.shrineType === 'Blood') {
+    let cost = Math.max(1, Math.floor(G.player.maxHp * 0.3));
+    G.player.maxHp = Math.max(1, G.player.maxHp - cost);
+    G.player.hp = Math.min(G.player.hp, G.player.maxHp);
+    G.player.atk += 1;
+    addLog(`Sacrificed ${cost} Max HP for +1 ATK!`, 'log-combat');
+    floatText('+1 ATK', G.player.x, G.player.y, '#f87171');
+    flashDamage();
+    SFX.hit();
+  } else if(shrine.shrineType === 'Greed') {
+    let gold = G.player.gold;
+    G.player.gold = 0;
+    G.player.lvl += 2;
+    G.player.maxHp += 4; G.player.hp += 4;
+    G.player.atk += 2; G.player.def += 1;
+    addLog(`Sacrificed ${gold} Gold for 2 Levels!`, 'log-info');
+    floatText('LEVEL UP!', G.player.x, G.player.y, '#fbbf24');
+    SFX.levelUp();
+  } else if(shrine.shrineType === 'Cursed') {
+    G.player.hp = G.player.maxHp;
+    addLog(`Fully healed, but the curse awakens!`, 'log-combat');
+    floatText('FULL HEAL', G.player.x, G.player.y, '#4ade80');
+    SFX.levelUp();
+    
+    // Spawn 3 elites
+    let enemyProfile = typeof getFloorEnemyProfile === 'function' ? getFloorEnemyProfile(G.floor) : {tierMin:0, tierMax:1, scale:1};
+    let spawned = 0;
+    for(let r=1; r<=2 && spawned < 3; r++) {
+      for(let y=G.player.y-r; y<=G.player.y+r; y++) {
+        for(let x=G.player.x-r; x<=G.player.x+r; x++) {
+          if(spawned >= 3) break;
+          if(x>=0 && x<MAP_W && y>=0 && y<MAP_H && G.map[y][x] === TILE.FLOOR && !G.enemies.some(e=>e.x===x&&e.y===y) && (x!==G.player.x || y!==G.player.y)) {
+            let tier=rr(enemyProfile.tierMin, enemyProfile.tierMax);
+            let t=ENEMIES[tier], sc=enemyProfile.scale;
+            let enemy = {...t,
+              hp:Math.round(t.hp*sc)*2,maxHp:Math.round(t.hp*sc)*2,
+              atk:Math.round(t.atk*sc)*2,def:Math.round(t.def*sc),
+              xp:Math.round(t.xp*sc)*2,gold:Math.round(t.gold*sc)*2,
+              x:x,y:y,id:uid(), stunnedTurns: 0, isElite: true, name: "Cursed " + t.name};
+            G.enemies.push(enemy);
+            spawned++;
+          }
+        }
+      }
+    }
+    shakeMap();
+  }
+  
+  advanceTurn({allowFreeMove:true});
+});
+
+document.getElementById('shrine-decline-btn').addEventListener('click', () => {
+  closeShrinePrompt();
+});
+
 // ===================== HELP MODAL =====================
 function openHelp(){
   document.getElementById('help-overlay').style.display='flex';

@@ -130,6 +130,18 @@
 
 <div id="damage-flash"></div>
 
+  <!-- SHRINE OVERLAY -->
+  <div id="shrine-overlay" style="display:none;position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s;">
+    <div id="shrine-modal" style="background:var(--panel);border:2px solid var(--accent);padding:22px 20px;max-width:360px;width:100%;box-shadow:0 0 60px rgba(192,132,252,.4);">
+      <h2 id="shrine-title" style="font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--accent);text-align:center;margin-bottom:8px;">SHRINE</h2>
+      <p id="shrine-msg" style="font-size:.6rem;color:var(--dim);text-align:center;line-height:1.9;margin-bottom:14px;"></p>
+      <div style="display:flex;gap:8px;">
+        <button id="shrine-accept-btn" class="act-btn" style="flex:1;background:var(--accent);color:#fff;">Accept</button>
+        <button id="shrine-decline-btn" class="act-btn" style="flex:1;">Decline</button>
+      </div>
+    </div>
+  </div>
+
 <!-- EMERGENCY POTION OVERLAY -->
 <div id="emergency-overlay" style="display:none;position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s;">
   <div id="emergency-modal" style="background:var(--panel);border:2px solid var(--red);padding:22px 20px;max-width:360px;width:100%;box-shadow:0 0 60px rgba(248,113,113,.4);">

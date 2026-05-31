@@ -238,6 +238,8 @@ function advanceTurn(opts={}){
   if(G.player.vanishTurns>0)G.player.vanishTurns--;
   if(G.player.bloodlustTurns>0)G.player.bloodlustTurns--;
   if(G.player.rootedTurns>0)G.player.rootedTurns--;
+  if(G.player.strengthTurns>0)G.player.strengthTurns--;
+  if(G.alarmedTurns>0)G.alarmedTurns--;
 
   if(G.player.poisonedTurns>0) {
     G.player.poisonedTurns--;
@@ -320,7 +322,7 @@ function processEnemyTurns(index) {
     }
   }
 
-  let seesPlayer = G.visible.has(e.y*MAP_W+e.x) && G.player.vanishTurns === 0;
+  let seesPlayer = (G.visible.has(e.y*MAP_W+e.x) || G.alarmedTurns > 0) && G.player.vanishTurns === 0;
   if(!seesPlayer){
     if(ch(.4)){
       let ds=[[-1,0],[1,0],[0,-1],[0,1]];let[dx,dy]=ds[rand(4)];

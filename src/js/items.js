@@ -160,6 +160,67 @@ function useItem(id){
     return;
   }
 
+  if(it.type==='potion_buff'){
+    if(it.buff === 'strength') {
+      G.player.strengthTurns = 10;
+      addLog(`Drank ${it.name}: Strength surged!`, 'log-item');
+      floatText('STRENGTH', G.player.x, G.player.y, '#f87171');
+      SFX.levelUp();
+    }
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
+  if(it.type==='bomb'){
+    addLog(`Threw a Bomb!`, 'log-combat');
+    floatText('BOOM!', G.player.x, G.player.y, '#fbbf24');
+    SFX.damage();shakeMap();
+    let killed = 0;
+    for(let y = G.player.y - 1; y <= G.player.y + 1; y++){
+      for(let x = G.player.x - 1; x <= G.player.x + 1; x++){
+        let en = G.enemies.find(e => e.x === x && e.y === y && !e.dying);
+        if(en){
+          en.hp -= 30;
+          floatText('-30', en.x, en.y, '#f87171');
+          if(en.hp <= 0) {
+            killEnemy(en, true);
+            killed++;
+          }
+        }
+      }
+    }
+    if(killed === 0) addLog(`The bomb hit nothing.`, 'log-info');
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
+  if(it.type==='scroll_teleport'){
+    let safeTiles = [];
+    for(let y=1; y<MAP_H-1; y++) {
+      for(let x=1; x<MAP_W-1; x++) {
+        if(G.map[y][x] === TILE.FLOOR && !G.enemies.some(e=>e.x===x&&e.y===y)) {
+          safeTiles.push({x,y});
+        }
+      }
+    }
+    if(safeTiles.length > 0) {
+      let t = safeTiles[Math.floor(Math.random()*safeTiles.length)];
+      G.player.x = t.x; G.player.y = t.y;
+      addLog(`Teleported to a random location!`, 'log-info');
+      floatText('TELEPORT', G.player.x, G.player.y, '#c084fc');
+      SFX.pickup();
+      computeVision();
+    }
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
   if(it.type==='scroll') {
     if(it.name==='Scroll of Detection') {
       let revealedSomething = false;
@@ -223,39 +284,7 @@ function useItem(id){
 }
 
 function interactShrine(it) {
-  let idx = G.items.findIndex(i => i.id === it.id);
-  if(idx > -1) G.items.splice(idx, 1);
-  
-  if(ch(0.75)) {
-    let buffType = ch(0.5) ? 'atk' : 'def';
-    if(buffType === 'atk') {
-      G.player.atk += 1;
-      addLog('The shrine blessed you! +1 ATK', 'log-info');
-      floatText('+1 ATK', G.player.x, G.player.y, '#fbbf24');
-    } else {
-      G.player.def += 1;
-      addLog('The shrine blessed you! +1 DEF', 'log-info');
-      floatText('+1 DEF', G.player.x, G.player.y, '#4ade80');
-    }
-  } else {
-    let debuffType = ch(0.5) ? 'maxHp' : 'atk';
-    if(debuffType === 'maxHp') {
-      let loss = Math.max(1, Math.floor(G.player.maxHp * 0.1));
-      G.player.maxHp -= loss;
-      if(G.player.hp > G.player.maxHp) G.player.hp = G.player.maxHp;
-      addLog(`The shrine cursed you! -${loss} Max HP`, 'log-combat');
-      floatText(`-${loss} MAX HP`, G.player.x, G.player.y, '#f87171');
-      flashDamage();
-    } else {
-      let loss = 1;
-      G.player.atk = Math.max(1, G.player.atk - loss);
-      addLog('The shrine cursed you! -1 ATK', 'log-combat');
-      floatText('-1 ATK', G.player.x, G.player.y, '#f87171');
-      flashDamage();
-    }
-  }
-  SFX.click();
-  advanceTurn({allowFreeMove:true});
+  showShrinePrompt(it);
 }
 
 function descend(){

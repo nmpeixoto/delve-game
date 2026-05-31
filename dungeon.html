@@ -395,6 +395,18 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 <div id="damage-flash"></div>
 
+  <!-- SHRINE OVERLAY -->
+  <div id="shrine-overlay" style="display:none;position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s;">
+    <div id="shrine-modal" style="background:var(--panel);border:2px solid var(--accent);padding:22px 20px;max-width:360px;width:100%;box-shadow:0 0 60px rgba(192,132,252,.4);">
+      <h2 id="shrine-title" style="font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--accent);text-align:center;margin-bottom:8px;">SHRINE</h2>
+      <p id="shrine-msg" style="font-size:.6rem;color:var(--dim);text-align:center;line-height:1.9;margin-bottom:14px;"></p>
+      <div style="display:flex;gap:8px;">
+        <button id="shrine-accept-btn" class="act-btn" style="flex:1;background:var(--accent);color:#fff;">Accept</button>
+        <button id="shrine-decline-btn" class="act-btn" style="flex:1;">Decline</button>
+      </div>
+    </div>
+  </div>
+
 <!-- EMERGENCY POTION OVERLAY -->
 <div id="emergency-overlay" style="display:none;position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s;">
   <div id="emergency-modal" style="background:var(--panel);border:2px solid var(--red);padding:22px 20px;max-width:360px;width:100%;box-shadow:0 0 60px rgba(248,113,113,.4);">
@@ -565,28 +577,28 @@ const WEAPONS=[
   {name:'Champion Blade',type:'weapon', atk:15,sym:'⚔', rarity:'legendary', price:280, reqClass:['warrior'], reqLvl:10},
 
   // Barbarian
-  {name:'Great Axe',     type:'weapon', atk:4, sym:'⚔', rarity:'common', price:70, reqClass:['barbarian']},
-  {name:'Savage Cleaver',type:'weapon', atk:9, sym:'⚔', rarity:'rare',   price:150, reqClass:['barbarian'], reqLvl:5},
-  {name:'Titan Slayer',  type:'weapon', atk:16,sym:'⚔', rarity:'legendary', price:315, reqClass:['barbarian'], reqLvl:10},
+  {name:'Great Axe',     type:'weapon', atk:4, sym:'⚔', rarity:'common', price:70, reqClass:['barbarian'], critChance:0.02},
+  {name:'Savage Cleaver',type:'weapon', atk:9, sym:'⚔', rarity:'rare',   price:150, reqClass:['barbarian'], reqLvl:5, critChance:0.05},
+  {name:'Titan Slayer',  type:'weapon', atk:16,sym:'⚔', rarity:'legendary', price:315, reqClass:['barbarian'], reqLvl:10, critChance:0.10},
 
   // Rogue
-  {name:'Twin Daggers',  type:'weapon', atk:5, sym:'†', rarity:'common', price:80, reqClass:['rogue']},
-  {name:'Assassin Dirk', type:'weapon', atk:8, sym:'†', rarity:'rare',   price:130, reqClass:['rogue'], reqLvl:5},
-  {name:'Shadow Blade',  type:'weapon', atk:14,sym:'†', rarity:'legendary', price:260, reqClass:['rogue'], reqLvl:10},
+  {name:'Twin Daggers',  type:'weapon', atk:5, sym:'†', rarity:'common', price:80, reqClass:['rogue'], dodgeBonus:0.02},
+  {name:'Assassin Dirk', type:'weapon', atk:8, sym:'†', rarity:'rare',   price:130, reqClass:['rogue'], reqLvl:5, critChance:0.05},
+  {name:'Shadow Blade',  type:'weapon', atk:14,sym:'†', rarity:'legendary', price:260, reqClass:['rogue'], reqLvl:10, vampirism:1},
 
   // Ranger
-  {name:'Shortbow',      type:'weapon', atk:4, sym:'🏹', rarity:'common', price:50, reqClass:['ranger']},
-  {name:'Longbow',       type:'weapon', atk:7, sym:'🏹', rarity:'rare',   price:115, reqClass:['ranger'], reqLvl:4},
-  {name:'Crossbow',      type:'weapon', atk:10, sym:'🏹', rarity:'rare',   price:160, reqClass:['ranger'], reqLvl:7},
-  {name:'Elven Bow',     type:'weapon', atk:14,sym:'🏹', rarity:'legendary', price:245, reqClass:['ranger'], reqLvl:10},
+  {name:'Shortbow',      type:'weapon', atk:4, sym:'🏹', rarity:'common', price:50, reqClass:['ranger'], perception:1},
+  {name:'Longbow',       type:'weapon', atk:7, sym:'🏹', rarity:'rare',   price:115, reqClass:['ranger'], reqLvl:4, critChance:0.05},
+  {name:'Crossbow',      type:'weapon', atk:10, sym:'🏹', rarity:'rare',   price:160, reqClass:['ranger'], reqLvl:7, critChance:0.10},
+  {name:'Elven Bow',     type:'weapon', atk:14,sym:'🏹', rarity:'legendary', price:245, reqClass:['ranger'], reqLvl:10, swiftness:1},
 
   // Mage / Necromancer
   {name:'Bone Staff',    type:'weapon', atk:5, sym:'♦', rarity:'common', price:70, reqClass:['mage','necromancer']},
-  {name:'Skull Rod',     type:'weapon', atk:5, sym:'♦', rarity:'common', price:70, reqClass:['mage','necromancer']},
-  {name:'Arcane Wand',   type:'weapon', atk:8, sym:'♦', rarity:'rare',   price:130, reqClass:['mage','necromancer'], reqLvl:5},
-  {name:'Void Staff',    type:'weapon', atk:12,sym:'♦', rarity:'rare',   price:190, reqClass:['mage','necromancer'], reqLvl:8},
-  {name:'Elder Wand',    type:'weapon', atk:18,sym:'♦', rarity:'legendary', price:350, reqClass:['mage'], reqLvl:12},
-  {name:'Scythe of Death',type:'weapon',atk:17,sym:'♦', rarity:'legendary', price:330, reqClass:['necromancer'], reqLvl:12},
+  {name:'Skull Rod',     type:'weapon', atk:5, sym:'♦', rarity:'common', price:70, reqClass:['mage','necromancer'], vampirism:1},
+  {name:'Arcane Wand',   type:'weapon', atk:8, sym:'♦', rarity:'rare',   price:130, reqClass:['mage','necromancer'], reqLvl:5, regen:1},
+  {name:'Void Staff',    type:'weapon', atk:12,sym:'♦', rarity:'rare',   price:190, reqClass:['mage','necromancer'], reqLvl:8, vampirism:1},
+  {name:'Elder Wand',    type:'weapon', atk:18,sym:'♦', rarity:'legendary', price:350, reqClass:['mage'], reqLvl:12, regen:2},
+  {name:'Scythe of Death',type:'weapon',atk:17,sym:'♦', rarity:'legendary', price:330, reqClass:['necromancer'], reqLvl:12, vampirism:2},
 ];
 
 const ARMORS=[
@@ -603,10 +615,10 @@ const ARMORS=[
   {name:'Dragon Scale',  type:'armor', def:12,sym:'◆', rarity:'legendary', price:260, reqClass:['warrior','paladin'], reqLvl:10},
 
   // Rogue / Ranger
-  {name:'Ranger Tunic',  type:'armor', def:3, sym:'◆', rarity:'common', price:50, reqClass:['rogue','ranger']},
-  {name:'Shadow Cloak',  type:'armor', def:6, sym:'◆', rarity:'rare',   price:120, reqClass:['rogue','ranger'], reqLvl:5},
-  {name:'Assassin Garb', type:'armor', def:10,sym:'◆', rarity:'legendary', price:225, reqClass:['rogue'], reqLvl:10},
-  {name:'Hunter Vest',   type:'armor', def:10,sym:'◆', rarity:'legendary', price:225, reqClass:['ranger'], reqLvl:10},
+  {name:'Ranger Tunic',  type:'armor', def:3, sym:'◆', rarity:'common', price:50, reqClass:['rogue','ranger'], perception:1},
+  {name:'Shadow Cloak',  type:'armor', def:6, sym:'◆', rarity:'rare',   price:120, reqClass:['rogue','ranger'], reqLvl:5, dodgeBonus:0.05},
+  {name:'Assassin Garb', type:'armor', def:10,sym:'◆', rarity:'legendary', price:225, reqClass:['rogue'], reqLvl:10, critChance:0.10, dodgeBonus:0.05},
+  {name:'Hunter Vest',   type:'armor', def:10,sym:'◆', rarity:'legendary', price:225, reqClass:['ranger'], reqLvl:10, perception:2, dodgeBonus:0.05},
 
   // Barbarian (Low DEF, but they wear it anyway)
   {name:'Furs',          type:'armor', def:4, sym:'◆', rarity:'common', price:40, reqClass:['barbarian']},
@@ -619,9 +631,9 @@ const ARMORS=[
   {name:'Lich Shroud',   type:'armor', def:9, sym:'◆', rarity:'legendary', price:210, reqClass:['necromancer'], reqLvl:10},
 
   // Monk
-  {name:'Gi',            type:'armor', def:3, sym:'◆', rarity:'common', price:50, reqClass:['monk']},
-  {name:'Master Gi',     type:'armor', def:6, sym:'◆', rarity:'rare',   price:120, reqClass:['monk'], reqLvl:5},
-  {name:'Grandmaster Robe',type:'armor',def:11,sym:'◆', rarity:'legendary', price:245, reqClass:['monk'], reqLvl:10},
+  {name:'Gi',            type:'armor', def:3, sym:'◆', rarity:'common', price:50, reqClass:['monk'], dodgeBonus:0.02},
+  {name:'Master Gi',     type:'armor', def:6, sym:'◆', rarity:'rare',   price:120, reqClass:['monk'], reqLvl:5, dodgeBonus:0.05},
+  {name:'Grandmaster Robe',type:'armor',def:11,sym:'◆', rarity:'legendary', price:245, reqClass:['monk'], reqLvl:10, dodgeBonus:0.10, swiftness:1},
 ];
 
 function spawnItem(r, itemFilter=null, forceHighTier=false){
@@ -646,7 +658,10 @@ const POTIONS=[
   {name:'Health Potion', type:'potion',heal:15,sym:'!',rarity:'common',   price:25},
   {name:'Greater Potion',type:'potion',heal:30,sym:'!',rarity:'rare',     price:50},
   {name:'Elixir of Life',type:'potion',heal:60,sym:'!',rarity:'legendary',price:100},
+  {name:'Potion of Giant Strength', type:'potion_buff', buff:'strength', sym:'🧪', rarity:'rare', price:75},
   {name:'Scroll of Detection',type:'scroll',sym:'📜',rarity:'common',price:200},
+  {name:'Scroll of Teleportation', type:'scroll_teleport', sym:'📜', rarity:'rare', price:150},
+  {name:'Bomb', type:'bomb', sym:'💣', rarity:'rare', price:120},
 ];
 
 // Shop-exclusive upgrades
@@ -689,13 +704,13 @@ const UPGRADES=[
   {name:'Scholar\'s Quill', type:'upgrade',stat:'xpMult',amount:0.20,sym:'📖',rarity:'rare', price:300, desc:'+20% XP from kills'},
 ];
 const ENEMIES=[
-  {name:'Rat',    sym:'r',hp:5, atk:2, def:0,xp:3, gold:2, color:'#cd853f'},
-  {name:'Goblin', sym:'g',hp:10,atk:4, def:1,xp:6, gold:4, color:'#4ade80'},
-  {name:'Skeleton',sym:'s',hp:15,atk:6,def:2,xp:10,gold:6, color:'#e2e8f0'},
-  {name:'Orc',    sym:'o',hp:25,atk:8, def:3,xp:15,gold:10,color:'#84cc16'},
-  {name:'Troll',  sym:'T',hp:40,atk:12,def:4,xp:25,gold:15,color:'#22d3ee'},
-  {name:'Demon',  sym:'D',hp:55,atk:15,def:5,xp:35,gold:22,color:'#f87171'},
-  {name:'Lich',   sym:'L',hp:70,atk:18,def:6,xp:50,gold:30,color:'#a78bfa'},
+  {name:'Rat',    sym:'r',hp:8, atk:3, def:0,xp:3, gold:2, color:'#cd853f'},
+  {name:'Goblin', sym:'g',hp:15,atk:6, def:1,xp:6, gold:4, color:'#4ade80', dodge: 0.2},
+  {name:'Skeleton',sym:'s',hp:25,atk:9,def:2,xp:10,gold:6, color:'#e2e8f0', revive: true},
+  {name:'Orc',    sym:'o',hp:40,atk:12, def:3,xp:15,gold:10,color:'#84cc16', enrage: true},
+  {name:'Troll',  sym:'T',hp:60,atk:18,def:4,xp:25,gold:15,color:'#22d3ee', regen: 0.1},
+  {name:'Demon',  sym:'D',hp:85,atk:22,def:5,xp:35,gold:22,color:'#f87171', vampiric: 0.5},
+  {name:'Lich',   sym:'L',hp:120,atk:26,def:6,xp:50,gold:30,color:'#a78bfa', freezeChance: 0.25},
 ];
 
 </script>
@@ -709,9 +724,16 @@ const uid=()=>`${Date.now().toString(36)}-${(++_idCounter).toString(36)}-${Math.
 const ch=p=>Math.random()<p;
 // Debounce tile actions — 400ms safety net against double-fire
 function canAct(){
+  if(typeof isOverlayOpen === 'function' && isOverlayOpen()) return false;
   const now=Date.now();
-  if(now-_lastAction<400) return false;
+  if(now-_lastAction<120) return false;
   _lastAction=now; return true;
+}
+function getStat(statName) {
+  let base = G.player[statName] || 0;
+  let w = G.player.weapon ? (G.player.weapon[statName] || 0) : 0;
+  let a = G.player.armor ? (G.player.armor[statName] || 0) : 0;
+  return base + w + a;
 }
 
 </script>
@@ -744,6 +766,7 @@ const SFX=(function(){
     sell:       ()=>play(440,'sine',0.12,0.15),
     bash:       ()=>{play(150,'sawtooth',0.1,0.4);setTimeout(()=>play(100,'square',0.15,0.3),50);},
     playerDeath:()=>{[300,250,200,150,100].forEach((f,i)=>setTimeout(()=>play(f,'sawtooth',0.3,0.3),i*120));},
+    click:      ()=>play(300,'sine',0.05,0.1),
   };
 })();
 
@@ -794,7 +817,7 @@ function computeVision(){
         G.seen.add(k);
         newTiles++;
       }
-      if(G.map[iy][ix]===TILE.WALL) break;
+      if(G.map[iy][ix]===TILE.WALL||G.map[iy][ix]===TILE.SECRET_DOOR||G.map[iy][ix]===TILE.LOCKED_DOOR) break;
     }
   }
 
@@ -802,8 +825,8 @@ function computeVision(){
     for(let i=0; i<newTiles; i++){
       G.player.tilesExplored++;
       
-      if(G.player.regen > 0 && G.player.tilesExplored % 10 === 0) {
-        let heal = G.player.regen;
+      if(getStat('regen') > 0 && G.player.tilesExplored % 10 === 0) {
+        let heal = getStat('regen');
         G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
         floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
       }
@@ -813,15 +836,15 @@ function computeVision(){
         floatText('+1 HP', G.player.x, G.player.y, '#4ade80');
       }
 
-      if(G.player.swiftness > 0 && G.player.tilesExplored % 15 === 0) {
-        G.player.freeMoves += G.player.swiftness;
-        addLog(`Swiftness granted ${G.player.swiftness} free move(s)!`, 'log-info');
+      if(getStat('swiftness') > 0 && G.player.tilesExplored % 15 === 0) {
+        G.player.freeMoves += getStat('swiftness');
+        addLog(`Swiftness granted ${getStat('swiftness')} free move(s)!`, 'log-info');
       }
     }
   }
 
-  if(G.player.perception > 0) {
-    let p = G.player.perception;
+  if(getStat('perception') > 0) {
+    let p = getStat('perception');
     for(let y=Math.max(0, py-p); y<=Math.min(MAP_H-1, py+p); y++) {
       for(let x=Math.max(0, px-p); x<=Math.min(MAP_W-1, px+p); x++) {
         if(!G.visible.has(y*MAP_W+x)) continue;
@@ -873,6 +896,17 @@ function positionMapOnPlayer(){
   }
   wrap.style.transform=`translate(${Math.round(tx)}px,${Math.round(ty)}px)`;
 }
+function formatSecStats(item) {
+  let s = [];
+  if(item.critChance) s.push(`+${Math.round(item.critChance*100)}% Crit`);
+  if(item.dodgeBonus) s.push(`+${Math.round(item.dodgeBonus*100)}% Dodge`);
+  if(item.perception) s.push(`+${item.perception} PER`);
+  if(item.vampirism) s.push(`+${item.vampirism} Vamp`);
+  if(item.regen) s.push(`+${item.regen} Regen`);
+  if(item.swiftness) s.push(`+${item.swiftness} Swift`);
+  return s.length > 0 ? ` <span class="sec-stats" style="color:var(--accent);font-size:0.7em;">(${s.join(', ')})</span>` : '';
+}
+
 function iDesc(item){
   let reqs = [];
   let canEverEquip = !item.reqClass || item.reqClass.includes(G.player.class);
@@ -904,13 +938,13 @@ function iDesc(item){
     let pAtk = typeof weaponPower === 'function' ? weaponPower(G.player.weapon) : (G.player.weapon ? G.player.weapon.atk : 0);
     let itemAtk = typeof weaponPower === 'function' ? weaponPower(item) : item.atk;
     let up = itemAtk > pAtk ? ' <span class=green>▲</span>' : '';
-    return `ATK+${item.atk}${up} ${rStr}`;
+    return `ATK+${item.atk}${up}${formatSecStats(item)} ${rStr}`;
   }
   if(item.type==='armor') {
     let pDef = typeof armorPower === 'function' ? armorPower(G.player.armor) : (G.player.armor ? G.player.armor.def : 0);
     let itemDef = typeof armorPower === 'function' ? armorPower(item) : item.def;
     let up = itemDef > pDef ? ' <span class=green>▲</span>' : '';
-    return `DEF+${item.def}${up} ${rStr}`;
+    return `DEF+${item.def}${up}${formatSecStats(item)} ${rStr}`;
   }
   if(item.type==='potion') return `Heal ${item.heal} HP`;
   if(item.type==='upgrade')return item.desc||'';
@@ -923,6 +957,7 @@ const gatk=()=>{
   if(typeof weaponPower !== 'function' && G.player.class === 'mage' && w && w.sym === '♦') watk += Math.floor(watk / 5);
   let total = G.player.atk + watk;
   if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 6);
+  if(G.player.strengthTurns > 0) total += 10;
   return total;
 };
 const gdef=()=>{
@@ -989,7 +1024,8 @@ function render(){
         h+=`<div class="tile tile-shop" style="${s}" onclick="openShop()" ontouchend="event.preventDefault();openShop()">$</div>`;continue;
       }
       let sc=(seen&&!vis)?' tile-seen':'';
-      h+=`<div class="tile ${(t===TILE.WALL||t===TILE.SECRET_DOOR)?'tile-wall':'tile-floor'}${sc}" style="${s}">${CH[t]||' '}</div>`;
+      let extraStyle = (t===TILE.SECRET_DOOR && vis) ? 'color:#52525b;' : '';
+      h+=`<div class="tile ${(t===TILE.WALL||t===TILE.SECRET_DOOR)?'tile-wall':'tile-floor'}${sc}" style="${s}${extraStyle}">${CH[t]||' '}</div>`;
     }
   }
   mapEl.innerHTML=h;
@@ -1006,7 +1042,7 @@ function updateHUD(){
   document.getElementById('xp-val').textContent=`${p.xp}/${p.xpNext}`;
   document.getElementById('atk-val').textContent=gatk();
   document.getElementById('def-val').textContent=gdef();
-  document.getElementById('per-val').textContent=p.perception||0;
+  document.getElementById('per-val').textContent=getStat('perception');
   document.getElementById('lvl-val').textContent=p.lvl;
   document.getElementById('class-val').textContent=p.class;
   document.getElementById('gold-val').textContent=p.gold;
@@ -1094,9 +1130,9 @@ function drawMinimap() {
       
       let t = G.map[y][x];
       let vis = G.visible.has(k);
-      
-      if(t===TILE.WALL || t===TILE.SECRET_DOOR) ctx.fillStyle = vis ? '#333' : '#111';
-      else if(t===TILE.STAIRS) ctx.fillStyle = vis ? '#4ade80' : '#225533';
+            if(t===TILE.WALL) ctx.fillStyle = vis ? '#333' : '#111';
+        else if(t===TILE.SECRET_DOOR) ctx.fillStyle = vis ? '#444' : '#111';
+        else if(t===TILE.STAIRS) ctx.fillStyle = vis ? '#4ade80' : '#225533';
       else if(t===TILE.SHOP) ctx.fillStyle = vis ? '#fbbf24' : '#665511';
       else if(t===TILE.LOCKED_DOOR) ctx.fillStyle = vis ? '#f87171' : '#662222';
       else ctx.fillStyle = vis ? '#7e7ea3' : '#333344';
@@ -1207,6 +1243,94 @@ function closeInv(){
   document.getElementById('inv-drawer').classList.remove('open');
   document.getElementById('drawer-backdrop').classList.remove('open');
 }
+
+// ===================== SHRINE OVERLAY =====================
+let _currentShrine = null;
+
+function showShrinePrompt(shrine) {
+  _currentShrine = shrine;
+  document.getElementById('shrine-title').textContent = shrine.shrineType ? `${shrine.shrineType.toUpperCase()} SHRINE` : 'SHRINE';
+  let msg = '';
+  if(shrine.shrineType === 'Blood') {
+    msg = 'Sacrifice 30% of your Max HP permanently to gain +1 ATK permanently?';
+  } else if(shrine.shrineType === 'Greed') {
+    msg = 'Sacrifice all your current Gold to instantly gain 2 Levels?';
+  } else if(shrine.shrineType === 'Cursed') {
+    msg = 'Fully heal your HP, but instantly summon 3 Elite enemies surrounding you?';
+  } else {
+    msg = 'Touch the shrine?'; // Fallback
+  }
+  document.getElementById('shrine-msg').textContent = msg;
+  document.getElementById('shrine-overlay').style.display = 'flex';
+}
+
+function closeShrinePrompt() {
+  document.getElementById('shrine-overlay').style.display = 'none';
+  _currentShrine = null;
+}
+
+document.getElementById('shrine-accept-btn').addEventListener('click', () => {
+  if(!_currentShrine) return;
+  let shrine = _currentShrine;
+  closeShrinePrompt();
+
+  let idx = G.items.findIndex(i => i.id === shrine.id);
+  if(idx > -1) G.items.splice(idx, 1);
+
+  if(shrine.shrineType === 'Blood') {
+    let cost = Math.max(1, Math.floor(G.player.maxHp * 0.3));
+    G.player.maxHp = Math.max(1, G.player.maxHp - cost);
+    G.player.hp = Math.min(G.player.hp, G.player.maxHp);
+    G.player.atk += 1;
+    addLog(`Sacrificed ${cost} Max HP for +1 ATK!`, 'log-combat');
+    floatText('+1 ATK', G.player.x, G.player.y, '#f87171');
+    flashDamage();
+    SFX.hit();
+  } else if(shrine.shrineType === 'Greed') {
+    let gold = G.player.gold;
+    G.player.gold = 0;
+    G.player.lvl += 2;
+    G.player.maxHp += 4; G.player.hp += 4;
+    G.player.atk += 2; G.player.def += 1;
+    addLog(`Sacrificed ${gold} Gold for 2 Levels!`, 'log-info');
+    floatText('LEVEL UP!', G.player.x, G.player.y, '#fbbf24');
+    SFX.levelUp();
+  } else if(shrine.shrineType === 'Cursed') {
+    G.player.hp = G.player.maxHp;
+    addLog(`Fully healed, but the curse awakens!`, 'log-combat');
+    floatText('FULL HEAL', G.player.x, G.player.y, '#4ade80');
+    SFX.levelUp();
+    
+    // Spawn 3 elites
+    let enemyProfile = typeof getFloorEnemyProfile === 'function' ? getFloorEnemyProfile(G.floor) : {tierMin:0, tierMax:1, scale:1};
+    let spawned = 0;
+    for(let r=1; r<=2 && spawned < 3; r++) {
+      for(let y=G.player.y-r; y<=G.player.y+r; y++) {
+        for(let x=G.player.x-r; x<=G.player.x+r; x++) {
+          if(spawned >= 3) break;
+          if(x>=0 && x<MAP_W && y>=0 && y<MAP_H && G.map[y][x] === TILE.FLOOR && !G.enemies.some(e=>e.x===x&&e.y===y) && (x!==G.player.x || y!==G.player.y)) {
+            let tier=rr(enemyProfile.tierMin, enemyProfile.tierMax);
+            let t=ENEMIES[tier], sc=enemyProfile.scale;
+            let enemy = {...t,
+              hp:Math.round(t.hp*sc)*2,maxHp:Math.round(t.hp*sc)*2,
+              atk:Math.round(t.atk*sc)*2,def:Math.round(t.def*sc),
+              xp:Math.round(t.xp*sc)*2,gold:Math.round(t.gold*sc)*2,
+              x:x,y:y,id:uid(), stunnedTurns: 0, isElite: true, name: "Cursed " + t.name};
+            G.enemies.push(enemy);
+            spawned++;
+          }
+        }
+      }
+    }
+    shakeMap();
+  }
+  
+  advanceTurn({allowFreeMove:true});
+});
+
+document.getElementById('shrine-decline-btn').addEventListener('click', () => {
+  closeShrinePrompt();
+});
 
 // ===================== HELP MODAL =====================
 function openHelp(){
@@ -1387,20 +1511,33 @@ function move(dx,dy){
   if(en){if(en.dying)return;attackEnemy(en.id);return;}
 
   let trap = G.traps.find(t=>t.x===nx&&t.y===ny&&!t.triggered);
+  if(trap && trap.type === 'bear') trap = null; // Bear traps only trigger on enemies
   if(trap && trap.revealed) {
-    let disarmChance = 0.3 + (G.player.perception * 0.15) + (G.player.class === 'rogue' ? 0.20 : 0);
+    let disarmChance = 0.3 + (getStat('perception') * 0.15) + (G.player.class === 'rogue' ? 0.20 : 0);
     if(ch(disarmChance)) {
       trap.triggered = true;
       let tIdx = G.traps.findIndex(t => t.x===nx && t.y===ny);
       if(tIdx > -1) G.traps.splice(tIdx, 1);
-      addLog('You successfully disarmed the trap!', 'log-info');
+      
+      if(ch(0.5)) {
+        let lootGold = rr(3, 10);
+        G.player.gold += lootGold;
+        addLog(`You successfully disarmed the trap and salvaged ${lootGold} gold!`, 'log-info');
+      } else {
+        addLog('You successfully disarmed the trap!', 'log-info');
+        if(ch(0.2)) {
+          spawnItem({x:nx, y:ny}, null, false);
+          addLog('You found an item hidden in the trap mechanism!', 'log-info');
+        }
+      }
       floatText('DISARMED', nx, ny, '#4ade80');
       SFX.click();
     } else {
       addLog('You failed to disarm the trap and triggered it!', 'log-combat');
       floatText('FAILED', nx, ny, '#f87171');
       trap.triggered = true;
-      if(G.player.class === 'rogue' && ch(0.5)) {
+      let trapDodge = (G.player.class === 'rogue' ? 0.5 : 0) + getStat('dodgeBonus');
+      if(ch(trapDodge)) {
         addLog('You agilely dodged the trap!', 'log-info');
         floatText('DODGED', nx, ny, '#fbbf24');
       } else {
@@ -1417,6 +1554,7 @@ function move(dx,dy){
           floatText('POISONED', nx, ny, '#a855f7');
           SFX.hit();
         } else if(trap.type === 'alarm') {
+          G.alarmedTurns = 15;
           addLog('Alarm triggered! Enemies are alerted.', 'log-combat');
           floatText('ALARM!', nx, ny, '#f87171');
           SFX.hit();
@@ -1434,9 +1572,10 @@ function move(dx,dy){
   G.player.x=nx;G.player.y=ny;
   computeVision();
 
-  if(trap) {
+  if(trap && trap.type!=='bear'){
     trap.triggered = true;
-    if(G.player.class === 'rogue' && ch(0.5)) {
+    let trapDodge = (G.player.class === 'rogue' ? 0.5 : 0) + getStat('dodgeBonus');
+    if(ch(trapDodge)) {
       addLog('You agilely dodged a trap!', 'log-info');
       floatText('DODGED', nx, ny, '#fbbf24');
     } else {
@@ -1453,6 +1592,7 @@ function move(dx,dy){
         floatText('POISONED', nx, ny, '#a855f7');
         SFX.hit();
       } else if(trap.type === 'alarm') {
+        G.alarmedTurns = 15;
         addLog('You triggered an alarm! Enemies are alerted.', 'log-combat');
         floatText('ALARM!', nx, ny, '#f87171');
         SFX.hit();
@@ -1651,6 +1791,67 @@ function useItem(id){
     return;
   }
 
+  if(it.type==='potion_buff'){
+    if(it.buff === 'strength') {
+      G.player.strengthTurns = 10;
+      addLog(`Drank ${it.name}: Strength surged!`, 'log-item');
+      floatText('STRENGTH', G.player.x, G.player.y, '#f87171');
+      SFX.levelUp();
+    }
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
+  if(it.type==='bomb'){
+    addLog(`Threw a Bomb!`, 'log-combat');
+    floatText('BOOM!', G.player.x, G.player.y, '#fbbf24');
+    SFX.damage();shakeMap();
+    let killed = 0;
+    for(let y = G.player.y - 1; y <= G.player.y + 1; y++){
+      for(let x = G.player.x - 1; x <= G.player.x + 1; x++){
+        let en = G.enemies.find(e => e.x === x && e.y === y && !e.dying);
+        if(en){
+          en.hp -= 30;
+          floatText('-30', en.x, en.y, '#f87171');
+          if(en.hp <= 0) {
+            killEnemy(en, true);
+            killed++;
+          }
+        }
+      }
+    }
+    if(killed === 0) addLog(`The bomb hit nothing.`, 'log-info');
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
+  if(it.type==='scroll_teleport'){
+    let safeTiles = [];
+    for(let y=1; y<MAP_H-1; y++) {
+      for(let x=1; x<MAP_W-1; x++) {
+        if(G.map[y][x] === TILE.FLOOR && !G.enemies.some(e=>e.x===x&&e.y===y)) {
+          safeTiles.push({x,y});
+        }
+      }
+    }
+    if(safeTiles.length > 0) {
+      let t = safeTiles[Math.floor(Math.random()*safeTiles.length)];
+      G.player.x = t.x; G.player.y = t.y;
+      addLog(`Teleported to a random location!`, 'log-info');
+      floatText('TELEPORT', G.player.x, G.player.y, '#c084fc');
+      SFX.pickup();
+      computeVision();
+    }
+    let idx = G.items.findIndex(i=>i.id===id);
+    if(idx > -1) G.items.splice(idx,1);
+    advanceTurn();closeInv();
+    return;
+  }
+
   if(it.type==='scroll') {
     if(it.name==='Scroll of Detection') {
       let revealedSomething = false;
@@ -1714,39 +1915,7 @@ function useItem(id){
 }
 
 function interactShrine(it) {
-  let idx = G.items.findIndex(i => i.id === it.id);
-  if(idx > -1) G.items.splice(idx, 1);
-  
-  if(ch(0.75)) {
-    let buffType = ch(0.5) ? 'atk' : 'def';
-    if(buffType === 'atk') {
-      G.player.atk += 1;
-      addLog('The shrine blessed you! +1 ATK', 'log-info');
-      floatText('+1 ATK', G.player.x, G.player.y, '#fbbf24');
-    } else {
-      G.player.def += 1;
-      addLog('The shrine blessed you! +1 DEF', 'log-info');
-      floatText('+1 DEF', G.player.x, G.player.y, '#4ade80');
-    }
-  } else {
-    let debuffType = ch(0.5) ? 'maxHp' : 'atk';
-    if(debuffType === 'maxHp') {
-      let loss = Math.max(1, Math.floor(G.player.maxHp * 0.1));
-      G.player.maxHp -= loss;
-      if(G.player.hp > G.player.maxHp) G.player.hp = G.player.maxHp;
-      addLog(`The shrine cursed you! -${loss} Max HP`, 'log-combat');
-      floatText(`-${loss} MAX HP`, G.player.x, G.player.y, '#f87171');
-      flashDamage();
-    } else {
-      let loss = 1;
-      G.player.atk = Math.max(1, G.player.atk - loss);
-      addLog('The shrine cursed you! -1 ATK', 'log-combat');
-      floatText('-1 ATK', G.player.x, G.player.y, '#f87171');
-      flashDamage();
-    }
-  }
-  SFX.click();
-  advanceTurn({allowFreeMove:true});
+  showShrinePrompt(it);
 }
 
 function descend(){
@@ -1754,7 +1923,9 @@ function descend(){
   if(G.map[G.player.y][G.player.x]!==TILE.STAIRS){addLog('Find the stairs (>) first','log-info');return;}
   G.floor++;
   if(G.floor>FLOORS){G.won=true;showVictory();return;}
+  if(typeof flushDeathBatch === 'function') flushDeathBatch();
   G.player.hp=Math.min(G.player.maxHp,G.player.hp+10);
+  G.player.poisonedTurns=0;
   buildFloor();
 }
 
@@ -1784,33 +1955,62 @@ function attackEnemy(id,multiplier=1,opts={}){
     G.player.vanishTurns = 0;
     addLog('Sneak Attack!', 'log-combat');
   }
-  if(G.player.critChance > 0 && Math.random() < G.player.critChance) {
+  if(getStat('critChance') > 0 && Math.random() < getStat('critChance')) {
     multiplier *= 2;
     addLog('Critical Hit!', 'log-combat');
   }
-  let dmg=Math.max(1,gatk()-en.def+rand(3));
-  if(multiplier>1){dmg*=multiplier;SFX.bash();}else{SFX.hit();}
-  en.hp-=dmg;
-  G.player.damageDealt+=dmg;
-  let atkSym = G.player.weapon ? G.player.weapon.sym : '👊';
-  if(atkSym === '†') atkSym = '🔪';
-  if(atkSym === '♦') atkSym = '✨';
-  popText(atkSym, en.x, en.y);
-  floatText(`-${dmg}`,en.x,en.y,'#f87171');
-  let multTag=multiplier>1?' (CRIT!)':'';
-  addLog(`Hit ${en.name} for ${dmg}${multTag}`, 'log-combat');
+  if(en.dodge && Math.random() < en.dodge) {
+    addLog(`${en.name} agilely dodged your attack!`, 'log-combat');
+    floatText('DODGED', en.x, en.y, '#fbbf24');
+    popText('💨', en.x, en.y);
+    SFX.hit();
+  } else {
+    let dmg=Math.max(1,gatk()-en.def+rand(3));
+    if(multiplier>1){dmg*=multiplier;SFX.bash();}else{SFX.hit();}
+    en.hp-=dmg;
+    G.player.damageDealt+=dmg;
+    let atkSym = G.player.weapon ? G.player.weapon.sym : '🗡️';
+    if(atkSym === '🏹') atkSym = '🎯';
+    if(atkSym === '🪄') atkSym = '💥';
+    popText(atkSym, en.x, en.y);
+    floatText(`-${dmg}`,en.x,en.y,'#f87171');
+    let multTag=multiplier>1?' (CRIT!)':'';
+    addLog(`Hit ${en.name} for ${dmg}${multTag}`, 'log-combat');
 
-  if(G.player.bloodlustTurns > 0) {
-    let heal = Math.floor(dmg / 2);
-    if(heal > 0) {
-      G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
-      floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
+    if(G.player.bloodlustTurns > 0) {
+      let heal = Math.floor(dmg / 2);
+      if(heal > 0) {
+        G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
+        floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
+      }
+    }
+    if(en.enrage && en.hp <= en.maxHp / 2 && en.color !== '#dc2626') {
+      en.color = '#dc2626';
+      popText('💢', en.x, en.y);
+      floatText('ENRAGED', en.x, en.y, '#dc2626');
     }
   }
 
   if(en.hp<=0){
-    killEnemy(en, false);
-    return;
+    if(en.reviveTurns > 0) {
+      addLog(`You shattered the bones!`, 'log-combat');
+      popText('💥', en.x, en.y);
+      killEnemy(en, false);
+      return;
+    } else if(en.revive) {
+      en.revive = false;
+      en.reviveTurns = 2;
+      en.hp = 0;
+      en.sym = '🦴';
+      en.color = '#94a3b8';
+      en.name = 'Bones';
+      addLog(`The Skeleton collapsed into a pile of bones!`, 'log-combat');
+      floatText('COLLAPSED', en.x, en.y, '#94a3b8');
+      popText('🦴', en.x, en.y);
+    } else {
+      killEnemy(en, false);
+      return;
+    }
   }
 
   if(opts.skipCounter){
@@ -1824,10 +2024,11 @@ function attackEnemy(id,multiplier=1,opts={}){
   }
 
   let edm=Math.max(1,en.atk-gdef()+rand(3));
+  if(en.enrage && en.hp <= en.maxHp / 2) edm = Math.floor(edm * 1.5);
   if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
   if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
 
-  let dodgeChance = (G.player.class === 'rogue' ? 0.4 : 0) + G.player.dodgeBonus;
+  let dodgeChance = (G.player.class === 'rogue' ? 0.4 : 0) + getStat('dodgeBonus');
   if(dodgeChance > 0 && Math.random() < dodgeChance) {
     addLog(`Dodged ${en.name}'s attack!`, 'log-info');
     popText('💨', G.player.x, G.player.y);
@@ -1835,10 +2036,25 @@ function attackEnemy(id,multiplier=1,opts={}){
   } else {
     checkEmergencyPotion(en, edm, ()=>{
       G.player.hp=Math.max(0,G.player.hp-edm);
-      popText('💢', G.player.x, G.player.y);
+      popText('🩸', G.player.x, G.player.y);
       floatText(`-${edm}`,G.player.x,G.player.y,'#60a5fa');
       addLog(`${en.name} hits you for ${edm}`,'log-combat');
-      SFX.damage();shakeMap();flashDamage();advanceTurn();
+      SFX.damage();shakeMap();flashDamage();
+      
+      if(en.vampiric && edm > 0) {
+        let heal = Math.floor(edm * en.vampiric);
+        if(heal > 0) {
+          en.hp = Math.min(en.maxHp, en.hp + heal);
+          floatText(`+${heal}`, en.x, en.y, '#4ade80');
+        }
+      }
+      if(en.freezeChance && Math.random() < en.freezeChance) {
+        G.player.rootedTurns = 2;
+        addLog(`The ${en.name} froze you!`, 'log-combat');
+        floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
+      }
+
+      advanceTurn();
       if(G.player.hp<=0){G.gameOver=true;showDeath();}
     });
   }
@@ -1848,12 +2064,12 @@ let _deathBatch = [];
 let _deathTimer = null;
 
 function killEnemy(en, skipAdvanceTurn) {
-  let goldDrop = en.gold + rand(3) + G.player.goldBonus;
-  let xpDrop = Math.ceil(en.xp * (1 + G.player.xpMult));
+  let goldDrop = en.gold + rand(3) + getStat('goldBonus');
+  let xpDrop = Math.ceil(en.xp * (1 + getStat('xpMult')));
   G.player.xp += xpDrop; G.player.kills++; G.player.gold += goldDrop;
 
-  if(G.player.vampirism > 0) {
-    let heal = G.player.vampirism;
+  if(getStat('vampirism') > 0) {
+    let heal = getStat('vampirism');
     G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
     floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
   }
@@ -1903,6 +2119,25 @@ function killEnemy(en, skipAdvanceTurn) {
   }
 }
 
+function flushDeathBatch() {
+  if(_deathTimer) {
+    clearTimeout(_deathTimer);
+    let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
+    _deathBatch.forEach(d => {
+      G.enemies = G.enemies.filter(e => e.id !== d.en.id);
+      if(ch(.2)){
+        let pool=[...WEAPONS,...ARMORS,...POTIONS];
+        let w=pool.flatMap(i=>i.rarity==='legendary'?[i]:i.rarity==='rare'?[i,i]:[i,i,i,i]);
+        G.items.push({...w[rand(w.length)],x:d.en.x,y:d.en.y,id:uid()});
+      }
+    });
+    _deathBatch = [];
+    _deathTimer = null;
+    checkLevelUp();
+    if(shouldAdvance) advanceTurn();
+  }
+}
+
 function checkLevelUp(){
   let leveled = false;
   while(G.player.xp>=G.player.xpNext){
@@ -1930,13 +2165,14 @@ function advanceTurn(opts={}){
   }
   G.turn++;
 
-
   if(G.ability1Cooldown>0)G.ability1Cooldown--;
   if(G.ability2Cooldown>0)G.ability2Cooldown--;
   if(G.player.shieldWallTurns>0)G.player.shieldWallTurns--;
   if(G.player.vanishTurns>0)G.player.vanishTurns--;
   if(G.player.bloodlustTurns>0)G.player.bloodlustTurns--;
   if(G.player.rootedTurns>0)G.player.rootedTurns--;
+  if(G.player.strengthTurns>0)G.player.strengthTurns--;
+  if(G.alarmedTurns>0)G.alarmedTurns--;
 
   if(G.player.poisonedTurns>0) {
     G.player.poisonedTurns--;
@@ -1953,79 +2189,134 @@ function advanceTurn(opts={}){
     }
   }
 
-  G.enemies.forEach(e=>{
-    if(G.gameOver||G.won||G.pendingHit) return;
-    if(e.dying) return;
-
-    let trapIdx = G.traps.findIndex(t => t.type === 'bear' && t.x===e.x && t.y===e.y);
-    if(trapIdx !== -1) {
-      G.traps.splice(trapIdx, 1);
-      e.stunnedTurns = 5;
-      e.hp -= 5;
-      floatText(`-5`, e.x, e.y, '#f87171');
-      addLog(`${e.name} stepped on a Bear Trap!`, 'log-combat');
-      if(e.hp<=0) { killEnemy(e, true); return; }
-    }
-
-    if(e.stunnedTurns>0) {
-      e.stunnedTurns--;
-      return;
-    }
-
-    let seesPlayer = G.visible.has(e.y*MAP_W+e.x) && G.player.vanishTurns === 0;
-    if(!seesPlayer){
-      if(ch(.4)){
-        let ds=[[-1,0],[1,0],[0,-1],[0,1]];let[dx,dy]=ds[rand(4)];
-        let nx=e.x+dx,ny=e.y+dy;
-        if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
-           !(nx===G.player.x&&ny===G.player.y)&&
-           !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;}
-      }
-    } else {
-      let dx=G.player.x-e.x,dy=G.player.y-e.y;
-      let steps=Math.abs(dx)>Math.abs(dy)?[[Math.sign(dx),0],[0,Math.sign(dy)]]:[[0,Math.sign(dy)],[Math.sign(dx),0]];
-      for(let[sx,sy] of steps){
-        let nx=e.x+sx,ny=e.y+sy;
-        if(nx===G.player.x&&ny===G.player.y){
-          let edm=Math.max(1,e.atk-gdef()+rand(3));
-          if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
-          if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
-
-          if(G.player.class === 'rogue' && ch(.4)) {
-            addLog(`Dodged ${e.name}'s attack!`, 'log-info');
-            popText('💨', G.player.x, G.player.y);
-          } else {
-            checkEmergencyPotion(e, edm, ()=>{
-              G.player.hp=Math.max(0,G.player.hp-edm);
-              addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
-              SFX.damage();shakeMap();flashDamage();
-              popText('💢', G.player.x, G.player.y);
-              floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
-              if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
-              computeVision();render();
-            });
-          }
-          break;
-        }
-        if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
-           !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;break;}
-      }
-    }
-  });
-  G.enemies.forEach(e=>{
-    if(e.corpseExplosionTurns>0){
-      e.corpseExplosionTurns--;
-      if(e.corpseExplosionTurns<=0){
-        e.corpseExplosionTarget=false;
-      }
-    }
-  });
-  computeVision();render();
-  if(!TIPS.firstEnemy.shown && G.enemies.some(e=>G.visible.has(e.y*MAP_W+e.x))) fireTip('firstEnemy');
-  if(!TIPS.firstStairs.shown && G.rooms.length &&
-     G.visible.has(G.rooms[G.rooms.length-1].cy*MAP_W+G.rooms[G.rooms.length-1].cx)) fireTip('firstStairs');
-  if(!TIPS.firstShop.shown && G.shops && G.shops.some(s=>G.visible.has(s.y*MAP_W+s.x))) fireTip('firstShop');
+  processEnemyTurns(0);
 }
+
+function processEnemyTurns(index) {
+  if(G.gameOver||G.won) return;
+  if(index >= G.enemies.length) {
+    G.enemies.forEach(e=>{
+      if(e.corpseExplosionTurns>0){
+        e.corpseExplosionTurns--;
+        if(e.corpseExplosionTurns<=0){
+          e.corpseExplosionTarget=false;
+        }
+      }
+    });
+    computeVision();render();
+    if(!TIPS.firstEnemy.shown && G.enemies.some(e=>G.visible.has(e.y*MAP_W+e.x))) fireTip('firstEnemy');
+    if(!TIPS.firstStairs.shown && G.rooms && G.rooms.length &&
+       G.visible.has(G.rooms[G.rooms.length-1].cy*MAP_W+G.rooms[G.rooms.length-1].cx)) fireTip('firstStairs');
+    if(!TIPS.firstShop.shown && G.shops && G.shops.some(s=>G.visible.has(s.y*MAP_W+s.x))) fireTip('firstShop');
+    return;
+  }
+
+  let e = G.enemies[index];
+  if(e.dying) return processEnemyTurns(index + 1);
+
+  let trapIdx = G.traps.findIndex(t => t.type === 'bear' && t.x===e.x && t.y===e.y);
+  if(trapIdx !== -1) {
+    G.traps.splice(trapIdx, 1);
+    e.stunnedTurns = 5;
+    e.hp -= 5;
+    floatText(`-5`, e.x, e.y, '#f87171');
+    addLog(`${e.name} stepped on a Bear Trap!`, 'log-combat');
+    if(e.hp<=0) killEnemy(e, true);
+    return processEnemyTurns(index + 1);
+  }
+
+  if(e.stunnedTurns>0) {
+    e.stunnedTurns--;
+    return processEnemyTurns(index + 1);
+  }
+
+  if(e.reviveTurns > 0) {
+    e.reviveTurns--;
+    if(e.reviveTurns <= 0) {
+      e.hp = Math.floor(e.maxHp / 2);
+      e.sym = 's';
+      e.color = '#e2e8f0';
+      e.name = 'Skeleton';
+      addLog(`The Skeleton revived!`, 'log-combat');
+      floatText('REVIVED', e.x, e.y, '#a78bfa');
+      popText('💀', e.x, e.y);
+    } else {
+      floatText('reforming...', e.x, e.y, '#94a3b8');
+    }
+    return processEnemyTurns(index + 1);
+  }
+
+  if(e.regen > 0 && e.hp < e.maxHp) {
+    let heal = Math.min(e.maxHp - e.hp, Math.floor(e.maxHp * e.regen));
+    if(heal > 0) {
+      e.hp += heal;
+      floatText(`+${heal}`, e.x, e.y, '#4ade80');
+      popText('✨', e.x, e.y);
+    }
+  }
+
+  let seesPlayer = (G.visible.has(e.y*MAP_W+e.x) || G.alarmedTurns > 0) && G.player.vanishTurns === 0;
+  if(!seesPlayer){
+    if(ch(.4)){
+      let ds=[[-1,0],[1,0],[0,-1],[0,1]];let[dx,dy]=ds[rand(4)];
+      let nx=e.x+dx,ny=e.y+dy;
+      if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
+         !(nx===G.player.x&&ny===G.player.y)&&
+         !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;}
+    }
+    return processEnemyTurns(index + 1);
+  } else {
+    let dx=G.player.x-e.x,dy=G.player.y-e.y;
+    let steps=Math.abs(dx)>Math.abs(dy)?[[Math.sign(dx),0],[0,Math.sign(dy)]]:[[0,Math.sign(dy)],[Math.sign(dx),0]];
+    for(let[sx,sy] of steps){
+      let nx=e.x+sx,ny=e.y+sy;
+      if(nx===G.player.x&&ny===G.player.y){
+        let edm=Math.max(1,e.atk-gdef()+rand(3));
+        if(e.enrage && e.hp <= e.maxHp / 2) edm = Math.floor(edm * 1.5);
+        if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
+        if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
+
+        if(G.player.class === 'rogue' && ch(.4)) {
+          addLog(`Dodged ${e.name}'s attack!`, 'log-info');
+          popText('💨', G.player.x, G.player.y);
+          return processEnemyTurns(index + 1);
+        } else {
+          checkEmergencyPotion(e, edm, ()=>{
+            G.player.hp=Math.max(0,G.player.hp-edm);
+            addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
+            SFX.damage();shakeMap();flashDamage();
+            popText('🩸', G.player.x, G.player.y);
+            floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
+            
+            if(e.vampiric && edm > 0) {
+              let heal = Math.floor(edm * e.vampiric);
+              if(heal > 0) {
+                e.hp = Math.min(e.maxHp, e.hp + heal);
+                floatText(`+${heal}`, e.x, e.y, '#4ade80');
+                popText('🦇', e.x, e.y);
+              }
+            }
+            if(e.freezeChance && Math.random() < e.freezeChance) {
+              G.player.rootedTurns = 2;
+              addLog(`The ${e.name} froze you!`, 'log-combat');
+              floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
+              popText('❄️', G.player.x, G.player.y);
+            }
+
+            if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
+            computeVision();render();
+            processEnemyTurns(index + 1);
+          });
+          return; // WAIT for checkEmergencyPotion to call the callback
+        }
+      }
+      if(nx>=0&&nx<MAP_W&&ny>=0&&ny<MAP_H&&G.map[ny][nx]!==TILE.WALL&&
+         !G.enemies.find(o=>o!==e&&o.x===nx&&o.y===ny)){e.x=nx;e.y=ny;break;}
+    }
+    return processEnemyTurns(index + 1);
+  }
+}
+
 
 function doAbility1(){
   if(G.gameOver||G.won)return;
@@ -2186,7 +2477,7 @@ function doAbility2(){
     addLog('Lay on Hands: Healed!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'ranger') {
-    G.traps.push({x: p.x, y: p.y, type: 'bear'});
+    G.traps.push({x: p.x, y: p.y, type: 'bear', revealed: true});
     let safeAdj = [[-1,0],[1,0],[0,-1],[0,1]].map(d=>({x:p.x+d[0], y:p.y+d[1]}))
       .filter(t=>G.map[t.y] && G.map[t.y][t.x]===TILE.FLOOR && !G.enemies.some(e=>e.x===t.x&&e.y===t.y));
     if(safeAdj.length) {
@@ -2295,6 +2586,7 @@ function openShop(){
   if(!nearShop){addLog('Move to a shop ($) to enter','log-shop');return;}
   G.currentShop = nearShop;
   _lastAction = 0; // entering the merchant should not inherit the map action cooldown
+  if(typeof closeInv === 'function') closeInv();
   renderShop();
   switchShopTab('buy');
   document.getElementById('shop-overlay').classList.add('open');
@@ -2448,6 +2740,7 @@ function sellItem(id, equippedSlot){
   document.getElementById('shop-gold-val').textContent=G.player.gold;
   updateHUD();
   updateActBtns();
+  if(typeof updateInvDrawer === 'function') updateInvDrawer();
   renderSellPanel();
   renderShop(); // refresh buy tab so affordability colours are up to date
 }
@@ -2489,6 +2782,7 @@ function sellWeakerGear(){
     SFX.sell();
     document.getElementById('shop-gold-val').textContent=G.player.gold;
     updateHUD();
+    if(typeof updateInvDrawer === 'function') updateInvDrawer();
     renderSellPanel();
     renderShop();
   } else {
@@ -2585,11 +2879,19 @@ function generateMap(){
       if(connected) {
         for(let ry=sy;ry<sy+sh;ry++) for(let rx=sx;rx<sx+sw;rx++) map[ry][rx]=TILE.FLOOR;
         let doorTile = isTreasure ? TILE.LOCKED_DOOR : TILE.SECRET_DOOR;
+        let potentialDoors = [];
         for(let y=sy-1; y<=sy+sh; y++) {
           for(let x=sx-1; x<=sx+sw; x++) {
             if((x===sx-1 || x===sx+sw || y===sy-1 || y===sy+sh) && map[y][x] === TILE.FLOOR) {
-              map[y][x] = doorTile;
+              potentialDoors.push({x,y});
             }
+          }
+        }
+        if(potentialDoors.length > 0) {
+          let doorIdx = Math.floor(Math.random() * potentialDoors.length);
+          for(let i=0; i<potentialDoors.length; i++) {
+            let pd = potentialDoors[i];
+            map[pd.y][pd.x] = (i === doorIdx) ? doorTile : TILE.WALL;
           }
         }
         rooms.push({x:sx, y:sy, w:sw, h:sh, cx:sx+Math.floor(sw/2), cy:sy+Math.floor(sh/2), type: isTreasure ? 'treasure' : 'secret'});
@@ -2732,7 +3034,9 @@ function buildFloor(){
       ne = baseEnemies * 3; isCrypt = true; guaranteedItems = 1;
     } else if(r.type === 'shrine') {
       ne = rr(1,2);
-      G.items.push({id:uid(), x:r.cx, y:r.cy, name:'Shrine', type:'shrine', rarity:'legendary', sym:'⛊', carried:false});
+      let shrineTypes = ['Blood', 'Greed', 'Cursed'];
+      let sType = shrineTypes[Math.floor(Math.random() * shrineTypes.length)];
+      G.items.push({id:uid(), x:r.cx, y:r.cy, name: sType + ' Shrine', type:'shrine', shrineType: sType, rarity:'legendary', sym:'⛊', carried:false});
     } else if(r.type === 'secret') {
       ne = 0; guaranteedItems = 1 + rr(0,1);
     } else {
@@ -2777,7 +3081,11 @@ function buildFloor(){
     if(rooms.length <= 1) break;
     let r = rooms[rr(1, rooms.length-1)];
     if(r.type === 'shop' || r.type === 'treasure') continue;
-    let tx = r.x+rr(1,r.w-2), ty = r.y+rr(1,r.h-2);
+    let tx, ty, attempts = 0;
+    do {
+      tx = r.x+rr(1,r.w-2); ty = r.y+rr(1,r.h-2);
+      attempts++;
+    } while(r.type === 'shrine' && tx === r.cx && ty === r.cy && attempts < 10);
     let type = ch(0.5) ? 'spike' : (ch(0.5) ? 'gas' : 'alarm');
     G.traps.push({x:tx, y:ty, type, triggered: false});
   }

@@ -77,6 +77,7 @@ function move(dx,dy){
           floatText('POISONED', nx, ny, '#a855f7');
           SFX.hit();
         } else if(trap.type === 'alarm') {
+          G.alarmedTurns = 15;
           addLog('Alarm triggered! Enemies are alerted.', 'log-combat');
           floatText('ALARM!', nx, ny, '#f87171');
           SFX.hit();
@@ -114,6 +115,7 @@ function move(dx,dy){
         floatText('POISONED', nx, ny, '#a855f7');
         SFX.hit();
       } else if(trap.type === 'alarm') {
+        G.alarmedTurns = 15;
         addLog('You triggered an alarm! Enemies are alerted.', 'log-combat');
         floatText('ALARM!', nx, ny, '#f87171');
         SFX.hit();

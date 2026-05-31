@@ -88,6 +88,7 @@ const gatk=()=>{
   if(typeof weaponPower !== 'function' && G.player.class === 'mage' && w && w.sym === '♦') watk += Math.floor(watk / 5);
   let total = G.player.atk + watk;
   if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 6);
+  if(G.player.strengthTurns > 0) total += 10;
   return total;
 };
 const gdef=()=>{
@@ -154,7 +155,8 @@ function render(){
         h+=`<div class="tile tile-shop" style="${s}" onclick="openShop()" ontouchend="event.preventDefault();openShop()">$</div>`;continue;
       }
       let sc=(seen&&!vis)?' tile-seen':'';
-      h+=`<div class="tile ${(t===TILE.WALL||t===TILE.SECRET_DOOR)?'tile-wall':'tile-floor'}${sc}" style="${s}">${CH[t]||' '}</div>`;
+      let extraStyle = (t===TILE.SECRET_DOOR && vis) ? 'color:#52525b;' : '';
+      h+=`<div class="tile ${(t===TILE.WALL||t===TILE.SECRET_DOOR)?'tile-wall':'tile-floor'}${sc}" style="${s}${extraStyle}">${CH[t]||' '}</div>`;
     }
   }
   mapEl.innerHTML=h;
@@ -259,9 +261,9 @@ function drawMinimap() {
       
       let t = G.map[y][x];
       let vis = G.visible.has(k);
-      
-      if(t===TILE.WALL || t===TILE.SECRET_DOOR) ctx.fillStyle = vis ? '#333' : '#111';
-      else if(t===TILE.STAIRS) ctx.fillStyle = vis ? '#4ade80' : '#225533';
+            if(t===TILE.WALL) ctx.fillStyle = vis ? '#333' : '#111';
+        else if(t===TILE.SECRET_DOOR) ctx.fillStyle = vis ? '#444' : '#111';
+        else if(t===TILE.STAIRS) ctx.fillStyle = vis ? '#4ade80' : '#225533';
       else if(t===TILE.SHOP) ctx.fillStyle = vis ? '#fbbf24' : '#665511';
       else if(t===TILE.LOCKED_DOOR) ctx.fillStyle = vis ? '#f87171' : '#662222';
       else ctx.fillStyle = vis ? '#7e7ea3' : '#333344';

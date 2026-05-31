@@ -94,7 +94,10 @@ const POTIONS=[
   {name:'Health Potion', type:'potion',heal:15,sym:'!',rarity:'common',   price:25},
   {name:'Greater Potion',type:'potion',heal:30,sym:'!',rarity:'rare',     price:50},
   {name:'Elixir of Life',type:'potion',heal:60,sym:'!',rarity:'legendary',price:100},
+  {name:'Potion of Giant Strength', type:'potion_buff', buff:'strength', sym:'🧪', rarity:'rare', price:75},
   {name:'Scroll of Detection',type:'scroll',sym:'📜',rarity:'common',price:200},
+  {name:'Scroll of Teleportation', type:'scroll_teleport', sym:'📜', rarity:'rare', price:150},
+  {name:'Bomb', type:'bomb', sym:'💣', rarity:'rare', price:120},
 ];
 
 // Shop-exclusive upgrades
