@@ -4,6 +4,23 @@ function consumeRootedTurn(){
   advanceTurn();
 }
 
+function checkCellItems(nx, ny) {
+  let it=G.items.find(i=>!i.carried&&i.x===nx&&i.y===ny);
+  if(it) {
+    if(it.type === 'key') {
+      pickupItem(it.id, {allowFreeMove:true, silent:true});
+      addLog('Picked up a Key.', 'log-info');
+      floatText('+KEY', nx, ny, '#fbbf24');
+    } else if(it.type === 'shrine') {
+      interactShrine(it);
+    } else {
+      pickupItem(it.id,{allowFreeMove:true});
+    }
+  } else {
+    advanceTurn({allowFreeMove:true});
+  }
+}
+
 function move(dx,dy){
   if(G.gameOver||G.won||!G.map)return;
   if(G.player.rootedTurns > 0) { consumeRootedTurn(); return; }
@@ -76,11 +93,16 @@ function move(dx,dy){
       } else {
         if(trap.type === 'spike') {
           let dmg = Math.floor(G.player.maxHp * 0.15) + 2;
-          G.player.hp -= dmg;
-          addLog(`Spike trap triggered! Took ${dmg} damage.`, 'log-combat');
-          floatText(`-${dmg}`, nx, ny, '#f87171');
-          flashDamage();
-          SFX.hit();
+          offerEmergencyPotion(dmg, () => {
+            G.player.hp -= dmg;
+            addLog(`Spike trap triggered! Took ${dmg} damage.`, 'log-combat');
+            floatText(`-${dmg}`, nx, ny, '#f87171');
+            flashDamage();
+            SFX.hit();
+            if(G.player.hp <= 0) { G.gameOver = true; showDeath(); return; }
+            advanceTurn();
+          });
+          return;
         } else if(trap.type === 'gas') {
           G.player.poisonedTurns = 5;
           addLog('Poison gas trap triggered!', 'log-combat');
@@ -114,11 +136,16 @@ function move(dx,dy){
     } else {
       if(trap.type === 'spike') {
         let dmg = Math.floor(G.player.maxHp * 0.15) + 2;
-        G.player.hp -= dmg;
-        addLog(`You stepped on a spike trap! Took ${dmg} damage.`, 'log-combat');
-        floatText(`-${dmg}`, nx, ny, '#f87171');
-        flashDamage();
-        SFX.hit();
+        offerEmergencyPotion(dmg, () => {
+          G.player.hp -= dmg;
+          addLog(`You stepped on a spike trap! Took ${dmg} damage.`, 'log-combat');
+          floatText(`-${dmg}`, nx, ny, '#f87171');
+          flashDamage();
+          SFX.hit();
+          if(G.player.hp <= 0) { G.gameOver = true; showDeath(); return; }
+          checkCellItems(nx, ny);
+        });
+        return;
       } else if(trap.type === 'gas') {
         G.player.poisonedTurns = 5;
         addLog('You triggered a poison gas trap!', 'log-combat');
@@ -137,20 +164,7 @@ function move(dx,dy){
     }
   }
 
-  let it=G.items.find(i=>!i.carried&&i.x===nx&&i.y===ny);
-  if(it) {
-    if(it.type === 'key') {
-      pickupItem(it.id, {allowFreeMove:true, silent:true});
-      addLog('Picked up a Key.', 'log-info');
-      floatText('+KEY', nx, ny, '#fbbf24');
-    } else if(it.type === 'shrine') {
-      interactShrine(it);
-    } else {
-      pickupItem(it.id,{allowFreeMove:true});
-    }
-  } else {
-    advanceTurn({allowFreeMove:true});
-  }
+  checkCellItems(nx, ny);
 }
 
 function dpadPress(dx,dy){
