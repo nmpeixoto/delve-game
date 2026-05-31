@@ -54,7 +54,7 @@ function selectClass(id) {
       <div class="c-stat"><div class="c-stat-lbl">DEF</div><div class="c-stat-val" style="color:var(--blue)">${c.def}</div></div>
     </div>
     <div class="class-stat-box" style="margin-top:8px;">
-      <div class="c-stat"><div class="c-stat-lbl">PER</div><div class="c-stat-val" style="color:var(--green)">${per}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">PERC</div><div class="c-stat-val" style="color:var(--green)">${per}</div></div>
       <div class="c-stat"><div class="c-stat-lbl">CRIT</div><div class="c-stat-val" style="color:#fbbf24">${Math.round(crit*100)}%</div></div>
       <div class="c-stat"><div class="c-stat-lbl">DODGE</div><div class="c-stat-val" style="color:#a78bfa">${Math.round(dodge*100)}%</div></div>
     </div>

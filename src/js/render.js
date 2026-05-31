@@ -31,7 +31,7 @@ function formatSecStats(item) {
   let s = [];
   if(item.critChance) s.push(`+${Math.round(item.critChance*100)}% Crit`);
   if(item.dodgeBonus) s.push(`+${Math.round(item.dodgeBonus*100)}% Dodge`);
-  if(item.perception) s.push(`+${item.perception} PER`);
+  if(item.perception) s.push(`+${item.perception} PERC`);
   if(item.vampirism) s.push(`+${item.vampirism} Vamp`);
   if(item.regen) s.push(`+${item.regen} Regen`);
   if(item.swiftness) s.push(`+${item.swiftness} Swift`);

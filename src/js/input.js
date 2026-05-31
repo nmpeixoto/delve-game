@@ -13,7 +13,37 @@ function isShopActionOverlayOpen(){
 }
 document.addEventListener('keydown',e=>{
   if(G.gameOver||G.won)return;
-  if(document.getElementById('game-screen').classList.contains('hidden'))return;
+  if(document.getElementById('game-screen').classList.contains('hidden')){
+    if(!document.getElementById('title-screen').classList.contains('hidden')) {
+      if(document.getElementById('class-select-overlay').style.display === 'flex') {
+        let keys = Object.keys(CLASS_DATA);
+        let idx = keys.indexOf(_selectedClass);
+        if(e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+          idx = (idx - 1 + keys.length) % keys.length;
+          selectClass(keys[idx]);
+          let btn = document.getElementById(`cbtn-${keys[idx]}`);
+          if(btn) btn.scrollIntoView({block: 'nearest'});
+        } else if(e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+          idx = (idx + 1) % keys.length;
+          selectClass(keys[idx]);
+          let btn = document.getElementById(`cbtn-${keys[idx]}`);
+          if(btn) btn.scrollIntoView({block: 'nearest'});
+        } else if(e.key === 'Enter') {
+          confirmClassSelect();
+        } else if(e.key === 'h' || e.key === 'H') {
+          let toggle = document.getElementById('hard-mode-toggle');
+          if(toggle) toggle.checked = !toggle.checked;
+        } else if(e.key === 'Escape') {
+          closeClassSelect();
+        }
+      } else {
+        if(e.key === 'Enter') {
+          openClassSelect();
+        }
+      }
+    }
+    return;
+  }
   // Allow closing overlays with Escape
   if(e.key==='Escape'){
     if(document.getElementById('shop-overlay').classList.contains('open')){closeShop();return;}
