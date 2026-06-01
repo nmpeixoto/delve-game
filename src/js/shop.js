@@ -112,7 +112,7 @@ function buyItem(id){
   G.player.gold-=item.price;
   item.sold=true;
 
-  if(item.type==='potion'){
+  if(['potion','potion_buff','bomb','scroll','scroll_teleport'].includes(item.type)){
     let clone={...item,carried:true,id:uid()};
     G.items.push(clone);
     addLog(`Bought ${item.name} — stored in bag`,'log-shop');
@@ -290,6 +290,7 @@ function applyUpgrade(item){
   else if(item.stat==='vamp'){p.vampirism+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP per kill!`,'log-level');}
   else if(item.stat==='regen'){p.regen+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP every 10 tiles explored!`,'log-level');}
   else if(item.stat==='swift'){p.swiftness+=item.amount;addLog(`${item.name}: +${item.amount} free move every 15 tiles explored!`,'log-level');}
+  else if(item.stat==='perception'){p.perception=(p.perception||0)+item.amount;addLog(`${item.name}: Perception +${item.amount}!`,'log-level');}
   else if(item.stat==='crit'){p.critChance+=item.amount;addLog(`${item.name}: +${item.amount*100}% Critical Hit Chance!`,'log-level');}
   else if(item.stat==='dodge'){p.dodgeBonus+=item.amount;addLog(`${item.name}: +${item.amount*100}% Dodge Chance!`,'log-level');}
   else if(item.stat==='goldBonus'){p.goldBonus+=item.amount;addLog(`${item.name}: +${item.amount} Gold per kill!`,'log-level');}

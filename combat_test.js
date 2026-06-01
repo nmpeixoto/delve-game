@@ -342,6 +342,66 @@ test('necromancer corpse explosion mark survives the setup turn', () => {
   assert.strictEqual(context.G.enemies[0].corpseExplosionTarget, true);
 });
 
+test('necromancer corpse explosion damages adjacent enemies when the mark dies', () => {
+  const context = loadCombat({
+    setTimeout: fn => {
+      fn();
+      return 1;
+    },
+  });
+  context.G.player.class = 'necromancer';
+  context.G.enemies = [
+    {
+      id: 'marked',
+      name: 'Marked Goblin',
+      hp: 1,
+      maxHp: 10,
+      atk: 0,
+      def: 0,
+      xp: 6,
+      gold: 4,
+      x: 6,
+      y: 5,
+      stunnedTurns: 0,
+      corpseExplosionTarget: true,
+      corpseExplosionTurns: 2,
+    },
+    {
+      id: 'adjacent',
+      name: 'Adjacent Goblin',
+      hp: 20,
+      maxHp: 20,
+      atk: 0,
+      def: 0,
+      xp: 6,
+      gold: 4,
+      x: 7,
+      y: 5,
+      stunnedTurns: 0,
+    },
+    {
+      id: 'distant',
+      name: 'Distant Goblin',
+      hp: 20,
+      maxHp: 20,
+      atk: 0,
+      def: 0,
+      xp: 6,
+      gold: 4,
+      x: 10,
+      y: 5,
+      stunnedTurns: 0,
+    },
+  ];
+
+  context.attackEnemy('marked');
+
+  const adjacent = context.G.enemies.find(enemy => enemy.id === 'adjacent');
+  const distant = context.G.enemies.find(enemy => enemy.id === 'distant');
+  assert.ok(adjacent.hp < 20);
+  assert.strictEqual(distant.hp, 20);
+});
+
 test('monk flurry leaves the player rooted for the next movement attempt', () => {
   const context = loadCombat({
     G: {

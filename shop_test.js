@@ -174,3 +174,76 @@ test('shop actions opt into the shop overlay action guard', () => {
   assert.strictEqual(context.G.player.gold, 85);
   assert.strictEqual(context.G.items.some(item => item.id === 'sell-potion'), false);
 });
+
+test('buyItem carries special consumables instead of only marking them sold', () => {
+  let nextId = 0;
+  const context = loadShopContext({
+    canAct: opts => opts && opts.allowShopOverlay === true,
+    uid: () => `new-special-${++nextId}`,
+  });
+  context.G.player.gold = 600;
+  context.G.currentShop = {
+    x: 5,
+    y: 5,
+    stock: [
+      {
+        id: 'shop-strength',
+        name: 'Potion of Giant Strength',
+        type: 'potion_buff',
+        buff: 'strength',
+        price: 75,
+        sold: false,
+      },
+      {
+        id: 'shop-bomb',
+        name: 'Bomb',
+        type: 'bomb',
+        price: 120,
+        sold: false,
+      },
+      {
+        id: 'shop-teleport',
+        name: 'Scroll of Teleportation',
+        type: 'scroll_teleport',
+        price: 150,
+        sold: false,
+      },
+      {
+        id: 'shop-detect',
+        name: 'Scroll of Detection',
+        type: 'scroll',
+        price: 200,
+        sold: false,
+      },
+    ],
+  };
+
+  context.buyItem('shop-strength');
+  context.buyItem('shop-bomb');
+  context.buyItem('shop-teleport');
+  context.buyItem('shop-detect');
+
+  assert.strictEqual(context.G.player.gold, 55);
+  assert.strictEqual(context.G.currentShop.stock.every(item => item.sold), true);
+  assert.strictEqual(context.G.items.filter(item => item.carried && item.type === 'potion_buff').length, 1);
+  assert.strictEqual(context.G.items.filter(item => item.carried && item.type === 'bomb').length, 1);
+  assert.strictEqual(context.G.items.filter(item => item.carried && item.type === 'scroll_teleport').length, 1);
+  assert.strictEqual(context.G.items.filter(item => item.carried && item.type === 'scroll').length, 1);
+});
+
+test('perception upgrades permanently increase the perception stat', () => {
+  const context = loadShopContext();
+  context.G.player.perception = 0;
+  context.G.player.x = 5;
+  context.G.player.y = 5;
+
+  context.applyUpgrade({
+    id: 'kit',
+    name: "Dungeoneer's Kit",
+    type: 'upgrade',
+    stat: 'perception',
+    amount: 1,
+  });
+
+  assert.strictEqual(context.G.player.perception, 1);
+});

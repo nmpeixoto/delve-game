@@ -208,7 +208,7 @@ function buildFloor(){
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
 
   // Place stairs in last main-path room
-  let stairsRoom = rooms[6];
+  let stairsRoom = rooms[Math.min(6, rooms.length - 1)];
   map[stairsRoom.cy][stairsRoom.cx] = TILE.STAIRS;
 
   if(rooms.length>=5){

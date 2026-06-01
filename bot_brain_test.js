@@ -9,6 +9,7 @@ const WALL = 0;
 const FLOOR = 1;
 const STAIRS = 2;
 const SHOP = 3;
+const SECRET_DOOR = 5;
 
 function classList(open = false) {
   return { contains: cls => cls === 'open' && open };
@@ -17,8 +18,11 @@ function classList(open = false) {
 function makeDocument(options = {}) {
   const elements = {
     'emergency-overlay': { style: { display: 'none' }, classList: classList(false) },
-    'shop-overlay': { style: { display: 'none' }, classList: classList(false) },
+    'shop-overlay': { style: { display: 'none' }, classList: classList(options.shopOpen || false) },
     'inv-drawer': { style: { display: 'none' }, classList: classList(options.bagOpen || false) },
+    'shrine-overlay': { style: { display: options.shrineOpen ? 'flex' : 'none' }, classList: classList(false) },
+    'shrine-modal': { style: { display: options.shrineModalDisplay || '' }, classList: classList(false) },
+    'shrine-title': { textContent: options.shrineTitle || '' },
   };
 
   return {
@@ -228,6 +232,33 @@ test('explores unseen floor 5 tiles before descending when healthy', () => {
 
   assert.strictEqual(decision.type, 'key');
   assert.strictEqual(decision.val, 'ArrowUp');
+});
+
+test('buys teleportation scrolls from shops as strategic escape items', () => {
+  const map = makeMap();
+  setFloor(map, [[4, 5, SHOP], [5, 5], [6, 5]]);
+  const seen = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6]);
+  const G = baseGame(map, {
+    player: { gold: 200 },
+    seen,
+    visible: new Set(seen),
+    shops: [{
+      x: 4,
+      y: 5,
+      stock: [{
+        id: 'teleport-scroll',
+        name: 'Scroll of Teleportation',
+        type: 'scroll_teleport',
+        price: 150,
+        sold: false,
+      }],
+    }],
+  });
+
+  const decision = decide(G, { shopOpen: true });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '.shop-item[onclick*="teleport-scroll"]');
 });
 
 test('attacks a weak visible floor 5 enemy before taking known stairs', () => {
@@ -440,7 +471,7 @@ test('rogue does not exit early at 72 percent hp without a potion', () => {
     [5, 5, STAIRS],
     [6, 5],
     [7, 5],
-    [10, 10],
+    [8, 5],
   ]);
   const seen = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
   const G = baseGame(map, {
@@ -693,6 +724,90 @@ test('ranger uses bow range on visible enemies before walking toward them', () =
 
   assert.strictEqual(decision.type, 'attack');
   assert.strictEqual(decision.target, 'g1');
+});
+
+test('uses a teleportation scroll when surrounded without healing', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [4, 5],
+    [5, 5],
+    [6, 5],
+    [5, 4],
+    [5, 6],
+  ]);
+  const visible = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6, 4 * MAP_W + 5, 6 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { hp: 8, maxHp: 24 },
+    seen: new Set(visible),
+    visible,
+    enemies: [
+      { id: 'orc-1', name: 'Orc', x: 4, y: 5, hp: 40, maxHp: 40, atk: 12, def: 3 },
+      { id: 'orc-2', name: 'Orc', x: 6, y: 5, hp: 40, maxHp: 40, atk: 12, def: 3 },
+    ],
+    items: [{ id: 'teleport-1', name: 'Scroll of Teleportation', type: 'scroll_teleport', carried: true }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
+test('clicks the carried teleportation scroll once the bag is open', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [4, 5],
+    [5, 5],
+    [6, 5],
+  ]);
+  const visible = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6]);
+  const G = baseGame(map, {
+    player: { hp: 8, maxHp: 24 },
+    seen: new Set(visible),
+    visible,
+    enemies: [
+      { id: 'orc-1', name: 'Orc', x: 4, y: 5, hp: 40, maxHp: 40, atk: 12, def: 3 },
+      { id: 'orc-2', name: 'Orc', x: 6, y: 5, hp: 40, maxHp: 40, atk: 12, def: 3 },
+    ],
+    items: [{ id: 'teleport-1', name: 'Scroll of Teleportation', type: 'scroll_teleport', carried: true }],
+  });
+
+  const decision = decide(G, { bagOpen: true });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '.inv-slot[onclick*="teleport-1"]');
+});
+
+test('accepts a low-cost greed shrine through the live shrine overlay', () => {
+  const map = makeMap();
+  setFloor(map, [[5, 5]]);
+  const visible = new Set([5 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { gold: 25 },
+    seen: new Set(visible),
+    visible,
+  });
+
+  const decision = decide(G, { shrineOpen: true, shrineTitle: 'GREED SHRINE' });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '#shrine-accept-btn');
+});
+
+test('rejects a cursed shrine when already healthy', () => {
+  const map = makeMap();
+  setFloor(map, [[5, 5]]);
+  const visible = new Set([5 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { hp: 20, maxHp: 20 },
+    seen: new Set(visible),
+    visible,
+  });
+
+  const decision = decide(G, { shrineOpen: true, shrineTitle: 'CURSED SHRINE' });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '#shrine-decline-btn');
 });
 
 test('warrior uses shield wall before bashing when outnumbered at level 5', () => {

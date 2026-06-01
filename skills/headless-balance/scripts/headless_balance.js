@@ -304,6 +304,7 @@ function createDocument(state) {
     switch (id) {
       case 'emergency-overlay':
       case 'help-overlay':
+      case 'shrine-overlay':
       case 'death-modal':
       case 'victory-modal':
         element.style.display = 'none';
@@ -542,14 +543,88 @@ function createRuntime(seed, options = {}) {
     ensureElement('drawer-backdrop').classList.remove('open');
   };
 
-  sandbox.showShrinePrompt = shrine => {
+  let currentShrine = null;
+
+  function removeShrine(shrine) {
     if (!sandbox.G || !shrine) return;
     const idx = sandbox.G.items.findIndex(item => item.id === shrine.id);
     if (idx > -1) sandbox.G.items.splice(idx, 1);
-    sandbox.addLog(`Ignored ${shrine.name || 'Shrine'} in headless run.`, 'log-info');
+  }
+
+  sandbox.closeShrinePrompt = () => {
+    ensureElement('shrine-overlay').style.display = 'none';
+    currentShrine = null;
+  };
+
+  sandbox.acceptShrinePrompt = () => {
+    if (!sandbox.G || !currentShrine) return;
+    const shrine = currentShrine;
+    sandbox.closeShrinePrompt();
+    removeShrine(shrine);
+
+    const p = sandbox.G.player;
+    if (shrine.shrineType === 'Blood') {
+      const cost = Math.max(1, Math.floor(p.maxHp * 0.3));
+      p.maxHp = Math.max(1, p.maxHp - cost);
+      p.hp = Math.min(p.hp, p.maxHp);
+      p.atk += 1;
+      sandbox.addLog(`Sacrificed ${cost} Max HP for +1 ATK!`, 'log-combat');
+    } else if (shrine.shrineType === 'Greed') {
+      const gold = p.gold;
+      p.gold = 0;
+      p.lvl += 2;
+      p.maxHp += 4;
+      p.hp += 4;
+      p.atk += 2;
+      p.def += 1;
+      sandbox.addLog(`Sacrificed ${gold} Gold for 2 Levels!`, 'log-info');
+    } else if (shrine.shrineType === 'Cursed') {
+      p.hp = p.maxHp;
+      sandbox.addLog('Fully healed, but the curse awakens!', 'log-combat');
+      let spawned = 0;
+      for (let r = 1; r <= 2 && spawned < 3; r++) {
+        for (let y = p.y - r; y <= p.y + r && spawned < 3; y++) {
+          for (let x = p.x - r; x <= p.x + r && spawned < 3; x++) {
+            if (
+              x >= 0 && x < 56 && y >= 0 && y < 36 &&
+              sandbox.G.map[y] && sandbox.G.map[y][x] === 1 &&
+              !sandbox.G.enemies.some(e => e.x === x && e.y === y) &&
+              (x !== p.x || y !== p.y)
+            ) {
+              const scale = Math.max(1, sandbox.G.floor || 1);
+              sandbox.G.enemies.push({
+                id: `headless-cursed-${seed}-${spawned}`,
+                name: 'Cursed Elite',
+                sym: 'C',
+                hp: 20 * scale,
+                maxHp: 20 * scale,
+                atk: 6 * scale,
+                def: 2 * scale,
+                xp: 8 * scale,
+                gold: 4 * scale,
+                color: '#a78bfa',
+                x,
+                y,
+                stunnedTurns: 0,
+                isElite: true,
+              });
+              spawned++;
+            }
+          }
+        }
+      }
+    }
+
     if (typeof sandbox.advanceTurn === 'function') {
       sandbox.advanceTurn({ allowFreeMove: true });
     }
+  };
+
+  sandbox.showShrinePrompt = shrine => {
+    if (!sandbox.G || !shrine) return;
+    currentShrine = shrine;
+    ensureElement('shrine-title').textContent = shrine.shrineType ? `${String(shrine.shrineType).toUpperCase()} SHRINE` : 'SHRINE';
+    ensureElement('shrine-overlay').style.display = 'flex';
   };
 
   sandbox.showDeath = () => {
@@ -630,6 +705,7 @@ function createRuntime(seed, options = {}) {
     const invDrawer = document.getElementById('inv-drawer');
     const emergencyOverlay = document.getElementById('emergency-overlay');
     const helpOverlay = document.getElementById('help-overlay');
+    const shrineOverlay = document.getElementById('shrine-overlay');
     const itemsHash = (G.items || [])
       .map(i => `${i.id}:${i.type}:${i.carried ? 1 : 0}:${i.name}:${i.x ?? ''},${i.y ?? ''}:${i.sold ? 1 : 0}:${i.used ? 1 : 0}`)
       .join('|');
@@ -678,6 +754,7 @@ function createRuntime(seed, options = {}) {
       invOpen: invDrawer.classList.contains('open'),
       emergencyOpen: emergencyOverlay.style.display === 'flex',
       helpOpen: helpOverlay.style.display === 'flex',
+      shrineOpen: shrineOverlay.style.display === 'flex',
       deathShown: state.deathShown,
       victoryShown: state.victoryShown,
       pendingHit: !!G.pendingHit,
@@ -708,6 +785,14 @@ function createRuntime(seed, options = {}) {
       if (target === '#drawer-backdrop') {
         context.closeInv();
         return { kind: 'click', label: 'close-inv' };
+      }
+      if (target === '#shrine-accept-btn') {
+        context.acceptShrinePrompt();
+        return { kind: 'click', label: 'shrine-accept' };
+      }
+      if (target === '#shrine-decline-btn' || target === '#shrine-reject-btn') {
+        context.closeShrinePrompt();
+        return { kind: 'click', label: 'shrine-decline' };
       }
 
       const shopMatch = target.match(/\.shop-item\[onclick\*="([^"]+)"\]/) || target.match(/\.shop-item\[onclick\*='([^']+)'\]/);
