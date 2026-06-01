@@ -655,6 +655,19 @@ function doAbility2(){
       }
     }
     if(safeTiles.length) {
+      let visEnemies = G.enemies.filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x));
+      if(visEnemies.length > 0) {
+        safeTiles.forEach(t => {
+          t.minDist = Math.min(...visEnemies.map(e => Math.max(Math.abs(e.x - t.x), Math.abs(e.y - t.y))));
+        });
+        let trulySafe = safeTiles.filter(t => t.minDist > 1);
+        if(trulySafe.length > 0) {
+          safeTiles = trulySafe;
+        } else {
+          let bestDist = Math.max(...safeTiles.map(t => t.minDist));
+          safeTiles = safeTiles.filter(t => t.minDist === bestDist);
+        }
+      }
       let t = safeTiles[rand(safeTiles.length)];
       p.x = t.x; p.y = t.y; G.ability2Cooldown = 8;
       addLog('Blinked to a safe location!', 'log-combat'); advanceTurn();
