@@ -1725,14 +1725,17 @@ function move(dx,dy){
         let lootGold = rr(3, 10);
         G.player.gold += lootGold;
         addLog(`You successfully disarmed the trap and salvaged ${lootGold} gold!`, 'log-info');
+        floatText(`+${lootGold}💰`, nx, ny, '#fbbf24');
       } else {
         addLog('You successfully disarmed the trap!', 'log-info');
         if(ch(0.2)) {
           spawnItem({x:nx, y:ny}, null, false);
           addLog('You found an item hidden in the trap mechanism!', 'log-info');
+          floatText('+ITEM', nx, ny, '#a78bfa');
+        } else {
+          floatText('DISARMED', nx, ny, '#4ade80');
         }
       }
-      floatText('DISARMED', nx, ny, '#4ade80');
       SFX.click();
     } else {
       addLog('You failed to disarm the trap and triggered it!', 'log-combat');
