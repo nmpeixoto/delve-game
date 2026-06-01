@@ -84,7 +84,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .dpad-btn{background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:1.1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;transition:background .1s,border-color .1s;user-select:none;touch-action:none;}
 .dpad-btn:active{background:var(--border);border-color:var(--accent);}
 .dpad-center{background:rgba(192,132,252,.05);border-color:var(--dim);font-size:.5rem;color:var(--dim);}
-#action-btns{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;flex-shrink:0;}
+#action-btns{display:grid;grid-template-columns:1fr;gap:4px;flex-shrink:0;}
 .act-btn{font-family:'Press Start 2P',monospace;font-size:.36rem;padding:9px 10px;background:var(--panel);border:1px solid var(--border);color:var(--dim);cursor:pointer;letter-spacing:.08em;border-radius:3px;transition:all .15s;min-width:76px;text-align:center;}
 .act-btn:active{background:var(--border);}
 .bash-ready{border-color:var(--orange)!important;color:var(--orange)!important;}
@@ -123,7 +123,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     padding:10px max(10px,env(safe-area-inset-right)) 10px 10px;
     gap:10px;
   }
-  #action-btns{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;}
+  #action-btns{display:grid;grid-template-columns:1fr;gap:5px;}
   .act-btn{min-width:68px;font-size:.32rem;padding:8px 6px;}
 }
 
