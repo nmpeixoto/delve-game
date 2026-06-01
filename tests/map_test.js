@@ -232,6 +232,19 @@ test('normal enemy profiles use the first-pass lower pressure scale', () => {
   assert.strictEqual(floor5.scale, 2.05);
 });
 
+test('dungeon lord uses normal-mode boss tuning knobs', () => {
+  const context = loadMapContext();
+  const boss = vm.runInContext('ENEMIES.find(enemy => enemy.boss)', context);
+
+  assert.ok(boss);
+  assert.strictEqual(boss.hp, 260);
+  assert.strictEqual(boss.atk, 24);
+  assert.strictEqual(boss.def, 6);
+  assert.strictEqual(boss.phaseAtkMult, 1.3);
+  assert.strictEqual(boss.phaseDefMult, 1.25);
+  assert.strictEqual(boss.phaseSummons, 1);
+});
+
 test('shop placement does not overwrite the stairs tile', () => {
   const { createRuntime } = require('../automation/headless-balance/headless_balance');
   const runtime = createRuntime(1001);

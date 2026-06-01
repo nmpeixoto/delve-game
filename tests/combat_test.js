@@ -734,6 +734,55 @@ test('boss phase two summons avoid the boss occupied tile', () => {
   assert.strictEqual(summons.some(enemy => enemy.x === 8 && enemy.y === 5), false);
 });
 
+test('boss phase two respects configured normal-mode pressure knobs', () => {
+  let nextId = 0;
+  const context = loadCombat({
+    rand: () => 1,
+    uid: () => `summon-${++nextId}`,
+    ENEMIES: [{
+      name: 'Skeleton',
+      sym: 's',
+      hp: 8,
+      atk: 3,
+      def: 1,
+      xp: 5,
+      gold: 2,
+      color: '#e2e8f0',
+    }],
+  });
+  context.G.player.x = 5;
+  context.G.player.y = 5;
+  context.G.visible = new Set([5 * MAP_W + 5]);
+  context.G.seen = new Set([5 * MAP_W + 5]);
+  context.G.enemies = [{
+    id: 'boss',
+    name: 'Dungeon Lord',
+    hp: 50,
+    maxHp: 100,
+    atk: 20,
+    def: 8,
+    xp: 250,
+    gold: 150,
+    x: 8,
+    y: 5,
+    boss: true,
+    phase: 1,
+    phaseAtkMult: 1.3,
+    phaseDefMult: 1.25,
+    phaseSummons: 1,
+    stunnedTurns: 0,
+  }];
+
+  context.advanceTurn();
+
+  const boss = context.G.enemies.find(enemy => enemy.id === 'boss');
+  const summons = context.G.enemies.filter(enemy => enemy.id !== 'boss');
+  assert.strictEqual(boss.phase, 2);
+  assert.strictEqual(boss.atk, 26);
+  assert.strictEqual(boss.def, 10);
+  assert.strictEqual(summons.length, 1);
+});
+
 function loadItems(overrides = {}) {
   const context = {
     G: {

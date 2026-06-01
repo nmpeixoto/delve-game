@@ -1157,6 +1157,68 @@ test('monk uses flurry before push kick when healthy in melee', () => {
   assert.strictEqual(decision.val, 'v');
 });
 
+test('monk saves push kick when a basic attack can finish the adjacent enemy', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [5, 6],
+    [5, 7],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 6 * MAP_W + 5, 7 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { class: 'monk', lvl: 3, hp: 26, maxHp: 28, atk: 4, def: 2, weapon: null, armor: { def: 4 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'g1', name: 'Goblin', x: 5, y: 6, hp: 4, maxHp: 12, atk: 4, def: 1 }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowDown');
+});
+
+test('monk uses push kick to create space against a healthy adjacent enemy', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [5, 6],
+    [5, 7],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 6 * MAP_W + 5, 7 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { class: 'monk', lvl: 3, hp: 26, maxHp: 28, atk: 4, def: 2, weapon: null, armor: { def: 4 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'g1', name: 'Goblin', x: 5, y: 6, hp: 12, maxHp: 12, atk: 4, def: 1 }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'b');
+});
+
+test('monk uses flurry to finish a dangerous adjacent enemy while wounded', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [5, 6],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 6 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { class: 'monk', lvl: 5, hp: 12, maxHp: 32, atk: 7, def: 2, weapon: null, armor: { def: 4 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'orc-1', name: 'Orc', x: 5, y: 6, hp: 18, maxHp: 40, atk: 14, def: 3 }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'v');
+});
+
 test('necromancer uses siphon life even at full health when a target is in range', () => {
   const map = makeMap();
   setFloor(map, [

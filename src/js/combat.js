@@ -373,8 +373,8 @@ function processEnemyTurns(index) {
     e.phase = 2;
     e.name = "Dungeon Lord (Enraged)";
     addLog("Dungeon Lord enters Phase 2! Dark magic surges!", "log-combat");
-    e.atk = Math.round(e.atk * 1.5);
-    e.def = Math.round(e.def * 1.5);
+    e.atk = Math.round(e.atk * (e.phaseAtkMult || 1.5));
+    e.def = Math.round(e.def * (e.phaseDefMult || 1.5));
     e.color = "#ff00ff";
     popText('🔥', e.x, e.y);
     let summonTiles = [];
@@ -388,7 +388,8 @@ function processEnemyTurns(index) {
         summonTiles.push({x:sx,y:sy});
       }
     }
-    for(let i=0; i<2 && summonTiles.length; i++) {
+    let phaseSummons = Number.isFinite(e.phaseSummons) ? e.phaseSummons : 2;
+    for(let i=0; i<phaseSummons && summonTiles.length; i++) {
       let t=ENEMIES.find(n=>n.name==='Skeleton');
       let pick = summonTiles.splice(rand(summonTiles.length), 1)[0];
       G.enemies.push({...t, hp:t.hp, maxHp:t.hp, x:pick.x, y:pick.y, id:uid(), stunnedTurns:0});

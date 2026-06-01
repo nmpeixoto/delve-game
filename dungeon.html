@@ -831,7 +831,7 @@ const ENEMIES=[
   {name:'Troll',  sym:'T',hp:60,atk:18,def:4,xp:25,gold:15,color:'#22d3ee', regen: 0.1},
   {name:'Demon',  sym:'D',hp:85,atk:22,def:5,xp:35,gold:22,color:'#f87171', vampiric: 0.5},
   {name:'Lich',   sym:'L',hp:120,atk:26,def:6,xp:50,gold:30,color:'#a78bfa', freezeChance: 0.25},
-  {name:'Dungeon Lord', sym:'M', hp:300, atk:28, def:8, xp:250, gold:150, color:'#ef4444', boss:true, phase:1},
+  {name:'Dungeon Lord', sym:'M', hp:260, atk:24, def:6, xp:250, gold:150, color:'#ef4444', boss:true, phase:1, phaseAtkMult:1.3, phaseDefMult:1.25, phaseSummons:1},
 ];
 
 const LEGENDARIES=[
@@ -2613,8 +2613,8 @@ function processEnemyTurns(index) {
     e.phase = 2;
     e.name = "Dungeon Lord (Enraged)";
     addLog("Dungeon Lord enters Phase 2! Dark magic surges!", "log-combat");
-    e.atk = Math.round(e.atk * 1.5);
-    e.def = Math.round(e.def * 1.5);
+    e.atk = Math.round(e.atk * (e.phaseAtkMult || 1.5));
+    e.def = Math.round(e.def * (e.phaseDefMult || 1.5));
     e.color = "#ff00ff";
     popText('🔥', e.x, e.y);
     let summonTiles = [];
@@ -2628,7 +2628,8 @@ function processEnemyTurns(index) {
         summonTiles.push({x:sx,y:sy});
       }
     }
-    for(let i=0; i<2 && summonTiles.length; i++) {
+    let phaseSummons = Number.isFinite(e.phaseSummons) ? e.phaseSummons : 2;
+    for(let i=0; i<phaseSummons && summonTiles.length; i++) {
       let t=ENEMIES.find(n=>n.name==='Skeleton');
       let pick = summonTiles.splice(rand(summonTiles.length), 1)[0];
       G.enemies.push({...t, hp:t.hp, maxHp:t.hp, x:pick.x, y:pick.y, id:uid(), stunnedTurns:0});

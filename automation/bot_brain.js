@@ -359,6 +359,15 @@ window.botDecisionLogic = function() {
       if (en.y > p.y) return { type: 'key', val: 'ArrowDown' };
       return null;
   };
+  const monkWallSlams = en => {
+      let dx = Math.sign(en.x - p.x), dy = Math.sign(en.y - p.y);
+      let nx = en.x + dx, ny = en.y + dy;
+      return nx < 0 || nx >= MAP_W || ny < 0 || ny >= MAP_H ||
+        G.map[ny][nx] === WALL ||
+        G.enemies.some(e => e !== en && !e.dying && e.x === nx && e.y === ny);
+  };
+  const monkPushKickMaxDamage = en => maxNormalDamage(en) * (monkWallSlams(en) ? 2 : 1);
+  const monkFlurryMaxDamage = en => maxNormalDamage(en) * 3;
 
   // CLASS ABILITIES (Phase 3)
   const ability2Decision = () => {
@@ -389,7 +398,13 @@ window.botDecisionLogic = function() {
          let markTargets = visEnemies.filter(e => !e.boss && !e.corpseExplosionTarget);
          if (markTargets.length >= 1 && (visEnemies.length >= 2 || boss)) return { type: 'key', val: 'v' }; // CORPSE EXPLOSION
       }
-      if (p.class === 'monk' && adjEnemies.length > 0 && (p.hp > p.maxHp * 0.75 || adjEnemies.length >= 2)) return { type: 'key', val: 'v' }; // FLURRY
+      if (p.class === 'monk' && adjEnemies.length > 0) {
+          let flurryKill = adjEnemies.some(e =>
+            e.hp <= monkFlurryMaxDamage(e) &&
+            (p.hp < p.maxHp * 0.6 || maxIncomingHit(e) >= p.hp * 0.35)
+          );
+          if (p.hp > p.maxHp * 0.75 || adjEnemies.length >= 2 || flurryKill) return { type: 'key', val: 'v' }; // FLURRY
+      }
       return null;
   };
   
@@ -421,7 +436,10 @@ window.botDecisionLogic = function() {
         let target = visEnemies.find(e => Math.abs(e.x - p.x) <= 2 && Math.abs(e.y - p.y) <= 2);
         if (target) return { type: 'key', val: 'b' }; 
       }
-      if (p.class === 'monk' && adjEnemies.length > 0) return { type: 'key', val: 'b' }; 
+      if (p.class === 'monk' && adjEnemies.length > 0) {
+         let target = adjEnemies.sort((a, b) => monkPushKickMaxDamage(b) - monkPushKickMaxDamage(a))[0];
+         if (target && target.hp > minSneakDamage(target)) return { type: 'key', val: 'b' };
+      } 
   }
 
   // RANGED ATTACK

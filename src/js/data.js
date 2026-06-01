@@ -149,7 +149,7 @@ const ENEMIES=[
   {name:'Troll',  sym:'T',hp:60,atk:18,def:4,xp:25,gold:15,color:'#22d3ee', regen: 0.1},
   {name:'Demon',  sym:'D',hp:85,atk:22,def:5,xp:35,gold:22,color:'#f87171', vampiric: 0.5},
   {name:'Lich',   sym:'L',hp:120,atk:26,def:6,xp:50,gold:30,color:'#a78bfa', freezeChance: 0.25},
-  {name:'Dungeon Lord', sym:'M', hp:300, atk:28, def:8, xp:250, gold:150, color:'#ef4444', boss:true, phase:1},
+  {name:'Dungeon Lord', sym:'M', hp:260, atk:24, def:6, xp:250, gold:150, color:'#ef4444', boss:true, phase:1, phaseAtkMult:1.3, phaseDefMult:1.25, phaseSummons:1},
 ];
 
 const LEGENDARIES=[
