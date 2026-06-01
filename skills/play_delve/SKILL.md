@@ -7,7 +7,7 @@ description: >-
 # DELVE Self-Improving Gameplay Loop
 
 ## Overview
-This skill instructs the agent to run the DELVE automated test bot (`scripts/autoplay_test.js`), evaluate its performance and causes of death from decision traces, and inject smarter heuristics into `bot_brain.js`. The goal is to maximize honest average floor depth and win rate without exploiting runner artifacts.
+This skill instructs the agent to run the DELVE automated test bot (`scripts/autoplay_test.js`), evaluate its performance and causes of death from decision traces, and inject smarter heuristics into `automation/bot_brain.js`. The goal is to maximize honest average floor depth and win rate without exploiting runner artifacts.
 
 ## Dependencies
 This skill requires Node.js and Puppeteer to be installed in the project root.
@@ -34,7 +34,7 @@ Follow these steps exactly when invoked:
 - Watch for runner artifacts such as acting during enemy death animations, repeated attacks on `dying` enemies, or inflated XP/gold.
 
 ### 3. Document Lessons Learned
-- Open `lessons_learned.md`.
+- Open `automation/lessons_learned.md`.
 - Append an iteration entry with the run count, win rate, average floor, notable errors, and the root cause of the observed weakness.
 - Propose a specific, programmatic rule to fix the weakness.
 - If a batch includes external browser errors, record them separately and avoid overstating the strategic result.

@@ -19,7 +19,7 @@ Please adhere to the following best practices and architectural constraints when
 - Follow PWA best practices defined in `manifest.json`.
 
 ## 4. Skills & Tooling
-- The project includes automated playtesting via Puppeteer (`scripts/autoplay_test.js` and `bot_brain.js`) and a faithful headless balance runner (`skills/headless-balance/scripts/headless_balance.js`) for seeded class-load sweeps.
+- The project includes automated playtesting via Puppeteer (`scripts/autoplay_test.js` and `automation/bot_brain.js`) and a faithful headless balance runner (`automation/headless-balance/headless_balance.js`) for seeded class-load sweeps.
 - If you change core gameplay mechanics, you should run the automated tests to ensure no regressions occur.
 - You can use the `play-delve-and-learn` skill to iterate on the bot's heuristic logic.
 - Use the `headless-balance` skill for class balancing work, seeded batch comparisons, and load-testing multiple classes without Chromium. Prefer it when you want throughput; use Puppeteer autoplay when you need browser/runtime parity checks or UI interaction verification.
@@ -30,7 +30,7 @@ Please adhere to the following best practices and architectural constraints when
 ## 5. Test Artifacts & Cleanup
 - Treat playtest outputs as temporary unless the user explicitly asks to keep them.
 - Clean up generated artifacts before your final response, especially `bot_findings.json`, `screenshot_*.png`, ad-hoc trace logs, and one-off diagnostic files.
-- If a generated artifact is useful for debugging, summarize the relevant evidence in your response or in `lessons_learned.md`, then remove the file.
+- If a generated artifact is useful for debugging, summarize the relevant evidence in your response or in `automation/lessons_learned.md`, then remove the file.
 - Do not leave local servers, background browser sessions, or temporary scripts running after verification.
 
 ## 6. Coding Style

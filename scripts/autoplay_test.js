@@ -114,7 +114,7 @@ async function runAutoBot(url, runIndex, heroClass = 'warrior') {
     });
 
     // Inject the brain logic
-    await page.addScriptTag({ path: path.join(__dirname, '..', 'bot_brain.js') });
+    await page.addScriptTag({ path: path.join(__dirname, '..', 'automation', 'bot_brain.js') });
 
     // Wait for game start and disable debounce
     await page.waitForFunction(() => typeof G !== 'undefined' && G.map && G.player);
@@ -133,7 +133,7 @@ async function runAutoBot(url, runIndex, heroClass = 'warrior') {
       // Re-inject if the script was somehow lost, but since it's an SPA it should persist
       const isBrainLoaded = await page.evaluate(() => typeof window.botDecisionLogic === 'function');
       if (!isBrainLoaded) {
-          await page.addScriptTag({ path: path.join(__dirname, '..', 'bot_brain.js') });
+          await page.addScriptTag({ path: path.join(__dirname, '..', 'automation', 'bot_brain.js') });
       }
 
       const step = await page.evaluate(() => {
@@ -255,7 +255,7 @@ async function runAutoBotWithRetries(url, runIndex, heroClass = 'warrior') {
 }
 
 async function runMany(count, classFilter = null) {
-  console.log(`Starting ${count} automated bot runs using bot_brain.js...`);
+  console.log(`Starting ${count} automated bot runs using automation/bot_brain.js...`);
   const results = [];
   const verbose = process.env.BOT_VERBOSE !== '0';
   const classes = classFilter ? [classFilter] : ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk'];

@@ -440,6 +440,7 @@ DELVE is a Progressive Web App. After the first load, it can be installed like a
 - `node scripts/browser_smoke.js` runs a browser smoke test against both `src/index.html` and `dungeon.html`.
 - `node scripts/browser_smoke.js` expects a local server at `http://127.0.0.1:8080/`.
 - `tests/bot_brain_test.js` and `scripts/autoplay_test.js` cover the automated playtester heuristics.
+- `npm run balance -- --classes warrior,rogue --per-class 20` runs the headless balance runner.
 
 ## Project Layout
 
@@ -466,7 +467,9 @@ DELVE is a Progressive Web App. After the first load, it can be installed like a
 | `src/js/input.js` | Keyboard and swipe input |
 | `src/js/pwa.js` | PWA install prompt |
 | `build.js` | Generates `dungeon.html` from `src/` |
-| `bot_brain.js` | Automated bot heuristics |
+| `automation/bot_brain.js` | Automated bot heuristics |
+| `automation/lessons_learned.md` | Bot learning ledger |
+| `automation/headless-balance/headless_balance.js` | Headless balance runner |
 | `scripts/browser_smoke.js` | Browser smoke test |
 | `scripts/autoplay_test.js` | Puppeteer autoplay runner |
 | `tests/bot_brain_test.js` | Bot heuristic regression tests |

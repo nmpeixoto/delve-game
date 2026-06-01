@@ -24,7 +24,7 @@ Do not use it for UI verification or touch interaction checks. For that, use the
 
 1. Run a fixed-seed batch.
    - Example:
-     `node skills/headless-balance/scripts/headless_balance.js --classes warrior,rogue,mage,paladin,ranger,barbarian,necromancer,monk --per-class 20 --seed-base 1000 --max-turns 5000 --output bot_findings.json`
+     `node automation/headless-balance/headless_balance.js --classes warrior,rogue,mage,paladin,ranger,barbarian,necromancer,monk --per-class 20 --seed-base 1000 --max-turns 5000 --output bot_findings.json`
    - If you need concurrency, launch one process per class and write each report to its own file.
 2. Read the summary.
    - Focus on `winRate`, `floor5Rate`, `avgFloor`, `avgTurns`, `avgSteps`, and `stuck` counts.
@@ -60,6 +60,6 @@ The report includes:
 
 ## Notes
 
-- The runner uses the real `src/js` rules and the real `bot_brain.js` policy.
+- The runner uses the real `src/js` rules and the real `automation/bot_brain.js` policy.
 - It does not use Puppeteer.
 - If a batch exposes a new class imbalance, fix the game or bot logic first, then rerun the same seed set.

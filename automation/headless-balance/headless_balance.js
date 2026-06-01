@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const REPO_ROOT = path.resolve(__dirname, '../../../');
+const REPO_ROOT = path.resolve(__dirname, '../../');
 const DEFAULT_CLASSES = [
   'warrior',
   'rogue',
@@ -29,7 +29,7 @@ const SOURCE_FILES = [
   'src/js/combat.js',
   'src/js/shop.js',
   'src/js/map.js',
-  'bot_brain.js',
+  'automation/bot_brain.js',
 ].map(rel => path.join(REPO_ROOT, rel));
 
 const COMPILED_SCRIPTS = SOURCE_FILES.map(file => ({
@@ -116,7 +116,7 @@ function parseArgs(argv) {
 function printUsage() {
   console.log([
     'Usage:',
-    '  node skills/headless-balance/scripts/headless_balance.js --classes warrior,rogue --per-class 20 --seed-base 1 --max-turns 5000 --output bot_findings.json',
+    '  node automation/headless-balance/headless_balance.js --classes warrior,rogue --per-class 20 --seed-base 1 --max-turns 5000 --output bot_findings.json',
     '',
     'Flags:',
     '  --classes, --class   Comma-separated class list',

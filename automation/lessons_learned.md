@@ -1,6 +1,6 @@
 # AI Gameplay Lessons Learned
 
-This file serves as the permanent memory ledger for the DELVE gameplay bot. Whenever the bot evaluates its runs, it will append new findings and strategic rules here. The agent will then use these rules to programmatically update `bot_brain.js`.
+This file serves as the permanent memory ledger for the DELVE gameplay bot. Whenever the bot evaluates its runs, it will append new findings and strategic rules here. The agent will then use these rules to programmatically update `automation/bot_brain.js`.
 
 ---
 

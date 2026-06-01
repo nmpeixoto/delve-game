@@ -1,4 +1,4 @@
-// bot_brain.js
+// automation/bot_brain.js
 // This file is injected into the browser by the Puppeteer runner.
 // The agent modifies this file to improve the bot's decision making based on lessons learned.
 // The function must return null (stuck), {type: 'status', val: 'dead'/'won'}, {type: 'click', target: selector}, or {type: 'key', val: keyString}.
