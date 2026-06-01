@@ -377,12 +377,21 @@ function processEnemyTurns(index) {
     e.def = Math.round(e.def * 1.5);
     e.color = "#ff00ff";
     popText('🔥', e.x, e.y);
-    for(let i=0; i<2; i++) {
-      let t=ENEMIES.find(n=>n.name==='Skeleton');
-      let sx=e.x+rand(3)-1, sy=e.y+rand(3)-1;
-      if(sx>=0&&sx<MAP_W&&sy>=0&&sy<MAP_H&&G.map[sy][sx]!==TILE.WALL) {
-        G.enemies.push({...t, hp:t.hp, maxHp:t.hp, x:sx, y:sy, id:uid(), stunnedTurns:0});
+    let summonTiles = [];
+    for(let sy=e.y-1; sy<=e.y+1; sy++) {
+      for(let sx=e.x-1; sx<=e.x+1; sx++) {
+        if(sx<0||sx>=MAP_W||sy<0||sy>=MAP_H) continue;
+        if(sx===e.x && sy===e.y) continue;
+        if(sx===G.player.x && sy===G.player.y) continue;
+        if(G.map[sy][sx]===TILE.WALL) continue;
+        if(G.enemies.some(other=>!other.dying&&other.x===sx&&other.y===sy)) continue;
+        summonTiles.push({x:sx,y:sy});
       }
+    }
+    for(let i=0; i<2 && summonTiles.length; i++) {
+      let t=ENEMIES.find(n=>n.name==='Skeleton');
+      let pick = summonTiles.splice(rand(summonTiles.length), 1)[0];
+      G.enemies.push({...t, hp:t.hp, maxHp:t.hp, x:pick.x, y:pick.y, id:uid(), stunnedTurns:0});
     }
   }
 

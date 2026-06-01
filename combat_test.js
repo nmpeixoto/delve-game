@@ -690,6 +690,50 @@ test('mage blink does not spend a turn or cooldown when no alternate safe visibl
   assert.strictEqual(context.G.ability2Cooldown, 0);
 });
 
+test('boss phase two summons avoid the boss occupied tile', () => {
+  let nextId = 0;
+  const context = loadCombat({
+    rand: () => 1,
+    uid: () => `summon-${++nextId}`,
+    ENEMIES: [{
+      name: 'Skeleton',
+      sym: 's',
+      hp: 8,
+      atk: 3,
+      def: 1,
+      xp: 5,
+      gold: 2,
+      color: '#e2e8f0',
+    }],
+  });
+  context.G.player.x = 5;
+  context.G.player.y = 5;
+  context.G.visible = new Set([5 * MAP_W + 5]);
+  context.G.seen = new Set([5 * MAP_W + 5]);
+  context.G.enemies = [{
+    id: 'boss',
+    name: 'Dungeon Lord',
+    hp: 50,
+    maxHp: 100,
+    atk: 0,
+    def: 0,
+    xp: 250,
+    gold: 150,
+    x: 8,
+    y: 5,
+    boss: true,
+    phase: 1,
+    stunnedTurns: 0,
+  }];
+
+  context.advanceTurn();
+
+  const summons = context.G.enemies.filter(enemy => enemy.id !== 'boss');
+  assert.strictEqual(context.G.enemies.find(enemy => enemy.id === 'boss').phase, 2);
+  assert.strictEqual(summons.length, 2);
+  assert.strictEqual(summons.some(enemy => enemy.x === 8 && enemy.y === 5), false);
+});
+
 function loadItems(overrides = {}) {
   const context = {
     G: {
@@ -763,6 +807,55 @@ test('full-health potion use is ignored instead of wasting the potion and a turn
   assert.strictEqual(context.G.player.hp, 20);
   assert.strictEqual(turns, 0);
   assert.strictEqual(logs[0], 'Already at full HP.');
+});
+
+test('teleport scroll avoids isolated floor pockets that would strand the player', () => {
+  const map = Array.from({ length: 8 }, () => Array(8).fill(TILE.WALL));
+  map[1][1] = TILE.FLOOR;
+  map[1][2] = TILE.FLOOR;
+  map[1][3] = TILE.FLOOR;
+  map[6][6] = TILE.FLOOR;
+
+  const deterministicMath = Object.create(Math);
+  deterministicMath.random = () => 0.99;
+  const context = loadItems({
+    MAP_W: 8,
+    MAP_H: 8,
+    TILE,
+    Math: deterministicMath,
+    G: {
+      player: {
+        class: 'warrior',
+        lvl: 1,
+        x: 1,
+        y: 1,
+        hp: 20,
+        maxHp: 20,
+        weapon: null,
+        armor: null,
+        bestWeapon: 'Bare hands',
+      },
+      map,
+      enemies: [],
+      items: [{
+        id: 'teleport-1',
+        name: 'Scroll of Teleportation',
+        type: 'scroll_teleport',
+        carried: true,
+      }],
+    },
+    addLog: () => {},
+    floatText: () => {},
+    computeVision: () => {},
+    advanceTurn: () => {},
+    closeInv: () => {},
+  });
+
+  context.useItem('teleport-1');
+
+  assert.notDeepStrictEqual([context.G.player.x, context.G.player.y], [6, 6]);
+  assert.strictEqual(context.G.player.y, 1);
+  assert.ok([2, 3].includes(context.G.player.x));
 });
 
 function loadEmergency(overrides = {}) {

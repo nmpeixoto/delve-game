@@ -140,6 +140,49 @@ function autoEquip(it){
   }
 }
 
+function getTeleportSafeTiles(){
+  const isSafeFloor = (x, y) => (
+    G.map[y][x] === TILE.FLOOR &&
+    !G.enemies.some(e => !e.dying && e.x === x && e.y === y)
+  );
+  const visited = new Set();
+  const components = [];
+  const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
+
+  for(let y=1; y<MAP_H-1; y++) {
+    for(let x=1; x<MAP_W-1; x++) {
+      let startKey = `${x},${y}`;
+      if(visited.has(startKey) || !isSafeFloor(x, y)) continue;
+
+      let component = [];
+      let q = [{x, y}];
+      visited.add(startKey);
+      while(q.length) {
+        let cur = q.shift();
+        component.push(cur);
+        dirs.forEach(([dx, dy]) => {
+          let nx = cur.x + dx, ny = cur.y + dy;
+          let key = `${nx},${ny}`;
+          if(nx<=0 || nx>=MAP_W-1 || ny<=0 || ny>=MAP_H-1) return;
+          if(visited.has(key) || !isSafeFloor(nx, ny)) return;
+          visited.add(key);
+          q.push({x:nx, y:ny});
+        });
+      }
+      components.push(component);
+    }
+  }
+
+  let playerKey = `${G.player.x},${G.player.y}`;
+  let playerComponent = components.find(component => component.some(tile => `${tile.x},${tile.y}` === playerKey));
+  let candidates = playerComponent ? playerComponent.filter(tile => tile.x !== G.player.x || tile.y !== G.player.y) : [];
+  if(candidates.length) return candidates;
+
+  return components
+    .map(component => component.filter(tile => tile.x !== G.player.x || tile.y !== G.player.y))
+    .sort((a, b) => b.length - a.length)[0] || [];
+}
+
 function useItem(id){
   let it=G.items.find(i=>i.id==id);if(!it)return;
   if(it.type==='potion'){
@@ -196,14 +239,7 @@ function useItem(id){
   }
 
   if(it.type==='scroll_teleport'){
-    let safeTiles = [];
-    for(let y=1; y<MAP_H-1; y++) {
-      for(let x=1; x<MAP_W-1; x++) {
-        if(G.map[y][x] === TILE.FLOOR && !G.enemies.some(e=>e.x===x&&e.y===y)) {
-          safeTiles.push({x,y});
-        }
-      }
-    }
+    let safeTiles = getTeleportSafeTiles();
     if(safeTiles.length > 0) {
       let t = safeTiles[Math.floor(Math.random()*safeTiles.length)];
       G.player.x = t.x; G.player.y = t.y;
@@ -287,14 +323,7 @@ function useItem(id){
   }
 
   if(it.type==='scroll_teleport'){
-    let safeTiles = [];
-    for(let y=1; y<MAP_H-1; y++) {
-      for(let x=1; x<MAP_W-1; x++) {
-        if(G.map[y][x] === TILE.FLOOR && !G.enemies.some(e=>e.x===x&&e.y===y)) {
-          safeTiles.push({x,y});
-        }
-      }
-    }
+    let safeTiles = getTeleportSafeTiles();
     if(safeTiles.length > 0) {
       let t = safeTiles[Math.floor(Math.random()*safeTiles.length)];
       G.player.x = t.x; G.player.y = t.y;
