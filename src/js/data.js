@@ -72,16 +72,45 @@ const ARMORS=[
   {name:'Grandmaster Robe',type:'armor',def:11,sym:'◆', rarity:'legendary', price:245, reqClass:['monk'], reqLvl:10, dodgeBonus:0.10, swiftness:1},
 ];
 
-function spawnItem(r, itemFilter=null, forceHighTier=false){
+function isClassUsableGear(item, player = G.player){
+  if(!item || (item.type !== 'weapon' && item.type !== 'armor')) return false;
+  if(item.reqClass && !item.reqClass.includes(player.class)) return false;
+  return true;
+}
+
+function gearPoolForPlayer(items, player = G.player, levelSlack = 2){
+  return items.filter(item =>
+    (!item.reqLvl || player.lvl >= item.reqLvl - levelSlack) &&
+    isClassUsableGear(item, player)
+  );
+}
+
+function preferredClassGearPool(player = G.player, levelSlack = 2){
+  let gear = [...WEAPONS, ...ARMORS].filter(item =>
+    (!item.reqLvl || player.lvl >= item.reqLvl - levelSlack) &&
+    isClassUsableGear(item, player)
+  );
+  let classSpecific = gear.filter(item => item.reqClass && item.reqClass.includes(player.class));
+  return classSpecific.length ? classSpecific : gear;
+}
+
+function spawnItem(r, itemFilter=null, forceHighTier=false, opts={}){
   let hasRoomBounds = Number.isFinite(r.w) && Number.isFinite(r.h);
   let cx=hasRoomBounds?r.x+rr(1,r.w-2):r.x;
   let cy=hasRoomBounds?r.y+rr(1,r.h-2):r.y;
   let pool=[];
-  if(ch(.3)||forceHighTier) pool.push(...WEAPONS.filter(w=>(!w.reqLvl||G.player.lvl>=w.reqLvl-2)&&(!w.reqClass||w.reqClass.includes(G.player.class))));
-  if(ch(.3)||forceHighTier) pool.push(...ARMORS.filter(a=>(!a.reqLvl||G.player.lvl>=a.reqLvl-2)&&(!a.reqClass||a.reqClass.includes(G.player.class))));
+  let weaponPool = gearPoolForPlayer(WEAPONS);
+  let armorPool = gearPoolForPlayer(ARMORS);
+  let preferredGear = opts.preferClassGear ? preferredClassGearPool() : [];
+  if(ch(.3)||forceHighTier) pool.push(...weaponPool);
+  if(ch(.3)||forceHighTier) pool.push(...armorPool);
   if(!forceHighTier) pool.push(...POTIONS);
   
   if(itemFilter) pool = pool.filter(itemFilter);
+  if(opts.preferClassGear && preferredGear.length) {
+    let filteredGear = itemFilter ? preferredGear.filter(itemFilter) : preferredGear;
+    if(filteredGear.length) pool = filteredGear;
+  }
   if(!pool.length) pool = POTIONS;
   
   let i=pool[rr(0,pool.length-1)];

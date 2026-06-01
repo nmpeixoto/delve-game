@@ -3,6 +3,7 @@ const {
   auditDecision,
   aggregateAudit,
   parseArgs,
+  weaponPower,
 } = require('../automation/bot_behavior_audit');
 
 function test(name, fn) {
@@ -174,4 +175,8 @@ test('parseArgs supports seed lists for multi-seed audit batches', () => {
   assert.strictEqual(args.perClass, 5);
   assert.strictEqual(args.maxTurns, 1234);
   assert.strictEqual(args.output, 'audit.json');
+});
+
+test('audit weaponPower uses rounded-up Monk unarmed scaling', () => {
+  assert.strictEqual(weaponPower(null, { class: 'monk', lvl: 3 }), 2);
 });

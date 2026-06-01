@@ -820,6 +820,19 @@ test('monk does not auto-equip a weapon weaker than unarmed scaling', () => {
   assert.strictEqual(context.G.items[0].carried, true);
 });
 
+test('monk unarmed weapon power rounds up by level', () => {
+  const context = loadItems();
+
+  context.G.player.lvl = 1;
+  assert.strictEqual(context.weaponPower(null), 1);
+
+  context.G.player.lvl = 2;
+  assert.strictEqual(context.weaponPower(null), 1);
+
+  context.G.player.lvl = 3;
+  assert.strictEqual(context.weaponPower(null), 2);
+});
+
 test('full-health potion use is ignored instead of wasting the potion and a turn', () => {
   let turns = 0;
   const logs = [];

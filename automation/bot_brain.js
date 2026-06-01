@@ -80,7 +80,7 @@ window.botDecisionLogic = function() {
   const isMagicWeapon = item => item && (item.sym === '♦' || /staff|rod|wand|scythe/i.test(item.name || ''));
   const isBow = item => item && (item.sym === '🏹' || /bow/i.test(item.name || ''));
   const weaponPower = item => {
-    if (!item) return p.class === 'monk' ? Math.floor(p.lvl / 2) : 0;
+    if (!item) return p.class === 'monk' ? Math.ceil(p.lvl / 2) : 0;
     let power = item.atk || 0;
     if (p.class === 'mage' && isMagicWeapon(item)) power += Math.floor(power / 5);
     return power;
@@ -333,6 +333,7 @@ window.botDecisionLogic = function() {
   };
   const shouldExitWithoutPotion = () => p.hp < p.maxHp * strategy.exitHp && potions.length === 0;
   const shouldHeadForStairs = () => G.floor < FINAL_FLOOR && liveEnemies.length === 0 && hasKnownStairs() && (G.seen.size / (MAP_W * MAP_H)) >= strategy.exploreThreshold;
+  const shouldAvoidVoluntaryCombat = () => G.floor >= 3 && potions.length === 0 && !hasKnownStairs() && adjEnemies.length === 0 && p.hp < p.maxHp * 0.45;
 
   if (G.map[p.y][p.x] === STAIRS && (isMapCleared() || shouldExitWithoutPotion() || shouldHeadForStairs() || G.won)) {
       return { type: 'key', val: '>' };
@@ -411,7 +412,7 @@ window.botDecisionLogic = function() {
   let a2First = ability2Decision();
   if (a2First && ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk'].includes(p.class)) return a2First;
 
-  if (G.ability1Cooldown === 0) {
+  if (G.ability1Cooldown === 0 && !shouldAvoidVoluntaryCombat()) {
       if (p.class === 'warrior' && adjEnemies.length > 0) {
          let target = adjEnemies.find(e => e.hp <= minBashDamage(e)) || adjEnemies[0];
          if (target) return { type: 'key', val: 'b' }; 
@@ -444,6 +445,7 @@ window.botDecisionLogic = function() {
 
   // RANGED ATTACK
   const rangedAttack = () => {
+      if (shouldAvoidVoluntaryCombat()) return null;
       let targets = visEnemies.filter(e => Math.max(Math.abs(e.x - p.x), Math.abs(e.y - p.y)) <= 2 && Math.abs(e.x - p.x) + Math.abs(e.y - p.y) > 1);
       if (targets.length) {
           let target = targets.sort((a, b) => a.hp - b.hp)[0];

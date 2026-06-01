@@ -17,6 +17,7 @@ function loadShopContext(overrides = {}) {
 
   const context = {
     G: {
+      floor: 1,
       player: {
         class: 'warrior',
         lvl: 3,
@@ -26,6 +27,9 @@ function loadShopContext(overrides = {}) {
       },
       items: [],
     },
+    rr: (a) => a,
+    ch: () => false,
+    uid: () => 'shop-item-id',
     getStat: (statName) => {
       let base = context.G.player[statName] || 0;
       let w = context.G.player.weapon ? (context.G.player.weapon[statName] || 0) : 0;
@@ -58,6 +62,7 @@ function loadShopContext(overrides = {}) {
   });
 
   vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/data.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/items.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/shop.js'), 'utf8'), context);
   context.renderSellPanel = () => {};
@@ -246,4 +251,50 @@ test('perception upgrades permanently increase the perception stat', () => {
   });
 
   assert.strictEqual(context.G.player.perception, 1);
+});
+
+test('generateShopStock includes class-usable gear when random stock would miss it', () => {
+  const deterministicMath = Object.create(Math);
+  deterministicMath.random = () => 0.5;
+  const context = loadShopContext({
+    G: {
+      floor: 3,
+      player: {
+        class: 'monk',
+        lvl: 5,
+        gold: 0,
+        weapon: null,
+        armor: { id: 'gi', name: 'Gi', type: 'armor', def: 4 },
+      },
+      items: [],
+    },
+    Math: deterministicMath,
+  });
+
+  vm.runInContext(`
+    WEAPONS.splice(0, WEAPONS.length,
+      {name:'Warrior Test 1', type:'weapon', atk:4, reqClass:['warrior'], price:10},
+      {name:'Warrior Test 2', type:'weapon', atk:4, reqClass:['warrior'], price:10},
+      {name:'Warrior Test 3', type:'weapon', atk:4, reqClass:['warrior'], price:10},
+      {name:'Warrior Test 4', type:'weapon', atk:4, reqClass:['warrior'], price:10},
+      {name:'Warrior Test 5', type:'weapon', atk:4, reqClass:['warrior'], price:10},
+      {name:'Warrior Test 6', type:'weapon', atk:4, reqClass:['warrior'], price:10}
+    );
+    ARMORS.splice(0, ARMORS.length,
+      {name:'Warrior Armor 1', type:'armor', def:3, reqClass:['warrior'], price:10},
+      {name:'Warrior Armor 2', type:'armor', def:3, reqClass:['warrior'], price:10},
+      {name:'Warrior Armor 3', type:'armor', def:3, reqClass:['warrior'], price:10},
+      {name:'Warrior Armor 4', type:'armor', def:3, reqClass:['warrior'], price:10},
+      {name:'Warrior Armor 5', type:'armor', def:3, reqClass:['warrior'], price:10},
+      {name:'Gi', type:'armor', def:4, reqClass:['monk'], price:50}
+    );
+  `, context);
+
+  const stock = context.generateShopStock();
+  const usableGear = stock.filter(item =>
+    (item.type === 'weapon' || item.type === 'armor') &&
+    (!item.reqClass || item.reqClass.includes(context.G.player.class))
+  );
+
+  assert.ok(usableGear.length >= 1);
 });

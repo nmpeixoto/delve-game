@@ -216,6 +216,54 @@ test('does not bash a range enemy while weak with no potion and known stairs', (
   assert.strictEqual(decision.val, 'ArrowRight');
 });
 
+test('mage explores instead of fireballing nonadjacent enemies while weak with no potion and unknown stairs', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5],
+    [5, 6],
+  ]);
+  const seen = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { class: 'mage', hp: 8, maxHp: 30, weapon: { atk: 5, sym: 'â™¦' } },
+    seen,
+    visible: new Set(seen),
+    enemies: [{ id: 'orc-1', name: 'Orc', x: 7, y: 5, hp: 30, maxHp: 30, atk: 12, def: 2 }],
+    ability1Cooldown: 0,
+    G: { floor: 4 },
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowDown');
+});
+
+test('paths to unseen tiles before nonblocking enemies while weak with no potion and unknown stairs', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5],
+    [5, 6],
+  ]);
+  const seen = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { class: 'warrior', hp: 14, maxHp: 40, weapon: { atk: 5 }, armor: { def: 4 } },
+    seen,
+    visible: new Set(seen),
+    enemies: [{ id: 'orc-1', name: 'Orc', x: 7, y: 5, hp: 30, maxHp: 30, atk: 12, def: 2 }],
+    ability1Cooldown: 5,
+    G: { floor: 4 },
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowDown');
+});
+
 test('drinks a potion before voluntary combat when critically hurt in combat', () => {
   const map = makeMap();
   setFloor(map, [[5, 5], [5, 6], [5, 7]]);
@@ -424,6 +472,27 @@ test('ignores weaker adjacent floor gear when exploring', () => {
   const decision = decide(G);
 
   assert.notStrictEqual(decision.val, 'ArrowRight');
+});
+
+test('monk values level 3 bare hands above equal low-tier weapons while exploring', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [5, 5],
+    [5, 6],
+  ]);
+  const seen = new Set([5 * MAP_W + 5, 4 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { class: 'monk', lvl: 3, weapon: null, armor: null },
+    seen,
+    visible: new Set(seen),
+    items: [{ id: 'training-sword', name: 'Training Sword', type: 'weapon', atk: 2, x: 5, y: 4, carried: false }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowDown');
 });
 
 test('ignores shop gear the current class can never equip', () => {

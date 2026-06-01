@@ -125,9 +125,10 @@ test('ranger starts with a tunic and stronger bow ladder', () => {
 
   context.initGame('ranger');
 
-  assert.strictEqual(context.G.player.maxHp, 16);
+  assert.strictEqual(context.G.player.maxHp, 20);
   assert.strictEqual(context.G.player.atk, 2);
   assert.strictEqual(context.G.player.def, 1);
+  assert.strictEqual(context.G.player.critChance, 0.1);
   assert.strictEqual(context.G.player.weapon.name, 'Shortbow');
   assert.strictEqual(context.G.player.weapon.atk, 5);
   assert.strictEqual(context.G.player.weapon.sym, '🏹');
@@ -142,6 +143,7 @@ test('warrior starts with enough base damage for normal mode pacing', () => {
 
   assert.strictEqual(context.G.player.maxHp, 32);
   assert.strictEqual(context.G.player.atk, 4);
+  assert.strictEqual(context.G.player.def, 3);
   assert.ok(context.G.player.armor);
   assert.strictEqual(context.G.player.armor.name, 'Chain Mail');
   assert.strictEqual(context.G.player.armor.def, 4);
@@ -167,6 +169,8 @@ test('mage starts with a robe so floor 4 pressure does not erase it instantly', 
 
   context.initGame('mage');
 
+  assert.strictEqual(context.G.player.maxHp, 20);
+  assert.strictEqual(context.G.player.def, 2);
   assert.ok(context.G.player.armor);
   assert.strictEqual(context.G.player.armor.name, 'Apprentice Robe');
   assert.strictEqual(context.G.player.armor.def, 2);
@@ -203,7 +207,8 @@ test('barbarian starts with furs for full-clear durability', () => {
 
   assert.strictEqual(context.G.player.maxHp, 42);
   assert.strictEqual(context.G.player.atk, 5);
-  assert.strictEqual(context.G.player.def, 1);
+  assert.strictEqual(context.G.player.def, 2);
+  assert.strictEqual(context.G.player.critChance, 0.15);
   assert.strictEqual(context.G.player.weapon.name, 'Great Axe');
   assert.strictEqual(context.G.player.weapon.atk, 4);
   assert.ok(context.G.player.armor);
@@ -230,6 +235,73 @@ test('normal enemy profiles use the first-pass lower pressure scale', () => {
   assert.strictEqual(floor4.tierMax, 4);
   assert.strictEqual(floor4.scale, 1.7);
   assert.strictEqual(floor5.scale, 2.05);
+});
+
+test('normal mode applies a stronger XP boost only on floors 3 and 4', () => {
+  const context = loadMapContext();
+
+  assert.strictEqual(context.getNormalXpScale(1, false), 1);
+  assert.strictEqual(context.getNormalXpScale(2, false), 1);
+  assert.strictEqual(context.getNormalXpScale(3, false), 1.35);
+  assert.strictEqual(context.getNormalXpScale(4, false), 1.6);
+  assert.strictEqual(context.getNormalXpScale(5, false), 1);
+});
+
+test('normal mode eases only floor 4 enemy pressure without reducing XP density', () => {
+  const context = loadMapContext();
+
+  assert.strictEqual(context.getNormalEnemyPressureScale(1, false), 1);
+  assert.strictEqual(context.getNormalEnemyPressureScale(3, false), 1);
+  assert.strictEqual(context.getNormalEnemyPressureScale(4, false), 0.9);
+  assert.strictEqual(context.getNormalEnemyPressureScale(5, false), 1);
+  assert.strictEqual(context.getNormalEnemyPressureScale(4, true), 1);
+});
+
+test('normal mode places floor 4 stairs earlier on the main path', () => {
+  const context = loadMapContext();
+
+  assert.strictEqual(context.getStairsCandidateOffset(3, false, 8), 5);
+  assert.strictEqual(context.getStairsCandidateOffset(4, false, 8), 3);
+  assert.strictEqual(context.getStairsCandidateOffset(4, true, 8), 5);
+  assert.strictEqual(context.getStairsCandidateOffset(4, false, 2), 1);
+});
+
+test('hard mode does not receive the normal-mode XP pacing boost', () => {
+  const context = loadMapContext();
+
+  assert.strictEqual(context.getNormalXpScale(3, true), 1);
+  assert.strictEqual(context.getNormalXpScale(4, true), 1);
+});
+
+test('initGame persists hard mode state for balance gates', () => {
+  const context = loadMapContext();
+
+  context.initGame('warrior', true);
+  assert.strictEqual(context.G.hardMode, true);
+
+  context.initGame('warrior', false);
+  assert.strictEqual(context.G.hardMode, false);
+});
+
+test('normal melee underdogs start with one carried health potion', () => {
+  const context = loadMapContext();
+
+  for (const className of ['warrior', 'paladin', 'monk']) {
+    context.initGame(className, false);
+    const potions = context.G.items.filter(item => item.carried && item.type === 'potion');
+
+    assert.strictEqual(potions.length, 1);
+    assert.strictEqual(potions[0].name, 'Health Potion');
+    assert.strictEqual(potions[0].id, `starter-potion-${className}`);
+  }
+});
+
+test('hard mode does not grant the normal starter potion', () => {
+  const context = loadMapContext();
+
+  context.initGame('monk', true);
+
+  assert.strictEqual(context.G.items.some(item => item.carried && item.type === 'potion'), false);
 });
 
 test('dungeon lord uses normal-mode boss tuning knobs', () => {
@@ -280,4 +352,21 @@ test('spawnItem keeps data-layer filtering and supports exact coordinate spawns'
   assert.strictEqual(context.G.items[1].type, 'armor');
   assert.ok(Number.isFinite(context.G.items[1].x));
   assert.ok(Number.isFinite(context.G.items[1].y));
+});
+
+test('spawnItem can require class-usable gear for armory slots', () => {
+  const context = loadSpawnContext();
+  context.G.player.class = 'monk';
+  context.G.player.lvl = 5;
+
+  context.spawnItem(
+    { x: 12, y: 13 },
+    item => item.type === 'weapon' || item.type === 'armor',
+    false,
+    { preferClassGear: true }
+  );
+
+  assert.strictEqual(context.G.items.length, 1);
+  assert.strictEqual(context.G.items[0].type, 'armor');
+  assert.ok(!context.G.items[0].reqClass || context.G.items[0].reqClass.includes('monk'));
 });

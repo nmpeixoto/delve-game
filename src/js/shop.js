@@ -2,30 +2,47 @@
 function generateShopStock(){
   let stock=[];
   let floorScale=G.floor;
+  let usedNames = new Set();
+  let addStock = item => {
+    if(!item || usedNames.has(item.name)) return;
+    usedNames.add(item.name);
+    stock.push({...item,id:uid(),sold:false});
+  };
+  let canUseGear = item => typeof isClassUsableGear === 'function'
+    ? isClassUsableGear(item, G.player)
+    : (!item.reqClass || item.reqClass.includes(G.player.class));
+  let nearLevel = item => !item.reqLvl || G.player.lvl >= item.reqLvl - 2;
 
   // 3-5 potions
   let pots=[...POTIONS].sort(()=>Math.random()-.5);
   for(let i=0; i<Math.min(pots.length, rr(3,5)); i++) {
-    stock.push({...pots[i],id:uid(),sold:false});
+    addStock(pots[i]);
   }
 
+  let weaponCandidates = WEAPONS.filter(w=>w.atk<=4+floorScale*3);
+  let armorCandidates = ARMORS.filter(a=>a.def<=2+floorScale*2);
+  let classGear = [...weaponCandidates, ...armorCandidates].filter(item => nearLevel(item) && canUseGear(item));
+  let classSpecificGear = classGear.filter(item => item.reqClass && item.reqClass.includes(G.player.class));
+  let priorityGear = classSpecificGear.length ? classSpecificGear : classGear;
+  if(priorityGear.length) addStock(priorityGear[rr(0, priorityGear.length-1)]);
+
   // 4-6 weapons scaled to floor
-  let weps=WEAPONS.filter(w=>w.atk<=4+floorScale*3).sort(()=>Math.random()-.5);
+  let weps=weaponCandidates.filter(w=>!usedNames.has(w.name)).sort(()=>Math.random()-.5);
   for(let i=0; i<Math.min(weps.length, rr(4,6)); i++) {
-    stock.push({...weps[i],id:uid(),sold:false});
+    addStock(weps[i]);
   }
 
   // 3-4 armors
-  let arms=ARMORS.filter(a=>a.def<=2+floorScale*2).sort(()=>Math.random()-.5);
+  let arms=armorCandidates.filter(a=>!usedNames.has(a.name)).sort(()=>Math.random()-.5);
   for(let i=0; i<Math.min(arms.length, rr(3,4)); i++) {
-    stock.push({...arms[i],id:uid(),sold:false});
+    addStock(arms[i]);
   }
 
   // 2-4 upgrades (floors 2+)
   if(G.floor>=2){
     let ups=UPGRADES.filter(u=>u.rarity!=='legendary'||G.floor>=4).sort(()=>Math.random()-.5);
     for(let i=0; i<Math.min(ups.length, 2); i++) {
-      stock.push({...ups[i],id:uid(),sold:false});
+      addStock(ups[i]);
     }
   }
 

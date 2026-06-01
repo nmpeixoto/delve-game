@@ -263,7 +263,7 @@ function isMagicWeapon(item) {
 }
 
 function weaponPower(item, p) {
-  if (!item) return p.class === 'monk' ? Math.floor((p.lvl || 1) / 2) : 0;
+  if (!item) return p.class === 'monk' ? Math.ceil((p.lvl || 1) / 2) : 0;
   let power = item.atk || 0;
   if (p.class === 'mage' && isMagicWeapon(item)) power += Math.floor(power / 5);
   return power;
@@ -752,5 +752,6 @@ module.exports = {
   runAuditSingle,
   runAuditBatch,
   createAuditSnapshot,
+  weaponPower,
   main,
 };

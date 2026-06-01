@@ -104,6 +104,23 @@ function getFloorEnemyProfile(floor){
   return FLOOR_ENEMY_PROFILES[Math.max(0, Math.min(floor - 1, FLOOR_ENEMY_PROFILES.length - 1))];
 }
 
+function getNormalXpScale(floor, hardMode = false){
+  if(hardMode) return 1;
+  if(floor === 3) return 1.35;
+  if(floor === 4) return 1.6;
+  return 1;
+}
+
+function getNormalEnemyPressureScale(floor, hardMode = false){
+  if(hardMode) return 1;
+  return floor === 4 ? 0.9 : 1;
+}
+
+function getStairsCandidateOffset(floor, hardMode = false, candidateCount = 0){
+  let target = (!hardMode && floor >= 4) ? 3 : 5;
+  return Math.max(0, Math.min(target, candidateCount - 1));
+}
+
 // ===================== INIT =====================
 function initGame(playerClass = 'warrior', hardMode = false){
   let cData = CLASS_DATA[playerClass] || {};
@@ -160,6 +177,7 @@ function initGame(playerClass = 'warrior', hardMode = false){
 
   G={
     floor:1,
+    hardMode: !!hardMode,
     player: p,
     enemies:[],items:[],traps:[],
     map:null,rooms:[],shops:[],
@@ -168,6 +186,10 @@ function initGame(playerClass = 'warrior', hardMode = false){
     ability1Cooldown:0, ability2Cooldown:0,
     gameOver:false,won:false,
   };
+  if(!G.hardMode && ['warrior','paladin','monk'].includes(playerClass)) {
+    let potion = POTIONS.find(item => item.name === 'Health Potion');
+    if(potion) G.items.push({...potion, id:`starter-potion-${playerClass}`, carried:true, x:undefined, y:undefined});
+  }
   resetTips();
   buildFloor();
 }
@@ -209,7 +231,7 @@ function buildFloor(){
 
   // Place stairs on the main path, but keep the room reserved from later overlays.
   let stairsCandidates = rooms.slice(1).filter(r => r.type === 'normal');
-  let stairsRoom = stairsCandidates[Math.min(5, stairsCandidates.length - 1)] || rooms[Math.min(6, rooms.length - 1)];
+  let stairsRoom = stairsCandidates[getStairsCandidateOffset(G.floor, G.hardMode, stairsCandidates.length)] || rooms[Math.min(6, rooms.length - 1)];
 
   if(rooms.length>=5){
     let pool = rooms.slice(1, -1).filter(r=>r!==stairsRoom&&r.type!=='secret'&&r.type!=='treasure'&&r.type!=='crypt');
@@ -276,10 +298,12 @@ function buildFloor(){
       if(startVisible.has(ey*MAP_W+ex)) if(Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y)<=8) continue;
       
       let goldMult = G.hardMode ? 0.7 : 1;
+      let xpMult = getNormalXpScale(G.floor, G.hardMode);
+      let pressureMult = getNormalEnemyPressureScale(G.floor, G.hardMode);
       let enemy = {...t,
-        hp:Math.round(t.hp*sc),maxHp:Math.round(t.hp*sc),
-        atk:Math.round(t.atk*sc),def:Math.round(t.def*sc),
-        xp:Math.round(t.xp*(isCrypt?1.5:1)*sc),gold:Math.round(t.gold*sc*goldMult),
+        hp:Math.round(t.hp*sc*pressureMult),maxHp:Math.round(t.hp*sc*pressureMult),
+        atk:Math.round(t.atk*sc*pressureMult),def:Math.round(t.def*sc*pressureMult),
+        xp:Math.round(t.xp*(isCrypt?1.5:1)*sc*xpMult),gold:Math.round(t.gold*sc*goldMult),
         x:ex,y:ey,id:uid(), stunnedTurns: 0};
         
       if(isElite) {
@@ -289,7 +313,7 @@ function buildFloor(){
     }
     
     for(let g=0;g<guaranteedItems;g++) {
-      spawnItem(r, itemFilter, (r.type==='treasure'||r.type==='crypt'||r.type==='secret')); 
+      spawnItem(r, itemFilter, (r.type==='treasure'||r.type==='crypt'||r.type==='secret'), { preferClassGear: r.type === 'armory' && g === 0 }); 
     }
   }
 
