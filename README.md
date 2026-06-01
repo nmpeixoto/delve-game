@@ -422,7 +422,7 @@ DELVE is a Progressive Web App. After the first load, it can be installed like a
 ## Development
 
 - `src/index.html` is the development entry point.
-- `build.js` inlines `src/css/style.css` and `src/js/*.js` into `dungeon.html`.
+- `scripts/build.js` inlines `src/css/style.css` and `src/js/*.js` into `dungeon.html`.
 - `dungeon.html` is the generated production file.
 - `sw.js` caches the production build, source files, and icons for offline play.
 - If you add new static files, update `sw.js` so they are cached.
@@ -466,7 +466,7 @@ DELVE is a Progressive Web App. After the first load, it can be installed like a
 | `src/js/fx.js` | Visual effects |
 | `src/js/input.js` | Keyboard and swipe input |
 | `src/js/pwa.js` | PWA install prompt |
-| `build.js` | Generates `dungeon.html` from `src/` |
+| `scripts/build.js` | Generates `dungeon.html` from `src/` |
 | `automation/bot_brain.js` | Automated bot heuristics |
 | `automation/lessons_learned.md` | Bot learning ledger |
 | `automation/headless-balance/headless_balance.js` | Headless balance runner |

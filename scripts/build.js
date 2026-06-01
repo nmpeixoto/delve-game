@@ -1,9 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const srcDir = path.join(__dirname, 'src');
+const repoRoot = path.resolve(__dirname, '..');
+const srcDir = path.join(repoRoot, 'src');
 const indexHtmlPath = path.join(srcDir, 'index.html');
-const outHtmlPath = path.join(__dirname, 'dungeon.html');
+const outHtmlPath = path.join(repoRoot, 'dungeon.html');
 
 let html = fs.readFileSync(indexHtmlPath, 'utf8');
 

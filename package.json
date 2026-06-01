@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "node build.js",
+    "build": "node scripts/build.js",
     "test": "node tests/bot_brain_test.js && node tests/autoplay_runner_test.js && node tests/combat_test.js && node tests/map_test.js && node tests/shop_test.js && node tests/headless_balance_test.js",
     "smoke": "node scripts/browser_smoke.js",
     "autoplay": "node scripts/autoplay_test.js",

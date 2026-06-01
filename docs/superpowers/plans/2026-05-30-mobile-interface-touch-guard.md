@@ -6,7 +6,7 @@
 
 **Architecture:** Add one shared guarded-tap helper in `src/js/ui.js` that distinguishes intentional taps from scroll or swipe gestures. Route touch-driven shop rows, inventory rows, and map tile actions through that helper while keeping desktop `onclick` behavior intact.
 
-**Tech Stack:** Vanilla HTML, CSS, JavaScript, Puppeteer smoke tests, existing `node build.js`, existing `npm test`, existing `node test.js`.
+**Tech Stack:** Vanilla HTML, CSS, JavaScript, Puppeteer smoke tests, existing `npm run build`, existing `npm test`, existing browser smoke test.
 
 ---
 
@@ -17,7 +17,7 @@
 - Modify `src/js/render.js`: inventory rows and map tile touch actions use guarded touch handlers; enemy long-press cancellation respects movement.
 - Modify `src/css/style.css`: scrollable action rows advertise `touch-action: pan-y`.
 - Modify `test.js`: adds a mobile viewport smoke test for shop, inventory, help, class select, emergency overlay, and map touch behavior.
-- Regenerate `dungeon.html`: production single-file output from `node build.js`.
+- Regenerate `dungeon.html`: production single-file output from `npm run build`.
 
 ## Scope Check
 
@@ -579,7 +579,7 @@ Expected: all listed tests pass: `bot_brain_test.js`, `autoplay_runner_test.js`,
 Run:
 
 ```powershell
-node build.js
+npm run build
 ```
 
 Expected output:
