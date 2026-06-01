@@ -96,8 +96,12 @@ function preferredClassGearPool(player = G.player, levelSlack = 2){
 
 function spawnItem(r, itemFilter=null, forceHighTier=false, opts={}){
   let hasRoomBounds = Number.isFinite(r.w) && Number.isFinite(r.h);
-  let cx=hasRoomBounds?r.x+rr(1,r.w-2):r.x;
-  let cy=hasRoomBounds?r.y+rr(1,r.h-2):r.y;
+  let cx, cy, attempts = 0;
+  do {
+    cx = hasRoomBounds ? r.x + rr(0, r.w - 1) : r.x;
+    cy = hasRoomBounds ? r.y + rr(0, r.h - 1) : r.y;
+    attempts++;
+  } while (G.map && G.map[cy] && G.map[cy][cx] === 2 /* TILE.STAIRS */ && attempts < 20);
   let pool=[];
   let weaponPool = gearPoolForPlayer(WEAPONS);
   let armorPool = gearPoolForPlayer(ARMORS);

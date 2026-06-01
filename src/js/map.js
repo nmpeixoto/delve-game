@@ -290,10 +290,10 @@ function buildFloor(){
       
       let ex, ey, attempts=0;
       do {
-        ex=r.x+rr(1,r.w-2); ey=r.y+rr(1,r.h-2);
+        ex=r.x+rr(0,r.w-1); ey=r.y+rr(0,r.h-1);
         attempts++;
         let dist=Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y);
-        if(!startVisible.has(ey*MAP_W+ex) && dist>8) break;
+        if(!startVisible.has(ey*MAP_W+ex) && dist>8 && map[ey][ex] !== TILE.STAIRS) break;
       } while(attempts<30);
       if(startVisible.has(ey*MAP_W+ex)) if(Math.abs(ex-G.player.x)+Math.abs(ey-G.player.y)<=8) continue;
       
@@ -324,9 +324,9 @@ function buildFloor(){
     if(r.type === 'shop' || r.type === 'treasure') continue;
     let tx, ty, attempts = 0;
     do {
-      tx = r.x+rr(1,r.w-2); ty = r.y+rr(1,r.h-2);
+      tx = r.x+rr(0,r.w-1); ty = r.y+rr(0,r.h-1);
       attempts++;
-    } while(r.type === 'shrine' && tx === r.cx && ty === r.cy && attempts < 10);
+    } while(((r.type === 'shrine' && tx === r.cx && ty === r.cy) || (map[ty] && map[ty][tx] === TILE.STAIRS)) && attempts < 20);
     let type = ch(0.5) ? 'spike' : (ch(0.5) ? 'gas' : 'alarm');
     G.traps.push({x:tx, y:ty, type, triggered: false});
   }
@@ -335,7 +335,12 @@ function buildFloor(){
     if(rooms.length <= 1) break;
     let r = rooms[rr(1, rooms.length-1)];
     if(r.type === 'normal') {
-      G.items.push({id:uid(), x:r.x+rr(1,r.w-2), y:r.y+rr(1,r.h-2), name:'Key', type:'key', rarity:'common', sym:'⚷', carried:false});
+      let kx, ky, attempts = 0;
+      do {
+        kx = r.x+rr(0,r.w-1); ky = r.y+rr(0,r.h-1);
+        attempts++;
+      } while(map[ky] && map[ky][kx] === TILE.STAIRS && attempts < 20);
+      G.items.push({id:uid(), x:kx, y:ky, name:'Key', type:'key', rarity:'common', sym:'⚷', carried:false});
     }
   }
 
