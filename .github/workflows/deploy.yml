@@ -20,5 +20,5 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         # If Amen requires a specific folder (like public_html or web), specify it here:
-        server-dir: ./www/game/
+        server-dir: ./public/www/game/
         
