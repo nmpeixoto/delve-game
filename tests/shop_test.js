@@ -58,8 +58,8 @@ function loadShopContext(overrides = {}) {
   });
 
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, 'src/js/items.js'), 'utf8'), context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, 'src/js/shop.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/items.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/shop.js'), 'utf8'), context);
   context.renderSellPanel = () => {};
   context.renderShop = () => {};
   return context;

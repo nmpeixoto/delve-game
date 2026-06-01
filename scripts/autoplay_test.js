@@ -114,7 +114,7 @@ async function runAutoBot(url, runIndex, heroClass = 'warrior') {
     });
 
     // Inject the brain logic
-    await page.addScriptTag({ path: path.join(__dirname, 'bot_brain.js') });
+    await page.addScriptTag({ path: path.join(__dirname, '..', 'bot_brain.js') });
 
     // Wait for game start and disable debounce
     await page.waitForFunction(() => typeof G !== 'undefined' && G.map && G.player);
@@ -133,7 +133,7 @@ async function runAutoBot(url, runIndex, heroClass = 'warrior') {
       // Re-inject if the script was somehow lost, but since it's an SPA it should persist
       const isBrainLoaded = await page.evaluate(() => typeof window.botDecisionLogic === 'function');
       if (!isBrainLoaded) {
-          await page.addScriptTag({ path: path.join(__dirname, 'bot_brain.js') });
+          await page.addScriptTag({ path: path.join(__dirname, '..', 'bot_brain.js') });
       }
 
       const step = await page.evaluate(() => {

@@ -101,7 +101,7 @@ function loadCombat(overrides = {}) {
     ...overrides,
   };
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, 'src/js/combat.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/combat.js'), 'utf8'), context);
   return context;
 }
 
@@ -751,7 +751,7 @@ function loadItems(overrides = {}) {
     ...overrides,
   };
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, 'src/js/items.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/items.js'), 'utf8'), context);
   return context;
 }
 
@@ -858,6 +858,65 @@ test('teleport scroll avoids isolated floor pockets that would strand the player
   assert.ok([2, 3].includes(context.G.player.x));
 });
 
+test('teleport scroll prefers rooms without enemies', () => {
+  const map = Array.from({ length: 10 }, () => Array(10).fill(TILE.WALL));
+  for(let y=1; y<=3; y++) {
+    for(let x=1; x<=3; x++) map[y][x] = TILE.FLOOR;
+    for(let x=5; x<=7; x++) map[y][x] = TILE.FLOOR;
+  }
+  map[2][4] = TILE.FLOOR;
+
+  const deterministicMath = Object.create(Math);
+  deterministicMath.random = () => 0.99;
+  const context = loadItems({
+    MAP_W: 10,
+    MAP_H: 10,
+    TILE,
+    Math: deterministicMath,
+    G: {
+      player: {
+        class: 'warrior',
+        lvl: 1,
+        x: 2,
+        y: 2,
+        hp: 20,
+        maxHp: 20,
+        weapon: null,
+        armor: null,
+        bestWeapon: 'Bare hands',
+      },
+      map,
+      rooms: [
+        { x: 1, y: 1, w: 3, h: 3 },
+        { x: 5, y: 1, w: 3, h: 3 },
+      ],
+      enemies: [{
+        id: 'enemy-room-goblin',
+        name: 'Goblin',
+        hp: 10,
+        maxHp: 10,
+        x: 6,
+        y: 2,
+      }],
+      items: [{
+        id: 'teleport-1',
+        name: 'Scroll of Teleportation',
+        type: 'scroll_teleport',
+        carried: true,
+      }],
+    },
+    addLog: () => {},
+    floatText: () => {},
+    computeVision: () => {},
+    advanceTurn: () => {},
+    closeInv: () => {},
+  });
+
+  context.useItem('teleport-1');
+
+  assert.strictEqual(context.G.player.x >= 5 && context.G.player.x <= 7 && context.G.player.y >= 1 && context.G.player.y <= 3, false);
+});
+
 function loadEmergency(overrides = {}) {
   const elements = {
     'emergency-overlay': { style: { display: 'none' } },
@@ -883,7 +942,7 @@ function loadEmergency(overrides = {}) {
   };
   context.elements = elements;
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, 'src/js/emergency.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/emergency.js'), 'utf8'), context);
   return context;
 }
 

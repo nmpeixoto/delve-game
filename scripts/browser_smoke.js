@@ -134,7 +134,7 @@ async function runTest(url, name) {
     if (hp !== '30/30') throw new Error('Initial HP is incorrect');
 
     // Take screenshot
-    screenshotPath = path.join(__dirname, `screenshot_${name}.png`);
+    screenshotPath = path.join(__dirname, '..', `screenshot_${name}.png`);
     await page.screenshot({ path: screenshotPath });
     console.log(`Screenshot saved to ${screenshotPath}`);
 

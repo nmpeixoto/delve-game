@@ -436,10 +436,10 @@ DELVE is a Progressive Web App. After the first load, it can be installed like a
 ## Tests
 
 - `npm install` installs the test runner dependency.
-- `npm test` runs `bot_brain_test.js`, `autoplay_runner_test.js`, `combat_test.js`, `map_test.js`, and `shop_test.js`.
-- `node test.js` runs a browser smoke test against both `src/index.html` and `dungeon.html`.
-- `node test.js` expects a local server at `http://127.0.0.1:8080/`.
-- `bot_brain_test.js` and `autoplay_test.js` cover the automated playtester heuristics.
+- `npm test` runs the Node regression tests in `tests/`.
+- `node scripts/browser_smoke.js` runs a browser smoke test against both `src/index.html` and `dungeon.html`.
+- `node scripts/browser_smoke.js` expects a local server at `http://127.0.0.1:8080/`.
+- `tests/bot_brain_test.js` and `scripts/autoplay_test.js` cover the automated playtester heuristics.
 
 ## Project Layout
 
@@ -466,14 +466,15 @@ DELVE is a Progressive Web App. After the first load, it can be installed like a
 | `src/js/input.js` | Keyboard and swipe input |
 | `src/js/pwa.js` | PWA install prompt |
 | `build.js` | Generates `dungeon.html` from `src/` |
-| `test.js` | Browser smoke test |
 | `bot_brain.js` | Automated bot heuristics |
-| `bot_brain_test.js` | Bot heuristic regression tests |
-| `autoplay_test.js` | Bot startup and retry behavior |
-| `autoplay_runner_test.js` | Bot runner regression tests |
-| `combat_test.js` | Combat regression tests |
-| `map_test.js` | Map and progression regression tests |
-| `shop_test.js` | Shop regression tests |
+| `scripts/browser_smoke.js` | Browser smoke test |
+| `scripts/autoplay_test.js` | Puppeteer autoplay runner |
+| `tests/bot_brain_test.js` | Bot heuristic regression tests |
+| `tests/autoplay_runner_test.js` | Bot runner regression tests |
+| `tests/combat_test.js` | Combat regression tests |
+| `tests/map_test.js` | Map and progression regression tests |
+| `tests/shop_test.js` | Shop regression tests |
+| `tests/headless_balance_test.js` | Headless runner regression tests |
 | `manifest.json` | PWA metadata |
 | `sw.js` | Service worker cache list |
 | `icon-192.png`, `icon-512.png`, `favicon.ico`, `favicon-32.png` | App and tab icons |

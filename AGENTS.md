@@ -19,13 +19,13 @@ Please adhere to the following best practices and architectural constraints when
 - Follow PWA best practices defined in `manifest.json`.
 
 ## 4. Skills & Tooling
-- The project includes automated playtesting via Puppeteer (`autoplay_test.js` and `bot_brain.js`) and a faithful headless balance runner (`skills/headless-balance/scripts/headless_balance.js`) for seeded class-load sweeps.
+- The project includes automated playtesting via Puppeteer (`scripts/autoplay_test.js` and `bot_brain.js`) and a faithful headless balance runner (`skills/headless-balance/scripts/headless_balance.js`) for seeded class-load sweeps.
 - If you change core gameplay mechanics, you should run the automated tests to ensure no regressions occur.
 - You can use the `play-delve-and-learn` skill to iterate on the bot's heuristic logic.
 - Use the `headless-balance` skill for class balancing work, seeded batch comparisons, and load-testing multiple classes without Chromium. Prefer it when you want throughput; use Puppeteer autoplay when you need browser/runtime parity checks or UI interaction verification.
 - When running parallel balance batches, launch one process per class and write each report to its own file.
-- For bot or combat changes, prefer adding focused tests in `bot_brain_test.js` or `combat_test.js` before tuning heuristics. Run `npm test` for those regression tests.
-- Use `node test.js` as a browser smoke test for both `src/index.html` and `dungeon.html` when UI/game runtime behavior changes.
+- For bot or combat changes, prefer adding focused tests in `tests/bot_brain_test.js` or `tests/combat_test.js` before tuning heuristics. Run `npm test` for those regression tests.
+- Use `node scripts/browser_smoke.js` as a browser smoke test for both `src/index.html` and `dungeon.html` when UI/game runtime behavior changes.
 
 ## 5. Test Artifacts & Cleanup
 - Treat playtest outputs as temporary unless the user explicitly asks to keep them.

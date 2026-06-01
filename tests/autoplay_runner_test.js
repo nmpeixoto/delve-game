@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { isRetryableStartupResult, hasActionResolved } = require('./autoplay_test');
+const { isRetryableStartupResult, hasActionResolved } = require('../scripts/autoplay_test');
 
 function test(name, fn) {
   try {

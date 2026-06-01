@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { createRuntime, runSingle } = require('./skills/headless-balance/scripts/headless_balance');
+const { createRuntime, runSingle } = require('../skills/headless-balance/scripts/headless_balance');
 
 function test(name, fn) {
   try {

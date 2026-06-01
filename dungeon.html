@@ -1944,6 +1944,17 @@ function getTeleportSafeTiles(){
     G.map[y][x] === TILE.FLOOR &&
     !G.enemies.some(e => !e.dying && e.x === x && e.y === y)
   );
+  const liveEnemies = () => G.enemies.filter(e => !e.dying);
+  const roomForTile = (x, y) => (G.rooms || []).find(r =>
+    x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h
+  );
+  const roomHasEnemies = room => room && liveEnemies().some(e =>
+    e.x >= room.x && e.x < room.x + room.w && e.y >= room.y && e.y < room.y + room.h
+  );
+  const withoutEnemyRooms = tiles => {
+    let filtered = tiles.filter(tile => !roomHasEnemies(roomForTile(tile.x, tile.y)));
+    return filtered.length ? filtered : tiles;
+  };
   const visited = new Set();
   const components = [];
   const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
@@ -1975,11 +1986,12 @@ function getTeleportSafeTiles(){
   let playerKey = `${G.player.x},${G.player.y}`;
   let playerComponent = components.find(component => component.some(tile => `${tile.x},${tile.y}` === playerKey));
   let candidates = playerComponent ? playerComponent.filter(tile => tile.x !== G.player.x || tile.y !== G.player.y) : [];
-  if(candidates.length) return candidates;
+  if(candidates.length) return withoutEnemyRooms(candidates);
 
-  return components
+  let fallback = components
     .map(component => component.filter(tile => tile.x !== G.player.x || tile.y !== G.player.y))
     .sort((a, b) => b.length - a.length)[0] || [];
+  return withoutEnemyRooms(fallback);
 }
 
 function useItem(id){

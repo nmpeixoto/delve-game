@@ -1,7 +1,9 @@
 {
   "scripts": {
     "build": "node build.js",
-    "test": "node bot_brain_test.js && node autoplay_runner_test.js && node combat_test.js && node map_test.js && node shop_test.js && node headless_balance_test.js"
+    "test": "node tests/bot_brain_test.js && node tests/autoplay_runner_test.js && node tests/combat_test.js && node tests/map_test.js && node tests/shop_test.js && node tests/headless_balance_test.js",
+    "smoke": "node scripts/browser_smoke.js",
+    "autoplay": "node scripts/autoplay_test.js"
   },
   "dependencies": {
     "puppeteer": "^25.1.0"

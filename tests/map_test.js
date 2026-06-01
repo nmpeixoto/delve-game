@@ -59,11 +59,11 @@ function loadMapContext() {
   };
 
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, 'src/js/data.js'), 'utf8'), context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, 'src/js/main.js'), 'utf8'), context);
-  const visionCode = fs.readFileSync(path.join(__dirname, 'src/js/vision.js'), 'utf8');
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/data.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/main.js'), 'utf8'), context);
+  const visionCode = fs.readFileSync(path.join(__dirname, '..', 'src/js/vision.js'), 'utf8');
   vm.runInContext(visionCode, context);
-  const mapCode = fs.readFileSync(path.join(__dirname, 'src/js/map.js'), 'utf8');
+  const mapCode = fs.readFileSync(path.join(__dirname, '..', 'src/js/map.js'), 'utf8');
   vm.runInContext(mapCode, context);
   return context;
 }
@@ -83,8 +83,8 @@ function loadSpawnContext() {
   };
 
   vm.createContext(context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, 'src/js/data.js'), 'utf8'), context);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, 'src/js/items.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/data.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/items.js'), 'utf8'), context);
   return context;
 }
 

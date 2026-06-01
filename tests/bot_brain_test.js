@@ -52,7 +52,7 @@ function loadBrain(options = {}) {
     Set,
   };
   vm.createContext(context);
-  const code = fs.readFileSync(path.join(__dirname, 'bot_brain.js'), 'utf8');
+  const code = fs.readFileSync(path.join(__dirname, '..', 'bot_brain.js'), 'utf8');
   vm.runInContext(code, context);
   return context;
 }
