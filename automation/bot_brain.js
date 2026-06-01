@@ -40,6 +40,7 @@ window.botDecisionLogic = function() {
 
   const MAP_H = G.map ? G.map.length : 36;
   const MAP_W = G.map && G.map[0] ? G.map[0].length : 56;
+  const FINAL_FLOOR = typeof FLOORS !== 'undefined' ? FLOORS : 5;
   const WALL = 0, FLOOR = 1, STAIRS = 2, SHOP = 3, LOCKED_DOOR = 4, SECRET_DOOR = 5;
   const p = G.player;
   const hasKey = () => G.items.some(i => i.carried && i.type === 'key');
@@ -102,10 +103,13 @@ window.botDecisionLogic = function() {
   const totalAtk = () => {
     let total = (p.atk || 0) + weaponPower(p.weapon);
     if (p.class === 'barbarian') total += Math.floor((p.maxHp - p.hp) / 6);
+    if (p.strengthTurns > 0) total += 10;
+    if (p.magicMult && isMagicWeapon(p.weapon)) total = Math.floor(total * p.magicMult);
     return total;
   };
   const minNormalDamage = en => Math.max(1, totalAtk() - en.def);
   const maxNormalDamage = en => Math.max(1, totalAtk() - en.def + 2);
+  const maxStrengthDamage = en => Math.max(1, totalAtk() + ((p.strengthTurns || 0) > 0 ? 0 : 10) - en.def + 2);
   const minBashDamage = en => minNormalDamage(en) * 1.5;
   const minSneakDamage = en => minNormalDamage(en) * (p.vanishTurns > 0 ? 2 : 1);
   const maxIncomingHit = en => {
@@ -219,8 +223,23 @@ window.botDecisionLogic = function() {
 
   let itemToUse = bestPotion;
   
-  // Buff Potion on elites or bosses
-  if (!itemToUse && visEnemies.some(e => e.isElite || e.boss) && p.strengthTurns === 0 && carriedBuffs().length > 0) {
+  const shouldUseStrengthBuff = () => {
+      if ((p.strengthTurns || 0) > 0 || carriedBuffs().length === 0 || visEnemies.length === 0) return false;
+      if (visEnemies.some(e => e.isElite || e.boss)) return true;
+      if (adjEnemies.length >= 2 && totalIncomingMax() >= p.hp * 0.35) return true;
+      return visEnemies.some(e => {
+          let dist = Math.abs(e.x - p.x) + Math.abs(e.y - p.y);
+          if (dist > 3) return false;
+          let currentHits = Math.ceil(e.hp / maxNormalDamage(e));
+          let buffedHits = Math.ceil(e.hp / maxStrengthDamage(e));
+          let savesAttacks = currentHits >= 3 && buffedHits < currentHits;
+          let dangerousHit = maxIncomingHit(e) >= Math.max(6, p.maxHp * 0.18) || e.atk >= p.hp * 0.25;
+          return savesAttacks && (dangerousHit || G.floor >= 2 || p.hp < p.maxHp * 0.8);
+      });
+  };
+
+  // Strength is worth using before durable ordinary fights, not only elites or bosses.
+  if (!itemToUse && shouldUseStrengthBuff()) {
       itemToUse = carriedBuffs()[0];
   }
   // Detection scrolls reveal traps and secret rooms before blind exploration.
@@ -230,13 +249,30 @@ window.botDecisionLogic = function() {
   // Bomb dense melee packs, lethal adjacent clusters, or the boss once phase 2 pressure begins.
   let bombKills = adjEnemies.filter(e => e.hp <= 30).length;
   let adjacentBoss = adjEnemies.some(e => e.boss);
+  let bombRemovesPressure = adjEnemies.some(e =>
+      e.hp <= 30 &&
+      (p.hp <= totalIncomingMax() + Math.max(6, p.maxHp * 0.08) ||
+       p.hp < p.maxHp * 0.35 ||
+       maxIncomingHit(e) >= p.hp * 0.45)
+  );
   if (!itemToUse && carriedBombs().length > 0 &&
-      (adjEnemies.length >= 3 || bombKills >= 2 || (adjacentBoss && (bossPhase >= 2 || p.hp < p.maxHp * 0.7 || adjEnemies.length >= 2)))) {
+      (adjEnemies.length >= 3 ||
+       bombKills >= 2 ||
+       bombRemovesPressure ||
+       (adjEnemies.length >= 2 && totalIncomingMax() >= p.hp * 0.65 && p.hp < p.maxHp * 0.6) ||
+       (adjacentBoss && (bossPhase >= 2 || p.hp < p.maxHp * 0.7 || adjEnemies.length >= 2)))) {
       itemToUse = carriedBombs()[0];
   }
   // Teleport if surrounded and going to die without potions
+  let lethalAdjacent = adjEnemies.some(e => maxIncomingHit(e) >= p.hp);
+  let losingMelee = adjEnemies.length > 0 && p.hp <= totalIncomingMax() + Math.max(4, p.maxHp * 0.05);
+  let criticallyExposed = p.hp < p.maxHp * 0.18 && (adjEnemies.length > 0 || visEnemies.length >= 2 || (G.floor >= 3 && visEnemies.length > 0));
   if (!itemToUse && carriedTeleports().length > 0 && potions.length === 0 &&
-      ((adjEnemies.length >= 2 && p.hp <= totalIncomingMax() * 2) || (adjacentBoss && bossPhase >= 2 && p.hp < p.maxHp * 0.55))) {
+      (lethalAdjacent ||
+       losingMelee ||
+       criticallyExposed ||
+       (adjEnemies.length >= 2 && p.hp <= totalIncomingMax() * 2) ||
+       (adjacentBoss && bossPhase >= 2 && p.hp < p.maxHp * 0.55))) {
       itemToUse = carriedTeleports()[0];
   }
 
@@ -296,8 +332,9 @@ window.botDecisionLogic = function() {
     return false;
   };
   const shouldExitWithoutPotion = () => p.hp < p.maxHp * strategy.exitHp && potions.length === 0;
+  const shouldHeadForStairs = () => G.floor < FINAL_FLOOR && liveEnemies.length === 0 && hasKnownStairs() && (G.seen.size / (MAP_W * MAP_H)) >= strategy.exploreThreshold;
 
-  if (G.map[p.y][p.x] === STAIRS && (isMapCleared() || shouldExitWithoutPotion() || G.won)) {
+  if (G.map[p.y][p.x] === STAIRS && (isMapCleared() || shouldExitWithoutPotion() || shouldHeadForStairs() || G.won)) {
       return { type: 'key', val: '>' };
   }
 
@@ -460,12 +497,12 @@ window.botDecisionLogic = function() {
         let isStairs = G.map[curr.y][curr.x] === STAIRS;
         let isShopTarget = G.shops && G.shops.some(s => s.x === curr.x && s.y === curr.y && s.stock.some(usefulShopItem));
         
-        let dying = shouldExitWithoutPotion();
+        let leavingFloor = shouldExitWithoutPotion() || shouldHeadForStairs();
         
         let validTarget = false;
         let label = '';
         
-        if (targetStairsOnly || dying) {
+        if (targetStairsOnly || leavingFloor) {
              if (!targetStairsOnly && isShopTarget) { validTarget = true; label = 'path to shop'; }
              else if (isStairs) { validTarget = true; label = 'path to stairs'; }
         } else {
@@ -511,7 +548,7 @@ window.botDecisionLogic = function() {
   if (action) return action;
 
   // Final Pass: If we have no action at all, we must be fully cleared of reachable targets!
-  if (G.map[p.y][p.x] === STAIRS && (isMapCleared() || shouldExitWithoutPotion() || G.won)) {
+  if (G.map[p.y][p.x] === STAIRS && (isMapCleared() || shouldExitWithoutPotion() || shouldHeadForStairs() || G.won)) {
       return { type: 'key', val: '>', label: 'descend' };
   }
 

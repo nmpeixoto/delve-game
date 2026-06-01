@@ -142,6 +142,58 @@ test('heads to known stairs at 70 percent hp with no potion instead of exploring
   assert.strictEqual(decision.val, 'ArrowRight');
 });
 
+test('heads to known stairs after the exploration threshold instead of full-clearing leftovers', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [5, 5],
+    [6, 5],
+    [7, 5, STAIRS],
+  ]);
+  const seen = new Set(Array.from({ length: 720 }, (_, i) => i));
+  seen.add(5 * MAP_W + 5);
+  seen.add(5 * MAP_W + 6);
+  seen.add(5 * MAP_W + 7);
+  seen.delete(4 * MAP_W + 5);
+  const G = baseGame(map, {
+    player: { hp: 20, maxHp: 20 },
+    seen,
+    visible: new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]),
+    G: { floor: 2 },
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowRight');
+});
+
+test('does not rush known stairs after the exploration threshold while enemies remain', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [5, 5],
+    [6, 5],
+    [7, 5, STAIRS],
+  ]);
+  const seen = new Set(Array.from({ length: 720 }, (_, i) => i));
+  seen.add(5 * MAP_W + 5);
+  seen.add(5 * MAP_W + 6);
+  seen.add(5 * MAP_W + 7);
+  seen.add(4 * MAP_W + 5);
+  const G = baseGame(map, {
+    player: { hp: 20, maxHp: 20, atk: 4, weapon: { atk: 4 } },
+    seen,
+    visible: new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7, 4 * MAP_W + 5]),
+    enemies: [{ id: 'rat-1', name: 'Rat', x: 5, y: 4, hp: 5, maxHp: 5, atk: 2, def: 0 }],
+    G: { floor: 2 },
+  });
+
+  const decision = decide(G);
+
+  assert.notStrictEqual(decision.val, 'ArrowRight');
+});
+
 test('does not bash a range enemy while weak with no potion and known stairs', () => {
   const map = makeMap();
   setFloor(map, [
@@ -753,6 +805,28 @@ test('uses a teleportation scroll when surrounded without healing', () => {
   assert.strictEqual(decision.val, 'i');
 });
 
+test('uses a teleportation scroll against a single lethal adjacent threat without healing', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [5, 5],
+    [5, 6],
+  ]);
+  const visible = new Set([4 * MAP_W + 5, 5 * MAP_W + 5, 6 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { hp: 8, maxHp: 24, def: 1, armor: { def: 1 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'orc-1', name: 'Orc', x: 5, y: 6, hp: 40, maxHp: 40, atk: 12, def: 3 }],
+    items: [{ id: 'teleport-1', name: 'Scroll of Teleportation', type: 'scroll_teleport', carried: true }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
 test('clicks the carried teleportation scroll once the bag is open', () => {
   const map = makeMap();
   setFloor(map, [
@@ -776,6 +850,116 @@ test('clicks the carried teleportation scroll once the bag is open', () => {
 
   assert.strictEqual(decision.type, 'click');
   assert.strictEqual(decision.target, '.inv-slot[onclick*="teleport-1"]');
+});
+
+test('uses a teleportation scroll proactively when critically wounded beside a threat', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [5, 5],
+    [5, 6],
+  ]);
+  const visible = new Set([4 * MAP_W + 5, 5 * MAP_W + 5, 6 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { hp: 12, maxHp: 90, def: 4, armor: { def: 4 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'orc-1', name: 'Orc', x: 5, y: 6, hp: 40, maxHp: 40, atk: 16, def: 3 }],
+    items: [{ id: 'teleport-1', name: 'Scroll of Teleportation', type: 'scroll_teleport', carried: true }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
+test('uses a bomb when wounded and it can remove adjacent pressure', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [5, 5],
+    [5, 6],
+  ]);
+  const visible = new Set([4 * MAP_W + 5, 5 * MAP_W + 5, 6 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { hp: 12, maxHp: 60, def: 2, armor: { def: 2 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'orc-1', name: 'Orc', x: 5, y: 6, hp: 25, maxHp: 40, atk: 16, def: 3 }],
+    items: [{ id: 'bomb-1', name: 'Bomb', type: 'bomb', carried: true }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
+test('clicks the carried bomb once the bag is open to remove adjacent pressure', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [5, 5],
+    [5, 6],
+  ]);
+  const visible = new Set([4 * MAP_W + 5, 5 * MAP_W + 5, 6 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { hp: 12, maxHp: 60, def: 2, armor: { def: 2 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'orc-1', name: 'Orc', x: 5, y: 6, hp: 25, maxHp: 40, atk: 16, def: 3 }],
+    items: [{ id: 'bomb-1', name: 'Bomb', type: 'bomb', carried: true }],
+  });
+
+  const decision = decide(G, { bagOpen: true });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '.inv-slot[onclick*="bomb-1"]');
+});
+
+test('drinks a strength potion before engaging a durable visible threat', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { hp: 18, maxHp: 24, atk: 5, weapon: { atk: 4 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'orc-1', name: 'Orc', x: 7, y: 5, hp: 40, maxHp: 40, atk: 12, def: 3 }],
+    items: [{ id: 'strength-1', name: 'Potion of Giant Strength', type: 'potion_buff', buff: 'strength', carried: true }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
+test('clicks the carried strength potion once the bag is open', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { hp: 18, maxHp: 24, atk: 5, weapon: { atk: 4 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'orc-1', name: 'Orc', x: 7, y: 5, hp: 40, maxHp: 40, atk: 12, def: 3 }],
+    items: [{ id: 'strength-1', name: 'Potion of Giant Strength', type: 'potion_buff', buff: 'strength', carried: true }],
+  });
+
+  const decision = decide(G, { bagOpen: true });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '.inv-slot[onclick*="strength-1"]');
 });
 
 test('accepts a low-cost greed shrine through the live shrine overlay', () => {

@@ -131,7 +131,7 @@ async function runTest(url, name) {
     // Verify HUD
     const hp = await page.$eval('#hp-val', el => el.textContent);
     console.log(`Initial HP: ${hp}`);
-    if (hp !== '30/30') throw new Error('Initial HP is incorrect');
+    if (hp !== '32/32') throw new Error('Initial HP is incorrect');
 
     // Take screenshot
     screenshotPath = path.join(__dirname, '..', `screenshot_${name}.png`);

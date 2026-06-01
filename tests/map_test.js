@@ -125,14 +125,26 @@ test('ranger starts with a tunic and stronger bow ladder', () => {
 
   context.initGame('ranger');
 
-  assert.strictEqual(context.G.player.maxHp, 13);
+  assert.strictEqual(context.G.player.maxHp, 16);
   assert.strictEqual(context.G.player.atk, 2);
   assert.strictEqual(context.G.player.def, 1);
   assert.strictEqual(context.G.player.weapon.name, 'Shortbow');
-  assert.strictEqual(context.G.player.weapon.atk, 4);
+  assert.strictEqual(context.G.player.weapon.atk, 5);
   assert.strictEqual(context.G.player.weapon.sym, '🏹');
   assert.strictEqual(context.G.player.armor.name, 'Ranger Tunic');
   assert.strictEqual(context.G.player.armor.def, 3);
+});
+
+test('warrior starts with enough base damage for normal mode pacing', () => {
+  const context = loadMapContext();
+
+  context.initGame('warrior');
+
+  assert.strictEqual(context.G.player.maxHp, 32);
+  assert.strictEqual(context.G.player.atk, 4);
+  assert.ok(context.G.player.armor);
+  assert.strictEqual(context.G.player.armor.name, 'Chain Mail');
+  assert.strictEqual(context.G.player.armor.def, 4);
 });
 
 test('paladin starts with an iron mace and plate for sustain', () => {
@@ -176,10 +188,12 @@ test('monk starts with a gi to survive the late floor melee checks', () => {
 
   context.initGame('monk');
 
-  assert.strictEqual(context.G.player.maxHp, 22);
+  assert.strictEqual(context.G.player.maxHp, 28);
+  assert.strictEqual(context.G.player.atk, 4);
+  assert.strictEqual(context.G.player.def, 2);
   assert.ok(context.G.player.armor);
   assert.strictEqual(context.G.player.armor.name, 'Gi');
-  assert.strictEqual(context.G.player.armor.def, 3);
+  assert.strictEqual(context.G.player.armor.def, 4);
 });
 
 test('barbarian starts with furs for full-clear durability', () => {
@@ -197,19 +211,44 @@ test('barbarian starts with furs for full-clear durability', () => {
   assert.strictEqual(context.G.player.armor.def, 4);
 });
 
-test('floor 5 enemy profile reaches lich tier and a harder stat scale', () => {
+test('normal enemy profiles use the first-pass lower pressure scale', () => {
   const context = loadMapContext();
 
   assert.strictEqual(typeof context.getFloorEnemyProfile, 'function');
 
+  const floor1 = context.getFloorEnemyProfile(1);
+  const floor2 = context.getFloorEnemyProfile(2);
+  const floor3 = context.getFloorEnemyProfile(3);
   const floor4 = context.getFloorEnemyProfile(4);
   const floor5 = context.getFloorEnemyProfile(5);
 
+  assert.strictEqual(floor1.scale, 0.9);
+  assert.strictEqual(floor2.scale, 1.2);
+  assert.strictEqual(floor3.scale, 1.45);
   assert.strictEqual(floor5.tierMin, 4);
   assert.strictEqual(floor5.tierMax, 6);
   assert.strictEqual(floor4.tierMax, 4);
-  assert.strictEqual(floor4.scale, 2.0);
-  assert.strictEqual(floor5.scale, 2.4);
+  assert.strictEqual(floor4.scale, 1.7);
+  assert.strictEqual(floor5.scale, 2.05);
+});
+
+test('shop placement does not overwrite the stairs tile', () => {
+  const { createRuntime } = require('../automation/headless-balance/headless_balance');
+  const runtime = createRuntime(1001);
+
+  runtime.context.initGame('mage');
+  runtime.flushTimers();
+
+  const G = runtime.context.G;
+  const stairs = [];
+  for (let y = 0; y < G.map.length; y++) {
+    for (let x = 0; x < G.map[y].length; x++) {
+      if (G.map[y][x] === TILE.STAIRS) stairs.push({ x, y });
+    }
+  }
+
+  assert.strictEqual(stairs.length, 1);
+  assert.ok(!G.shops.some(shop => shop.x === stairs[0].x && shop.y === stairs[0].y));
 });
 
 test('spawnItem keeps data-layer filtering and supports exact coordinate spawns', () => {

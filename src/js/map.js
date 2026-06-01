@@ -93,11 +93,11 @@ function generateMap(){
 }
 
 const FLOOR_ENEMY_PROFILES = [
-  { tierMin: 0, tierMax: 1, scale: 1.0 },
-  { tierMin: 1, tierMax: 2, scale: 1.4 },
-  { tierMin: 2, tierMax: 3, scale: 1.75 },
-  { tierMin: 3, tierMax: 4, scale: 2.0 },
-  { tierMin: 4, tierMax: 6, scale: 2.4 },
+  { tierMin: 0, tierMax: 1, scale: 0.9 },
+  { tierMin: 1, tierMax: 2, scale: 1.2 },
+  { tierMin: 2, tierMax: 3, scale: 1.45 },
+  { tierMin: 3, tierMax: 4, scale: 1.7 },
+  { tierMin: 4, tierMax: 6, scale: 2.05 },
 ];
 
 function getFloorEnemyProfile(floor){
@@ -143,9 +143,9 @@ function initGame(playerClass = 'warrior', hardMode = false){
     p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:80};
     p.bestWeapon = 'Iron Mace (ATK+5)';
   } else if(playerClass === 'ranger') {
-    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:4, rarity:'common', sym:'🏹', price:50};
+    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:5, rarity:'common', sym:'🏹', price:50};
     p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
-    p.bestWeapon = 'Shortbow (ATK+4)';
+    p.bestWeapon = 'Shortbow (ATK+5)';
   } else if(playerClass === 'barbarian') {
     p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:70};
     p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'◆', price:40};
@@ -155,7 +155,7 @@ function initGame(playerClass = 'warrior', hardMode = false){
     p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
     p.bestWeapon = 'Skull Rod (ATK+5)';
   } else if(playerClass === 'monk') {
-    p.armor = {id:uid(), name:'Gi', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
+    p.armor = {id:uid(), name:'Gi', type:'armor', def:4, rarity:'common', sym:'◆', price:50};
   }
 
   G={
@@ -207,12 +207,12 @@ function buildFloor(){
 
   G.player.x=rooms[0].cx;G.player.y=rooms[0].cy;
 
-  // Place stairs in last main-path room
-  let stairsRoom = rooms[Math.min(6, rooms.length - 1)];
-  map[stairsRoom.cy][stairsRoom.cx] = TILE.STAIRS;
+  // Place stairs on the main path, but keep the room reserved from later overlays.
+  let stairsCandidates = rooms.slice(1).filter(r => r.type === 'normal');
+  let stairsRoom = stairsCandidates[Math.min(5, stairsCandidates.length - 1)] || rooms[Math.min(6, rooms.length - 1)];
 
   if(rooms.length>=5){
-    let pool = rooms.slice(1, -1).filter(r=>r.type!=='secret'&&r.type!=='treasure'&&r.type!=='crypt');
+    let pool = rooms.slice(1, -1).filter(r=>r!==stairsRoom&&r.type!=='secret'&&r.type!=='treasure'&&r.type!=='crypt');
     for (let i = pool.length - 1; i > 0; i--) {
       let j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -225,6 +225,7 @@ function buildFloor(){
       map[sr.cy][sr.cx]=TILE.SHOP;
     }
   }
+  map[stairsRoom.cy][stairsRoom.cx] = TILE.STAIRS;
 
   computeVision();
   const startVisible = new Set(G.visible);

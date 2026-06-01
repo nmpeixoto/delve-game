@@ -23,7 +23,7 @@ const WEAPONS=[
   {name:'Shadow Blade',  type:'weapon', atk:14,sym:'†', rarity:'legendary', price:260, reqClass:['rogue'], reqLvl:10, vampirism:1},
 
   // Ranger
-  {name:'Shortbow',      type:'weapon', atk:4, sym:'🏹', rarity:'common', price:50, reqClass:['ranger'], perception:1},
+  {name:'Shortbow',      type:'weapon', atk:5, sym:'🏹', rarity:'common', price:50, reqClass:['ranger'], perception:1},
   {name:'Longbow',       type:'weapon', atk:7, sym:'🏹', rarity:'rare',   price:115, reqClass:['ranger'], reqLvl:4, critChance:0.05},
   {name:'Crossbow',      type:'weapon', atk:10, sym:'🏹', rarity:'rare',   price:160, reqClass:['ranger'], reqLvl:7, critChance:0.10},
   {name:'Elven Bow',     type:'weapon', atk:14,sym:'🏹', rarity:'legendary', price:245, reqClass:['ranger'], reqLvl:10, swiftness:1},
@@ -67,7 +67,7 @@ const ARMORS=[
   {name:'Lich Shroud',   type:'armor', def:9, sym:'◆', rarity:'legendary', price:210, reqClass:['necromancer'], reqLvl:10},
 
   // Monk
-  {name:'Gi',            type:'armor', def:3, sym:'◆', rarity:'common', price:50, reqClass:['monk'], dodgeBonus:0.02},
+  {name:'Gi',            type:'armor', def:4, sym:'◆', rarity:'common', price:50, reqClass:['monk'], dodgeBonus:0.02},
   {name:'Master Gi',     type:'armor', def:6, sym:'◆', rarity:'rare',   price:120, reqClass:['monk'], reqLvl:5, dodgeBonus:0.05},
   {name:'Grandmaster Robe',type:'armor',def:11,sym:'◆', rarity:'legendary', price:245, reqClass:['monk'], reqLvl:10, dodgeBonus:0.10, swiftness:1},
 ];
