@@ -12,7 +12,7 @@ The production build is a single self-contained `dungeon.html` file. The modular
 - [Classes](#classes)
 - [Weapons](#weapons)
 - [Armor](#armor)
-- [Potions](#potions)
+- [Consumables](#consumables)
 - [Permanent Shop Upgrades](#permanent-shop-upgrades)
 - [Enemies](#enemies)
 - [Systems Reference](#systems-reference)
@@ -57,6 +57,7 @@ The production build is a single self-contained `dungeon.html` file. The modular
 | `.` or `>` | Descend stairs |
 | `I` | Open inventory |
 | `T` | Open shop |
+| `BOMB` btn | Throws a Bomb if you have one in your inventory, dealing 30 AoE damage |
 | `H` or `?` | Open help |
 | `Escape` | Close the current overlay |
 
@@ -265,15 +266,16 @@ Armor power stacks with your class base DEF. Each point of DEF reduces incoming 
 | Master Gi | +6 | Rare | 70g | Monk, Level 5 |
 | Grandmaster Robe | +11 | Legendary | 140g | Monk, Level 10 |
 
-## Potions
+## Consumables
 
-Potions are always stored in your bag. They are never consumed automatically.
+Consumables are always stored in your bag. They are never consumed automatically.
 
-| Name | Heal | Rarity | Price | Notes |
-| --- | ---: | --- | ---: | --- |
+| Name | Effect | Rarity | Price | Notes |
+| --- | --- | --- | ---: | --- |
 | Health Potion | 15 HP | Common | 15g | Bag item |
 | Greater Potion | 30 HP | Rare | 30g | Bag item |
 | Elixir of Life | 60 HP | Legendary | 60g | Bag item |
+| Bomb | Deals 30 damage to adjacent enemies | Rare | 120g | Shows a quick-action BOMB button when carried |
 
 Emergency potion prompts can offer your best potion automatically when the game predicts a fatal hit. If one potion is not enough, the prompt can chain multiple potions.
 

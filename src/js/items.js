@@ -31,7 +31,7 @@ function updateBestWeapon(weapon){
   let currentAtk=match?parseInt(match[1]):0;
   let wp = weaponPower(weapon);
   if(wp>currentAtk){
-    G.player.bestWeapon=`${weapon.name} (ATK+${wp})`;
+    G.player.bestWeapon=`${weapon.name} (ATK+${Math.floor(wp)})`;
   }
 }
 
@@ -47,11 +47,27 @@ function weaponPower(it) {
   }
   let power = it.atk || 0;
   if (G.player.class === 'mage' && it.sym === '\u2666') power += Math.floor(power / 5);
-  return power;
+  
+  let sec = 0;
+  if(it.vampirism) sec += it.vampirism * 0.1;
+  if(it.critChance) sec += it.critChance;
+  if(it.perception) sec += it.perception * 0.1;
+  if(it.swiftness) sec += it.swiftness * 0.5;
+  if(it.dodgeBonus) sec += it.dodgeBonus;
+  if(it.regen) sec += it.regen * 0.1;
+  
+  return power + sec;
 }
 
 function armorPower(it) {
-  return it ? (it.def || 0) : 0;
+  if (!it) return 0;
+  let power = it.def || 0;
+  let sec = 0;
+  if(it.dodgeBonus) sec += it.dodgeBonus;
+  if(it.perception) sec += it.perception * 0.1;
+  if(it.swiftness) sec += it.swiftness * 0.5;
+  if(it.critChance) sec += it.critChance;
+  return power + sec;
 }
 
 function getItemColorClass(it) {

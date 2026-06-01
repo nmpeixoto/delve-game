@@ -1184,8 +1184,7 @@ function render(){
         h+=`<div class="tile tile-shop" style="${s}" onclick="openShop()" ontouchend="event.preventDefault();openShop()">$</div>`;continue;
       }
       let sc=(seen&&!vis)?' tile-seen':'';
-      let extraStyle = (t===TILE.SECRET_DOOR && vis) ? 'color:#52525b;' : '';
-      h+=`<div class="tile ${(t===TILE.WALL||t===TILE.SECRET_DOOR)?'tile-wall':'tile-floor'}${sc}" style="${s}${extraStyle}">${CH[t]||' '}</div>`;
+      h+=`<div class="tile ${(t===TILE.WALL||t===TILE.SECRET_DOOR)?'tile-wall':'tile-floor'}${sc}" style="${s}">${CH[t]||' '}</div>`;
     }
   }
   mapEl.innerHTML=h;
@@ -1302,9 +1301,8 @@ function drawMinimap() {
       
       let t = G.map[y][x];
       let vis = G.visible.has(k);
-            if(t===TILE.WALL) ctx.fillStyle = vis ? '#333' : '#111';
-        else if(t===TILE.SECRET_DOOR) ctx.fillStyle = vis ? '#444' : '#111';
-        else if(t===TILE.STAIRS) ctx.fillStyle = vis ? '#4ade80' : '#225533';
+      if(t===TILE.WALL || t===TILE.SECRET_DOOR) ctx.fillStyle = vis ? '#333' : '#111';
+      else if(t===TILE.STAIRS) ctx.fillStyle = vis ? '#4ade80' : '#225533';
       else if(t===TILE.SHOP) ctx.fillStyle = vis ? '#fbbf24' : '#665511';
       else if(t===TILE.LOCKED_DOOR) ctx.fillStyle = vis ? '#f87171' : '#662222';
       else ctx.fillStyle = vis ? '#7e7ea3' : '#333344';
@@ -1859,7 +1857,7 @@ function updateBestWeapon(weapon){
   let currentAtk=match?parseInt(match[1]):0;
   let wp = weaponPower(weapon);
   if(wp>currentAtk){
-    G.player.bestWeapon=`${weapon.name} (ATK+${wp})`;
+    G.player.bestWeapon=`${weapon.name} (ATK+${Math.floor(wp)})`;
   }
 }
 
@@ -1875,11 +1873,27 @@ function weaponPower(it) {
   }
   let power = it.atk || 0;
   if (G.player.class === 'mage' && it.sym === '\u2666') power += Math.floor(power / 5);
-  return power;
+  
+  let sec = 0;
+  if(it.vampirism) sec += it.vampirism * 0.1;
+  if(it.critChance) sec += it.critChance;
+  if(it.perception) sec += it.perception * 0.1;
+  if(it.swiftness) sec += it.swiftness * 0.5;
+  if(it.dodgeBonus) sec += it.dodgeBonus;
+  if(it.regen) sec += it.regen * 0.1;
+  
+  return power + sec;
 }
 
 function armorPower(it) {
-  return it ? (it.def || 0) : 0;
+  if (!it) return 0;
+  let power = it.def || 0;
+  let sec = 0;
+  if(it.dodgeBonus) sec += it.dodgeBonus;
+  if(it.perception) sec += it.perception * 0.1;
+  if(it.swiftness) sec += it.swiftness * 0.5;
+  if(it.critChance) sec += it.critChance;
+  return power + sec;
 }
 
 function getItemColorClass(it) {
@@ -3227,6 +3241,7 @@ function sellItem(id, equippedSlot){
   floatText(`+${sellPrice}💰`, G.player.x, G.player.y, '#fbbf24');
   SFX.sell();
   document.getElementById('shop-gold-val').textContent=G.player.gold;
+  if(typeof checkBagUpgrades === 'function') checkBagUpgrades();
   updateHUD();
   updateActBtns();
   if(typeof updateInvDrawer === 'function') updateInvDrawer();
@@ -3277,6 +3292,7 @@ function sellWeakerGear(){
     floatText(`+${totalGold}💰`, G.player.x, G.player.y, '#fbbf24');
     SFX.sell();
     document.getElementById('shop-gold-val').textContent=G.player.gold;
+    if(typeof checkBagUpgrades === 'function') checkBagUpgrades();
     updateHUD();
     updateActBtns();
     if(typeof updateInvDrawer === 'function') updateInvDrawer();

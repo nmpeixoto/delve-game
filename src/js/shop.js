@@ -237,6 +237,7 @@ function sellItem(id, equippedSlot){
   floatText(`+${sellPrice}💰`, G.player.x, G.player.y, '#fbbf24');
   SFX.sell();
   document.getElementById('shop-gold-val').textContent=G.player.gold;
+  if(typeof checkBagUpgrades === 'function') checkBagUpgrades();
   updateHUD();
   updateActBtns();
   if(typeof updateInvDrawer === 'function') updateInvDrawer();
@@ -287,6 +288,7 @@ function sellWeakerGear(){
     floatText(`+${totalGold}💰`, G.player.x, G.player.y, '#fbbf24');
     SFX.sell();
     document.getElementById('shop-gold-val').textContent=G.player.gold;
+    if(typeof checkBagUpgrades === 'function') checkBagUpgrades();
     updateHUD();
     updateActBtns();
     if(typeof updateInvDrawer === 'function') updateInvDrawer();
