@@ -21,6 +21,24 @@ function checkCellItems(nx, ny) {
   }
 }
 
+function trapDisarmReward(){
+  let floor = Math.max(1, Number.isFinite(G.floor) ? G.floor : 1);
+  return {
+    xp: 2 + floor * 2,
+    gold: rr(5 + floor * 2, 10 + floor * 4),
+  };
+}
+
+function grantTrapDisarmReward(x, y){
+  let reward = trapDisarmReward();
+  G.player.xp = round1((G.player.xp || 0) + reward.xp);
+  G.player.gold = round1((G.player.gold || 0) + reward.gold);
+  addLog(`Trap disarmed! +${fmt1(reward.xp)} XP +${fmt1(reward.gold)}💰`, 'log-info');
+  floatText(`+${fmt1(reward.xp)} XP`, x, y, '#c084fc');
+  floatText(`+${fmt1(reward.gold)}💰`, x, y, '#fbbf24');
+  checkLevelUp();
+}
+
 function move(dx,dy){
   if(G.gameOver||G.won||!G.map)return;
   if(G.player.rootedTurns > 0) { consumeRootedTurn(); return; }
@@ -69,20 +87,13 @@ function move(dx,dy){
       let tIdx = G.traps.findIndex(t => t.x===nx && t.y===ny);
       if(tIdx > -1) G.traps.splice(tIdx, 1);
       
-      if(ch(0.5)) {
-        let lootGold = rr(3, 10);
-        G.player.gold += lootGold;
-        addLog(`You successfully disarmed the trap and salvaged ${lootGold} gold!`, 'log-info');
-        floatText(`+${lootGold}💰`, nx, ny, '#fbbf24');
+      grantTrapDisarmReward(nx, ny);
+      if(ch(0.2)) {
+        spawnItem({x:nx, y:ny}, null, false);
+        addLog('You found an item hidden in the trap mechanism!', 'log-info');
+        floatText('+ITEM', nx, ny, '#a78bfa');
       } else {
-        addLog('You successfully disarmed the trap!', 'log-info');
-        if(ch(0.2)) {
-          spawnItem({x:nx, y:ny}, null, false);
-          addLog('You found an item hidden in the trap mechanism!', 'log-info');
-          floatText('+ITEM', nx, ny, '#a78bfa');
-        } else {
-          floatText('DISARMED', nx, ny, '#4ade80');
-        }
+        floatText('DISARMED', nx, ny, '#4ade80');
       }
       SFX.click();
     } else {
@@ -97,9 +108,9 @@ function move(dx,dy){
         if(trap.type === 'spike') {
           let dmg = Math.floor(G.player.maxHp * 0.15) + 2;
           offerEmergencyPotion(dmg, () => {
-            G.player.hp -= dmg;
-            addLog(`Spike trap triggered! Took ${dmg} damage.`, 'log-combat');
-            floatText(`-${dmg}`, nx, ny, '#f87171');
+            G.player.hp = round1(G.player.hp - dmg);
+            addLog(`Spike trap triggered! Took ${fmt1(dmg)} damage.`, 'log-combat');
+            floatText(`-${fmt1(dmg)}`, nx, ny, '#f87171');
             flashDamage();
             SFX.hit();
             if(G.player.hp <= 0) { G.gameOver = true; showDeath(); return; }
@@ -140,9 +151,9 @@ function move(dx,dy){
       if(trap.type === 'spike') {
         let dmg = Math.floor(G.player.maxHp * 0.15) + 2;
         offerEmergencyPotion(dmg, () => {
-          G.player.hp -= dmg;
-          addLog(`You stepped on a spike trap! Took ${dmg} damage.`, 'log-combat');
-          floatText(`-${dmg}`, nx, ny, '#f87171');
+          G.player.hp = round1(G.player.hp - dmg);
+          addLog(`You stepped on a spike trap! Took ${fmt1(dmg)} damage.`, 'log-combat');
+          floatText(`-${fmt1(dmg)}`, nx, ny, '#f87171');
           flashDamage();
           SFX.hit();
           if(G.player.hp <= 0) { G.gameOver = true; showDeath(); return; }

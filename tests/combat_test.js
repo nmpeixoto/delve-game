@@ -71,6 +71,20 @@ function loadCombat(overrides = {}) {
     gdef: () => 1,
     rand: () => 0,
     ch: () => false,
+    round1: value => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 0;
+      return Math.round((n + Number.EPSILON) * 10) / 10;
+    },
+    fmt1: value => {
+      let n = context.round1(value);
+      if (Object.is(n, -0)) n = 0;
+      return Number.isInteger(n) ? `${n}` : n.toFixed(1);
+    },
+    fmtPct: value => `${context.fmt1(Number(value) * 100)}%`,
+    addDamageDealt: amount => {
+      context.G.player.damageDealt = context.round1((context.G.player.damageDealt || 0) + amount);
+    },
     canAct: () => true,
     SFX: {
       hit: () => {},
@@ -139,6 +153,30 @@ test('attackEnemy ignores enemies already marked dying', () => {
   assert.strictEqual(context.G.player.gold, 0);
   assert.strictEqual(context.G.player.damageDealt, 0);
   assert.strictEqual(context.G.enemies.length, 1);
+});
+
+test('attackEnemy stores cumulative damage rounded to one decimal place', () => {
+  const context = loadCombat({
+    gatk: () => 2.1,
+  });
+  context.G.player.damageDealt = 496.1;
+  context.G.enemies = [{
+    id: 'goblin-1',
+    name: 'Goblin',
+    hp: 999,
+    maxHp: 999,
+    atk: 0,
+    def: 0,
+    xp: 6,
+    gold: 4,
+    x: 6,
+    y: 5,
+    stunnedTurns: 0,
+  }];
+
+  context.attackEnemy('goblin-1', 1, { skipCounter: true });
+
+  assert.strictEqual(context.G.player.damageDealt, 498.2);
 });
 
 test('paladin smite prevents the target immediate counterattack', () => {
@@ -403,9 +441,292 @@ test('necromancer raise dead turns the marked enemy into a temporary pet when it
   assert.strictEqual(pet.name, 'Pet Marked Goblin');
   assert.strictEqual(pet.hp, 5);
   assert.strictEqual(pet.maxHp, 5);
-  assert.strictEqual(pet.lifespanTurns, 24);
+  assert.strictEqual(pet.lifespanTurns, 25);
   assert.strictEqual(pet.dying, false);
   assert.strictEqual(distant.hp, 20);
+});
+
+test('necromancer raise dead turns destroyed bones into a stable pet skeleton', () => {
+  const context = loadCombat({
+    setTimeout: fn => {
+      fn();
+      return 1;
+    },
+  });
+  context.G.player.class = 'necromancer';
+  context.G.player.hp = 40;
+  context.G.player.maxHp = 40;
+  context.G.visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6]);
+  context.G.seen = new Set([5 * MAP_W + 5, 5 * MAP_W + 6]);
+  context.G.enemies = [{
+    id: 'skeleton',
+    name: 'Skeleton',
+    sym: 's',
+    hp: 1,
+    maxHp: 25,
+    atk: 0,
+    def: 0,
+    xp: 10,
+    gold: 6,
+    color: '#e2e8f0',
+    revive: true,
+    x: 6,
+    y: 5,
+    stunnedTurns: 0,
+    raiseCorpseTarget: true,
+    raiseCorpseTurns: 3,
+  }];
+
+  context.attackEnemy('skeleton');
+
+  const bones = context.G.enemies.find(enemy => enemy.id === 'skeleton');
+  assert.strictEqual(bones.name, 'Bones');
+  assert.strictEqual(bones.isPet, undefined);
+  assert.strictEqual(bones.raiseCorpseTarget, true);
+
+  context.attackEnemy('skeleton');
+
+  const pet = context.G.enemies.find(enemy => enemy.id === 'skeleton');
+  assert.strictEqual(pet.isPet, true);
+  assert.strictEqual(pet.name, 'Pet Skeleton');
+  assert.strictEqual(pet.sym, 's');
+  assert.strictEqual(pet.color, '#a78bfa');
+  assert.strictEqual(pet.revive, false);
+  assert.strictEqual(pet.reviveTurns, 0);
+  assert.strictEqual(pet.lifespanTurns, 25);
+  assert.strictEqual(pet.dying, false);
+});
+
+test('necromancer raise dead still works when the marked enemy dies during enemy processing', () => {
+  let queuedDeathFlush = null;
+  const context = loadCombat({
+    setTimeout: fn => {
+      queuedDeathFlush = fn;
+      return 1;
+    },
+    clearTimeout: () => {},
+  });
+  context.G.player.class = 'necromancer';
+  context.G.visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  context.G.seen = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  context.G.enemies = [
+    {
+      id: 'pet',
+      name: 'Pet Skeleton',
+      hp: 5,
+      maxHp: 5,
+      atk: 10,
+      def: 0,
+      x: 6,
+      y: 5,
+      isPet: true,
+      lifespanTurns: 10,
+      stunnedTurns: 0,
+    },
+    {
+      id: 'marked',
+      name: 'Marked Goblin',
+      hp: 1,
+      maxHp: 10,
+      atk: 0,
+      def: 0,
+      xp: 6,
+      gold: 4,
+      x: 7,
+      y: 5,
+      stunnedTurns: 0,
+      raiseCorpseTarget: true,
+      raiseCorpseTurns: 1,
+    },
+  ];
+
+  context.advanceTurn();
+  assert.strictEqual(typeof queuedDeathFlush, 'function');
+  queuedDeathFlush();
+
+  const raised = context.G.enemies.find(enemy => enemy.id === 'marked');
+  assert.strictEqual(raised.isPet, true);
+  assert.strictEqual(raised.name, 'Pet Marked Goblin');
+  assert.strictEqual(raised.dying, false);
+});
+
+test('raised pets attack visible hostile enemies instead of the player', () => {
+  const context = loadCombat();
+  context.G.player.hp = 20;
+  context.G.visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  context.G.enemies = [
+    {
+      id: 'pet',
+      name: 'Pet Goblin',
+      hp: 5,
+      maxHp: 5,
+      atk: 4,
+      def: 0,
+      x: 6,
+      y: 5,
+      isPet: true,
+      lifespanTurns: 10,
+      stunnedTurns: 0,
+    },
+    {
+      id: 'hostile',
+      name: 'Hostile Goblin',
+      hp: 20,
+      maxHp: 20,
+      atk: 0,
+      def: 0,
+      x: 7,
+      y: 5,
+      stunnedTurns: 0,
+    },
+  ];
+
+  context.advanceTurn();
+
+  const hostile = context.G.enemies.find(enemy => enemy.id === 'hostile');
+  assert.strictEqual(hostile.hp, 16);
+  assert.strictEqual(context.G.player.hp, 20);
+});
+
+test('hostile enemies can target raised pets before the player', () => {
+  const context = loadCombat();
+  context.G.player.hp = 20;
+  context.G.visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  context.G.enemies = [
+    {
+      id: 'hostile',
+      name: 'Hostile Goblin',
+      hp: 20,
+      maxHp: 20,
+      atk: 5,
+      def: 0,
+      x: 7,
+      y: 5,
+      stunnedTurns: 0,
+    },
+    {
+      id: 'pet',
+      name: 'Pet Goblin',
+      hp: 20,
+      maxHp: 20,
+      atk: 0,
+      def: 0,
+      x: 6,
+      y: 5,
+      isPet: true,
+      lifespanTurns: 10,
+      stunnedTurns: 0,
+    },
+  ];
+
+  context.advanceTurn();
+
+  const pet = context.G.enemies.find(enemy => enemy.id === 'pet');
+  assert.strictEqual(pet.hp, 15);
+  assert.strictEqual(context.G.player.hp, 20);
+});
+
+test('raised pets follow then hold near the player when no hostile is visible', () => {
+  const context = loadCombat();
+  context.G.player.x = 5;
+  context.G.player.y = 5;
+  context.G.player.hp = 20;
+  context.G.visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 8]);
+  context.G.enemies = [{
+    id: 'pet',
+    name: 'Pet Goblin',
+    hp: 5,
+    maxHp: 5,
+    atk: 4,
+    def: 0,
+    x: 8,
+    y: 5,
+    isPet: true,
+    lifespanTurns: 10,
+    stunnedTurns: 0,
+  }];
+
+  context.advanceTurn();
+
+  const pet = context.G.enemies[0];
+  assert.strictEqual(pet.x, 7);
+  assert.strictEqual(pet.y, 5);
+  assert.strictEqual(context.G.player.hp, 20);
+
+  context.advanceTurn();
+
+  assert.strictEqual(pet.x, 7);
+  assert.strictEqual(pet.y, 5);
+  assert.strictEqual(context.G.player.hp, 20);
+});
+
+test('players swap positions with adjacent raised pets instead of attacking them', () => {
+  const context = loadCombat();
+  context.G.player.x = 5;
+  context.G.player.y = 5;
+  context.G.visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6]);
+  context.G.enemies = [{
+    id: 'pet',
+    name: 'Pet Goblin',
+    hp: 5,
+    maxHp: 5,
+    atk: 4,
+    def: 0,
+    x: 6,
+    y: 5,
+    isPet: true,
+    lifespanTurns: 10,
+    stunnedTurns: 0,
+  }];
+
+  context.tileAttack('pet');
+
+  const pet = context.G.enemies[0];
+  assert.strictEqual(context.G.player.x, 6);
+  assert.strictEqual(context.G.player.y, 5);
+  assert.strictEqual(pet.x, 5);
+  assert.strictEqual(pet.y, 5);
+  assert.strictEqual(pet.hp, 5);
+});
+
+test('raised pets crumble once and leave play when their lifespan expires', () => {
+  let queuedDeathFlush = null;
+  const logs = [];
+  const context = loadCombat({
+    addLog: msg => logs.push(msg),
+    setTimeout: fn => {
+      queuedDeathFlush = fn;
+      return 1;
+    },
+    clearTimeout: () => {},
+  });
+  context.G.player.hp = 20;
+  context.G.visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 7]);
+  context.G.enemies = [{
+    id: 'pet',
+    name: 'Pet Goblin',
+    hp: 5,
+    maxHp: 5,
+    atk: 0,
+    def: 0,
+    x: 7,
+    y: 5,
+    isPet: true,
+    lifespanTurns: 1,
+    stunnedTurns: 0,
+  }];
+
+  context.advanceTurn();
+
+  const pet = context.G.enemies[0];
+  assert.strictEqual(pet.dying, true);
+  assert.strictEqual(logs.filter(msg => msg.includes('crumbled to dust')).length, 1);
+  assert.strictEqual(typeof queuedDeathFlush, 'function');
+
+  queuedDeathFlush();
+
+  assert.strictEqual(context.G.enemies.some(enemy => enemy.id === 'pet'), false);
+  assert.strictEqual(context.G.player.hp, 20);
 });
 
 test('monk flurry leaves the player rooted for the next movement attempt', () => {
@@ -803,6 +1124,15 @@ function loadItems(overrides = {}) {
     },
     SFX: { pickup: () => {} },
     addLog: () => {},
+    round1: value => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 0;
+      return Math.round((n + Number.EPSILON) * 10) / 10;
+    },
+    fmt1: value => {
+      const n = Math.round((Number(value) + Number.EPSILON) * 10) / 10;
+      return Number.isInteger(n) ? `${n}` : n.toFixed(1);
+    },
     ...overrides,
   };
   vm.createContext(context);
@@ -1006,6 +1336,16 @@ function loadEmergency(overrides = {}) {
     addLog: () => {},
     floatText: () => {},
     updateHUD: () => {},
+    round1: value => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 0;
+      return Math.round((n + Number.EPSILON) * 10) / 10;
+    },
+    fmt1: value => {
+      let n = context.round1(value);
+      if (Object.is(n, -0)) n = 0;
+      return Number.isInteger(n) ? `${n}` : n.toFixed(1);
+    },
     ...overrides,
   };
   context.elements = elements;

@@ -27,11 +27,11 @@ function pickupItem(id, opts={}){
 
 function updateBestWeapon(weapon){
   let current=G.player.bestWeapon;
-  let match=current.match(/ATK\+(\d+)/);
-  let currentAtk=match?parseInt(match[1]):0;
+  let match=current.match(/ATK\+(\d+(?:\.\d)?)/);
+  let currentAtk=match?parseFloat(match[1]):0;
   let wp = weaponPower(weapon);
   if(wp>currentAtk){
-    G.player.bestWeapon=`${weapon.name} (ATK+${Math.floor(wp)})`;
+    G.player.bestWeapon=`${weapon.name} (ATK+${fmt1(wp)})`;
   }
 }
 
@@ -219,9 +219,9 @@ function useItem(id){
       return;
     }
     let h=Math.min(it.heal,G.player.maxHp-G.player.hp);
-    G.player.hp+=h;
-    addLog(`Drank ${it.name}: +${h} HP`,'log-item');
-    floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
+    G.player.hp=round1(G.player.hp+h);
+    addLog(`Drank ${it.name}: +${fmt1(h)} HP`,'log-item');
+    floatText(`+${fmt1(h)} HP`,G.player.x,G.player.y,'#4ade80');
     let idx = G.items.findIndex(i=>i.id===id);
     if(idx > -1) G.items.splice(idx,1);
     advanceTurn();closeInv();
@@ -250,8 +250,8 @@ function useItem(id){
       for(let x = G.player.x - 1; x <= G.player.x + 1; x++){
         let en = G.enemies.find(e => e.x === x && e.y === y && !e.dying);
         if(en){
-          en.hp -= 30;
-          floatText('-30', en.x, en.y, '#f87171');
+          en.hp = round1(en.hp - 30);
+          floatText(`-${fmt1(30)}`, en.x, en.y, '#f87171');
           if(en.hp <= 0) {
             killEnemy(en, true);
             killed++;
@@ -334,8 +334,8 @@ function useItem(id){
       for(let x = G.player.x - 1; x <= G.player.x + 1; x++){
         let en = G.enemies.find(e => e.x === x && e.y === y && !e.dying);
         if(en){
-          en.hp -= 30;
-          floatText('-30', en.x, en.y, '#f87171');
+          en.hp = round1(en.hp - 30);
+          floatText(`-${fmt1(30)}`, en.x, en.y, '#f87171');
           if(en.hp <= 0) {
             killEnemy(en, true);
             killed++;
@@ -448,7 +448,7 @@ function descend(){
   G.floor++;
   if(G.floor>FLOORS){G.won=true;showVictory();return;}
   if(typeof flushDeathBatch === 'function') flushDeathBatch();
-  G.player.hp=Math.min(G.player.maxHp,G.player.hp+10);
+  G.player.hp=round1(Math.min(G.player.maxHp,G.player.hp+10));
   G.player.poisonedTurns=0;
   buildFloor();
 }

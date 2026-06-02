@@ -49,14 +49,14 @@ function selectClass(id) {
     <div class="class-title">${c.name}</div>
     <div class="class-tagline">${c.tagline}</div>
     <div class="class-stat-box">
-      <div class="c-stat"><div class="c-stat-lbl">HP</div><div class="c-stat-val" style="color:var(--red)">${c.hp}</div></div>
-      <div class="c-stat"><div class="c-stat-lbl">ATK</div><div class="c-stat-val" style="color:var(--orange)">${c.atk}</div></div>
-      <div class="c-stat"><div class="c-stat-lbl">DEF</div><div class="c-stat-val" style="color:var(--blue)">${c.def}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">HP</div><div class="c-stat-val" style="color:var(--red)">${fmt1(c.hp)}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">ATK</div><div class="c-stat-val" style="color:var(--orange)">${fmt1(c.atk)}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">DEF</div><div class="c-stat-val" style="color:var(--blue)">${fmt1(c.def)}</div></div>
     </div>
     <div class="class-stat-box" style="margin-top:8px;">
-      <div class="c-stat"><div class="c-stat-lbl">PERC</div><div class="c-stat-val" style="color:var(--green)">${per}</div></div>
-      <div class="c-stat"><div class="c-stat-lbl">CRIT</div><div class="c-stat-val" style="color:#fbbf24">${Math.round(crit*100)}%</div></div>
-      <div class="c-stat"><div class="c-stat-lbl">DODGE</div><div class="c-stat-val" style="color:#a78bfa">${Math.round(dodge*100)}%</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">PERC</div><div class="c-stat-val" style="color:var(--green)">${fmt1(per)}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">CRIT</div><div class="c-stat-val" style="color:#fbbf24">${fmtPct(crit)}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">DODGE</div><div class="c-stat-val" style="color:#a78bfa">${fmtPct(dodge)}</div></div>
     </div>
     <div class="c-section">
       <div class="c-sec-title">STARTING GEAR</div>
@@ -101,9 +101,9 @@ function showDeath(){
     <div class="stats-list">
       Level: <span>${p.lvl}</span><br>
       Kills: <span>${p.kills}</span><br>
-      Damage dealt: <span>${p.damageDealt}</span><br>
+      Damage dealt: <span>${fmt1(p.damageDealt)}</span><br>
       Best weapon: <span>${p.bestWeapon}</span><br>
-      Gold earned: <span>${p.gold}💰</span><br>
+      Gold earned: <span>${fmt1(p.gold)}💰</span><br>
       Floors: <span>${G.floor}</span><br>
       Turns: <span>${G.turn}</span>
     </div>
@@ -124,14 +124,14 @@ function showVictory(){
     <div class="stats-list">
       Level: <span>${p.lvl}</span><br>
       Kills: <span>${p.kills}</span><br>
-      Damage dealt: <span>${p.damageDealt}</span><br>
+      Damage dealt: <span>${fmt1(p.damageDealt)}</span><br>
       Best weapon: <span>${p.bestWeapon}</span><br>
-      Gold: <span>${p.gold}💰</span><br>
+      Gold: <span>${fmt1(p.gold)}💰</span><br>
       Turns: <span>${G.turn}</span>
     </div>
     <div class="stats-list" style="margin-top:10px; border-top:1px dashed var(--dim); padding-top:10px;">
       Base Score (Flr×Kills×Lvl): <span>${baseScore}</span><br>
-      Difficulty Multiplier: <span>${diffMult}x</span><br>
+      Difficulty Multiplier: <span>${fmt1(diffMult)}x</span><br>
       <strong style="color:var(--gold);font-size:1.1em;">Final Score: ${score}</strong>
     </div>
     <button class="btn btn-gold" onclick="this.closest('.overlay').remove();openClassSelect()" style="margin-top:15px;">CHOOSE CLASS</button>

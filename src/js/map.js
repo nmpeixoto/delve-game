@@ -42,52 +42,77 @@ function generateMap(){
   if(pool.length > 1) pool[1].type = 'crypt';
   if(pool.length > 2) pool[2].type = 'shrine';
 
-  for(let i=0; i<3; i++) {
-    let isTreasure = (i === 0);
-    let sw = rr(3, 4), sh = rr(3, 4);
-    let sx = rr(2, MAP_W-sw-2), sy = rr(2, MAP_H-sh-2);
-    let ok = true;
+  const canPlaceHiddenRoom = (sx, sy, sw, sh) => {
+    if(sx<2||sy<2||sx+sw>=MAP_W-2||sy+sh>=MAP_H-2) return false;
     for(let y=sy-1; y<=sy+sh; y++) {
       for(let x=sx-1; x<=sx+sw; x++) {
-        if(map[y][x] !== TILE.WALL) ok = false;
+        if(map[y][x] !== TILE.WALL) return false;
       }
     }
-    if(ok) {
-      let connected = false;
-      for(let r=2; r<6 && !connected; r++) {
-        for(let y=sy-r; y<=sy+sh+r-1; y++) {
-          for(let x=sx-r; x<=sx+sw+r-1; x++) {
-            if(y>0&&y<MAP_H-1&&x>0&&x<MAP_W-1 && map[y][x] === TILE.FLOOR) {
-              directTunnel(sx+Math.floor(sw/2), sy+Math.floor(sh/2), x, y);
-              connected = true;
-              break;
-            }
-          }
-          if(connected) break;
+    return true;
+  };
+
+  const findHiddenConnection = (sx, sy, sw, sh) => {
+    for(let r=2; r<7; r++) {
+      for(let y=sy-r; y<=sy+sh+r-1; y++) {
+        for(let x=sx-r; x<=sx+sw+r-1; x++) {
+          if(y>0&&y<MAP_H-1&&x>0&&x<MAP_W-1 && map[y][x] === TILE.FLOOR) return {x,y};
         }
-      }
-      if(connected) {
-        for(let ry=sy;ry<sy+sh;ry++) for(let rx=sx;rx<sx+sw;rx++) map[ry][rx]=TILE.FLOOR;
-        let doorTile = isTreasure ? TILE.LOCKED_DOOR : TILE.SECRET_DOOR;
-        let potentialDoors = [];
-        for(let y=sy-1; y<=sy+sh; y++) {
-          for(let x=sx-1; x<=sx+sw; x++) {
-            if((x===sx-1 || x===sx+sw || y===sy-1 || y===sy+sh) && map[y][x] === TILE.FLOOR) {
-              potentialDoors.push({x,y});
-            }
-          }
-        }
-        if(potentialDoors.length > 0) {
-          let doorIdx = Math.floor(Math.random() * potentialDoors.length);
-          for(let i=0; i<potentialDoors.length; i++) {
-            let pd = potentialDoors[i];
-            map[pd.y][pd.x] = (i === doorIdx) ? doorTile : TILE.WALL;
-          }
-        }
-        rooms.splice(rooms.length-1, 0, {x:sx, y:sy, w:sw, h:sh, cx:sx+Math.floor(sw/2), cy:sy+Math.floor(sh/2), type: isTreasure ? 'treasure' : 'secret'});
       }
     }
-  }
+    return null;
+  };
+
+  const carveHiddenRoom = (type, sx, sy, sw, sh, connection) => {
+    directTunnel(sx+Math.floor(sw/2), sy+Math.floor(sh/2), connection.x, connection.y);
+    for(let ry=sy;ry<sy+sh;ry++) for(let rx=sx;rx<sx+sw;rx++) map[ry][rx]=TILE.FLOOR;
+    let doorTile = type === 'treasure' ? TILE.LOCKED_DOOR : TILE.SECRET_DOOR;
+    let potentialDoors = [];
+    for(let y=sy-1; y<=sy+sh; y++) {
+      for(let x=sx-1; x<=sx+sw; x++) {
+        if((x===sx-1 || x===sx+sw || y===sy-1 || y===sy+sh) && map[y][x] === TILE.FLOOR) {
+          potentialDoors.push({x,y});
+        }
+      }
+    }
+    if(!potentialDoors.length) return false;
+    let doorIdx = Math.floor(Math.random() * potentialDoors.length);
+    for(let i=0; i<potentialDoors.length; i++) {
+      let pd = potentialDoors[i];
+      map[pd.y][pd.x] = (i === doorIdx) ? doorTile : TILE.WALL;
+    }
+    rooms.splice(rooms.length-1, 0, {x:sx, y:sy, w:sw, h:sh, cx:sx+Math.floor(sw/2), cy:sy+Math.floor(sh/2), type});
+    return true;
+  };
+
+  const tryPlaceHiddenRoom = (type, sx, sy, sw, sh) => {
+    if(!canPlaceHiddenRoom(sx, sy, sw, sh)) return false;
+    let connection = findHiddenConnection(sx, sy, sw, sh);
+    if(!connection) return false;
+    return carveHiddenRoom(type, sx, sy, sw, sh, connection);
+  };
+
+  const addHiddenRoom = (type) => {
+    for(let attempt=0; attempt<120; attempt++) {
+      let sw = rr(3, 4), sh = rr(3, 4);
+      let sx = rr(2, MAP_W-sw-2), sy = rr(2, MAP_H-sh-2);
+      if(tryPlaceHiddenRoom(type, sx, sy, sw, sh)) return true;
+    }
+    for(let sh=3; sh<=4; sh++) {
+      for(let sw=3; sw<=4; sw++) {
+        for(let sy=2; sy<MAP_H-sh-2; sy++) {
+          for(let sx=2; sx<MAP_W-sw-2; sx++) {
+            if(tryPlaceHiddenRoom(type, sx, sy, sw, sh)) return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
+  addHiddenRoom('treasure');
+  addHiddenRoom('secret');
+  addHiddenRoom('secret');
 
   return{map,rooms};
 }
@@ -234,7 +259,7 @@ function buildFloor(){
   let stairsRoom = stairsCandidates[getStairsCandidateOffset(G.floor, G.hardMode, stairsCandidates.length)] || rooms[Math.min(6, rooms.length - 1)];
 
   if(rooms.length>=5){
-    let pool = rooms.slice(1, -1).filter(r=>r!==stairsRoom&&r.type!=='secret'&&r.type!=='treasure'&&r.type!=='crypt');
+    let pool = rooms.slice(1, -1).filter(r=>r!==stairsRoom&&r.type==='normal');
     for (let i = pool.length - 1; i > 0; i--) {
       let j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];

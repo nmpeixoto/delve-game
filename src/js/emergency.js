@@ -24,7 +24,7 @@ function incomingDamageMax(enemy){
 
 function checkEmergencyPotion(enemy, dmg, afterFn){
   // Max possible next hit from this enemy
-  let maxNextHit=Math.max(dmg, incomingDamageMax(enemy));
+  let maxNextHit=round1(Math.max(dmg, incomingDamageMax(enemy)));
   // Would that kill us?
   if(G.player.hp-maxNextHit>0){
     afterFn(); return; // safe — just proceed
@@ -44,14 +44,14 @@ function checkEmergencyPotion(enemy, dmg, afterFn){
   G.pendingHit={dmg, afterFn, potionChain:chain};
 
   // Build modal content
-  let msg=`<strong style="color:var(--red)">${enemy.name}</strong> could deal up to <strong style="color:var(--orange)">${maxNextHit} damage</strong>. You have <strong style="color:var(--red)">${G.player.hp} HP</strong>.`;
+  let msg=`<strong style="color:var(--red)">${enemy.name}</strong> could deal up to <strong style="color:var(--orange)">${fmt1(maxNextHit)} damage</strong>. You have <strong style="color:var(--red)">${fmt1(G.player.hp)} HP</strong>.`;
   document.getElementById('emergency-msg').innerHTML=msg;
 
   let ph='';
   chain.forEach(p=>{
     ph+=`<div class="emergency-potion-row">
       <span class="emergency-potion-name">! ${p.name}</span>
-      <span class="emergency-potion-heal">+${p.heal} HP</span>
+      <span class="emergency-potion-heal">+${fmt1(p.heal)} HP</span>
     </div>`;
   });
   if(!willSurvive){
@@ -64,7 +64,7 @@ function checkEmergencyPotion(enemy, dmg, afterFn){
 }
 
 function offerEmergencyPotion(dmg, afterFn){
-  let atk=Math.max(1, dmg + gdef() - 2);
+  let atk=round1(Math.max(1, dmg + gdef() - 2));
   checkEmergencyPotion({name:'Incoming hit', atk}, dmg, afterFn);
 }
 
@@ -78,9 +78,9 @@ function resolveEmergency(drink){
   if(drink && potionChain.length){
     potionChain.forEach(p=>{
       let heal=Math.min(p.heal, G.player.maxHp-G.player.hp);
-      G.player.hp+=heal;
-      addLog(`Drank ${p.name}: +${heal} HP`,'log-item');
-      floatText(`+${heal} HP`,G.player.x,G.player.y,'#4ade80');
+      G.player.hp=round1(G.player.hp+heal);
+      addLog(`Drank ${p.name}: +${fmt1(heal)} HP`,'log-item');
+      floatText(`+${fmt1(heal)} HP`,G.player.x,G.player.y,'#4ade80');
       G.items=G.items.filter(i=>i.id!==p.id);
     });
     updateHUD();

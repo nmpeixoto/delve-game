@@ -96,7 +96,7 @@ function closeShop(){
 }
 
 function renderShop(){
-  document.getElementById('shop-gold-val').textContent=G.player.gold;
+  document.getElementById('shop-gold-val').textContent=fmt1(G.player.gold);
   let h='';
   if(!G.currentShop) {
     document.getElementById('shop-items').innerHTML='';
@@ -115,7 +115,7 @@ function renderShop(){
           <div class="shop-item-name ${colorCls}">${item.sym} ${item.name}${item.sold?' (SOLD)':''}</div>
         <div class="shop-item-desc">${desc} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
       </div>
-      <div class="shop-item-price${canAfford?'':' cant-afford'}">💰${item.price}</div>
+      <div class="shop-item-price${canAfford?'':' cant-afford'}">💰${fmt1(item.price)}</div>
     </div>`;
   });
   document.getElementById('shop-items').innerHTML=h;
@@ -198,7 +198,7 @@ function renderSellPanel(){
           <div class="sell-item-name ${colorCls}">${item.sym} ${item.name}${equippedTag}${countTag}</div>
           <div class="sell-item-desc">${iDesc(item)} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
         </div>
-        <div class="sell-item-price">+${sellPrice}💰</div>
+        <div class="sell-item-price">+${fmt1(sellPrice)}💰</div>
       </div>`;
     });
   }
@@ -236,7 +236,7 @@ function sellItem(id, equippedSlot){
   addLog(`Sold ${item.name} for ${sellPrice}💰`, 'log-shop');
   floatText(`+${sellPrice}💰`, G.player.x, G.player.y, '#fbbf24');
   SFX.sell();
-  document.getElementById('shop-gold-val').textContent=G.player.gold;
+  document.getElementById('shop-gold-val').textContent=fmt1(G.player.gold);
   if(typeof checkBagUpgrades === 'function') checkBagUpgrades();
   updateHUD();
   updateActBtns();
@@ -287,7 +287,7 @@ function sellWeakerGear(){
     addLog(`Auto-sold ${toSell.length} unwanted gear for ${totalGold}💰`, 'log-shop');
     floatText(`+${totalGold}💰`, G.player.x, G.player.y, '#fbbf24');
     SFX.sell();
-    document.getElementById('shop-gold-val').textContent=G.player.gold;
+    document.getElementById('shop-gold-val').textContent=fmt1(G.player.gold);
     if(typeof checkBagUpgrades === 'function') checkBagUpgrades();
     updateHUD();
     updateActBtns();
@@ -300,19 +300,20 @@ function sellWeakerGear(){
 
 function applyUpgrade(item){
   let p=G.player;
-  if(item.stat==='atk'){p.atk+=item.amount;addLog(`${item.name}: ATK +${item.amount}!`,'log-level');}
-  else if(item.stat==='def'){p.def+=item.amount;addLog(`${item.name}: DEF +${item.amount}!`,'log-level');}
-  else if(item.stat==='hp'){p.maxHp+=item.amount;p.hp=Math.min(p.maxHp,p.hp+item.amount);addLog(`${item.name}: Max HP +${item.amount}!`,'log-level');}
-  else if(item.stat==='all'){p.atk+=1;p.def+=1;p.maxHp+=10;p.hp=Math.min(p.maxHp,p.hp+10);addLog(`Blessing: ATK+1, DEF+1, MaxHP+10!`,'log-level');}
-  else if(item.stat==='all5'){p.atk+=5;p.def+=5;p.maxHp+=50;p.hp=Math.min(p.maxHp,p.hp+50);addLog(`Ring of the Fallen: ATK+5, DEF+5, MaxHP+50!`,'log-level');}
-  else if(item.stat==='magicMult'){p.magicMult=(p.magicMult||1)*item.amount;addLog(`${item.name}: ${item.amount}x Magic Damage!`,'log-level');}
-  else if(item.stat==='vamp'){p.vampirism+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP per kill!`,'log-level');}
-  else if(item.stat==='regen'){p.regen+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP every 10 tiles explored!`,'log-level');}
-  else if(item.stat==='swift'){p.swiftness+=item.amount;addLog(`${item.name}: +${item.amount} free move every 15 tiles explored!`,'log-level');}
-  else if(item.stat==='perception'){p.perception=(p.perception||0)+item.amount;addLog(`${item.name}: Perception +${item.amount}!`,'log-level');}
-  else if(item.stat==='crit'){p.critChance+=item.amount;addLog(`${item.name}: +${item.amount*100}% Critical Hit Chance!`,'log-level');}
-  else if(item.stat==='dodge'){p.dodgeBonus+=item.amount;addLog(`${item.name}: +${item.amount*100}% Dodge Chance!`,'log-level');}
-  else if(item.stat==='goldBonus'){p.goldBonus+=item.amount;addLog(`${item.name}: +${item.amount} Gold per kill!`,'log-level');}
-  else if(item.stat==='xpMult'){p.xpMult+=item.amount;addLog(`${item.name}: +${item.amount*100}% XP from kills!`,'log-level');}
+  let amount=Number(item.amount) || 0;
+  if(item.stat==='atk'){p.atk=round1((p.atk||0)+amount);addLog(`${item.name}: ATK +${fmt1(amount)}!`,'log-level');}
+  else if(item.stat==='def'){p.def=round1((p.def||0)+amount);addLog(`${item.name}: DEF +${fmt1(amount)}!`,'log-level');}
+  else if(item.stat==='hp'){p.maxHp=round1((p.maxHp||0)+amount);p.hp=round1(Math.min(p.maxHp,p.hp+amount));addLog(`${item.name}: Max HP +${fmt1(amount)}!`,'log-level');}
+  else if(item.stat==='all'){p.atk=round1(p.atk+1);p.def=round1(p.def+1);p.maxHp=round1(p.maxHp+10);p.hp=round1(Math.min(p.maxHp,p.hp+10));addLog(`Blessing: ATK+1, DEF+1, MaxHP+10!`,'log-level');}
+  else if(item.stat==='all5'){p.atk=round1(p.atk+5);p.def=round1(p.def+5);p.maxHp=round1(p.maxHp+50);p.hp=round1(Math.min(p.maxHp,p.hp+50));addLog(`Ring of the Fallen: ATK+5, DEF+5, MaxHP+50!`,'log-level');}
+  else if(item.stat==='magicMult'){p.magicMult=round1((p.magicMult||1)*amount);addLog(`${item.name}: ${fmt1(amount)}x Magic Damage!`,'log-level');}
+  else if(item.stat==='vamp'){p.vampirism=round1((p.vampirism||0)+amount);addLog(`${item.name}: Heal ${fmt1(amount)} HP per kill!`,'log-level');}
+  else if(item.stat==='regen'){p.regen=round1((p.regen||0)+amount);addLog(`${item.name}: Heal ${fmt1(amount)} HP every 10 tiles explored!`,'log-level');}
+  else if(item.stat==='swift'){p.swiftness=round1((p.swiftness||0)+amount);addLog(`${item.name}: +${fmt1(amount)} free move every 15 tiles explored!`,'log-level');}
+  else if(item.stat==='perception'){p.perception=round1((p.perception||0)+amount);addLog(`${item.name}: Perception +${fmt1(amount)}!`,'log-level');}
+  else if(item.stat==='crit'){p.critChance=round1((p.critChance||0)+amount);addLog(`${item.name}: +${fmtPct(amount)} Critical Hit Chance!`,'log-level');}
+  else if(item.stat==='dodge'){p.dodgeBonus=round1((p.dodgeBonus||0)+amount);addLog(`${item.name}: +${fmtPct(amount)} Dodge Chance!`,'log-level');}
+  else if(item.stat==='goldBonus'){p.goldBonus=round1((p.goldBonus||0)+amount);addLog(`${item.name}: +${fmt1(amount)} Gold per kill!`,'log-level');}
+  else if(item.stat==='xpMult'){p.xpMult=round1((p.xpMult||0)+amount);addLog(`${item.name}: +${fmtPct(amount)} XP from kills!`,'log-level');}
   floatText('UPGRADED!',p.x,p.y,'#c084fc');
 }

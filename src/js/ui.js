@@ -3,8 +3,8 @@ function showTip(e,name,hp,maxHp,atk){
   e.stopPropagation(); // prevent global dismiss firing on same click
   let t=document.getElementById('tooltip');
   t.innerHTML=`<strong style="color:var(--text)">${name}</strong><br>`+
-    (hp!==undefined?`HP:<span style="color:var(--red)">${hp}/${maxHp}</span> `:'') +
-    (atk!==undefined?`ATK:<span style="color:var(--orange)">${atk}</span>`:'');
+    (hp!==undefined?`HP:<span style="color:var(--red)">${fmt1(hp)}/${fmt1(maxHp)}</span> `:'') +
+    (atk!==undefined?`ATK:<span style="color:var(--orange)">${fmt1(atk)}</span>`:'');
   t.style.display='block';
   // Clamp tooltip to viewport
   let tx=e.clientX+12, ty=e.clientY-8;
@@ -105,13 +105,13 @@ function showShrinePrompt(shrine) {
   let msg = '';
   if(shrine.shrineType === 'Blood') {
     let cost = Math.max(1, Math.floor(G.player.maxHp * 0.3));
-    msg = `Sacrifice ${cost} Max HP permanently to gain +1 ATK permanently? (HP: ${G.player.hp}/${G.player.maxHp})`;
+    msg = `Sacrifice ${fmt1(cost)} Max HP permanently to gain +1 ATK permanently? (HP: ${fmt1(G.player.hp)}/${fmt1(G.player.maxHp)})`;
   } else if(shrine.shrineType === 'Greed') {
-    msg = `Sacrifice all your current Gold to instantly gain 2 Levels? (Gold: ${G.player.gold})`;
+    msg = `Sacrifice all your current Gold to instantly gain 2 Levels? (Gold: ${fmt1(G.player.gold)})`;
   } else if(shrine.shrineType === 'Cursed') {
-    msg = `Fully heal your HP, but instantly summon 3 Elite enemies surrounding you? (HP: ${G.player.hp}/${G.player.maxHp})`;
+    msg = `Fully heal your HP, but instantly summon 3 Elite enemies surrounding you? (HP: ${fmt1(G.player.hp)}/${fmt1(G.player.maxHp)})`;
   } else {
-    msg = `Touch the shrine? (HP: ${G.player.hp}/${G.player.maxHp})`; // Fallback
+    msg = `Touch the shrine? (HP: ${fmt1(G.player.hp)}/${fmt1(G.player.maxHp)})`; // Fallback
   }
   document.getElementById('shrine-msg').textContent = msg;
   document.getElementById('shrine-overlay').style.display = 'flex';
@@ -132,10 +132,10 @@ document.getElementById('shrine-accept-btn').addEventListener('click', () => {
 
   if(shrine.shrineType === 'Blood') {
     let cost = Math.max(1, Math.floor(G.player.maxHp * 0.3));
-    G.player.maxHp = Math.max(1, G.player.maxHp - cost);
-    G.player.hp = Math.min(G.player.hp, G.player.maxHp);
-    G.player.atk += 1;
-    addLog(`Sacrificed ${cost} Max HP for +1 ATK!`, 'log-combat');
+    G.player.maxHp = round1(Math.max(1, G.player.maxHp - cost));
+    G.player.hp = round1(Math.min(G.player.hp, G.player.maxHp));
+    G.player.atk = round1(G.player.atk + 1);
+    addLog(`Sacrificed ${fmt1(cost)} Max HP for +1 ATK!`, 'log-combat');
     floatText('+1 ATK', G.player.x, G.player.y, '#f87171');
     flashDamage();
     SFX.hit();
@@ -143,9 +143,9 @@ document.getElementById('shrine-accept-btn').addEventListener('click', () => {
     let gold = G.player.gold;
     G.player.gold = 0;
     G.player.lvl += 2;
-    G.player.maxHp += 4; G.player.hp += 4;
-    G.player.atk += 2; G.player.def += 1;
-    addLog(`Sacrificed ${gold} Gold for 2 Levels!`, 'log-info');
+    G.player.maxHp = round1(G.player.maxHp + 4); G.player.hp = round1(G.player.hp + 4);
+    G.player.atk = round1(G.player.atk + 2); G.player.def = round1(G.player.def + 1);
+    addLog(`Sacrificed ${fmt1(gold)} Gold for 2 Levels!`, 'log-info');
     floatText('LEVEL UP!', G.player.x, G.player.y, '#fbbf24');
     SFX.levelUp();
   } else if(shrine.shrineType === 'Cursed') {

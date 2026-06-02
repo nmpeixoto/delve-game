@@ -336,6 +336,23 @@ test('shop placement does not overwrite the stairs tile', () => {
   assert.ok(!G.shops.some(shop => shop.x === stairs[0].x && shop.y === stairs[0].y));
 });
 
+test('non-boss floors guarantee every designed special room type', () => {
+  const { createRuntime } = require('../automation/headless-balance/headless_balance');
+  const requiredTypes = ['armory', 'crypt', 'shrine', 'treasure', 'secret'];
+
+  for (let seed = 1000; seed < 1010; seed++) {
+    const runtime = createRuntime(seed);
+    const { context, flushTimers } = runtime;
+    context.initGame('warrior');
+    flushTimers();
+
+    const types = new Set(context.G.rooms.map(room => room.type));
+    for (const type of requiredTypes) {
+      assert.ok(types.has(type), `seed ${seed} missing ${type}`);
+    }
+  }
+});
+
 test('spawnItem keeps data-layer filtering and supports exact coordinate spawns', () => {
   const context = loadSpawnContext();
 

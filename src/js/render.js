@@ -29,12 +29,12 @@ function positionMapOnPlayer(){
 }
 function formatSecStats(item) {
   let s = [];
-  if(item.critChance) s.push(`+${Math.round(item.critChance*100)}% Crit`);
-  if(item.dodgeBonus) s.push(`+${Math.round(item.dodgeBonus*100)}% Dodge`);
-  if(item.perception) s.push(`+${item.perception} PERC`);
-  if(item.vampirism) s.push(`+${item.vampirism} Vamp`);
-  if(item.regen) s.push(`+${item.regen} Regen`);
-  if(item.swiftness) s.push(`+${item.swiftness} Swift`);
+  if(item.critChance) s.push(`+${fmtPct(item.critChance)} Crit`);
+  if(item.dodgeBonus) s.push(`+${fmtPct(item.dodgeBonus)} Dodge`);
+  if(item.perception) s.push(`+${fmt1(item.perception)} PERC`);
+  if(item.vampirism) s.push(`+${fmt1(item.vampirism)} Vamp`);
+  if(item.regen) s.push(`+${fmt1(item.regen)} Regen`);
+  if(item.swiftness) s.push(`+${fmt1(item.swiftness)} Swift`);
   return s.length > 0 ? ` <span class="sec-stats" style="color:var(--accent);font-size:0.7em;">(${s.join(', ')})</span>` : '';
 }
 
@@ -69,15 +69,15 @@ function iDesc(item){
     let pAtk = typeof weaponPower === 'function' ? weaponPower(G.player.weapon) : (G.player.weapon ? G.player.weapon.atk : 0);
     let itemAtk = typeof weaponPower === 'function' ? weaponPower(item) : item.atk;
     let up = itemAtk > pAtk ? ' <span class=green>▲</span>' : '';
-    return `ATK+${item.atk}${up}${formatSecStats(item)} ${rStr}`;
+    return `ATK+${fmt1(item.atk)}${up}${formatSecStats(item)} ${rStr}`;
   }
   if(item.type==='armor') {
     let pDef = typeof armorPower === 'function' ? armorPower(G.player.armor) : (G.player.armor ? G.player.armor.def : 0);
     let itemDef = typeof armorPower === 'function' ? armorPower(item) : item.def;
     let up = itemDef > pDef ? ' <span class=green>▲</span>' : '';
-    return `DEF+${item.def}${up}${formatSecStats(item)} ${rStr}`;
+    return `DEF+${fmt1(item.def)}${up}${formatSecStats(item)} ${rStr}`;
   }
-  if(item.type==='potion') return `Heal ${item.heal} HP`;
+  if(item.type==='potion') return `Heal ${fmt1(item.heal)} HP`;
   if(item.type==='upgrade')return item.desc||'';
   return item.desc || '';
 }
@@ -90,11 +90,11 @@ const gatk=()=>{
   if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 6);
   if(G.player.strengthTurns > 0) total += 10;
   if(G.player.magicMult && w && w.sym === '♦') total = Math.floor(total * G.player.magicMult);
-  return Math.round(total * 10) / 10;
+  return round1(total);
 };
 const gdef=()=>{
   let armDef = G.player.armor ? G.player.armor.def : 0;
-  return Math.round((G.player.def + armDef) * 10) / 10;
+  return round1(G.player.def + armDef);
 };
 
 function render(){
@@ -169,15 +169,15 @@ function render(){
 function updateHUD(){
   let p=G.player;
   let hpBar=document.getElementById('hp-bar'); if(hpBar) hpBar.style.width=Math.max(0,p.hp/p.maxHp*100)+'%';
-  let hpVal=document.getElementById('hp-val'); if(hpVal) hpVal.textContent=`${Math.max(0, p.hp)}/${p.maxHp}`;
+  let hpVal=document.getElementById('hp-val'); if(hpVal) hpVal.textContent=`${fmt1(Math.max(0, p.hp))}/${fmt1(p.maxHp)}`;
   let xpBar=document.getElementById('xp-bar'); if(xpBar) xpBar.style.width=Math.min(100,p.xp/p.xpNext*100)+'%';
-  let xpVal=document.getElementById('xp-val'); if(xpVal) xpVal.textContent=`${p.xp}/${p.xpNext}`;
-  let atkVal=document.getElementById('atk-val'); if(atkVal) atkVal.textContent=gatk();
-  let defVal=document.getElementById('def-val'); if(defVal) defVal.textContent=gdef();
-  let perVal=document.getElementById('per-val'); if(perVal) perVal.textContent=getStat('perception');
+  let xpVal=document.getElementById('xp-val'); if(xpVal) xpVal.textContent=`${fmt1(p.xp)}/${fmt1(p.xpNext)}`;
+  let atkVal=document.getElementById('atk-val'); if(atkVal) atkVal.textContent=fmt1(gatk());
+  let defVal=document.getElementById('def-val'); if(defVal) defVal.textContent=fmt1(gdef());
+  let perVal=document.getElementById('per-val'); if(perVal) perVal.textContent=fmt1(getStat('perception'));
   let lvlVal=document.getElementById('lvl-val'); if(lvlVal) lvlVal.textContent=p.lvl;
   let classVal=document.getElementById('class-val'); if(classVal) classVal.textContent=p.class;
-  let goldVal=document.getElementById('gold-val'); if(goldVal) goldVal.textContent=p.gold;
+  let goldVal=document.getElementById('gold-val'); if(goldVal) goldVal.textContent=fmt1(p.gold);
   let floorLabel=document.getElementById('floor-label'); if(floorLabel) floorLabel.textContent=`FLOOR ${G.floor}`;
 }
 
@@ -255,8 +255,8 @@ function updateInvDrawer(){
   }
   document.getElementById('inventory-list').innerHTML=h;
   let eh='';
-  if(G.player.weapon) eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.weapon.name}</div><div class="inv-type">weapon</div></div><div class="inv-bonus">ATK+${Math.round(weaponPower(G.player.weapon) * 10) / 10}</div></div>`;
-  if(G.player.armor)  eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.armor.name}</div><div class="inv-type">armor</div></div><div class="inv-bonus">DEF+${Math.round(armorPower(G.player.armor) * 10) / 10}</div></div>`;
+  if(G.player.weapon) eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.weapon.name}</div><div class="inv-type">weapon</div></div><div class="inv-bonus">ATK+${fmt1(weaponPower(G.player.weapon))}</div></div>`;
+  if(G.player.armor)  eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.armor.name}</div><div class="inv-type">armor</div></div><div class="inv-bonus">DEF+${fmt1(armorPower(G.player.armor))}</div></div>`;
   if(!G.player.weapon&&!G.player.armor) eh='<div class="inv-empty">Nothing equipped</div>';
   document.getElementById('equipped-list').innerHTML=eh;
 }

@@ -882,6 +882,22 @@ const rr=(a,b)=>a+rand(b-a+1);
 let _idCounter=0;
 const uid=()=>`${Date.now().toString(36)}-${(++_idCounter).toString(36)}-${Math.random().toString(36).slice(2,8)}`;
 const ch=p=>Math.random()<p;
+function round1(value){
+  const n = Number(value);
+  if(!Number.isFinite(n)) return 0;
+  return Math.round((n + Number.EPSILON) * 10) / 10;
+}
+function fmt1(value){
+  let n = round1(value);
+  if(Object.is(n, -0)) n = 0;
+  return Number.isInteger(n) ? `${n}` : n.toFixed(1);
+}
+function fmtPct(value){
+  return `${fmt1(Number(value) * 100)}%`;
+}
+function addDamageDealt(amount){
+  G.player.damageDealt = round1((G.player.damageDealt || 0) + amount);
+}
 // Debounce tile actions — 400ms safety net against double-fire
 function canAct(opts={}){
   if(typeof isOverlayOpen === 'function' && isOverlayOpen()){
@@ -989,12 +1005,12 @@ function computeVision(){
       
       if(getStat('regen') > 0 && G.player.tilesExplored % 10 === 0) {
         let heal = getStat('regen');
-        G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
-        floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
+        G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + heal));
+        floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
       }
 
       if(G.player.class === 'warrior' && G.player.tilesExplored % 12 === 0 && G.player.hp < G.player.maxHp) {
-        G.player.hp = Math.min(G.player.maxHp, G.player.hp + 1);
+        G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + 1));
         floatText('+1 HP', G.player.x, G.player.y, '#4ade80');
       }
 
@@ -1060,12 +1076,12 @@ function positionMapOnPlayer(){
 }
 function formatSecStats(item) {
   let s = [];
-  if(item.critChance) s.push(`+${Math.round(item.critChance*100)}% Crit`);
-  if(item.dodgeBonus) s.push(`+${Math.round(item.dodgeBonus*100)}% Dodge`);
-  if(item.perception) s.push(`+${item.perception} PERC`);
-  if(item.vampirism) s.push(`+${item.vampirism} Vamp`);
-  if(item.regen) s.push(`+${item.regen} Regen`);
-  if(item.swiftness) s.push(`+${item.swiftness} Swift`);
+  if(item.critChance) s.push(`+${fmtPct(item.critChance)} Crit`);
+  if(item.dodgeBonus) s.push(`+${fmtPct(item.dodgeBonus)} Dodge`);
+  if(item.perception) s.push(`+${fmt1(item.perception)} PERC`);
+  if(item.vampirism) s.push(`+${fmt1(item.vampirism)} Vamp`);
+  if(item.regen) s.push(`+${fmt1(item.regen)} Regen`);
+  if(item.swiftness) s.push(`+${fmt1(item.swiftness)} Swift`);
   return s.length > 0 ? ` <span class="sec-stats" style="color:var(--accent);font-size:0.7em;">(${s.join(', ')})</span>` : '';
 }
 
@@ -1100,15 +1116,15 @@ function iDesc(item){
     let pAtk = typeof weaponPower === 'function' ? weaponPower(G.player.weapon) : (G.player.weapon ? G.player.weapon.atk : 0);
     let itemAtk = typeof weaponPower === 'function' ? weaponPower(item) : item.atk;
     let up = itemAtk > pAtk ? ' <span class=green>▲</span>' : '';
-    return `ATK+${item.atk}${up}${formatSecStats(item)} ${rStr}`;
+    return `ATK+${fmt1(item.atk)}${up}${formatSecStats(item)} ${rStr}`;
   }
   if(item.type==='armor') {
     let pDef = typeof armorPower === 'function' ? armorPower(G.player.armor) : (G.player.armor ? G.player.armor.def : 0);
     let itemDef = typeof armorPower === 'function' ? armorPower(item) : item.def;
     let up = itemDef > pDef ? ' <span class=green>▲</span>' : '';
-    return `DEF+${item.def}${up}${formatSecStats(item)} ${rStr}`;
+    return `DEF+${fmt1(item.def)}${up}${formatSecStats(item)} ${rStr}`;
   }
-  if(item.type==='potion') return `Heal ${item.heal} HP`;
+  if(item.type==='potion') return `Heal ${fmt1(item.heal)} HP`;
   if(item.type==='upgrade')return item.desc||'';
   return item.desc || '';
 }
@@ -1121,11 +1137,11 @@ const gatk=()=>{
   if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 6);
   if(G.player.strengthTurns > 0) total += 10;
   if(G.player.magicMult && w && w.sym === '♦') total = Math.floor(total * G.player.magicMult);
-  return Math.round(total * 10) / 10;
+  return round1(total);
 };
 const gdef=()=>{
   let armDef = G.player.armor ? G.player.armor.def : 0;
-  return Math.round((G.player.def + armDef) * 10) / 10;
+  return round1(G.player.def + armDef);
 };
 
 function render(){
@@ -1200,15 +1216,15 @@ function render(){
 function updateHUD(){
   let p=G.player;
   let hpBar=document.getElementById('hp-bar'); if(hpBar) hpBar.style.width=Math.max(0,p.hp/p.maxHp*100)+'%';
-  let hpVal=document.getElementById('hp-val'); if(hpVal) hpVal.textContent=`${Math.max(0, p.hp)}/${p.maxHp}`;
+  let hpVal=document.getElementById('hp-val'); if(hpVal) hpVal.textContent=`${fmt1(Math.max(0, p.hp))}/${fmt1(p.maxHp)}`;
   let xpBar=document.getElementById('xp-bar'); if(xpBar) xpBar.style.width=Math.min(100,p.xp/p.xpNext*100)+'%';
-  let xpVal=document.getElementById('xp-val'); if(xpVal) xpVal.textContent=`${p.xp}/${p.xpNext}`;
-  let atkVal=document.getElementById('atk-val'); if(atkVal) atkVal.textContent=gatk();
-  let defVal=document.getElementById('def-val'); if(defVal) defVal.textContent=gdef();
-  let perVal=document.getElementById('per-val'); if(perVal) perVal.textContent=getStat('perception');
+  let xpVal=document.getElementById('xp-val'); if(xpVal) xpVal.textContent=`${fmt1(p.xp)}/${fmt1(p.xpNext)}`;
+  let atkVal=document.getElementById('atk-val'); if(atkVal) atkVal.textContent=fmt1(gatk());
+  let defVal=document.getElementById('def-val'); if(defVal) defVal.textContent=fmt1(gdef());
+  let perVal=document.getElementById('per-val'); if(perVal) perVal.textContent=fmt1(getStat('perception'));
   let lvlVal=document.getElementById('lvl-val'); if(lvlVal) lvlVal.textContent=p.lvl;
   let classVal=document.getElementById('class-val'); if(classVal) classVal.textContent=p.class;
-  let goldVal=document.getElementById('gold-val'); if(goldVal) goldVal.textContent=p.gold;
+  let goldVal=document.getElementById('gold-val'); if(goldVal) goldVal.textContent=fmt1(p.gold);
   let floorLabel=document.getElementById('floor-label'); if(floorLabel) floorLabel.textContent=`FLOOR ${G.floor}`;
 }
 
@@ -1286,8 +1302,8 @@ function updateInvDrawer(){
   }
   document.getElementById('inventory-list').innerHTML=h;
   let eh='';
-  if(G.player.weapon) eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.weapon.name}</div><div class="inv-type">weapon</div></div><div class="inv-bonus">ATK+${Math.round(weaponPower(G.player.weapon) * 10) / 10}</div></div>`;
-  if(G.player.armor)  eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.armor.name}</div><div class="inv-type">armor</div></div><div class="inv-bonus">DEF+${Math.round(armorPower(G.player.armor) * 10) / 10}</div></div>`;
+  if(G.player.weapon) eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.weapon.name}</div><div class="inv-type">weapon</div></div><div class="inv-bonus">ATK+${fmt1(weaponPower(G.player.weapon))}</div></div>`;
+  if(G.player.armor)  eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.armor.name}</div><div class="inv-type">armor</div></div><div class="inv-bonus">DEF+${fmt1(armorPower(G.player.armor))}</div></div>`;
   if(!G.player.weapon&&!G.player.armor) eh='<div class="inv-empty">Nothing equipped</div>';
   document.getElementById('equipped-list').innerHTML=eh;
 }
@@ -1325,8 +1341,8 @@ function showTip(e,name,hp,maxHp,atk){
   e.stopPropagation(); // prevent global dismiss firing on same click
   let t=document.getElementById('tooltip');
   t.innerHTML=`<strong style="color:var(--text)">${name}</strong><br>`+
-    (hp!==undefined?`HP:<span style="color:var(--red)">${hp}/${maxHp}</span> `:'') +
-    (atk!==undefined?`ATK:<span style="color:var(--orange)">${atk}</span>`:'');
+    (hp!==undefined?`HP:<span style="color:var(--red)">${fmt1(hp)}/${fmt1(maxHp)}</span> `:'') +
+    (atk!==undefined?`ATK:<span style="color:var(--orange)">${fmt1(atk)}</span>`:'');
   t.style.display='block';
   // Clamp tooltip to viewport
   let tx=e.clientX+12, ty=e.clientY-8;
@@ -1427,13 +1443,13 @@ function showShrinePrompt(shrine) {
   let msg = '';
   if(shrine.shrineType === 'Blood') {
     let cost = Math.max(1, Math.floor(G.player.maxHp * 0.3));
-    msg = `Sacrifice ${cost} Max HP permanently to gain +1 ATK permanently? (HP: ${G.player.hp}/${G.player.maxHp})`;
+    msg = `Sacrifice ${fmt1(cost)} Max HP permanently to gain +1 ATK permanently? (HP: ${fmt1(G.player.hp)}/${fmt1(G.player.maxHp)})`;
   } else if(shrine.shrineType === 'Greed') {
-    msg = `Sacrifice all your current Gold to instantly gain 2 Levels? (Gold: ${G.player.gold})`;
+    msg = `Sacrifice all your current Gold to instantly gain 2 Levels? (Gold: ${fmt1(G.player.gold)})`;
   } else if(shrine.shrineType === 'Cursed') {
-    msg = `Fully heal your HP, but instantly summon 3 Elite enemies surrounding you? (HP: ${G.player.hp}/${G.player.maxHp})`;
+    msg = `Fully heal your HP, but instantly summon 3 Elite enemies surrounding you? (HP: ${fmt1(G.player.hp)}/${fmt1(G.player.maxHp)})`;
   } else {
-    msg = `Touch the shrine? (HP: ${G.player.hp}/${G.player.maxHp})`; // Fallback
+    msg = `Touch the shrine? (HP: ${fmt1(G.player.hp)}/${fmt1(G.player.maxHp)})`; // Fallback
   }
   document.getElementById('shrine-msg').textContent = msg;
   document.getElementById('shrine-overlay').style.display = 'flex';
@@ -1454,10 +1470,10 @@ document.getElementById('shrine-accept-btn').addEventListener('click', () => {
 
   if(shrine.shrineType === 'Blood') {
     let cost = Math.max(1, Math.floor(G.player.maxHp * 0.3));
-    G.player.maxHp = Math.max(1, G.player.maxHp - cost);
-    G.player.hp = Math.min(G.player.hp, G.player.maxHp);
-    G.player.atk += 1;
-    addLog(`Sacrificed ${cost} Max HP for +1 ATK!`, 'log-combat');
+    G.player.maxHp = round1(Math.max(1, G.player.maxHp - cost));
+    G.player.hp = round1(Math.min(G.player.hp, G.player.maxHp));
+    G.player.atk = round1(G.player.atk + 1);
+    addLog(`Sacrificed ${fmt1(cost)} Max HP for +1 ATK!`, 'log-combat');
     floatText('+1 ATK', G.player.x, G.player.y, '#f87171');
     flashDamage();
     SFX.hit();
@@ -1465,9 +1481,9 @@ document.getElementById('shrine-accept-btn').addEventListener('click', () => {
     let gold = G.player.gold;
     G.player.gold = 0;
     G.player.lvl += 2;
-    G.player.maxHp += 4; G.player.hp += 4;
-    G.player.atk += 2; G.player.def += 1;
-    addLog(`Sacrificed ${gold} Gold for 2 Levels!`, 'log-info');
+    G.player.maxHp = round1(G.player.maxHp + 4); G.player.hp = round1(G.player.hp + 4);
+    G.player.atk = round1(G.player.atk + 2); G.player.def = round1(G.player.def + 1);
+    addLog(`Sacrificed ${fmt1(gold)} Gold for 2 Levels!`, 'log-info');
     floatText('LEVEL UP!', G.player.x, G.player.y, '#fbbf24');
     SFX.levelUp();
   } else if(shrine.shrineType === 'Cursed') {
@@ -1583,7 +1599,7 @@ function incomingDamageMax(enemy){
 
 function checkEmergencyPotion(enemy, dmg, afterFn){
   // Max possible next hit from this enemy
-  let maxNextHit=Math.max(dmg, incomingDamageMax(enemy));
+  let maxNextHit=round1(Math.max(dmg, incomingDamageMax(enemy)));
   // Would that kill us?
   if(G.player.hp-maxNextHit>0){
     afterFn(); return; // safe — just proceed
@@ -1603,14 +1619,14 @@ function checkEmergencyPotion(enemy, dmg, afterFn){
   G.pendingHit={dmg, afterFn, potionChain:chain};
 
   // Build modal content
-  let msg=`<strong style="color:var(--red)">${enemy.name}</strong> could deal up to <strong style="color:var(--orange)">${maxNextHit} damage</strong>. You have <strong style="color:var(--red)">${G.player.hp} HP</strong>.`;
+  let msg=`<strong style="color:var(--red)">${enemy.name}</strong> could deal up to <strong style="color:var(--orange)">${fmt1(maxNextHit)} damage</strong>. You have <strong style="color:var(--red)">${fmt1(G.player.hp)} HP</strong>.`;
   document.getElementById('emergency-msg').innerHTML=msg;
 
   let ph='';
   chain.forEach(p=>{
     ph+=`<div class="emergency-potion-row">
       <span class="emergency-potion-name">! ${p.name}</span>
-      <span class="emergency-potion-heal">+${p.heal} HP</span>
+      <span class="emergency-potion-heal">+${fmt1(p.heal)} HP</span>
     </div>`;
   });
   if(!willSurvive){
@@ -1623,7 +1639,7 @@ function checkEmergencyPotion(enemy, dmg, afterFn){
 }
 
 function offerEmergencyPotion(dmg, afterFn){
-  let atk=Math.max(1, dmg + gdef() - 2);
+  let atk=round1(Math.max(1, dmg + gdef() - 2));
   checkEmergencyPotion({name:'Incoming hit', atk}, dmg, afterFn);
 }
 
@@ -1637,9 +1653,9 @@ function resolveEmergency(drink){
   if(drink && potionChain.length){
     potionChain.forEach(p=>{
       let heal=Math.min(p.heal, G.player.maxHp-G.player.hp);
-      G.player.hp+=heal;
-      addLog(`Drank ${p.name}: +${heal} HP`,'log-item');
-      floatText(`+${heal} HP`,G.player.x,G.player.y,'#4ade80');
+      G.player.hp=round1(G.player.hp+heal);
+      addLog(`Drank ${p.name}: +${fmt1(heal)} HP`,'log-item');
+      floatText(`+${fmt1(heal)} HP`,G.player.x,G.player.y,'#4ade80');
       G.items=G.items.filter(i=>i.id!==p.id);
     });
     updateHUD();
@@ -1671,6 +1687,24 @@ function checkCellItems(nx, ny) {
   } else {
     advanceTurn({allowFreeMove:true});
   }
+}
+
+function trapDisarmReward(){
+  let floor = Math.max(1, Number.isFinite(G.floor) ? G.floor : 1);
+  return {
+    xp: 2 + floor * 2,
+    gold: rr(5 + floor * 2, 10 + floor * 4),
+  };
+}
+
+function grantTrapDisarmReward(x, y){
+  let reward = trapDisarmReward();
+  G.player.xp = round1((G.player.xp || 0) + reward.xp);
+  G.player.gold = round1((G.player.gold || 0) + reward.gold);
+  addLog(`Trap disarmed! +${fmt1(reward.xp)} XP +${fmt1(reward.gold)}💰`, 'log-info');
+  floatText(`+${fmt1(reward.xp)} XP`, x, y, '#c084fc');
+  floatText(`+${fmt1(reward.gold)}💰`, x, y, '#fbbf24');
+  checkLevelUp();
 }
 
 function move(dx,dy){
@@ -1721,20 +1755,13 @@ function move(dx,dy){
       let tIdx = G.traps.findIndex(t => t.x===nx && t.y===ny);
       if(tIdx > -1) G.traps.splice(tIdx, 1);
       
-      if(ch(0.5)) {
-        let lootGold = rr(3, 10);
-        G.player.gold += lootGold;
-        addLog(`You successfully disarmed the trap and salvaged ${lootGold} gold!`, 'log-info');
-        floatText(`+${lootGold}💰`, nx, ny, '#fbbf24');
+      grantTrapDisarmReward(nx, ny);
+      if(ch(0.2)) {
+        spawnItem({x:nx, y:ny}, null, false);
+        addLog('You found an item hidden in the trap mechanism!', 'log-info');
+        floatText('+ITEM', nx, ny, '#a78bfa');
       } else {
-        addLog('You successfully disarmed the trap!', 'log-info');
-        if(ch(0.2)) {
-          spawnItem({x:nx, y:ny}, null, false);
-          addLog('You found an item hidden in the trap mechanism!', 'log-info');
-          floatText('+ITEM', nx, ny, '#a78bfa');
-        } else {
-          floatText('DISARMED', nx, ny, '#4ade80');
-        }
+        floatText('DISARMED', nx, ny, '#4ade80');
       }
       SFX.click();
     } else {
@@ -1749,9 +1776,9 @@ function move(dx,dy){
         if(trap.type === 'spike') {
           let dmg = Math.floor(G.player.maxHp * 0.15) + 2;
           offerEmergencyPotion(dmg, () => {
-            G.player.hp -= dmg;
-            addLog(`Spike trap triggered! Took ${dmg} damage.`, 'log-combat');
-            floatText(`-${dmg}`, nx, ny, '#f87171');
+            G.player.hp = round1(G.player.hp - dmg);
+            addLog(`Spike trap triggered! Took ${fmt1(dmg)} damage.`, 'log-combat');
+            floatText(`-${fmt1(dmg)}`, nx, ny, '#f87171');
             flashDamage();
             SFX.hit();
             if(G.player.hp <= 0) { G.gameOver = true; showDeath(); return; }
@@ -1792,9 +1819,9 @@ function move(dx,dy){
       if(trap.type === 'spike') {
         let dmg = Math.floor(G.player.maxHp * 0.15) + 2;
         offerEmergencyPotion(dmg, () => {
-          G.player.hp -= dmg;
-          addLog(`You stepped on a spike trap! Took ${dmg} damage.`, 'log-combat');
-          floatText(`-${dmg}`, nx, ny, '#f87171');
+          G.player.hp = round1(G.player.hp - dmg);
+          addLog(`You stepped on a spike trap! Took ${fmt1(dmg)} damage.`, 'log-combat');
+          floatText(`-${fmt1(dmg)}`, nx, ny, '#f87171');
           flashDamage();
           SFX.hit();
           if(G.player.hp <= 0) { G.gameOver = true; showDeath(); return; }
@@ -1860,11 +1887,11 @@ function pickupItem(id, opts={}){
 
 function updateBestWeapon(weapon){
   let current=G.player.bestWeapon;
-  let match=current.match(/ATK\+(\d+)/);
-  let currentAtk=match?parseInt(match[1]):0;
+  let match=current.match(/ATK\+(\d+(?:\.\d)?)/);
+  let currentAtk=match?parseFloat(match[1]):0;
   let wp = weaponPower(weapon);
   if(wp>currentAtk){
-    G.player.bestWeapon=`${weapon.name} (ATK+${Math.floor(wp)})`;
+    G.player.bestWeapon=`${weapon.name} (ATK+${fmt1(wp)})`;
   }
 }
 
@@ -2052,9 +2079,9 @@ function useItem(id){
       return;
     }
     let h=Math.min(it.heal,G.player.maxHp-G.player.hp);
-    G.player.hp+=h;
-    addLog(`Drank ${it.name}: +${h} HP`,'log-item');
-    floatText(`+${h} HP`,G.player.x,G.player.y,'#4ade80');
+    G.player.hp=round1(G.player.hp+h);
+    addLog(`Drank ${it.name}: +${fmt1(h)} HP`,'log-item');
+    floatText(`+${fmt1(h)} HP`,G.player.x,G.player.y,'#4ade80');
     let idx = G.items.findIndex(i=>i.id===id);
     if(idx > -1) G.items.splice(idx,1);
     advanceTurn();closeInv();
@@ -2083,8 +2110,8 @@ function useItem(id){
       for(let x = G.player.x - 1; x <= G.player.x + 1; x++){
         let en = G.enemies.find(e => e.x === x && e.y === y && !e.dying);
         if(en){
-          en.hp -= 30;
-          floatText('-30', en.x, en.y, '#f87171');
+          en.hp = round1(en.hp - 30);
+          floatText(`-${fmt1(30)}`, en.x, en.y, '#f87171');
           if(en.hp <= 0) {
             killEnemy(en, true);
             killed++;
@@ -2167,8 +2194,8 @@ function useItem(id){
       for(let x = G.player.x - 1; x <= G.player.x + 1; x++){
         let en = G.enemies.find(e => e.x === x && e.y === y && !e.dying);
         if(en){
-          en.hp -= 30;
-          floatText('-30', en.x, en.y, '#f87171');
+          en.hp = round1(en.hp - 30);
+          floatText(`-${fmt1(30)}`, en.x, en.y, '#f87171');
           if(en.hp <= 0) {
             killEnemy(en, true);
             killed++;
@@ -2281,7 +2308,7 @@ function descend(){
   G.floor++;
   if(G.floor>FLOORS){G.won=true;showVictory();return;}
   if(typeof flushDeathBatch === 'function') flushDeathBatch();
-  G.player.hp=Math.min(G.player.maxHp,G.player.hp+10);
+  G.player.hp=round1(Math.min(G.player.maxHp,G.player.hp+10));
   G.player.poisonedTurns=0;
   buildFloor();
 }
@@ -2334,23 +2361,23 @@ function attackEnemy(id,multiplier=1,opts={}){
     popText('💨', en.x, en.y);
     SFX.hit();
   } else {
-    let dmg=Math.round(Math.max(1,gatk()-en.def+rand(3))*10)/10;
-    if(multiplier>1){dmg*=multiplier;SFX.bash();}else{SFX.hit();}
-    en.hp-=dmg;
-    G.player.damageDealt+=dmg;
+    let dmg=round1(Math.max(1,gatk()-en.def+rand(3)));
+    if(multiplier>1){dmg=round1(dmg*multiplier);SFX.bash();}else{SFX.hit();}
+    en.hp=round1(en.hp-dmg);
+    addDamageDealt(dmg);
     let atkSym = G.player.weapon ? G.player.weapon.sym : '🗡️';
     if(atkSym === '🏹') atkSym = '🎯';
     if(atkSym === '🪄') atkSym = '💥';
     popText(atkSym, en.x, en.y);
-    floatText(`-${dmg}`,en.x,en.y,'#f87171');
+    floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171');
     let multTag=multiplier>1?' (CRIT!)':'';
-    addLog(`Hit ${en.name} for ${dmg}${multTag}`, 'log-combat');
+    addLog(`Hit ${en.name} for ${fmt1(dmg)}${multTag}`, 'log-combat');
 
     if(G.player.bloodlustTurns > 0) {
       let heal = Math.floor(dmg / 2);
       if(heal > 0) {
-        G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
-        floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
+        G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + heal));
+        floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
       }
     }
     if(en.enrage && en.hp <= en.maxHp / 2 && en.color !== '#dc2626') {
@@ -2392,10 +2419,11 @@ function attackEnemy(id,multiplier=1,opts={}){
     return;
   }
 
-  let edm=Math.round(Math.max(1,en.atk-gdef()+rand(3))*10)/10;
+  let edm=round1(Math.max(1,en.atk-gdef()+rand(3)));
   if(en.enrage && en.hp <= en.maxHp / 2) edm = Math.floor(edm * 1.5);
   if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
   if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
+  edm = round1(edm);
 
   let dodgeChance = playerDodgeChance();
   if(dodgeChance > 0 && ch(dodgeChance)) {
@@ -2404,17 +2432,17 @@ function attackEnemy(id,multiplier=1,opts={}){
     advanceTurn();
   } else {
     checkEmergencyPotion(en, edm, ()=>{
-      G.player.hp=Math.max(0,G.player.hp-edm);
+      G.player.hp=round1(Math.max(0,G.player.hp-edm));
       popText('🩸', G.player.x, G.player.y);
-      floatText(`-${edm}`,G.player.x,G.player.y,'#60a5fa');
-      addLog(`${en.name} hits you for ${edm}`,'log-combat');
+      floatText(`-${fmt1(edm)}`,G.player.x,G.player.y,'#60a5fa');
+      addLog(`${en.name} hits you for ${fmt1(edm)}`,'log-combat');
       SFX.damage();shakeMap();flashDamage();
       
       if(en.vampiric && edm > 0) {
         let heal = Math.floor(edm * en.vampiric);
         if(heal > 0) {
-          en.hp = Math.min(en.maxHp, en.hp + heal);
-          floatText(`+${heal}`, en.x, en.y, '#4ade80');
+          en.hp = round1(Math.min(en.maxHp, en.hp + heal));
+          floatText(`+${fmt1(heal)}`, en.x, en.y, '#4ade80');
         }
       }
       if(en.freezeChance && Math.random() < en.freezeChance) {
@@ -2455,11 +2483,11 @@ function killEnemy(en, skipAdvanceTurn) {
 
   if(getStat('vampirism') > 0) {
     let heal = getStat('vampirism');
-    G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
-    floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
+    G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + heal));
+    floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
   }
   if(G.player.class === 'necromancer') {
-    G.player.hp = Math.min(G.player.maxHp, G.player.hp + 2);
+    G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + 2));
     floatText('+2 HP', G.player.x, G.player.y, '#4ade80');
   }
 
@@ -2485,13 +2513,18 @@ function flushDeathBatch() {
     if(d.en.raiseCorpseTarget && !d.en.boss && !d.en.isPet) {
       addLog(`${d.en.name} rises to fight for you!`, 'log-combat');
       popText('🧟', d.en.x, d.en.y);
-      d.en.name = `Pet ${d.en.name}`;
+      let petBaseName = d.en.name === 'Bones' ? 'Skeleton' : d.en.name;
+      d.en.name = `Pet ${petBaseName}`;
       d.en.isPet = true;
       d.en.dying = false;
       d.en.raiseCorpseTarget = false;
+      d.en.revive = false;
+      d.en.reviveTurns = 0;
+      if(petBaseName === 'Skeleton') d.en.sym = 's';
       d.en.hp = Math.ceil(d.en.maxHp / 2);
       d.en.maxHp = Math.ceil(d.en.maxHp / 2);
       d.en.lifespanTurns = 25;
+      d.en.petSummonedTurn = shouldAdvance ? G.turn + 1 : G.turn;
       d.en.color = '#a78bfa';
       return;
     }
@@ -2526,11 +2559,11 @@ function checkLevelUp(){
   while(G.player.xp>=G.player.xpNext){
     G.player.xp-=G.player.xpNext;G.player.lvl++;
     G.player.xpNext=Math.round(G.player.xpNext*1.6);
-    G.player.maxHp+=8;G.player.hp=Math.min(G.player.maxHp,G.player.hp+8);
+    G.player.maxHp+=8;G.player.hp=round1(Math.min(G.player.maxHp,G.player.hp+8));
     G.player.atk+=1;G.player.def+=1;
     if(G.player.class === 'paladin') {
       G.player.maxHp += 2;
-      G.player.hp = Math.min(G.player.maxHp, G.player.hp + 2);
+      G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + 2));
     }
     addLog(`LEVEL UP! Now level ${G.player.lvl}!`,'log-level');
     floatText('LVL UP!',G.player.x,G.player.y,'#c084fc');
@@ -2560,9 +2593,9 @@ function advanceTurn(opts={}){
   if(G.player.poisonedTurns>0) {
     G.player.poisonedTurns--;
     let pdmg = Math.max(1, Math.floor(G.player.maxHp * 0.05));
-    G.player.hp -= pdmg;
-    addLog(`Poison damage: -${pdmg} HP`, 'log-combat');
-    floatText(`-${pdmg} HP`, G.player.x, G.player.y, '#a855f7');
+    G.player.hp = round1(G.player.hp - pdmg);
+    addLog(`Poison damage: -${fmt1(pdmg)} HP`, 'log-combat');
+    floatText(`-${fmt1(pdmg)} HP`, G.player.x, G.player.y, '#a855f7');
     flashDamage();
     SFX.hit();
     if(G.player.hp <= 0) {
@@ -2579,6 +2612,7 @@ function processEnemyTurns(index) {
   if(G.gameOver||G.won) return;
   if(index >= G.enemies.length) {
     G.enemies.forEach(e=>{
+      if(e.dying) return;
       if(e.raiseCorpseTurns>0){
         e.raiseCorpseTurns--;
         if(e.raiseCorpseTurns<=0){
@@ -2586,9 +2620,15 @@ function processEnemyTurns(index) {
         }
       }
       if(e.isPet && e.lifespanTurns !== undefined) {
+        if(e.petSummonedTurn === G.turn) {
+          delete e.petSummonedTurn;
+          return;
+        }
+        if(e.petSummonedTurn !== undefined && e.petSummonedTurn < G.turn) {
+          delete e.petSummonedTurn;
+        }
         e.lifespanTurns--;
         if(e.lifespanTurns <= 0) {
-          addLog(`${e.name} crumbled to dust.`, 'log-combat');
           e.hp = 0;
           killEnemy(e, true);
         }
@@ -2609,7 +2649,7 @@ function processEnemyTurns(index) {
   if(trapIdx !== -1) {
     G.traps.splice(trapIdx, 1);
     e.stunnedTurns = 5;
-    e.hp -= 5;
+    e.hp = round1(e.hp - 5);
     floatText(`-5`, e.x, e.y, '#f87171');
     addLog(`${e.name} stepped on a Bear Trap!`, 'log-combat');
     if(e.hp<=0) killEnemy(e, true);
@@ -2640,8 +2680,8 @@ function processEnemyTurns(index) {
   if(e.regen > 0 && e.hp < e.maxHp) {
     let heal = Math.min(e.maxHp - e.hp, Math.floor(e.maxHp * e.regen));
     if(heal > 0) {
-      e.hp += heal;
-      floatText(`+${heal}`, e.x, e.y, '#4ade80');
+      e.hp = round1(e.hp + heal);
+      floatText(`+${fmt1(heal)}`, e.x, e.y, '#4ade80');
       popText('✨', e.x, e.y);
     }
   }
@@ -2706,10 +2746,11 @@ function processEnemyTurns(index) {
       let nx=e.x+sx,ny=e.y+sy;
       if(nx===target.x&&ny===target.y){
         if(target.isPlayer) {
-          let edm=Math.round(Math.max(1,e.atk-gdef()+rand(3))*10)/10;
+          let edm=round1(Math.max(1,e.atk-gdef()+rand(3)));
           if(e.enrage && e.hp <= e.maxHp / 2) edm = Math.floor(edm * 1.5);
           if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
           if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
+          edm = round1(edm);
 
           let dChance = playerDodgeChance();
           if(dChance > 0 && ch(dChance)) {
@@ -2718,17 +2759,17 @@ function processEnemyTurns(index) {
             return processEnemyTurns(index + 1);
           } else {
             checkEmergencyPotion(e, edm, ()=>{
-              G.player.hp=Math.max(0,G.player.hp-edm);
-              addLog(`${e.name} attacks! -${edm} HP`,'log-combat');
+              G.player.hp=round1(Math.max(0,G.player.hp-edm));
+              addLog(`${e.name} attacks! -${fmt1(edm)} HP`,'log-combat');
               SFX.damage();shakeMap();flashDamage();
               popText('🩸', G.player.x, G.player.y);
-              floatText(`-${edm}`,G.player.x,G.player.y,'#f87171');
+              floatText(`-${fmt1(edm)}`,G.player.x,G.player.y,'#f87171');
               
               if(e.vampiric && edm > 0) {
                 let heal = Math.floor(edm * e.vampiric);
                 if(heal > 0) {
-                  e.hp = Math.min(e.maxHp, e.hp + heal);
-                  floatText(`+${heal}`, e.x, e.y, '#4ade80');
+                  e.hp = round1(Math.min(e.maxHp, e.hp + heal));
+                  floatText(`+${fmt1(heal)}`, e.x, e.y, '#4ade80');
                   popText('🦇', e.x, e.y);
                 }
               }
@@ -2752,20 +2793,21 @@ function processEnemyTurns(index) {
             return processEnemyTurns(index + 1);
           }
 
-          let edm = Math.round(Math.max(1, e.atk - (target.def || 0) + rand(3))*10)/10;
+          let edm = round1(Math.max(1, e.atk - (target.def || 0) + rand(3)));
           if(e.enrage && e.hp <= e.maxHp / 2) edm = Math.floor(edm * 1.5);
+          edm = round1(edm);
 
-          target.hp -= edm;
-          addLog(`${e.name} attacks ${target.name}! -${edm} HP`, 'log-combat');
+          target.hp = round1(target.hp - edm);
+          addLog(`${e.name} attacks ${target.name}! -${fmt1(edm)} HP`, 'log-combat');
           SFX.damage();
           popText('🩸', target.x, target.y);
-          floatText(`-${edm}`, target.x, target.y, '#f87171');
+          floatText(`-${fmt1(edm)}`, target.x, target.y, '#f87171');
 
           if(e.vampiric && edm > 0) {
             let heal = Math.floor(edm * e.vampiric);
             if(heal > 0) {
-              e.hp = Math.min(e.maxHp, e.hp + heal);
-              floatText(`+${heal}`, e.x, e.y, '#4ade80');
+              e.hp = round1(Math.min(e.maxHp, e.hp + heal));
+              floatText(`+${fmt1(heal)}`, e.x, e.y, '#4ade80');
               popText('🦇', e.x, e.y);
             }
           }
@@ -2806,8 +2848,8 @@ function doAbility1(){
       G.ability1Cooldown = 5; let target = t[0]; let hits = [];
       G.enemies.forEach(e => {
         if(!e.dying && Math.abs(e.x-target.x)<=1 && Math.abs(e.y-target.y)<=1) {
-          let dmg = Math.round(Math.max(1, gatk() - e.def + rand(3))*10)/10; e.hp -= dmg;
-          floatText(`-${dmg}`,e.x,e.y,'#f87171'); p.damageDealt += dmg;
+          let dmg = round1(Math.max(1, gatk() - e.def + rand(3))); e.hp = round1(e.hp - dmg);
+          floatText(`-${fmt1(dmg)}`,e.x,e.y,'#f87171'); addDamageDealt(dmg);
           if(e.hp <= 0) hits.push(e);
         }
       });
@@ -2848,8 +2890,8 @@ function doAbility1(){
       while(cx>=0&&cx<MAP_W&&cy>=0&&cy<MAP_H&&G.map[cy][cx] !== TILE.WALL) {
         let e = G.enemies.find(e => e.x === cx && e.y === cy && !e.dying);
         if(e) {
-          let dmg = Math.round(Math.max(1, gatk() - e.def + rand(3))*10)/10; e.hp -= dmg;
-          floatText(`-${dmg}`,e.x,e.y,'#f87171'); p.damageDealt += dmg;
+          let dmg = round1(Math.max(1, gatk() - e.def + rand(3))); e.hp = round1(e.hp - dmg);
+          floatText(`-${fmt1(dmg)}`,e.x,e.y,'#f87171'); addDamageDealt(dmg);
           if(e.hp <= 0) hits.push(e);
         }
         cx += dx; cy += dy;
@@ -2865,8 +2907,8 @@ function doAbility1(){
     G.ability1Cooldown = 4;
     let hits = [];
     targets.forEach(e => {
-        let dmg = Math.round(Math.max(1, gatk() - e.def + rand(3))*10)/10; e.hp -= dmg;
-        floatText(`-${dmg}`,e.x,e.y,'#f87171'); p.damageDealt += dmg;
+        let dmg = round1(Math.max(1, gatk() - e.def + rand(3))); e.hp = round1(e.hp - dmg);
+        floatText(`-${fmt1(dmg)}`,e.x,e.y,'#f87171'); addDamageDealt(dmg);
         if(e.hp <= 0) hits.push(e);
     });
     SFX.bash(); addLog('Cleave!', 'log-combat');
@@ -2878,11 +2920,11 @@ function doAbility1(){
     if(t.length) {
       G.ability1Cooldown = 5;
       let en = t[0];
-      let dmg = Math.round(Math.max(1, gatk() - en.def + rand(3))*10)/10;
-      en.hp -= dmg; floatText(`-${dmg}`,en.x,en.y,'#f87171'); p.damageDealt += dmg;
+      let dmg = round1(Math.max(1, gatk() - en.def + rand(3)));
+      en.hp = round1(en.hp - dmg); floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171'); addDamageDealt(dmg);
       let heal = dmg;
-      p.hp = Math.min(p.maxHp, p.hp + heal); floatText(`+${heal} HP`, p.x, p.y, '#4ade80');
-      SFX.bash(); addLog(`Siphoned ${dmg} life from ${en.name}!`, 'log-combat');
+      p.hp = round1(Math.min(p.maxHp, p.hp + heal)); floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
+      SFX.bash(); addLog(`Siphoned ${fmt1(dmg)} life from ${en.name}!`, 'log-combat');
       if(en.hp <= 0) killEnemy(en, false);
       else advanceTurn();
     } else addLog('No nearby enemies to Siphon','log-info');
@@ -2894,15 +2936,15 @@ function doAbility1(){
       let en = t[0];
       let dx = Math.sign(en.x - p.x), dy = Math.sign(en.y - p.y);
       let nx = en.x + dx, ny = en.y + dy;
-      let dmg = Math.round(Math.max(1, gatk() - en.def + rand(3))*10)/10;
+      let dmg = round1(Math.max(1, gatk() - en.def + rand(3)));
       if(nx>=0 && nx<MAP_W && ny>=0 && ny<MAP_H && G.map[ny][nx] !== TILE.WALL && !G.enemies.some(e=>e.x===nx&&e.y===ny)) {
         en.x = nx; en.y = ny;
       } else {
-        dmg *= 2;
+        dmg = round1(dmg * 2);
         addLog('Slammed into a wall!', 'log-combat');
       }
-      en.hp -= dmg; floatText(`-${dmg}`,en.x,en.y,'#f87171'); p.damageDealt += dmg;
-      SFX.bash(); addLog(`Push Kick hit ${en.name} for ${dmg}!`, 'log-combat');
+      en.hp = round1(en.hp - dmg); floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171'); addDamageDealt(dmg);
+      SFX.bash(); addLog(`Push Kick hit ${en.name} for ${fmt1(dmg)}!`, 'log-combat');
       if(en.hp <= 0) killEnemy(en, false);
       else advanceTurn();
     } else addLog('No adjacent enemies to Push Kick','log-info');
@@ -2947,8 +2989,8 @@ function doAbility2(){
   }
   else if(p.class === 'paladin') {
     let heal = Math.floor(p.maxHp * 0.2);
-    p.hp = Math.min(p.maxHp, p.hp + heal);
-    floatText(`+${heal} HP`, p.x, p.y, '#4ade80');
+    p.hp = round1(Math.min(p.maxHp, p.hp + heal));
+    floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
     G.ability2Cooldown = 15;
     addLog('Lay on Hands: Healed!', 'log-combat'); advanceTurn();
   }
@@ -3102,7 +3144,7 @@ function closeShop(){
 }
 
 function renderShop(){
-  document.getElementById('shop-gold-val').textContent=G.player.gold;
+  document.getElementById('shop-gold-val').textContent=fmt1(G.player.gold);
   let h='';
   if(!G.currentShop) {
     document.getElementById('shop-items').innerHTML='';
@@ -3121,7 +3163,7 @@ function renderShop(){
           <div class="shop-item-name ${colorCls}">${item.sym} ${item.name}${item.sold?' (SOLD)':''}</div>
         <div class="shop-item-desc">${desc} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
       </div>
-      <div class="shop-item-price${canAfford?'':' cant-afford'}">💰${item.price}</div>
+      <div class="shop-item-price${canAfford?'':' cant-afford'}">💰${fmt1(item.price)}</div>
     </div>`;
   });
   document.getElementById('shop-items').innerHTML=h;
@@ -3204,7 +3246,7 @@ function renderSellPanel(){
           <div class="sell-item-name ${colorCls}">${item.sym} ${item.name}${equippedTag}${countTag}</div>
           <div class="sell-item-desc">${iDesc(item)} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
         </div>
-        <div class="sell-item-price">+${sellPrice}💰</div>
+        <div class="sell-item-price">+${fmt1(sellPrice)}💰</div>
       </div>`;
     });
   }
@@ -3242,7 +3284,7 @@ function sellItem(id, equippedSlot){
   addLog(`Sold ${item.name} for ${sellPrice}💰`, 'log-shop');
   floatText(`+${sellPrice}💰`, G.player.x, G.player.y, '#fbbf24');
   SFX.sell();
-  document.getElementById('shop-gold-val').textContent=G.player.gold;
+  document.getElementById('shop-gold-val').textContent=fmt1(G.player.gold);
   if(typeof checkBagUpgrades === 'function') checkBagUpgrades();
   updateHUD();
   updateActBtns();
@@ -3293,7 +3335,7 @@ function sellWeakerGear(){
     addLog(`Auto-sold ${toSell.length} unwanted gear for ${totalGold}💰`, 'log-shop');
     floatText(`+${totalGold}💰`, G.player.x, G.player.y, '#fbbf24');
     SFX.sell();
-    document.getElementById('shop-gold-val').textContent=G.player.gold;
+    document.getElementById('shop-gold-val').textContent=fmt1(G.player.gold);
     if(typeof checkBagUpgrades === 'function') checkBagUpgrades();
     updateHUD();
     updateActBtns();
@@ -3306,20 +3348,21 @@ function sellWeakerGear(){
 
 function applyUpgrade(item){
   let p=G.player;
-  if(item.stat==='atk'){p.atk+=item.amount;addLog(`${item.name}: ATK +${item.amount}!`,'log-level');}
-  else if(item.stat==='def'){p.def+=item.amount;addLog(`${item.name}: DEF +${item.amount}!`,'log-level');}
-  else if(item.stat==='hp'){p.maxHp+=item.amount;p.hp=Math.min(p.maxHp,p.hp+item.amount);addLog(`${item.name}: Max HP +${item.amount}!`,'log-level');}
-  else if(item.stat==='all'){p.atk+=1;p.def+=1;p.maxHp+=10;p.hp=Math.min(p.maxHp,p.hp+10);addLog(`Blessing: ATK+1, DEF+1, MaxHP+10!`,'log-level');}
-  else if(item.stat==='all5'){p.atk+=5;p.def+=5;p.maxHp+=50;p.hp=Math.min(p.maxHp,p.hp+50);addLog(`Ring of the Fallen: ATK+5, DEF+5, MaxHP+50!`,'log-level');}
-  else if(item.stat==='magicMult'){p.magicMult=(p.magicMult||1)*item.amount;addLog(`${item.name}: ${item.amount}x Magic Damage!`,'log-level');}
-  else if(item.stat==='vamp'){p.vampirism+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP per kill!`,'log-level');}
-  else if(item.stat==='regen'){p.regen+=item.amount;addLog(`${item.name}: Heal ${item.amount} HP every 10 tiles explored!`,'log-level');}
-  else if(item.stat==='swift'){p.swiftness+=item.amount;addLog(`${item.name}: +${item.amount} free move every 15 tiles explored!`,'log-level');}
-  else if(item.stat==='perception'){p.perception=(p.perception||0)+item.amount;addLog(`${item.name}: Perception +${item.amount}!`,'log-level');}
-  else if(item.stat==='crit'){p.critChance+=item.amount;addLog(`${item.name}: +${item.amount*100}% Critical Hit Chance!`,'log-level');}
-  else if(item.stat==='dodge'){p.dodgeBonus+=item.amount;addLog(`${item.name}: +${item.amount*100}% Dodge Chance!`,'log-level');}
-  else if(item.stat==='goldBonus'){p.goldBonus+=item.amount;addLog(`${item.name}: +${item.amount} Gold per kill!`,'log-level');}
-  else if(item.stat==='xpMult'){p.xpMult+=item.amount;addLog(`${item.name}: +${item.amount*100}% XP from kills!`,'log-level');}
+  let amount=Number(item.amount) || 0;
+  if(item.stat==='atk'){p.atk=round1((p.atk||0)+amount);addLog(`${item.name}: ATK +${fmt1(amount)}!`,'log-level');}
+  else if(item.stat==='def'){p.def=round1((p.def||0)+amount);addLog(`${item.name}: DEF +${fmt1(amount)}!`,'log-level');}
+  else if(item.stat==='hp'){p.maxHp=round1((p.maxHp||0)+amount);p.hp=round1(Math.min(p.maxHp,p.hp+amount));addLog(`${item.name}: Max HP +${fmt1(amount)}!`,'log-level');}
+  else if(item.stat==='all'){p.atk=round1(p.atk+1);p.def=round1(p.def+1);p.maxHp=round1(p.maxHp+10);p.hp=round1(Math.min(p.maxHp,p.hp+10));addLog(`Blessing: ATK+1, DEF+1, MaxHP+10!`,'log-level');}
+  else if(item.stat==='all5'){p.atk=round1(p.atk+5);p.def=round1(p.def+5);p.maxHp=round1(p.maxHp+50);p.hp=round1(Math.min(p.maxHp,p.hp+50));addLog(`Ring of the Fallen: ATK+5, DEF+5, MaxHP+50!`,'log-level');}
+  else if(item.stat==='magicMult'){p.magicMult=round1((p.magicMult||1)*amount);addLog(`${item.name}: ${fmt1(amount)}x Magic Damage!`,'log-level');}
+  else if(item.stat==='vamp'){p.vampirism=round1((p.vampirism||0)+amount);addLog(`${item.name}: Heal ${fmt1(amount)} HP per kill!`,'log-level');}
+  else if(item.stat==='regen'){p.regen=round1((p.regen||0)+amount);addLog(`${item.name}: Heal ${fmt1(amount)} HP every 10 tiles explored!`,'log-level');}
+  else if(item.stat==='swift'){p.swiftness=round1((p.swiftness||0)+amount);addLog(`${item.name}: +${fmt1(amount)} free move every 15 tiles explored!`,'log-level');}
+  else if(item.stat==='perception'){p.perception=round1((p.perception||0)+amount);addLog(`${item.name}: Perception +${fmt1(amount)}!`,'log-level');}
+  else if(item.stat==='crit'){p.critChance=round1((p.critChance||0)+amount);addLog(`${item.name}: +${fmtPct(amount)} Critical Hit Chance!`,'log-level');}
+  else if(item.stat==='dodge'){p.dodgeBonus=round1((p.dodgeBonus||0)+amount);addLog(`${item.name}: +${fmtPct(amount)} Dodge Chance!`,'log-level');}
+  else if(item.stat==='goldBonus'){p.goldBonus=round1((p.goldBonus||0)+amount);addLog(`${item.name}: +${fmt1(amount)} Gold per kill!`,'log-level');}
+  else if(item.stat==='xpMult'){p.xpMult=round1((p.xpMult||0)+amount);addLog(`${item.name}: +${fmtPct(amount)} XP from kills!`,'log-level');}
   floatText('UPGRADED!',p.x,p.y,'#c084fc');
 }
 
@@ -3369,52 +3412,77 @@ function generateMap(){
   if(pool.length > 1) pool[1].type = 'crypt';
   if(pool.length > 2) pool[2].type = 'shrine';
 
-  for(let i=0; i<3; i++) {
-    let isTreasure = (i === 0);
-    let sw = rr(3, 4), sh = rr(3, 4);
-    let sx = rr(2, MAP_W-sw-2), sy = rr(2, MAP_H-sh-2);
-    let ok = true;
+  const canPlaceHiddenRoom = (sx, sy, sw, sh) => {
+    if(sx<2||sy<2||sx+sw>=MAP_W-2||sy+sh>=MAP_H-2) return false;
     for(let y=sy-1; y<=sy+sh; y++) {
       for(let x=sx-1; x<=sx+sw; x++) {
-        if(map[y][x] !== TILE.WALL) ok = false;
+        if(map[y][x] !== TILE.WALL) return false;
       }
     }
-    if(ok) {
-      let connected = false;
-      for(let r=2; r<6 && !connected; r++) {
-        for(let y=sy-r; y<=sy+sh+r-1; y++) {
-          for(let x=sx-r; x<=sx+sw+r-1; x++) {
-            if(y>0&&y<MAP_H-1&&x>0&&x<MAP_W-1 && map[y][x] === TILE.FLOOR) {
-              directTunnel(sx+Math.floor(sw/2), sy+Math.floor(sh/2), x, y);
-              connected = true;
-              break;
-            }
-          }
-          if(connected) break;
+    return true;
+  };
+
+  const findHiddenConnection = (sx, sy, sw, sh) => {
+    for(let r=2; r<7; r++) {
+      for(let y=sy-r; y<=sy+sh+r-1; y++) {
+        for(let x=sx-r; x<=sx+sw+r-1; x++) {
+          if(y>0&&y<MAP_H-1&&x>0&&x<MAP_W-1 && map[y][x] === TILE.FLOOR) return {x,y};
         }
-      }
-      if(connected) {
-        for(let ry=sy;ry<sy+sh;ry++) for(let rx=sx;rx<sx+sw;rx++) map[ry][rx]=TILE.FLOOR;
-        let doorTile = isTreasure ? TILE.LOCKED_DOOR : TILE.SECRET_DOOR;
-        let potentialDoors = [];
-        for(let y=sy-1; y<=sy+sh; y++) {
-          for(let x=sx-1; x<=sx+sw; x++) {
-            if((x===sx-1 || x===sx+sw || y===sy-1 || y===sy+sh) && map[y][x] === TILE.FLOOR) {
-              potentialDoors.push({x,y});
-            }
-          }
-        }
-        if(potentialDoors.length > 0) {
-          let doorIdx = Math.floor(Math.random() * potentialDoors.length);
-          for(let i=0; i<potentialDoors.length; i++) {
-            let pd = potentialDoors[i];
-            map[pd.y][pd.x] = (i === doorIdx) ? doorTile : TILE.WALL;
-          }
-        }
-        rooms.splice(rooms.length-1, 0, {x:sx, y:sy, w:sw, h:sh, cx:sx+Math.floor(sw/2), cy:sy+Math.floor(sh/2), type: isTreasure ? 'treasure' : 'secret'});
       }
     }
-  }
+    return null;
+  };
+
+  const carveHiddenRoom = (type, sx, sy, sw, sh, connection) => {
+    directTunnel(sx+Math.floor(sw/2), sy+Math.floor(sh/2), connection.x, connection.y);
+    for(let ry=sy;ry<sy+sh;ry++) for(let rx=sx;rx<sx+sw;rx++) map[ry][rx]=TILE.FLOOR;
+    let doorTile = type === 'treasure' ? TILE.LOCKED_DOOR : TILE.SECRET_DOOR;
+    let potentialDoors = [];
+    for(let y=sy-1; y<=sy+sh; y++) {
+      for(let x=sx-1; x<=sx+sw; x++) {
+        if((x===sx-1 || x===sx+sw || y===sy-1 || y===sy+sh) && map[y][x] === TILE.FLOOR) {
+          potentialDoors.push({x,y});
+        }
+      }
+    }
+    if(!potentialDoors.length) return false;
+    let doorIdx = Math.floor(Math.random() * potentialDoors.length);
+    for(let i=0; i<potentialDoors.length; i++) {
+      let pd = potentialDoors[i];
+      map[pd.y][pd.x] = (i === doorIdx) ? doorTile : TILE.WALL;
+    }
+    rooms.splice(rooms.length-1, 0, {x:sx, y:sy, w:sw, h:sh, cx:sx+Math.floor(sw/2), cy:sy+Math.floor(sh/2), type});
+    return true;
+  };
+
+  const tryPlaceHiddenRoom = (type, sx, sy, sw, sh) => {
+    if(!canPlaceHiddenRoom(sx, sy, sw, sh)) return false;
+    let connection = findHiddenConnection(sx, sy, sw, sh);
+    if(!connection) return false;
+    return carveHiddenRoom(type, sx, sy, sw, sh, connection);
+  };
+
+  const addHiddenRoom = (type) => {
+    for(let attempt=0; attempt<120; attempt++) {
+      let sw = rr(3, 4), sh = rr(3, 4);
+      let sx = rr(2, MAP_W-sw-2), sy = rr(2, MAP_H-sh-2);
+      if(tryPlaceHiddenRoom(type, sx, sy, sw, sh)) return true;
+    }
+    for(let sh=3; sh<=4; sh++) {
+      for(let sw=3; sw<=4; sw++) {
+        for(let sy=2; sy<MAP_H-sh-2; sy++) {
+          for(let sx=2; sx<MAP_W-sw-2; sx++) {
+            if(tryPlaceHiddenRoom(type, sx, sy, sw, sh)) return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
+  addHiddenRoom('treasure');
+  addHiddenRoom('secret');
+  addHiddenRoom('secret');
 
   return{map,rooms};
 }
@@ -3561,7 +3629,7 @@ function buildFloor(){
   let stairsRoom = stairsCandidates[getStairsCandidateOffset(G.floor, G.hardMode, stairsCandidates.length)] || rooms[Math.min(6, rooms.length - 1)];
 
   if(rooms.length>=5){
-    let pool = rooms.slice(1, -1).filter(r=>r!==stairsRoom&&r.type!=='secret'&&r.type!=='treasure'&&r.type!=='crypt');
+    let pool = rooms.slice(1, -1).filter(r=>r!==stairsRoom&&r.type==='normal');
     for (let i = pool.length - 1; i > 0; i--) {
       let j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -3734,14 +3802,14 @@ function selectClass(id) {
     <div class="class-title">${c.name}</div>
     <div class="class-tagline">${c.tagline}</div>
     <div class="class-stat-box">
-      <div class="c-stat"><div class="c-stat-lbl">HP</div><div class="c-stat-val" style="color:var(--red)">${c.hp}</div></div>
-      <div class="c-stat"><div class="c-stat-lbl">ATK</div><div class="c-stat-val" style="color:var(--orange)">${c.atk}</div></div>
-      <div class="c-stat"><div class="c-stat-lbl">DEF</div><div class="c-stat-val" style="color:var(--blue)">${c.def}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">HP</div><div class="c-stat-val" style="color:var(--red)">${fmt1(c.hp)}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">ATK</div><div class="c-stat-val" style="color:var(--orange)">${fmt1(c.atk)}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">DEF</div><div class="c-stat-val" style="color:var(--blue)">${fmt1(c.def)}</div></div>
     </div>
     <div class="class-stat-box" style="margin-top:8px;">
-      <div class="c-stat"><div class="c-stat-lbl">PERC</div><div class="c-stat-val" style="color:var(--green)">${per}</div></div>
-      <div class="c-stat"><div class="c-stat-lbl">CRIT</div><div class="c-stat-val" style="color:#fbbf24">${Math.round(crit*100)}%</div></div>
-      <div class="c-stat"><div class="c-stat-lbl">DODGE</div><div class="c-stat-val" style="color:#a78bfa">${Math.round(dodge*100)}%</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">PERC</div><div class="c-stat-val" style="color:var(--green)">${fmt1(per)}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">CRIT</div><div class="c-stat-val" style="color:#fbbf24">${fmtPct(crit)}</div></div>
+      <div class="c-stat"><div class="c-stat-lbl">DODGE</div><div class="c-stat-val" style="color:#a78bfa">${fmtPct(dodge)}</div></div>
     </div>
     <div class="c-section">
       <div class="c-sec-title">STARTING GEAR</div>
@@ -3786,9 +3854,9 @@ function showDeath(){
     <div class="stats-list">
       Level: <span>${p.lvl}</span><br>
       Kills: <span>${p.kills}</span><br>
-      Damage dealt: <span>${p.damageDealt}</span><br>
+      Damage dealt: <span>${fmt1(p.damageDealt)}</span><br>
       Best weapon: <span>${p.bestWeapon}</span><br>
-      Gold earned: <span>${p.gold}💰</span><br>
+      Gold earned: <span>${fmt1(p.gold)}💰</span><br>
       Floors: <span>${G.floor}</span><br>
       Turns: <span>${G.turn}</span>
     </div>
@@ -3809,14 +3877,14 @@ function showVictory(){
     <div class="stats-list">
       Level: <span>${p.lvl}</span><br>
       Kills: <span>${p.kills}</span><br>
-      Damage dealt: <span>${p.damageDealt}</span><br>
+      Damage dealt: <span>${fmt1(p.damageDealt)}</span><br>
       Best weapon: <span>${p.bestWeapon}</span><br>
-      Gold: <span>${p.gold}💰</span><br>
+      Gold: <span>${fmt1(p.gold)}💰</span><br>
       Turns: <span>${G.turn}</span>
     </div>
     <div class="stats-list" style="margin-top:10px; border-top:1px dashed var(--dim); padding-top:10px;">
       Base Score (Flr×Kills×Lvl): <span>${baseScore}</span><br>
-      Difficulty Multiplier: <span>${diffMult}x</span><br>
+      Difficulty Multiplier: <span>${fmt1(diffMult)}x</span><br>
       <strong style="color:var(--gold);font-size:1.1em;">Final Score: ${score}</strong>
     </div>
     <button class="btn btn-gold" onclick="this.closest('.overlay').remove();openClassSelect()" style="margin-top:15px;">CHOOSE CLASS</button>

@@ -37,6 +37,17 @@ function loadShopContext(overrides = {}) {
       return base + w + a;
     },
     _lastAction: 0,
+    round1: value => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 0;
+      return Math.round((n + Number.EPSILON) * 10) / 10;
+    },
+    fmt1: value => {
+      let n = context.round1(value);
+      if (Object.is(n, -0)) n = 0;
+      return Number.isInteger(n) ? `${n}` : n.toFixed(1);
+    },
+    fmtPct: value => `${context.fmt1(Number(value) * 100)}%`,
     addLog: () => {},
     floatText: () => {},
     fireTip: () => {},
@@ -251,6 +262,24 @@ test('perception upgrades permanently increase the perception stat', () => {
   });
 
   assert.strictEqual(context.G.player.perception, 1);
+});
+
+test('percent upgrade logs are rounded to one decimal place', () => {
+  const logs = [];
+  const context = loadShopContext({
+    addLog: msg => logs.push(msg),
+  });
+  context.G.player.critChance = 0;
+
+  context.applyUpgrade({
+    id: 'crit-test',
+    name: 'Precision Test',
+    type: 'upgrade',
+    stat: 'crit',
+    amount: 0.1 + 0.2,
+  });
+
+  assert.strictEqual(logs[0], 'Precision Test: +30% Critical Hit Chance!');
 });
 
 test('generateShopStock includes class-usable gear when random stock would miss it', () => {

@@ -24,12 +24,12 @@ function computeVision(){
       
       if(getStat('regen') > 0 && G.player.tilesExplored % 10 === 0) {
         let heal = getStat('regen');
-        G.player.hp = Math.min(G.player.maxHp, G.player.hp + heal);
-        floatText(`+${heal} HP`, G.player.x, G.player.y, '#4ade80');
+        G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + heal));
+        floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
       }
 
       if(G.player.class === 'warrior' && G.player.tilesExplored % 12 === 0 && G.player.hp < G.player.maxHp) {
-        G.player.hp = Math.min(G.player.maxHp, G.player.hp + 1);
+        G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + 1));
         floatText('+1 HP', G.player.x, G.player.y, '#4ade80');
       }
 
