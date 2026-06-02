@@ -1180,7 +1180,7 @@ test('barbarian uses bloodlust before cleaving into a crowd', () => {
   assert.strictEqual(decision.val, 'v');
 });
 
-test('necromancer primes corpse explosion before siphoning into a cluster', () => {
+test('necromancer primes raise dead before siphoning when multiple enemies are visible', () => {
   const map = makeMap();
   setFloor(map, [
     [5, 5],
@@ -1194,7 +1194,7 @@ test('necromancer primes corpse explosion before siphoning into a cluster', () =
     seen: new Set(visible),
     visible,
     enemies: [
-      { id: 'g1', name: 'Goblin', x: 6, y: 5, hp: 10, maxHp: 10, atk: 4, def: 1 },
+      { id: 'g1', name: 'Goblin', x: 6, y: 5, hp: 10, maxHp: 10, atk: 4, def: 1, raiseCorpseTarget: false },
       { id: 'g2', name: 'Goblin', x: 7, y: 5, hp: 10, maxHp: 10, atk: 4, def: 1 },
     ],
   });
@@ -1203,6 +1203,29 @@ test('necromancer primes corpse explosion before siphoning into a cluster', () =
 
   assert.strictEqual(decision.type, 'key');
   assert.strictEqual(decision.val, 'v');
+});
+
+test('necromancer does not prime raise dead again when the visible target is already marked', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { class: 'necromancer', lvl: 5, hp: 15, maxHp: 15, weapon: { atk: 4, sym: 'â™¦' } },
+    seen: new Set(visible),
+    visible,
+    enemies: [
+      { id: 'g1', name: 'Goblin', x: 6, y: 5, hp: 10, maxHp: 10, atk: 4, def: 1, raiseCorpseTarget: true },
+      { id: 'g2', name: 'Goblin', x: 7, y: 5, hp: 10, maxHp: 10, atk: 4, def: 1, raiseCorpseTarget: true },
+    ],
+  });
+
+  const decision = decide(G);
+
+  assert.notStrictEqual(decision && decision.val, 'v');
 });
 
 test('monk uses flurry before push kick when healthy in melee', () => {

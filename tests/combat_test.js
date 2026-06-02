@@ -281,7 +281,7 @@ test('mage fireball hits enemies around the selected target, not around the play
   assert.ok(context.G.enemies[1].hp < 10);
 });
 
-test('necromancer corpse explosion mark survives the setup turn', () => {
+test('necromancer raise dead mark survives the setup turn', () => {
   const context = loadCombat({
     G: {
       player: {
@@ -339,10 +339,11 @@ test('necromancer corpse explosion mark survives the setup turn', () => {
 
   context.doAbility2();
 
-  assert.strictEqual(context.G.enemies[0].corpseExplosionTarget, true);
+  assert.strictEqual(context.G.enemies[0].raiseCorpseTarget, true);
+  assert.strictEqual(context.G.enemies[0].raiseCorpseTurns, 2);
 });
 
-test('necromancer corpse explosion damages adjacent enemies when the mark dies', () => {
+test('necromancer raise dead turns the marked enemy into a temporary pet when it dies', () => {
   const context = loadCombat({
     setTimeout: fn => {
       fn();
@@ -363,8 +364,8 @@ test('necromancer corpse explosion damages adjacent enemies when the mark dies',
       x: 6,
       y: 5,
       stunnedTurns: 0,
-      corpseExplosionTarget: true,
-      corpseExplosionTurns: 2,
+      raiseCorpseTarget: true,
+      raiseCorpseTurns: 2,
     },
     {
       id: 'adjacent',
@@ -396,9 +397,14 @@ test('necromancer corpse explosion damages adjacent enemies when the mark dies',
 
   context.attackEnemy('marked');
 
-  const adjacent = context.G.enemies.find(enemy => enemy.id === 'adjacent');
+  const pet = context.G.enemies.find(enemy => enemy.id === 'marked');
   const distant = context.G.enemies.find(enemy => enemy.id === 'distant');
-  assert.ok(adjacent.hp < 20);
+  assert.strictEqual(pet.isPet, true);
+  assert.strictEqual(pet.name, 'Pet Marked Goblin');
+  assert.strictEqual(pet.hp, 5);
+  assert.strictEqual(pet.maxHp, 5);
+  assert.strictEqual(pet.lifespanTurns, 24);
+  assert.strictEqual(pet.dying, false);
   assert.strictEqual(distant.hp, 20);
 });
 

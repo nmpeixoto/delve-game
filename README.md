@@ -138,7 +138,7 @@ Starting gear: Skull Rod, Apprentice Robe
 
 Ability 1: Siphon Life. Deals damage and heals you for the same amount. Cooldown: 5 turns.
 
-Ability 2: Corpse Explosion. Unlocked at level 5. Marks an enemy for 3 turns; if it dies while marked, it explodes for heavy AoE damage. Cooldown: 8 turns.
+Ability 2: Raise Dead. Unlocked at level 5. Marks an enemy for 3 turns; if it dies while marked, it becomes a loyal pet with 50% HP for 25 turns. Cooldown: 8 turns.
 
 Passive: Heals 1 HP whenever an enemy dies.
 

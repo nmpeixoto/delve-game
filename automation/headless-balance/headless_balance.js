@@ -710,7 +710,7 @@ function createRuntime(seed, options = {}) {
       .map(i => `${i.id}:${i.type}:${i.carried ? 1 : 0}:${i.name}:${i.x ?? ''},${i.y ?? ''}:${i.sold ? 1 : 0}:${i.used ? 1 : 0}`)
       .join('|');
     const enemyHash = (G.enemies || [])
-      .map(e => `${e.id}:${e.name}:${e.hp}:${e.x},${e.y}:${e.dying ? 1 : 0}:${e.stunnedTurns || 0}:${e.corpseExplosionTurns || 0}:${e.corpseExplosionTarget ? 1 : 0}`)
+      .map(e => `${e.id}:${e.name}:${e.hp}:${e.x},${e.y}:${e.dying ? 1 : 0}:${e.stunnedTurns || 0}:${e.raiseCorpseTurns || 0}:${e.raiseCorpseTarget ? 1 : 0}`)
       .join('|');
     const trapHash = (G.traps || [])
       .map(t => `${t.x},${t.y}:${t.type}:${t.revealed?1:0}:${t.triggered?1:0}`)

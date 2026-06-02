@@ -183,7 +183,7 @@ function updateHUD(){
 
 function updateActBtns(){
   const A1 = { warrior:'BASH', rogue:'DASH', mage:'FIREBALL', paladin:'SMITE', ranger:'PIERCING SHOT', barbarian:'CLEAVE', necromancer:'SIPHON LIFE', monk:'PUSH KICK' };
-  const A2 = { warrior:'SHIELD', rogue:'VANISH', mage:'BLINK', paladin:'HEAL', ranger:'BEAR TRAP', barbarian:'BLOODLUST', necromancer:'EXPLOSION', monk:'FLURRY' };
+  const A2 = { warrior:'SHIELD', rogue:'VANISH', mage:'BLINK', paladin:'HEAL', ranger:'BEAR TRAP', barbarian:'BLOODLUST', necromancer:'RAISE', monk:'FLURRY' };
 
   // ABILITY 1
   let a1=document.getElementById('ability1-btn');

@@ -674,7 +674,7 @@ const CLASS_INFO = {
   paladin: { passive: '+2 Max HP per level.', a1: { name: 'SMITE', desc: 'Stun and damage an enemy for 1 turn.' }, a2: { name: 'LAY ON HANDS', desc: 'Heal 20% of your Max HP.' } },
   ranger: { passive: 'Bows (🏹) have range 3.', a1: { name: 'PIERCING SHOT', desc: 'Damage all enemies in a line.' }, a2: { name: 'BEAR TRAP', desc: 'Drop a trap and jump back to safety.' } },
   barbarian: { passive: 'Gain ATK as your HP gets lower.', a1: { name: 'CLEAVE', desc: 'Damage all adjacent enemies.' }, a2: { name: 'BLOODLUST', desc: 'Deal damage to heal, but take 15% more damage for 3 turns.' } },
-  necromancer: { passive: 'Heal 2 HP when an enemy dies.', a1: { name: 'SIPHON LIFE', desc: 'Damage an enemy and heal for the same amount.' }, a2: { name: 'CORPSE EXPLOSION', desc: 'Targeted enemy explodes on death, damaging adjacent enemies.' } },
+  necromancer: { passive: 'Heal 2 HP when an enemy dies.', a1: { name: 'SIPHON LIFE', desc: 'Damage an enemy and heal for the same amount.' }, a2: { name: 'RAISE DEAD', desc: 'Marked enemy rises as a temporary pet if it dies in time.' } },
   monk: { passive: 'Unarmed damage scales with your level.', a1: { name: 'PUSH KICK', desc: 'Knock an enemy back. Double damage if they hit a wall.' }, a2: { name: 'FLURRY OF BLOWS', desc: 'Attack 3 times but root yourself for 2 turns.' } }
 };
 
@@ -1214,7 +1214,7 @@ function updateHUD(){
 
 function updateActBtns(){
   const A1 = { warrior:'BASH', rogue:'DASH', mage:'FIREBALL', paladin:'SMITE', ranger:'PIERCING SHOT', barbarian:'CLEAVE', necromancer:'SIPHON LIFE', monk:'PUSH KICK' };
-  const A2 = { warrior:'SHIELD', rogue:'VANISH', mage:'BLINK', paladin:'HEAL', ranger:'BEAR TRAP', barbarian:'BLOODLUST', necromancer:'EXPLOSION', monk:'FLURRY' };
+  const A2 = { warrior:'SHIELD', rogue:'VANISH', mage:'BLINK', paladin:'HEAL', ranger:'BEAR TRAP', barbarian:'BLOODLUST', necromancer:'RAISE', monk:'FLURRY' };
 
   // ABILITY 1
   let a1=document.getElementById('ability1-btn');
@@ -2482,19 +2482,6 @@ function flushDeathBatch() {
   }
   let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
   _deathBatch.forEach(d => {
-    if(d.en.corpseExplosionTarget && !d.en.isPet) {
-      let blast = Math.max(12, Math.ceil(d.en.maxHp * 0.35));
-      addLog(`${d.en.name}'s corpse exploded!`, 'log-combat');
-      popText('💥', d.en.x, d.en.y);
-      G.enemies.forEach(other => {
-        if(other.id === d.en.id || other.dying || other.isPet) return;
-        if(Math.abs(other.x - d.en.x) <= 1 && Math.abs(other.y - d.en.y) <= 1) {
-          other.hp -= blast;
-          floatText(`-${blast}`, other.x, other.y, '#a78bfa');
-          if(other.hp <= 0) killEnemy(other, true);
-        }
-      });
-    }
     if(d.en.raiseCorpseTarget && !d.en.boss && !d.en.isPet) {
       addLog(`${d.en.name} rises to fight for you!`, 'log-combat');
       popText('🧟', d.en.x, d.en.y);
@@ -2592,10 +2579,10 @@ function processEnemyTurns(index) {
   if(G.gameOver||G.won) return;
   if(index >= G.enemies.length) {
     G.enemies.forEach(e=>{
-      if(e.corpseExplosionTurns>0){
-        e.corpseExplosionTurns--;
-        if(e.corpseExplosionTurns<=0){
-          e.corpseExplosionTarget=false;
+      if(e.raiseCorpseTurns>0){
+        e.raiseCorpseTurns--;
+        if(e.raiseCorpseTurns<=0){
+          e.raiseCorpseTarget=false;
         }
       }
       if(e.isPet && e.lifespanTurns !== undefined) {
@@ -2994,12 +2981,12 @@ function doAbility2(){
   }
   else if(p.class === 'necromancer') {
     let visEnemies = G.enemies.filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x));
-    let t=visEnemies.filter(e=>!e.boss&&!e.isPet).sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
+    let t=visEnemies.filter(e=>!e.boss&&!e.isPet&&!e.raiseCorpseTarget).sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
     if(t.length) {
-      t[0].corpseExplosionTarget = true;
-      t[0].corpseExplosionTurns = 3;
+      t[0].raiseCorpseTarget = true;
+      t[0].raiseCorpseTurns = 3;
       G.ability2Cooldown = 8;
-      addLog(`Marked ${t[0].name} for Corpse Explosion!`, 'log-combat'); advanceTurn();
+      addLog(`Marked ${t[0].name} for Raise Dead!`, 'log-combat'); advanceTurn();
     } else addLog('No visible enemies to target', 'log-info');
   }
   else if(p.class === 'monk') {
@@ -3710,7 +3697,7 @@ const CLASS_DATA = {
   paladin: { name: 'Paladin', tagline: 'A holy champion focused on sustain and defense.', hp: 20, atk: 1, def: 1, weapon: 'Iron Mace', armor: 'Iron Plate', ability1: 'SMITE', desc1: 'Deals damage and stuns the enemy for 1 turn. Cooldown: 5', ability2: 'LAY ON HANDS', desc2: '(Lvl 5) Heals for 20% of Max HP. Cooldown: 15', passive: 'Max HP increases by 2 upon leveling up.', critChance: 0.05 },
   ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 20, atk: 2, def: 1, weapon: 'Shortbow', armor: 'Ranger Tunic', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 3 tiles away. Avoids counter-attacks at max range.', perception: 1, critChance: 0.1 },
   barbarian: { name: 'Barbarian', tagline: 'A fearless brute who thrives in chaos.', hp: 42, atk: 5, def: 2, weapon: 'Great Axe', armor: 'Furs', ability1: 'CLEAVE', desc1: 'Deals damage to all adjacent enemies. Cooldown: 4', ability2: 'BLOODLUST', desc2: '(Lvl 5) For 3 turns, heal 50% of damage dealt, but take 15% more damage. Cooldown: 12', passive: 'Deals +1 damage for every 6 missing HP.', critChance: 0.15 },
-  necromancer: { name: 'Necromancer', tagline: 'A dark caster who drains life from foes.', hp: 18, atk: 4, def: 1, weapon: 'Skull Rod', armor: 'Apprentice Robe', ability1: 'SIPHON LIFE', desc1: 'Deals damage and heals yourself for the same amount. Cooldown: 5', ability2: 'CORPSE EXPLOSION', desc2: '(Lvl 5) Mark an enemy for 3 turns. If it dies while marked, it explodes and damages nearby enemies. Cooldown: 8', passive: 'Heals 2 HP whenever an enemy dies.', critChance: 0.05 },
+  necromancer: { name: 'Necromancer', tagline: 'A dark caster who drains life from foes.', hp: 18, atk: 4, def: 1, weapon: 'Skull Rod', armor: 'Apprentice Robe', ability1: 'SIPHON LIFE', desc1: 'Deals damage and heals yourself for the same amount. Cooldown: 5', ability2: 'RAISE DEAD', desc2: '(Lvl 5) Mark an enemy for 3 turns. If it dies while marked, it becomes a loyal pet with 50% HP for 25 turns. Cooldown: 8', passive: 'Heals 2 HP whenever an enemy dies.', critChance: 0.05 },
   monk: { name: 'Monk', tagline: 'A disciplined martial artist.', hp: 28, atk: 4, def: 2, weapon: 'Bare Hands', armor: 'Gi', ability1: 'PUSH KICK', desc1: 'Pushes an enemy 1 tile away. Deals extra damage if they hit a wall. Cooldown: 3', ability2: 'FLURRY OF BLOWS', desc2: '(Lvl 5) Attacks 3 times instantly, but you are rooted for your next turn. Cooldown: 10', passive: 'Gains level-based ATK when NO weapon is equipped.', critChance: 0.05 }
 };
 

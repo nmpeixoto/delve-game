@@ -396,8 +396,8 @@ window.botDecisionLogic = function() {
       }
       if (p.class === 'barbarian' && ((adjEnemies.length >= 2 || p.hp < p.maxHp * 0.5) || boss) && visEnemies.length > 0 && (p.bloodlustTurns || 0) === 0) return { type: 'key', val: 'v' }; // BLOODLUST
       if (p.class === 'necromancer') {
-         let markTargets = visEnemies.filter(e => !e.boss && !e.corpseExplosionTarget);
-         if (markTargets.length >= 1 && (visEnemies.length >= 2 || boss)) return { type: 'key', val: 'v' }; // CORPSE EXPLOSION
+         let markTargets = visEnemies.filter(e => !e.boss && !e.raiseCorpseTarget);
+         if (markTargets.length >= 1 && (visEnemies.length >= 2 || boss)) return { type: 'key', val: 'v' }; // RAISE DEAD
       }
       if (p.class === 'monk' && adjEnemies.length > 0) {
           let flurryKill = adjEnemies.some(e =>

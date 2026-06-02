@@ -192,19 +192,6 @@ function flushDeathBatch() {
   }
   let shouldAdvance = _deathBatch.some(d => !d.skipAdvanceTurn);
   _deathBatch.forEach(d => {
-    if(d.en.corpseExplosionTarget && !d.en.isPet) {
-      let blast = Math.max(12, Math.ceil(d.en.maxHp * 0.35));
-      addLog(`${d.en.name}'s corpse exploded!`, 'log-combat');
-      popText('💥', d.en.x, d.en.y);
-      G.enemies.forEach(other => {
-        if(other.id === d.en.id || other.dying || other.isPet) return;
-        if(Math.abs(other.x - d.en.x) <= 1 && Math.abs(other.y - d.en.y) <= 1) {
-          other.hp -= blast;
-          floatText(`-${blast}`, other.x, other.y, '#a78bfa');
-          if(other.hp <= 0) killEnemy(other, true);
-        }
-      });
-    }
     if(d.en.raiseCorpseTarget && !d.en.boss && !d.en.isPet) {
       addLog(`${d.en.name} rises to fight for you!`, 'log-combat');
       popText('🧟', d.en.x, d.en.y);
@@ -302,10 +289,10 @@ function processEnemyTurns(index) {
   if(G.gameOver||G.won) return;
   if(index >= G.enemies.length) {
     G.enemies.forEach(e=>{
-      if(e.corpseExplosionTurns>0){
-        e.corpseExplosionTurns--;
-        if(e.corpseExplosionTurns<=0){
-          e.corpseExplosionTarget=false;
+      if(e.raiseCorpseTurns>0){
+        e.raiseCorpseTurns--;
+        if(e.raiseCorpseTurns<=0){
+          e.raiseCorpseTarget=false;
         }
       }
       if(e.isPet && e.lifespanTurns !== undefined) {
@@ -704,12 +691,12 @@ function doAbility2(){
   }
   else if(p.class === 'necromancer') {
     let visEnemies = G.enemies.filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x));
-    let t=visEnemies.filter(e=>!e.boss&&!e.isPet).sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
+    let t=visEnemies.filter(e=>!e.boss&&!e.isPet&&!e.raiseCorpseTarget).sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
     if(t.length) {
-      t[0].corpseExplosionTarget = true;
-      t[0].corpseExplosionTurns = 3;
+      t[0].raiseCorpseTarget = true;
+      t[0].raiseCorpseTurns = 3;
       G.ability2Cooldown = 8;
-      addLog(`Marked ${t[0].name} for Corpse Explosion!`, 'log-combat'); advanceTurn();
+      addLog(`Marked ${t[0].name} for Raise Dead!`, 'log-combat'); advanceTurn();
     } else addLog('No visible enemies to target', 'log-info');
   }
   else if(p.class === 'monk') {
