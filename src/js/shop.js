@@ -263,9 +263,9 @@ function sellWeakerGear(){
       let unusable = it.reqClass && !it.reqClass.includes(G.player.class);
       if(unusable) {
         toSell.push(it);
-      } else if(it.type==='weapon' && weaponPower(it) < weaponPower(G.player.weapon)) {
+      } else if(it.type==='weapon' && weaponPower(it) <= weaponPower(G.player.weapon)) {
         toSell.push(it);
-      } else if(it.type==='armor' && armorPower(it) < armorPower(G.player.armor)) {
+      } else if(it.type==='armor' && armorPower(it) <= armorPower(G.player.armor)) {
         toSell.push(it);
       } else {
         newItems.push(it);

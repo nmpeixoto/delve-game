@@ -44,7 +44,7 @@ function attackEnemy(id,multiplier=1,opts={}){
     popText('💨', en.x, en.y);
     SFX.hit();
   } else {
-    let dmg=Math.max(1,gatk()-en.def+rand(3));
+    let dmg=Math.round(Math.max(1,gatk()-en.def+rand(3))*10)/10;
     if(multiplier>1){dmg*=multiplier;SFX.bash();}else{SFX.hit();}
     en.hp-=dmg;
     G.player.damageDealt+=dmg;
@@ -102,7 +102,7 @@ function attackEnemy(id,multiplier=1,opts={}){
     return;
   }
 
-  let edm=Math.max(1,en.atk-gdef()+rand(3));
+  let edm=Math.round(Math.max(1,en.atk-gdef()+rand(3))*10)/10;
   if(en.enrage && en.hp <= en.maxHp / 2) edm = Math.floor(edm * 1.5);
   if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
   if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
@@ -429,7 +429,7 @@ function processEnemyTurns(index) {
       let nx=e.x+sx,ny=e.y+sy;
       if(nx===target.x&&ny===target.y){
         if(target.isPlayer) {
-          let edm=Math.max(1,e.atk-gdef()+rand(3));
+          let edm=Math.round(Math.max(1,e.atk-gdef()+rand(3))*10)/10;
           if(e.enrage && e.hp <= e.maxHp / 2) edm = Math.floor(edm * 1.5);
           if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
           if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
@@ -475,7 +475,7 @@ function processEnemyTurns(index) {
             return processEnemyTurns(index + 1);
           }
 
-          let edm = Math.max(1, e.atk - (target.def || 0) + rand(3));
+          let edm = Math.round(Math.max(1, e.atk - (target.def || 0) + rand(3))*10)/10;
           if(e.enrage && e.hp <= e.maxHp / 2) edm = Math.floor(edm * 1.5);
 
           target.hp -= edm;
@@ -529,7 +529,7 @@ function doAbility1(){
       G.ability1Cooldown = 5; let target = t[0]; let hits = [];
       G.enemies.forEach(e => {
         if(!e.dying && Math.abs(e.x-target.x)<=1 && Math.abs(e.y-target.y)<=1) {
-          let dmg = Math.max(1, gatk() - e.def + rand(3)); e.hp -= dmg;
+          let dmg = Math.round(Math.max(1, gatk() - e.def + rand(3))*10)/10; e.hp -= dmg;
           floatText(`-${dmg}`,e.x,e.y,'#f87171'); p.damageDealt += dmg;
           if(e.hp <= 0) hits.push(e);
         }
@@ -571,7 +571,7 @@ function doAbility1(){
       while(cx>=0&&cx<MAP_W&&cy>=0&&cy<MAP_H&&G.map[cy][cx] !== TILE.WALL) {
         let e = G.enemies.find(e => e.x === cx && e.y === cy && !e.dying);
         if(e) {
-          let dmg = Math.max(1, gatk() - e.def + rand(3)); e.hp -= dmg;
+          let dmg = Math.round(Math.max(1, gatk() - e.def + rand(3))*10)/10; e.hp -= dmg;
           floatText(`-${dmg}`,e.x,e.y,'#f87171'); p.damageDealt += dmg;
           if(e.hp <= 0) hits.push(e);
         }
@@ -588,7 +588,7 @@ function doAbility1(){
     G.ability1Cooldown = 4;
     let hits = [];
     targets.forEach(e => {
-        let dmg = Math.max(1, gatk() - e.def + rand(3)); e.hp -= dmg;
+        let dmg = Math.round(Math.max(1, gatk() - e.def + rand(3))*10)/10; e.hp -= dmg;
         floatText(`-${dmg}`,e.x,e.y,'#f87171'); p.damageDealt += dmg;
         if(e.hp <= 0) hits.push(e);
     });
@@ -601,7 +601,7 @@ function doAbility1(){
     if(t.length) {
       G.ability1Cooldown = 5;
       let en = t[0];
-      let dmg = Math.max(1, gatk() - en.def + rand(3));
+      let dmg = Math.round(Math.max(1, gatk() - en.def + rand(3))*10)/10;
       en.hp -= dmg; floatText(`-${dmg}`,en.x,en.y,'#f87171'); p.damageDealt += dmg;
       let heal = dmg;
       p.hp = Math.min(p.maxHp, p.hp + heal); floatText(`+${heal} HP`, p.x, p.y, '#4ade80');
@@ -617,7 +617,7 @@ function doAbility1(){
       let en = t[0];
       let dx = Math.sign(en.x - p.x), dy = Math.sign(en.y - p.y);
       let nx = en.x + dx, ny = en.y + dy;
-      let dmg = Math.max(1, gatk() - en.def + rand(3));
+      let dmg = Math.round(Math.max(1, gatk() - en.def + rand(3))*10)/10;
       if(nx>=0 && nx<MAP_W && ny>=0 && ny<MAP_H && G.map[ny][nx] !== TILE.WALL && !G.enemies.some(e=>e.x===nx&&e.y===ny)) {
         en.x = nx; en.y = ny;
       } else {
@@ -655,18 +655,13 @@ function doAbility2(){
       }
     }
     if(safeTiles.length) {
-      let visEnemies = G.enemies.filter(e=>!e.dying&&G.visible.has(e.y*MAP_W+e.x));
-      if(visEnemies.length > 0) {
+      let liveEnemies = G.enemies.filter(e=>!e.dying);
+      if(liveEnemies.length > 0) {
         safeTiles.forEach(t => {
-          t.minDist = Math.min(...visEnemies.map(e => Math.max(Math.abs(e.x - t.x), Math.abs(e.y - t.y))));
+          t.minDist = Math.min(...liveEnemies.map(e => Math.max(Math.abs(e.x - t.x), Math.abs(e.y - t.y))));
         });
-        let trulySafe = safeTiles.filter(t => t.minDist > 1);
-        if(trulySafe.length > 0) {
-          safeTiles = trulySafe;
-        } else {
-          let bestDist = Math.max(...safeTiles.map(t => t.minDist));
-          safeTiles = safeTiles.filter(t => t.minDist === bestDist);
-        }
+        let maxDist = Math.max(...safeTiles.map(t => t.minDist));
+        safeTiles = safeTiles.filter(t => t.minDist === maxDist);
       }
       let t = safeTiles[rand(safeTiles.length)];
       p.x = t.x; p.y = t.y; G.ability2Cooldown = 8;

@@ -90,11 +90,11 @@ const gatk=()=>{
   if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 6);
   if(G.player.strengthTurns > 0) total += 10;
   if(G.player.magicMult && w && w.sym === '♦') total = Math.floor(total * G.player.magicMult);
-  return total;
+  return Math.round(total * 10) / 10;
 };
 const gdef=()=>{
   let armDef = G.player.armor ? G.player.armor.def : 0;
-  return G.player.def + armDef;
+  return Math.round((G.player.def + armDef) * 10) / 10;
 };
 
 function render(){
@@ -255,8 +255,8 @@ function updateInvDrawer(){
   }
   document.getElementById('inventory-list').innerHTML=h;
   let eh='';
-  if(G.player.weapon) eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.weapon.name}</div><div class="inv-type">weapon</div></div><div class="inv-bonus">ATK+${weaponPower(G.player.weapon)}</div></div>`;
-  if(G.player.armor)  eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.armor.name}</div><div class="inv-type">armor</div></div><div class="inv-bonus">DEF+${armorPower(G.player.armor)}</div></div>`;
+  if(G.player.weapon) eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.weapon.name}</div><div class="inv-type">weapon</div></div><div class="inv-bonus">ATK+${Math.round(weaponPower(G.player.weapon) * 10) / 10}</div></div>`;
+  if(G.player.armor)  eh+=`<div class="inv-slot equipped"><div><div class="inv-name">${G.player.armor.name}</div><div class="inv-type">armor</div></div><div class="inv-bonus">DEF+${Math.round(armorPower(G.player.armor) * 10) / 10}</div></div>`;
   if(!G.player.weapon&&!G.player.armor) eh='<div class="inv-empty">Nothing equipped</div>';
   document.getElementById('equipped-list').innerHTML=eh;
 }
