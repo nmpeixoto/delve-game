@@ -1113,13 +1113,10 @@ function iDesc(item){
   let rStr = reqs.length ? `<span class="${cls}">${prefix}Req: ${reqs.join(' ')}</span>` : '';
 
   if(item.type==='weapon') {
-    let pAtk = typeof weaponPower === 'function' ? weaponPower(G.player.weapon) : (G.player.weapon ? G.player.weapon.atk : 0);
-    let itemAtk = typeof weaponPower === 'function' ? weaponPower(item) : item.atk;
     let up = itemAtk > pAtk ? ' <span class=green>▲</span>' : '';
     return `ATK+${fmt1(item.atk)}${up}${formatSecStats(item)} ${rStr}`;
   }
   if(item.type==='armor') {
-    let pDef = typeof armorPower === 'function' ? armorPower(G.player.armor) : (G.player.armor ? G.player.armor.def : 0);
     let itemDef = typeof armorPower === 'function' ? armorPower(item) : item.def;
     let up = itemDef > pDef ? ' <span class=green>▲</span>' : '';
     return `DEF+${fmt1(item.def)}${up}${formatSecStats(item)} ${rStr}`;
