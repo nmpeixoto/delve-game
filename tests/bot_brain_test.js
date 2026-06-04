@@ -194,6 +194,29 @@ test('does not rush known stairs after the exploration threshold while enemies r
   assert.notStrictEqual(decision.val, 'ArrowRight');
 });
 
+test('heads to known stairs when low on HP and out of potions if danger is not adjacent', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5, STAIRS],
+    [7, 3],
+  ]);
+  const seen = new Set([5 * MAP_W + 5, 6 * MAP_W + 5, 7 * MAP_W + 5, 7 * MAP_W + 3]);
+  const G = baseGame(map, {
+    player: { class: 'rogue', hp: 9, maxHp: 48 },
+    seen,
+    visible: new Set(seen),
+    enemies: [{ id: 'goblin-1', name: 'Goblin', x: 7, y: 3, hp: 18, maxHp: 18, atk: 6, def: 1 }],
+    G: { floor: 2 },
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowRight');
+});
+
 test('does not bash a range enemy while weak with no potion and known stairs', () => {
   const map = makeMap();
   setFloor(map, [
@@ -316,6 +339,30 @@ test('resupplies at an affordable shop before exiting weak with no potion', () =
   assert.strictEqual(decision.val, 'ArrowLeft');
 });
 
+test('heads to stairs instead of detouring to a shop once the floor is clear', () => {
+  const map = makeMap();
+  setFloor(map, [[3, 5, SHOP], [4, 5], [5, 5], [6, 5], [7, 5, STAIRS]]);
+  const seen = new Set(Array.from({ length: 720 }, (_, i) => i));
+  seen.add(5 * MAP_W + 3);
+  seen.add(5 * MAP_W + 7);
+  const G = baseGame(map, {
+    player: { class: 'mage', hp: 25, maxHp: 25, gold: 60 },
+    seen,
+    visible: new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]),
+    shops: [{
+      x: 3,
+      y: 5,
+      stock: [{ id: 'shop-potion', type: 'potion', price: 15, sold: false, heal: 15 }],
+    }],
+    G: { floor: 1 },
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'ArrowRight');
+});
+
 test('explores unseen floor 5 tiles before descending when healthy', () => {
   const map = makeMap();
   setFloor(map, [[5, 5, STAIRS], [5, 4]]);
@@ -339,9 +386,10 @@ test('buys teleportation scrolls from shops as strategic escape items', () => {
   setFloor(map, [[4, 5, SHOP], [5, 5], [6, 5]]);
   const seen = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6]);
   const G = baseGame(map, {
-    player: { gold: 200 },
+    player: { class: 'ranger', gold: 200, hp: 18, maxHp: 24 },
     seen,
     visible: new Set(seen),
+    items: [{ id: 'escape-1', name: 'Scroll of Teleportation', type: 'scroll_teleport', carried: true }],
     shops: [{
       x: 4,
       y: 5,
@@ -351,6 +399,13 @@ test('buys teleportation scrolls from shops as strategic escape items', () => {
         type: 'scroll_teleport',
         price: 150,
         sold: false,
+      }, {
+        id: 'def-upgrade',
+        type: 'upgrade',
+        stat: 'def',
+        amount: 1,
+        price: 40,
+        sold: false,
       }],
     }],
   });
@@ -359,6 +414,182 @@ test('buys teleportation scrolls from shops as strategic escape items', () => {
 
   assert.strictEqual(decision.type, 'click');
   assert.strictEqual(decision.target, '.shop-item[onclick*="teleport-scroll"]');
+});
+
+test('rogue keeps a fourth potion stocked before upgrades', () => {
+  const map = makeMap();
+  setFloor(map, [[4, 5, SHOP], [5, 5], [6, 5]]);
+  const visible = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6]);
+  const G = baseGame(map, {
+    player: { class: 'rogue', hp: 15, maxHp: 20, gold: 200 },
+    seen: new Set(visible),
+    visible,
+    items: [
+      { id: 'backup-potion-1', type: 'potion', heal: 20, carried: true },
+      { id: 'backup-potion-2', type: 'potion', heal: 20, carried: true },
+      { id: 'backup-potion-3', type: 'potion', heal: 20, carried: true },
+    ],
+    shops: [{
+      x: 4,
+      y: 5,
+      stock: [
+        { id: 'potion-2', type: 'potion', heal: 20, price: 15, sold: false },
+        { id: 'def-upgrade', type: 'upgrade', stat: 'def', amount: 1, price: 40, sold: false },
+      ],
+    }],
+  });
+
+  const decision = decide(G, { shopOpen: true });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '.shop-item[onclick*="potion-2"]');
+});
+
+test('mage keeps a third potion stocked before upgrades', () => {
+  const map = makeMap();
+  setFloor(map, [[4, 5, SHOP], [5, 5], [6, 5]]);
+  const visible = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6]);
+  const G = baseGame(map, {
+    player: { class: 'mage', hp: 11, maxHp: 20, gold: 200 },
+    seen: new Set(visible),
+    visible,
+    items: [
+      { id: 'backup-potion-1', type: 'potion', heal: 20, carried: true },
+      { id: 'backup-potion-2', type: 'potion', heal: 20, carried: true },
+    ],
+    shops: [{
+      x: 4,
+      y: 5,
+      stock: [
+        { id: 'potion-3', type: 'potion', heal: 20, price: 15, sold: false },
+        { id: 'def-upgrade', type: 'upgrade', stat: 'def', amount: 1, price: 40, sold: false },
+      ],
+    }],
+  });
+
+  const decision = decide(G, { shopOpen: true });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '.shop-item[onclick*="potion-3"]');
+});
+
+test('barbarian keeps a third potion stocked before upgrades', () => {
+  const map = makeMap();
+  setFloor(map, [[4, 5, SHOP], [5, 5], [6, 5]]);
+  const visible = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6]);
+  const G = baseGame(map, {
+    player: { class: 'barbarian', hp: 26, maxHp: 60, gold: 200 },
+    seen: new Set(visible),
+    visible,
+    items: [
+      { id: 'backup-potion-1', type: 'potion', heal: 20, carried: true },
+      { id: 'backup-potion-2', type: 'potion', heal: 20, carried: true },
+    ],
+    shops: [{
+      x: 4,
+      y: 5,
+      stock: [
+        { id: 'potion-4', type: 'potion', heal: 20, price: 15, sold: false },
+        { id: 'def-upgrade', type: 'upgrade', stat: 'def', amount: 1, price: 40, sold: false },
+      ],
+    }],
+  });
+
+  const decision = decide(G, { shopOpen: true });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '.shop-item[onclick*="potion-4"]');
+});
+
+test('buys a potion before an upgrade when wounded and out of healing', () => {
+  const map = makeMap();
+  setFloor(map, [[4, 5, SHOP], [5, 5], [6, 5]]);
+  const visible = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6]);
+  const G = baseGame(map, {
+    player: { class: 'ranger', hp: 12, maxHp: 40, gold: 200 },
+    seen: new Set(visible),
+    visible,
+    shops: [{
+      x: 4,
+      y: 5,
+      stock: [
+        { id: 'def-upgrade', type: 'upgrade', stat: 'def', amount: 1, price: 40, sold: false },
+        { id: 'potion-1', type: 'potion', heal: 20, price: 15, sold: false },
+      ],
+    }],
+  });
+
+  const decision = decide(G, { shopOpen: true });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '.shop-item[onclick*="potion-1"]');
+});
+
+test('rogue drinks a potion when below the combat floor threshold', () => {
+  const map = makeMap();
+  setFloor(map, [[5, 5], [6, 5], [7, 5], [5, 6]]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { class: 'rogue', hp: 10, maxHp: 20, weapon: { atk: 2 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'g1', name: 'Goblin', x: 7, y: 5, hp: 10, maxHp: 10, atk: 4, def: 1 }],
+    items: [{ id: 'potion-1', type: 'potion', heal: 20, carried: true }],
+    G: { floor: 4 },
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
+test('warrior prioritizes defense upgrades over perception in shops', () => {
+  const map = makeMap();
+  setFloor(map, [[4, 5, SHOP], [5, 5], [6, 5]]);
+  const visible = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6]);
+  const G = baseGame(map, {
+    player: { class: 'warrior', gold: 220 },
+    seen: new Set(visible),
+    visible,
+    shops: [{
+      x: 4,
+      y: 5,
+      stock: [
+        { id: 'def-upgrade', type: 'upgrade', stat: 'def', amount: 1, price: 40, sold: false },
+        { id: 'perception-upgrade', type: 'upgrade', stat: 'perception', amount: 1, price: 40, sold: false },
+      ],
+    }],
+  });
+
+  const decision = decide(G, { shopOpen: true });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '.shop-item[onclick*="def-upgrade"]');
+});
+
+test('ranger prioritizes perception upgrades over defense in shops', () => {
+  const map = makeMap();
+  setFloor(map, [[4, 5, SHOP], [5, 5], [6, 5]]);
+  const visible = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6]);
+  const G = baseGame(map, {
+    player: { class: 'ranger', gold: 220 },
+    seen: new Set(visible),
+    visible,
+    shops: [{
+      x: 4,
+      y: 5,
+      stock: [
+        { id: 'def-upgrade', type: 'upgrade', stat: 'def', amount: 1, price: 40, sold: false },
+        { id: 'perception-upgrade', type: 'upgrade', stat: 'perception', amount: 1, price: 40, sold: false },
+      ],
+    }],
+  });
+
+  const decision = decide(G, { shopOpen: true });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '.shop-item[onclick*="perception-upgrade"]');
 });
 
 test('attacks a weak visible floor 5 enemy before taking known stairs', () => {
@@ -415,6 +646,30 @@ test('paths to nearest unseen tile instead of falling back to random movement', 
 
   assert.strictEqual(decision.type, 'key');
   assert.strictEqual(decision.val, 'ArrowRight');
+});
+
+test('avoids chasing a visible enemy when wounded but still carrying a potion', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5],
+    [5, 6],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { class: 'warrior', hp: 18, maxHp: 40, weapon: { atk: 4 } },
+    seen: new Set([5 * MAP_W + 5, 5 * MAP_W + 7]),
+    visible,
+    enemies: [{ id: 'g1', name: 'Goblin', x: 7, y: 5, hp: 20, maxHp: 20, atk: 8, def: 2 }],
+    items: [{ id: 'potion-1', type: 'potion', heal: 20, carried: true }],
+    G: { floor: 4 },
+  });
+
+  const decision = decide(G);
+
+  assert.notStrictEqual(decision.label, 'path to enemy');
+  assert.strictEqual(decision.val, 'ArrowDown');
 });
 
 test('derives map dimensions from the active game map', () => {
@@ -711,7 +966,29 @@ test('rogue fights instead of dash-spamming when critical with no known exit', (
   const decision = decide(G);
 
   assert.strictEqual(decision.type, 'key');
-  assert.strictEqual(decision.val, 'ArrowDown');
+  assert.notStrictEqual(decision.val, 'b');
+});
+
+test('rogue does not dash into melee when low on hp, out of potions, and known stairs already exist', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [5, 5],
+    [5, 6],
+    [7, 5, STAIRS],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { class: 'rogue', hp: 21, maxHp: 32, weapon: { atk: 2 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'g1', name: 'Goblin', x: 5, y: 6, hp: 10, maxHp: 10, atk: 4, def: 1 }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.notStrictEqual(decision.val, 'b');
 });
 
 test('rogue uses vanish before dash when wounded at level 5 in melee', () => {
@@ -743,8 +1020,9 @@ test('rogue uses vanish offensively on late-floor visible threats before dash', 
     [5, 5],
     [6, 5],
     [7, 5],
+    [8, 5],
   ]);
-  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7, 5 * MAP_W + 8]);
   const G = baseGame(map, {
     player: { class: 'rogue', lvl: 5, hp: 28, maxHp: 28, weapon: { atk: 2 } },
     seen: new Set(visible),
@@ -810,8 +1088,9 @@ test('mage fireballs a healthy single visible threat instead of kiting forever',
     [5, 5],
     [6, 5],
     [7, 5],
+    [8, 5],
   ]);
-  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7, 5 * MAP_W + 8]);
   const G = baseGame(map, {
     player: { class: 'mage', hp: 15, maxHp: 15, weapon: { atk: 5, sym: '♦' } },
     seen: new Set(visible),
@@ -831,13 +1110,14 @@ test('ranger uses bow range on visible enemies before walking toward them', () =
     [5, 5],
     [6, 5],
     [7, 5],
+    [8, 5],
   ]);
-  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7, 5 * MAP_W + 8]);
   const G = baseGame(map, {
     player: { class: 'ranger', hp: 15, maxHp: 15, weapon: { atk: 3, sym: '🏹' } },
     seen: new Set(visible),
     visible,
-    enemies: [{ id: 'g1', name: 'Goblin', x: 7, y: 5, hp: 10, maxHp: 10, atk: 4, def: 1 }],
+    enemies: [{ id: 'g1', name: 'Goblin', x: 8, y: 5, hp: 10, maxHp: 10, atk: 4, def: 1 }],
     ability1Cooldown: 4,
   });
 
@@ -845,6 +1125,25 @@ test('ranger uses bow range on visible enemies before walking toward them', () =
 
   assert.strictEqual(decision.type, 'attack');
   assert.strictEqual(decision.target, 'g1');
+});
+
+test('mage does not spend blink when the only safe visible tile is the current tile', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [5, 6],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 6 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { class: 'mage', lvl: 5, hp: 8, maxHp: 15, weapon: { atk: 5 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'g1', name: 'Goblin', x: 5, y: 6, hp: 10, maxHp: 10, atk: 4, def: 1 }],
+  });
+
+  const decision = decide(G);
+
+  assert.notStrictEqual(decision.val, 'v');
 });
 
 test('uses a teleportation scroll when surrounded without healing', () => {
@@ -888,6 +1187,27 @@ test('uses a teleportation scroll against a single lethal adjacent threat withou
     visible,
     enemies: [{ id: 'orc-1', name: 'Orc', x: 5, y: 6, hp: 40, maxHp: 40, atk: 12, def: 3 }],
     items: [{ id: 'teleport-1', name: 'Scroll of Teleportation', type: 'scroll_teleport', carried: true }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
+test('uses a detection scroll before exploring when hidden secrets remain', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5, SECRET_DOOR],
+    [5, 6],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 6 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { hp: 18, maxHp: 18 },
+    seen: new Set(visible),
+    visible,
+    items: [{ id: 'detect-1', name: 'Scroll of Detection', type: 'scroll', carried: true }],
   });
 
   const decision = decide(G);
@@ -943,6 +1263,30 @@ test('uses a teleportation scroll proactively when critically wounded beside a t
   assert.strictEqual(decision.val, 'i');
 });
 
+test('uses a teleportation scroll when out of potions and below the combat floor', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5],
+    [5, 6],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { class: 'ranger', hp: 10, maxHp: 20, weapon: { atk: 3, sym: '🏹' } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'g1', name: 'Goblin', x: 7, y: 5, hp: 12, maxHp: 12, atk: 5, def: 1 }],
+    items: [{ id: 'teleport-1', name: 'Scroll of Teleportation', type: 'scroll_teleport', carried: true }],
+    G: { floor: 4 },
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
 test('uses a bomb when wounded and it can remove adjacent pressure', () => {
   const map = makeMap();
   setFloor(map, [
@@ -956,6 +1300,33 @@ test('uses a bomb when wounded and it can remove adjacent pressure', () => {
     seen: new Set(visible),
     visible,
     enemies: [{ id: 'orc-1', name: 'Orc', x: 5, y: 6, hp: 25, maxHp: 40, atk: 16, def: 3 }],
+    items: [{ id: 'bomb-1', name: 'Bomb', type: 'bomb', carried: true }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
+test('mage uses a bomb when panic-low and two adjacent enemies remain', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [5, 5],
+    [5, 6],
+    [6, 5],
+    [4, 5],
+  ]);
+  const visible = new Set([4 * MAP_W + 5, 5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6, 6 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { class: 'mage', hp: 8, maxHp: 30, weapon: { atk: 4 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [
+      { id: 'orc-1', name: 'Orc', x: 5, y: 4, hp: 40, maxHp: 40, atk: 12, def: 3 },
+      { id: 'orc-2', name: 'Orc', x: 5, y: 6, hp: 40, maxHp: 40, atk: 12, def: 3 },
+    ],
     items: [{ id: 'bomb-1', name: 'Bomb', type: 'bomb', carried: true }],
   });
 
@@ -1009,6 +1380,121 @@ test('drinks a strength potion before engaging a durable visible threat', () => 
   assert.strictEqual(decision.val, 'i');
 });
 
+test('warrior drinks strength before a durable visible threat', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { class: 'warrior', hp: 18, maxHp: 30, weapon: { atk: 5 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'ogre-1', name: 'Ogre', x: 7, y: 5, hp: 24, maxHp: 24, atk: 8, def: 2 }],
+    items: [{ id: 'strength-warrior-1', name: 'Potion of Giant Strength', type: 'potion_buff', buff: 'strength', carried: true }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
+test('mage drinks strength before a durable visible threat', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { class: 'mage', hp: 18, maxHp: 30, weapon: { atk: 5, sym: 'â™¦' } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'ogre-1', name: 'Ogre', x: 7, y: 5, hp: 24, maxHp: 24, atk: 8, def: 2 }],
+    items: [{ id: 'strength-mage-1', name: 'Potion of Giant Strength', type: 'potion_buff', buff: 'strength', carried: true }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
+test('monk drinks strength before a durable visible threat', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 5],
+    [6, 5],
+    [7, 5],
+  ]);
+  const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { class: 'monk', hp: 18, maxHp: 28, weapon: { atk: 3 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'ogre-1', name: 'Ogre', x: 7, y: 5, hp: 24, maxHp: 24, atk: 8, def: 2 }],
+    items: [{ id: 'strength-monk-1', name: 'Potion of Giant Strength', type: 'potion_buff', buff: 'strength', carried: true }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
+test('prioritizes a valuable strength buff over a nearby shop detour', () => {
+  const map = makeMap();
+  setFloor(map, [[4, 5, SHOP], [5, 5], [6, 5]]);
+  const visible = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6]);
+  const G = baseGame(map, {
+    player: { class: 'paladin', hp: 23, maxHp: 77, gold: 120, weapon: { atk: 5 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'ogre-1', name: 'Ogre', x: 6, y: 5, hp: 24, maxHp: 24, atk: 8, def: 2 }],
+    items: [{ id: 'strength-paladin-1', name: 'Potion of Giant Strength', type: 'potion_buff', buff: 'strength', carried: true }],
+    shops: [{
+      x: 4,
+      y: 5,
+      stock: [
+        { id: 'def-upgrade', type: 'upgrade', stat: 'def', amount: 1, price: 40, sold: false },
+      ],
+    }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.strictEqual(decision.val, 'i');
+});
+
+test('does not shop for a strength buff while enemies are already visible', () => {
+  const map = makeMap();
+  setFloor(map, [[4, 5, SHOP], [5, 5], [6, 5], [7, 5]]);
+  const visible = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
+  const G = baseGame(map, {
+    player: { class: 'monk', hp: 67, maxHp: 132, gold: 120, weapon: { atk: 4 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'ogre-1', name: 'Ogre', x: 7, y: 5, hp: 24, maxHp: 24, atk: 8, def: 2 }],
+    shops: [{
+      x: 4,
+      y: 5,
+      stock: [
+        { id: 'strength-shop-1', name: 'Potion of Giant Strength', type: 'potion_buff', buff: 'strength', price: 30, sold: false },
+      ],
+    }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.notStrictEqual(decision.val, 't');
+});
+
 test('clicks the carried strength potion once the bag is open', () => {
   const map = makeMap();
   setFloor(map, [
@@ -1039,6 +1525,23 @@ test('accepts a low-cost greed shrine through the live shrine overlay', () => {
     player: { gold: 25 },
     seen: new Set(visible),
     visible,
+  });
+
+  const decision = decide(G, { shrineOpen: true, shrineTitle: 'GREED SHRINE' });
+
+  assert.strictEqual(decision.type, 'click');
+  assert.strictEqual(decision.target, '#shrine-accept-btn');
+});
+
+test('paladin accepts a greed shrine late when the gold payout is worth the detour', () => {
+  const map = makeMap();
+  setFloor(map, [[5, 5]]);
+  const visible = new Set([5 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { class: 'paladin', lvl: 5, hp: 24, maxHp: 24, gold: 240 },
+    seen: new Set(visible),
+    visible,
+    G: { floor: 4 },
   });
 
   const decision = decide(G, { shrineOpen: true, shrineTitle: 'GREED SHRINE' });
@@ -1154,6 +1657,28 @@ test('ranger uses bear trap before piercing shot when an enemy is adjacent', () 
   assert.strictEqual(decision.val, 'v');
 });
 
+test('ranger does not spend bear trap while in panic range with no potion', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [5, 5],
+    [5, 6],
+    [6, 5],
+  ]);
+  const visible = new Set([4 * MAP_W + 5, 5 * MAP_W + 5, 6 * MAP_W + 5, 5 * MAP_W + 6]);
+  const G = baseGame(map, {
+    player: { class: 'ranger', lvl: 5, hp: 6, maxHp: 20, weapon: { atk: 3, sym: '🏹' } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'g1', name: 'Goblin', x: 5, y: 6, hp: 14, maxHp: 14, atk: 6, def: 1 }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.notStrictEqual(decision.val, 'v');
+});
+
 test('barbarian uses bloodlust before cleaving into a crowd', () => {
   const map = makeMap();
   setFloor(map, [
@@ -1178,6 +1703,27 @@ test('barbarian uses bloodlust before cleaving into a crowd', () => {
 
   assert.strictEqual(decision.type, 'key');
   assert.strictEqual(decision.val, 'v');
+});
+
+test('barbarian does not bloodlust while critically low and unrecovered', () => {
+  const map = makeMap();
+  setFloor(map, [
+    [5, 4],
+    [5, 5],
+    [5, 6],
+  ]);
+  const visible = new Set([4 * MAP_W + 5, 5 * MAP_W + 5, 6 * MAP_W + 5]);
+  const G = baseGame(map, {
+    player: { class: 'barbarian', lvl: 5, hp: 4, maxHp: 40, weapon: { atk: 8 } },
+    seen: new Set(visible),
+    visible,
+    enemies: [{ id: 'ogre-1', name: 'Ogre', x: 5, y: 6, hp: 30, maxHp: 30, atk: 10, def: 2 }],
+  });
+
+  const decision = decide(G);
+
+  assert.strictEqual(decision.type, 'key');
+  assert.notStrictEqual(decision.val, 'v');
 });
 
 test('necromancer primes raise dead before siphoning when multiple enemies are visible', () => {

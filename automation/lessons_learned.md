@@ -6,7 +6,7 @@ This file serves as the permanent memory ledger for the DELVE gameplay bot. When
 
 ## Strategic Rules
 
-*No rules have been written yet. Start a learning loop to populate this ledger!*
+*Keep appending strategy rules below as the bot learns; the run history is the source of truth.*
 
 ## Run History Logs
 *Append post-mortem analysis of deaths and run statistics below.*
@@ -92,8 +92,83 @@ This file serves as the permanent memory ledger for the DELVE gameplay bot. When
 - **Outcome**: After fixing the runner exploit, a strict 10-run batch reached **Avg Floor 4.5** with **1 WON** and one external Chromium resource error; a follow-up clean 5-run batch had no harness bugs and averaged **Floor 3.8**. The results are stricter than earlier batches because repeated dying-enemy rewards were removed.
 - **Analysis**: The previous playtest runner could send inputs while enemies were in the 320ms death animation. Because dying enemies still lived in `G.enemies`, the bot could repeatedly attack the same corpse, stack XP/gold, and queue extra enemy turns. This inflated progression and also caused fake attrition deaths. Once fixed, Floor 1 mostly stopped being the real issue; late-game deaths now come from being pinned adjacent to Trolls/Demons.
 - **New Rules**:
-  9. Dying enemies are inert: the engine ignores attacks, Bash targets, movement bumps, and enemy turns for `e.dying`.
-  10. The bot treats `hp < 70%` with no carried potion as an exit/resupply state. Known stairs outrank exploration, and affordable shops with useful stock outrank stairs before Floor 5.
-  11. If critically hurt in combat, drink a carried potion before taking voluntary combat actions.
-  12. On Floor 5, known stairs are the win condition. Stop full-clearing and descend immediately when standing on them.
+ 9. Dying enemies are inert: the engine ignores attacks, Bash targets, movement bumps, and enemy turns for `e.dying`.
+ 10. The bot treats `hp < 70%` with no carried potion as an exit/resupply state. Known stairs outrank exploration, and affordable shops with useful stock outrank stairs before Floor 5.
+ 11. If critically hurt in combat, drink a carried potion before taking voluntary combat actions.
+ 12. On Floor 5, known stairs are the win condition. Stop full-clearing and descend immediately when standing on them.
 - **Conclusion**: The bot is now evaluated by a much more honest harness. It reliably reaches late floors, can still win, and the next target is late-game adjacency escape: avoid or break multi-enemy pins before Troll/Demon double-hits drain all potions.
+
+### Iteration 15 (Class-Aware Strategy Profiles)
+- **Outcome**: Bot brain regressions and the full test suite passed after consolidating class strategy logic.
+- **Analysis**: The bot had two competing strategy schemas, which made class behavior brittle and masked bugs in shop selection, trap caution, and ability usage. Consolidating into one class-aware profile fixed the duplication and let the heuristics line up with real class roles.
+- **New Rules**:
+  13. Keep one canonical strategy profile per class. It must cover exit HP, combat caution, trap caution, gold reserve, consumable targets, and gear bias.
+  14. Ranger bow attacks can target up to 3 tiles away, and Mage Blink must exclude the current tile and only trigger when a real visible safe destination exists.
+  15. Shop logic should respect class-specific gold reserves, but still buy high-value upgrades or emergency consumables when the purchase is strategically justified.
+  16. Class-weighted gear valuation matters: Warrior should bias DEF, Ranger should bias Perception and mobility, and other classes should lean into their own survivability or offense profile.
+
+### Iteration 16 (Recover Before Combat)
+- **Outcome**: On the same deterministic audit seed, low-HP combat-no-healing events dropped from 414 to 140 after tightening recovery behavior for low-health runs.
+- **Analysis**: The bot was still willing to keep fighting while wounded, especially for Rogue, Ranger, and Paladin. Making recovery mode strictly prefer items, shops, stairs, and unexplored tiles before enemies cut down the worst low-HP combat loops, but it also increased overclear/timeouts because the bot now spends more turns escaping instead of converting that advantage into a win.
+- **New Rules**:
+  17. When recovering at low HP, do not target enemies as BFS goals. Prefer items, shops, stairs, and unseen tiles; if none are reachable, fall back to non-combat movement instead of forcing a fight.
+  18. Rogue, Ranger, and Paladin should recover earlier than the baseline classes. Their exploration and exit thresholds need to be more conservative than the melee-heavy classes because they lose too many runs while trying to keep tempo at low HP.
+
+### Iteration 16 (Class-Aware Combat, Economy, and Shrine Fixes)
+- **Outcome**: `npm test` passed, and a seeded 8-class audit finished cleanly with no timeouts or loader crashes. The audit averaged **Floor 3.8** across one run per class at 5000 turns.
+- **Analysis**: The active bot strategy was missing the low-hp combat floor in the live table, detection scroll targeting had drifted, shrine acceptance was comparing the wrong case, and ranger ranged targeting still truncated the bow at 2 tiles. Those bugs made the bot too timid in some places and too blind in others.
+- **New Rules**:
+  17. Keep the live strategy table complete: exit HP, combat HP floor, exploration threshold, gold reserve, and consumable targets must all exist in the same active scope.
+  18. Detection scrolls are strategic exploration tools and should be used when secrets remain.
+  19. Shrine types should be normalized before decision logic so overlay text casing does not change acceptance behavior.
+  20. Ranger bows should evaluate 3-tile ranged attacks before falling back to movement or kiting.
+- **Audit Notes**: The 8-run audit still shows residual pressure, especially **low-hp combat without healing** and a handful of missed buff opportunities, so the next tuning pass should focus on buff usage and escape thresholds rather than basic navigation.
+
+### Iteration 17 (Mage Buff Aggression Fix)
+- **Outcome**: Bot regressions and the full test suite still passed after making mage buffs more aggressive and pinning the behavior with a mage-specific strength-buff regression.
+- **Analysis**: The audit isolated missed buffs to mage. Raising mage buff willingness fixed that class-specific blind spot without regressing the rest of the roster. The latest audit shows `missedBuff = 0` across all classes.
+- **New Rules**:
+  21. Mage should treat strength buffs as a real combat tool, not a last resort. If a buff saves attacks against a durable visible threat, use it.
+  22. Class exploration thresholds can be tuned independently from combat logic; do not use one class’s routeing needs to justify another class’s clear pattern.
+- **Audit Notes**: The latest one-run-per-class audit still shows substantial **low-hp combat without healing** and some **overclearSteps**, especially on mage, barbarian, and rogue. Those are now the next strategic tuning targets.
+
+### Iteration 18 (Consumable Stock and Combat Floor Tuning)
+- **Outcome**: `npm test` passed after adding class-specific shop stock regressions and combat-floor healing checks. A small seeded audit improved to **Floor 3.9**, **floor5 12.5%**, and **low-hp combat no healing 160**; the matching headless balance batch reached **Floor 3.8** on average with **floor5 12.5%** and no wins.
+- **Analysis**: The bot was still spending upgrades before it had enough escape stock, and some classes were waiting too long to drink potions in live combat. Making shop scores respect class potion/teleport targets and giving each class its own combat potion floor fixed the most obvious escape-stock blind spot without breaking the existing class-specific movement tests.
+- **New Rules**:
+ 23. If a class has not met its potion or teleport target, those consumables should outrank normal upgrades in shops.
+ 24. Combat potion thresholds are class-specific. Rogue, Ranger, and Paladin should heal earlier than Warrior, while fragile ranged classes should not wait for the global critical-low cutoff.
+ 25. If a class is out of potions and below its combat floor while enemies are visible, an emergency teleport is a valid escape action.
+- **Audit Notes**: The remaining gaps are now mostly late-floor pressure and missed buff opportunities, not basic pathing or shop priority bugs.
+
+### Iteration 19 (Combat Buffs Beat Shop Detours)
+- **Outcome**: `npm test` passed, and the same seeded 8-class audit dropped `missedBuff` from 2 to 0. The audit finished at **Floor 3.9** average with **floor5 0%** on this seed, while the win/loss shape stayed unchanged.
+- **Analysis**: The remaining buff misses were not a raw strength-gate problem. They came from the bot opening or staying in shops while combat buffs were already the better move, then spending the next step escaping before it could use inventory. The fix was to treat visible-combat strength buffs as a hard shop detour stop and to stop buying shop strength buffs while enemies are already on screen.
+- **New Rules**:
+ 26. If a visible combat buff is valuable, do not open or continue a shop detour for normal upgrades or gear. Use the buff first, then revisit the shop if the fight survives.
+ 27. Do not buy strength buffs from shops while enemies are already visible. Shop-bought combat buffs are downtime purchases, not emergency combat actions.
+- **Audit Notes**: `missedBuff = 0` across all classes on the final one-run-per-class audit. The remaining tuning work is now concentrated in `lowHpCombatNoHealing`, especially for Monk.
+
+### Iteration 20 (Known Stairs Beat Panic Kiting)
+- **Outcome**: `npm test` passed, and the seed-9000 headless balance sweep improved to **Floor 3.8** average with no timeouts. The new low-HP stair-escape regression stayed green.
+- **Analysis**: The bot was panic-kiting away from a known stair escape when it had no potions, which let visible pressure snowball into avoidable deaths. The fix is narrower than a global stair rush: keep the visible-enemy gate on stair targeting, but let panic mode yield when a known-stairs escape is already available and the player is not adjacent to danger.
+- **New Rules**:
+ 28. Panic kiting must not override a known-stairs escape when the player is out of potions, below the exit threshold, and not adjacent to enemies.
+ 29. Do not broaden `shouldHeadForStairs()` globally to fix one escape seed; keep the conservative visible-pressure gate and handle emergency exits in the panic path instead.
+- **Audit Notes**: The bot still is not winning these samples, but the stair escape no longer regresses the balance sweep and the low-HP no-potion case now behaves predictably.
+
+### Iteration 21 (Rogue and Paladin Commit Earlier)
+- **Outcome**: `npm test` passed, and the seed-9000 one-run-per-class audit settled at **Floor 3.0** average with **low-hp combat no healing 152** and no missed heals, teleports, bombs, or buffs.
+- **Analysis**: Rogue and paladin were spending too long on cleared floors after stairs were known, which kept them exposed at low HP for too many turns. Lowering their exploration thresholds makes them commit to stairs earlier without changing their combat or shop priorities.
+- **New Rules**:
+ 30. Fragile classes should commit to known stairs earlier once the floor is sufficiently explored; do not keep roaming for marginal value after an escape path is already available.
+ 31. Route timing should be class-specific. A threshold that is safe for one class can be too greedy for another.
+- **Audit Notes**: The remaining pressure is now mostly class-by-class combat survivability, not missed buffs, shrines, or basic shop logic.
+
+### Iteration 22 (Rogue Dash Respects Escape Mode)
+- **Outcome**: `npm test` passed after making rogue dash skip escape-mode turns when stairs are already known. The 8-run seed-9000 sweep kept `low-hp combat no healing` at **152** and rogue no longer converts a known escape into a dash follow-up.
+- **Analysis**: Rogue was still using `dash` as an aggressive melee follow-up while already in escape mode. That is the wrong priority once the stairs are known and the run has no potions left. The fix suppresses only the rogue dash branch and lets the rest of the decision pipeline pick a real escape action.
+- **New Rules**:
+ 32. Rogue dash should not trigger when `shouldExitWithoutPotion()` is true and the stairs are already known.
+ 33. Suppressing a risky ability should fall through to the normal movement logic; do not return `null` and stall the turn.
+- **Audit Notes**: The bot still has no wins in the seed-9000 sweep, but the rogue escape behavior is safer and the low-HP count did not regress.

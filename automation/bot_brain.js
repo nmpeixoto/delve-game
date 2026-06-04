@@ -3,6 +3,488 @@
 // The agent modifies this file to improve the bot's decision making based on lessons learned.
 // The function must return null (stuck), {type: 'status', val: 'dead'/'won'}, {type: 'click', target: selector}, or {type: 'key', val: keyString}.
 
+function getClassStrategy(className) {
+  const base = {
+    exitHp: 0.7,
+    combatHpFloor: 0.45,
+    combatPotionFloor: 0.42,
+    exploreThreshold: 0.35,
+    trapHpThreshold: 0.5,
+    goldReserve: 60,
+    potionTarget: 2,
+    buffTarget: 1,
+    teleportTarget: 1,
+    bombTarget: 1,
+    detectionTarget: 1,
+    bloodHpThreshold: 0.7,
+    bloodMinRemainingHp: 16,
+    greedGoldCap: 220,
+    cursedHpThreshold: 0.35,
+    weaponBias: 1,
+    armorBias: 1,
+    buffAggression: 1,
+    secondaryWeights: {
+      perception: 1,
+      vampirism: 1,
+      regen: 1,
+      swiftness: 1,
+      goldBonus: 1,
+      xpMult: 1,
+      critChance: 1,
+      dodgeBonus: 1,
+    },
+    upgradeWeights: {
+      atk: 1,
+      def: 1,
+      hp: 1,
+      all: 1,
+      all5: 1,
+      vamp: 1,
+      regen: 1,
+      swift: 1,
+      perception: 1,
+      crit: 1,
+      dodge: 1,
+      goldBonus: 1,
+      xpMult: 1,
+      magicMult: 1,
+    },
+  };
+
+  switch (className) {
+    case 'warrior':
+      return {
+        ...base,
+        exitHp: 0.62,
+        combatHpFloor: 0.5,
+        combatPotionFloor: 0.4,
+        exploreThreshold: 0.3,
+        trapHpThreshold: 0.55,
+        goldReserve: 70,
+        potionTarget: 2,
+        detectionTarget: 0,
+        bloodHpThreshold: 0.7,
+        bloodMinRemainingHp: 18,
+        greedGoldCap: 220,
+        cursedHpThreshold: 0.3,
+        weaponBias: 1.15,
+        armorBias: 1.45,
+        buffAggression: 1.6,
+        secondaryWeights: {
+          ...base.secondaryWeights,
+          perception: 0.8,
+          vampirism: 0.9,
+          regen: 1.1,
+          swiftness: 0.8,
+          goldBonus: 0.9,
+          xpMult: 0.85,
+          critChance: 1.15,
+          dodgeBonus: 0.8,
+        },
+        upgradeWeights: {
+          ...base.upgradeWeights,
+          atk: 1.15,
+          def: 1.45,
+          hp: 1.3,
+          all: 1.3,
+          all5: 1.3,
+          vamp: 0.9,
+          regen: 1.05,
+          swift: 0.8,
+          perception: 0.8,
+          crit: 1.05,
+          dodge: 0.85,
+          goldBonus: 0.9,
+          xpMult: 0.85,
+        },
+      };
+    case 'rogue':
+      return {
+        ...base,
+        exitHp: 0.7,
+        combatHpFloor: 0.64,
+        combatPotionFloor: 0.56,
+        exploreThreshold: 0.18,
+        trapHpThreshold: 0.7,
+        goldReserve: 55,
+        potionTarget: 4,
+        teleportTarget: 2,
+        detectionTarget: 1,
+        bloodHpThreshold: 0.78,
+        bloodMinRemainingHp: 16,
+        greedGoldCap: 190,
+        cursedHpThreshold: 0.4,
+        weaponBias: 1.15,
+        armorBias: 1,
+        buffAggression: 0.95,
+        secondaryWeights: {
+          ...base.secondaryWeights,
+          perception: 0.95,
+          vampirism: 1,
+          regen: 0.9,
+          swiftness: 1.15,
+          goldBonus: 0.9,
+          xpMult: 0.95,
+          critChance: 1.35,
+          dodgeBonus: 1.45,
+        },
+        upgradeWeights: {
+          ...base.upgradeWeights,
+          atk: 1.05,
+          def: 0.85,
+          hp: 0.95,
+          all: 1,
+          all5: 1,
+          vamp: 1,
+          regen: 0.9,
+          swift: 1.15,
+          perception: 1.2,
+          crit: 1.4,
+          dodge: 1.45,
+          goldBonus: 0.95,
+          xpMult: 0.95,
+        },
+      };
+    case 'mage':
+      return {
+        ...base,
+        exitHp: 0.72,
+        combatHpFloor: 0.68,
+        combatPotionFloor: 0.62,
+        exploreThreshold: 0.2,
+        trapHpThreshold: 0.75,
+        goldReserve: 80,
+        potionTarget: 2,
+        teleportTarget: 2,
+        detectionTarget: 1,
+        bloodHpThreshold: 0.82,
+        bloodMinRemainingHp: 14,
+        greedGoldCap: 160,
+        cursedHpThreshold: 0.45,
+        weaponBias: 1.25,
+        armorBias: 0.9,
+        buffAggression: 1.1,
+        secondaryWeights: {
+          ...base.secondaryWeights,
+          perception: 1,
+          vampirism: 1.15,
+          regen: 1.35,
+          swiftness: 1,
+          goldBonus: 0.8,
+          xpMult: 0.95,
+          critChance: 0.9,
+          dodgeBonus: 0.9,
+        },
+        upgradeWeights: {
+          ...base.upgradeWeights,
+          atk: 1,
+          def: 0.9,
+          hp: 1.05,
+          all: 1,
+          all5: 1,
+          vamp: 1.15,
+          regen: 1.4,
+          swift: 1,
+          perception: 1.1,
+          crit: 0.9,
+          dodge: 0.9,
+          goldBonus: 0.8,
+          xpMult: 1,
+        },
+      };
+    case 'paladin':
+      return {
+        ...base,
+        exitHp: 0.68,
+        combatHpFloor: 0.58,
+        combatPotionFloor: 0.5,
+        exploreThreshold: 0.15,
+        trapHpThreshold: 0.6,
+        goldReserve: 75,
+        potionTarget: 3,
+        teleportTarget: 2,
+        detectionTarget: 0,
+        bloodHpThreshold: 0.68,
+        bloodMinRemainingHp: 18,
+        greedGoldCap: 180,
+        cursedHpThreshold: 0.28,
+        weaponBias: 1.15,
+        armorBias: 1.5,
+        buffAggression: 1,
+        secondaryWeights: {
+          ...base.secondaryWeights,
+          perception: 0.85,
+          vampirism: 1,
+          regen: 1.15,
+          swiftness: 0.8,
+          goldBonus: 0.9,
+          xpMult: 0.9,
+          critChance: 0.9,
+          dodgeBonus: 0.9,
+        },
+        upgradeWeights: {
+          ...base.upgradeWeights,
+          atk: 1,
+          def: 1.3,
+          hp: 1.45,
+          all: 1.35,
+          all5: 1.35,
+          vamp: 1,
+          regen: 1.15,
+          swift: 0.8,
+          perception: 0.8,
+          crit: 0.9,
+          dodge: 0.9,
+          goldBonus: 0.9,
+          xpMult: 0.9,
+        },
+      };
+    case 'ranger':
+      return {
+        ...base,
+        exitHp: 0.72,
+        combatHpFloor: 0.63,
+        combatPotionFloor: 0.55,
+        exploreThreshold: 0.22,
+        trapHpThreshold: 0.72,
+        goldReserve: 65,
+        potionTarget: 2,
+        teleportTarget: 2,
+        detectionTarget: 1,
+        bloodHpThreshold: 0.76,
+        bloodMinRemainingHp: 16,
+        greedGoldCap: 210,
+        cursedHpThreshold: 0.35,
+        weaponBias: 1.2,
+        armorBias: 1.05,
+        buffAggression: 0.9,
+        secondaryWeights: {
+          ...base.secondaryWeights,
+          perception: 1.45,
+          vampirism: 0.9,
+          regen: 0.9,
+          swiftness: 1.3,
+          goldBonus: 0.9,
+          xpMult: 1,
+          critChance: 1.15,
+          dodgeBonus: 1.2,
+        },
+        upgradeWeights: {
+          ...base.upgradeWeights,
+          atk: 1.05,
+          def: 0.9,
+          hp: 1,
+          all: 1,
+          all5: 1,
+          vamp: 0.9,
+          regen: 0.9,
+          swift: 1.35,
+          perception: 1.45,
+          crit: 1.1,
+          dodge: 1.2,
+          goldBonus: 0.9,
+          xpMult: 1,
+        },
+      };
+    case 'barbarian':
+      return {
+        ...base,
+        exitHp: 0.58,
+        combatHpFloor: 0.5,
+        combatPotionFloor: 0.42,
+        exploreThreshold: 0.22,
+        trapHpThreshold: 0.55,
+        goldReserve: 50,
+        potionTarget: 3,
+        detectionTarget: 0,
+        bloodHpThreshold: 0.62,
+        bloodMinRemainingHp: 18,
+        greedGoldCap: 160,
+        cursedHpThreshold: 0.3,
+        weaponBias: 1.25,
+        armorBias: 1.05,
+        buffAggression: 1.2,
+        secondaryWeights: {
+          ...base.secondaryWeights,
+          perception: 0.8,
+          vampirism: 1.2,
+          regen: 0.9,
+          swiftness: 0.8,
+          goldBonus: 0.85,
+          xpMult: 0.85,
+          critChance: 1.35,
+          dodgeBonus: 0.8,
+        },
+        upgradeWeights: {
+          ...base.upgradeWeights,
+          atk: 1.35,
+          def: 0.9,
+          hp: 1.2,
+          all: 1.1,
+          all5: 1.1,
+          vamp: 1.2,
+          regen: 0.9,
+          swift: 0.8,
+          perception: 0.8,
+          crit: 1.35,
+          dodge: 0.8,
+          goldBonus: 0.85,
+          xpMult: 0.85,
+        },
+      };
+    case 'necromancer':
+      return {
+        ...base,
+        exitHp: 0.68,
+        combatHpFloor: 0.6,
+        combatPotionFloor: 0.52,
+        exploreThreshold: 0.25,
+        trapHpThreshold: 0.75,
+        goldReserve: 80,
+        potionTarget: 3,
+        detectionTarget: 1,
+        bloodHpThreshold: 0.82,
+        bloodMinRemainingHp: 14,
+        greedGoldCap: 160,
+        cursedHpThreshold: 0.4,
+        weaponBias: 1.2,
+        armorBias: 0.95,
+        buffAggression: 0.9,
+        secondaryWeights: {
+          ...base.secondaryWeights,
+          perception: 0.9,
+          vampirism: 1.45,
+          regen: 1.35,
+          swiftness: 0.9,
+          goldBonus: 0.85,
+          xpMult: 0.95,
+          critChance: 0.9,
+          dodgeBonus: 0.85,
+        },
+        upgradeWeights: {
+          ...base.upgradeWeights,
+          atk: 1.05,
+          def: 0.9,
+          hp: 1,
+          all: 1,
+          all5: 1,
+          vamp: 1.5,
+          regen: 1.35,
+          swift: 0.9,
+          perception: 1,
+          crit: 0.9,
+          dodge: 0.85,
+          goldBonus: 0.85,
+          xpMult: 0.95,
+        },
+      };
+    case 'monk':
+      return {
+        ...base,
+        exitHp: 0.65,
+        combatHpFloor: 0.56,
+        combatPotionFloor: 0.48,
+        exploreThreshold: 0.24,
+        trapHpThreshold: 0.65,
+        goldReserve: 60,
+        potionTarget: 2,
+        secondaryWeights: {
+          ...base.secondaryWeights,
+          perception: 1.25,
+          vampirism: 0.9,
+          regen: 1,
+          swiftness: 1.4,
+          goldBonus: 0.9,
+          xpMult: 0.9,
+          critChance: 1,
+          dodgeBonus: 1.35,
+        },
+        upgradeWeights: {
+          ...base.upgradeWeights,
+          atk: 0.9,
+          def: 1.1,
+          hp: 1.05,
+          all: 1,
+          all5: 1,
+          vamp: 0.9,
+          regen: 1,
+          swift: 1.45,
+          perception: 1.25,
+          crit: 1,
+          dodge: 1.35,
+          goldBonus: 0.9,
+          xpMult: 0.9,
+        },
+      };
+    default:
+      return base;
+  }
+}
+
+function getUpgradeBaseScore(item) {
+  const amount = Number(item && item.amount) || 0;
+  switch (item && item.stat) {
+    case 'atk': return 30 + amount * 15;
+    case 'def': return 30 + amount * 15;
+    case 'hp': return 24 + amount * 3.5;
+    case 'all': return 95;
+    case 'all5': return 190;
+    case 'vamp': return 60 + amount * 20;
+    case 'regen': return 55 + amount * 18;
+    case 'swift': return 50 + amount * 20;
+    case 'perception': return 42 + amount * 18;
+    case 'crit': return 45 + amount * 600;
+    case 'dodge': return 45 + amount * 600;
+    case 'goldBonus': return 30 + amount * 5;
+    case 'xpMult': return 30 + amount * 120;
+    default: return 25 + amount * 10;
+  }
+}
+
+function shouldAcceptShrineType(p, G, shrineType) {
+  if (!p || !shrineType) return false;
+  const type = String(shrineType).toLowerCase();
+  const className = p.class || '';
+  const hpRatio = p.maxHp > 0 ? p.hp / p.maxHp : 0;
+  const hasEscapeItem = (G.items || []).some(i => i.carried && (i.type === 'scroll_teleport' || i.type === 'bomb'));
+  const hasEmergencyAbility =
+    (p.lvl >= 5 && G.ability2Cooldown === 0 && ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian'].includes(className)) ||
+    (p.lvl >= 5 && G.ability1Cooldown === 0 && ['necromancer', 'monk'].includes(className));
+  const canRiskCursed = hasEscapeItem || hasEmergencyAbility;
+
+  if (type === 'blood') {
+    const minHpRatio =
+      className === 'barbarian' ? 0.65 :
+      className === 'warrior' || className === 'paladin' ? 0.7 :
+      className === 'rogue' || className === 'ranger' ? 0.76 :
+      className === 'mage' || className === 'necromancer' ? 0.82 :
+      className === 'monk' ? 0.74 : 0.72;
+    const minRemaining = className === 'barbarian' ? 24 : (className === 'warrior' || className === 'paladin' ? 22 : 18);
+    const cost = Math.max(1, Math.floor(p.maxHp * 0.3));
+    return hpRatio >= minHpRatio && (p.maxHp - cost) >= minRemaining;
+  }
+
+  if (type === 'greed') {
+    const goldCap =
+      className === 'warrior' || className === 'paladin' || className === 'barbarian' ? 350 :
+      className === 'rogue' || className === 'ranger' || className === 'monk' ? 275 :
+      250;
+    return p.gold <= goldCap || (G.floor >= 4 && p.lvl < 8) || (G.floor >= 3 && p.lvl < 6 && p.gold <= goldCap + 40);
+  }
+
+  if (type === 'cursed') {
+    const hpFloor =
+      className === 'mage' || className === 'necromancer' ? 0.4 :
+      className === 'rogue' || className === 'ranger' ? 0.35 :
+      className === 'warrior' || className === 'paladin' ? 0.38 :
+      className === 'barbarian' ? 0.3 :
+      0.34;
+    return hpRatio < hpFloor && canRiskCursed;
+  }
+
+  return false;
+}
+
 window.botDecisionLogic = function() {
   if (document.getElementById('emergency-overlay').style.display === 'flex') {
     return { type: 'click', target: '#emergency-drink-btn' };
@@ -15,16 +497,9 @@ window.botDecisionLogic = function() {
     let title = (document.getElementById('shrine-title').textContent || '').toLowerCase();
     const p = G.player;
     let accept = false;
-    if (title.includes('blood')) {
-      let cost = Math.max(1, Math.floor(p.maxHp * 0.3));
-      accept = p.maxHp - cost >= 20 && p.hp > p.maxHp * 0.7;
-    } else if (title.includes('greed')) {
-      accept = p.gold <= 250 || (G.floor >= 4 && p.lvl < 8);
-    } else if (title.includes('cursed')) {
-      let hasEscape = G.items.some(i => i.carried && (i.type === 'scroll_teleport' || i.type === 'bomb'));
-      let hasClassEscape = p.lvl >= 5 && G.ability2Cooldown === 0 && ['rogue', 'mage', 'ranger'].includes(p.class);
-      accept = p.hp < p.maxHp * 0.35 && (hasEscape || hasClassEscape);
-    }
+    if (title.includes('blood')) accept = shouldAcceptShrineType(p, G, 'blood');
+    else if (title.includes('greed')) accept = shouldAcceptShrineType(p, G, 'greed');
+    else if (title.includes('cursed')) accept = shouldAcceptShrineType(p, G, 'cursed');
     
     if (!accept) {
       // If we decline, mark the shrine on our tile as used so we don't path to it infinitely
@@ -45,9 +520,429 @@ window.botDecisionLogic = function() {
   const p = G.player;
   const hasKey = () => G.items.some(i => i.carried && i.type === 'key');
 
+  const DEFAULT_STRATEGY = {
+    exitHp: 0.7,
+    combatHpFloor: 0.45,
+    exploreThreshold: 0.35,
+    trapHpThreshold: 0.5,
+    goldReserve: 60,
+    potionTarget: 1,
+    buffTarget: 1,
+    teleportTarget: 1,
+    bombTarget: 1,
+    detectTarget: 0,
+    bloodHpThreshold: 0.7,
+    bloodMinRemainingHp: 16,
+    greedGoldCap: 220,
+    cursedHpThreshold: 0.35,
+    weaponBias: 1,
+    armorBias: 1,
+    buffAggression: 1,
+    secondaryWeights: {
+      perception: 1,
+      vampirism: 1,
+      regen: 1,
+      swiftness: 1,
+      goldBonus: 1,
+      xpMult: 1,
+      critChance: 1,
+      dodgeBonus: 1,
+    },
+    upgradeWeights: {
+      atk: 1,
+      def: 1,
+      hp: 1,
+      all: 1,
+      all5: 1,
+      vamp: 1,
+      regen: 1,
+      swift: 1,
+      perception: 1,
+      crit: 1,
+      dodge: 1,
+      goldBonus: 1,
+      xpMult: 1,
+      magicMult: 1,
+    },
+  };
+  const CLASS_STRATEGY = {
+    warrior: {
+      exitHp: 0.62,
+      combatHpFloor: 0.5,
+      exploreThreshold: 0.38,
+      trapHpThreshold: 0.55,
+      goldReserve: 70,
+      potionTarget: 1,
+      buffTarget: 1,
+      teleportTarget: 1,
+      bombTarget: 1,
+      detectTarget: 0,
+      bloodHpThreshold: 0.7,
+      bloodMinRemainingHp: 18,
+      greedGoldCap: 220,
+      cursedHpThreshold: 0.3,
+      weaponBias: 1.15,
+      armorBias: 1.45,
+      buffAggression: 1.15,
+      secondaryWeights: {
+        perception: 0.75,
+        vampirism: 0.95,
+        regen: 1.1,
+        swiftness: 0.8,
+        goldBonus: 0.65,
+        xpMult: 0.65,
+        critChance: 0.9,
+        dodgeBonus: 0.8,
+      },
+      upgradeWeights: {
+        atk: 1.15,
+        def: 1.6,
+        hp: 1.25,
+        all: 1.25,
+        all5: 1.15,
+        vamp: 0.95,
+        regen: 1.1,
+        swift: 0.8,
+        perception: 0.75,
+        crit: 0.9,
+        dodge: 0.8,
+        goldBonus: 0.7,
+        xpMult: 0.65,
+      },
+    },
+    rogue: {
+      exitHp: 0.7,
+      combatHpFloor: 0.58,
+      exploreThreshold: 0.32,
+      trapHpThreshold: 0.7,
+      goldReserve: 55,
+      potionTarget: 2,
+      buffTarget: 1,
+      teleportTarget: 2,
+      bombTarget: 1,
+      detectTarget: 1,
+      bloodHpThreshold: 0.78,
+      bloodMinRemainingHp: 16,
+      greedGoldCap: 190,
+      cursedHpThreshold: 0.4,
+      weaponBias: 1.15,
+      armorBias: 1.0,
+      buffAggression: 0.95,
+      secondaryWeights: {
+        perception: 1.15,
+        vampirism: 1,
+        regen: 0.9,
+        swiftness: 1.15,
+        goldBonus: 0.85,
+        xpMult: 0.75,
+        critChance: 1.35,
+        dodgeBonus: 1.45,
+      },
+      upgradeWeights: {
+        atk: 1.05,
+        def: 0.8,
+        hp: 0.9,
+        all: 1.0,
+        all5: 1.0,
+        vamp: 1,
+        regen: 0.9,
+        swift: 1.15,
+        perception: 1.15,
+        crit: 1.35,
+        dodge: 1.45,
+        goldBonus: 0.85,
+        xpMult: 0.8,
+      },
+    },
+    mage: {
+      exitHp: 0.75,
+      combatHpFloor: 0.62,
+      exploreThreshold: 0.3,
+      trapHpThreshold: 0.75,
+      goldReserve: 65,
+      potionTarget: 2,
+      buffTarget: 1,
+      teleportTarget: 2,
+      bombTarget: 1,
+      detectTarget: 1,
+      bloodHpThreshold: 0.82,
+      bloodMinRemainingHp: 14,
+      greedGoldCap: 160,
+      cursedHpThreshold: 0.45,
+      weaponBias: 1.25,
+      armorBias: 0.9,
+      buffAggression: 0.8,
+      secondaryWeights: {
+        perception: 1,
+        vampirism: 1.15,
+        regen: 1.25,
+        swiftness: 0.95,
+        goldBonus: 0.7,
+        xpMult: 0.8,
+        critChance: 1,
+        dodgeBonus: 0.9,
+      },
+      upgradeWeights: {
+        atk: 1.1,
+        def: 0.85,
+        hp: 1,
+        all: 1,
+        all5: 1,
+        vamp: 1.15,
+        regen: 1.3,
+        swift: 0.95,
+        perception: 1,
+        crit: 1,
+        dodge: 0.9,
+        goldBonus: 0.7,
+        xpMult: 0.8,
+        magicMult: 1.25,
+      },
+    },
+    paladin: {
+      exitHp: 0.65,
+      combatHpFloor: 0.52,
+      exploreThreshold: 0.35,
+      trapHpThreshold: 0.6,
+      goldReserve: 70,
+      potionTarget: 1,
+      buffTarget: 1,
+      teleportTarget: 1,
+      bombTarget: 1,
+      detectTarget: 0,
+      bloodHpThreshold: 0.68,
+      bloodMinRemainingHp: 18,
+      greedGoldCap: 180,
+      cursedHpThreshold: 0.28,
+      weaponBias: 1.15,
+      armorBias: 1.5,
+      buffAggression: 1,
+      secondaryWeights: {
+        perception: 0.8,
+        vampirism: 1,
+        regen: 1.2,
+        swiftness: 0.85,
+        goldBonus: 0.7,
+        xpMult: 0.7,
+        critChance: 0.9,
+        dodgeBonus: 0.85,
+      },
+      upgradeWeights: {
+        atk: 1,
+        def: 1.5,
+        hp: 1.3,
+        all: 1.35,
+        all5: 1.2,
+        vamp: 1,
+        regen: 1.25,
+        swift: 0.85,
+        perception: 0.8,
+        crit: 0.9,
+        dodge: 0.85,
+        goldBonus: 0.7,
+        xpMult: 0.65,
+      },
+    },
+    ranger: {
+      exitHp: 0.68,
+      combatHpFloor: 0.58,
+      exploreThreshold: 0.38,
+      trapHpThreshold: 0.72,
+      goldReserve: 55,
+      potionTarget: 2,
+      buffTarget: 1,
+      teleportTarget: 2,
+      bombTarget: 1,
+      detectTarget: 1,
+      bloodHpThreshold: 0.76,
+      bloodMinRemainingHp: 16,
+      greedGoldCap: 180,
+      cursedHpThreshold: 0.4,
+      weaponBias: 1.2,
+      armorBias: 1.05,
+      buffAggression: 0.9,
+      secondaryWeights: {
+        perception: 1.35,
+        vampirism: 0.95,
+        regen: 0.95,
+        swiftness: 1.3,
+        goldBonus: 0.7,
+        xpMult: 0.75,
+        critChance: 1.1,
+        dodgeBonus: 1.1,
+      },
+      upgradeWeights: {
+        atk: 1,
+        def: 0.95,
+        hp: 1,
+        all: 1,
+        all5: 1,
+        vamp: 0.95,
+        regen: 0.95,
+        swift: 1.3,
+        perception: 1.35,
+        crit: 1.1,
+        dodge: 1.1,
+        goldBonus: 0.7,
+        xpMult: 0.75,
+      },
+    },
+    barbarian: {
+      exitHp: 0.58,
+      combatHpFloor: 0.5,
+      exploreThreshold: 0.4,
+      trapHpThreshold: 0.55,
+      goldReserve: 50,
+      potionTarget: 1,
+      buffTarget: 2,
+      teleportTarget: 1,
+      bombTarget: 2,
+      detectTarget: 0,
+      bloodHpThreshold: 0.62,
+      bloodMinRemainingHp: 20,
+      greedGoldCap: 200,
+      cursedHpThreshold: 0.35,
+      weaponBias: 1.25,
+      armorBias: 1.05,
+      buffAggression: 1.2,
+      secondaryWeights: {
+        perception: 0.7,
+        vampirism: 1.15,
+        regen: 1.05,
+        swiftness: 0.8,
+        goldBonus: 0.7,
+        xpMult: 0.65,
+        critChance: 1.2,
+        dodgeBonus: 0.8,
+      },
+      upgradeWeights: {
+        atk: 1.3,
+        def: 1,
+        hp: 1.2,
+        all: 1.1,
+        all5: 1.1,
+        vamp: 1.15,
+        regen: 1.05,
+        swift: 0.8,
+        perception: 0.7,
+        crit: 1.2,
+        dodge: 0.8,
+        goldBonus: 0.7,
+        xpMult: 0.65,
+      },
+    },
+    necromancer: {
+      exitHp: 0.72,
+      combatHpFloor: 0.6,
+      exploreThreshold: 0.33,
+      trapHpThreshold: 0.75,
+      goldReserve: 65,
+      potionTarget: 1,
+      buffTarget: 1,
+      teleportTarget: 2,
+      bombTarget: 1,
+      detectTarget: 1,
+      bloodHpThreshold: 0.82,
+      bloodMinRemainingHp: 14,
+      greedGoldCap: 160,
+      cursedHpThreshold: 0.45,
+      weaponBias: 1.2,
+      armorBias: 0.95,
+      buffAggression: 0.9,
+      secondaryWeights: {
+        perception: 1,
+        vampirism: 1.35,
+        regen: 1.25,
+        swiftness: 0.9,
+        goldBonus: 0.7,
+        xpMult: 0.8,
+        critChance: 0.9,
+        dodgeBonus: 0.85,
+      },
+      upgradeWeights: {
+        atk: 1.05,
+        def: 0.9,
+        hp: 1,
+        all: 1,
+        all5: 1,
+        vamp: 1.35,
+        regen: 1.25,
+        swift: 0.9,
+        perception: 1,
+        crit: 0.9,
+        dodge: 0.85,
+        goldBonus: 0.7,
+        xpMult: 0.8,
+        magicMult: 1.15,
+      },
+    },
+    monk: {
+      exitHp: 0.66,
+      combatHpFloor: 0.56,
+      exploreThreshold: 0.37,
+      trapHpThreshold: 0.65,
+      goldReserve: 55,
+      potionTarget: 1,
+      buffTarget: 1,
+      teleportTarget: 1,
+      bombTarget: 1,
+      detectTarget: 1,
+      bloodHpThreshold: 0.72,
+      bloodMinRemainingHp: 16,
+      greedGoldCap: 180,
+      cursedHpThreshold: 0.35,
+      weaponBias: 0.9,
+      armorBias: 1.15,
+        buffAggression: 1.45,
+      secondaryWeights: {
+        perception: 1.25,
+        vampirism: 0.95,
+        regen: 1,
+        swiftness: 1.35,
+        goldBonus: 0.7,
+        xpMult: 0.75,
+        critChance: 0.95,
+        dodgeBonus: 1.35,
+      },
+      upgradeWeights: {
+        atk: 1,
+        def: 1.1,
+        hp: 1.05,
+        all: 1,
+        all5: 1,
+        vamp: 0.95,
+        regen: 1,
+        swift: 1.35,
+        perception: 1.25,
+        crit: 0.95,
+        dodge: 1.35,
+        goldBonus: 0.7,
+        xpMult: 0.75,
+      },
+    },
+  };
+  const strategy = getClassStrategy(p.class);
+  strategy.detectionTarget = strategy.detectionTarget ?? strategy.detectTarget ?? 0;
+  strategy.detectTarget = strategy.detectTarget ?? strategy.detectionTarget ?? 0;
+
+  const carriedCount = predicate => G.items.filter(i => i.carried && predicate(i)).length;
+  const consumableCount = type => {
+    if (type === 'potion') return carriedCount(i => i.type === 'potion');
+    if (type === 'buff') return carriedCount(i => i.type === 'potion_buff');
+    if (type === 'teleport') return carriedCount(i => i.type === 'scroll_teleport' || /teleport/i.test(i.name || ''));
+    if (type === 'bomb') return carriedCount(i => i.type === 'bomb');
+    if (type === 'scroll') return carriedCount(i => i.type === 'scroll' && /detection/i.test(i.name || ''));
+    return 0;
+  };
+  const targetCount = type => {
+    if (type === 'scroll') return Math.max(0, strategy.detectionTarget ?? strategy.detectTarget ?? 0);
+    return Math.max(0, strategy[`${type}Target`] ?? 1);
+  };
+  const needsConsumable = type => consumableCount(type) < targetCount(type);
+  const reserveGold = () => strategy.goldReserve + (G.floor >= 4 ? 20 : 0);
+
   const isDangerousTrap = (x, y) => {
-    // If we have plenty of health (>50%), we can afford to tank a trap if it's blocking the way.
-    if (G.player.hp > G.player.maxHp * 0.5) return false;
+    if (p.hp > p.maxHp * strategy.trapHpThreshold) return false;
     let t = G.traps && G.traps.find(tr => tr.x === x && tr.y === y && !tr.triggered);
     if (!t) return false;
     if (G.seen.has(y * MAP_W + x)) return true;
@@ -88,17 +983,18 @@ window.botDecisionLogic = function() {
   const armorPower = item => item ? (item.def || 0) : 0;
   const secondaryScore = item => {
     if (!item) return 0;
-    return (item.perception || 0) * 4 +
-      (item.vampirism || 0) * 8 +
-      (item.regen || 0) * 7 +
-      (item.swiftness || 0) * 6 +
-      (item.goldBonus || 0) * 0.5 +
-      (item.xpMult || 0) * 20 +
-      (item.critChance || 0) * 60 +
-      (item.dodgeBonus || 0) * 60;
+    const w = strategy.secondaryWeights || {};
+    return (item.perception || 0) * 4 * (w.perception || 1) +
+      (item.vampirism || 0) * 8 * (w.vampirism || 1) +
+      (item.regen || 0) * 7 * (w.regen || 1) +
+      (item.swiftness || 0) * 6 * (w.swiftness || 1) +
+      (item.goldBonus || 0) * 0.5 * (w.goldBonus || 1) +
+      (item.xpMult || 0) * 20 * (w.xpMult || 1) +
+      (item.critChance || 0) * 60 * (w.critChance || 1) +
+      (item.dodgeBonus || 0) * 60 * (w.dodgeBonus || 1);
   };
-  const weaponValue = item => weaponPower(item) * 10 + secondaryScore(item);
-  const armorValue = item => armorPower(item) * 10 + secondaryScore(item);
+  const weaponValue = item => weaponPower(item) * 10 * (strategy.weaponBias || 1) + secondaryScore(item);
+  const armorValue = item => armorPower(item) * 10 * (strategy.armorBias || 1) + secondaryScore(item);
   
   const totalAtk = () => {
     let total = (p.atk || 0) + weaponPower(p.weapon);
@@ -130,48 +1026,101 @@ window.botDecisionLogic = function() {
     }
     return false;
   };
+  const combatPotionFloor = strategy.combatPotionFloor ?? strategy.combatHpFloor;
+  const panicFloor = ['mage', 'ranger', 'paladin', 'necromancer'].includes(p.class) ? 0.3 : 0.25;
+  const panicMode = p.hp <= p.maxHp * Math.min(combatPotionFloor, panicFloor);
+  const desperateRecovery = panicMode && carriedPotions().length === 0;
+
+  const shouldUseStrengthBuff = () => {
+      if ((p.strengthTurns || 0) > 0 || carriedBuffs().length === 0 || visEnemies.length === 0) return false;
+      if (visEnemies.some(e => e.isElite || e.boss)) return true;
+      if (adjEnemies.length >= 2 && totalIncomingMax() >= p.hp * 0.35) return true;
+      const meleeClass = ['warrior', 'paladin', 'barbarian', 'monk'].includes(p.class);
+      const baseNeededHits = meleeClass ? 2 : 3;
+      const neededHits = Math.max(1, Math.round(baseNeededHits / (strategy.buffAggression || 1)));
+      return visEnemies.some(e => {
+          let dist = Math.abs(e.x - p.x) + Math.abs(e.y - p.y);
+          if (dist > 3) return false;
+          let currentHits = Math.ceil(e.hp / maxNormalDamage(e));
+          let buffedHits = Math.ceil(e.hp / maxStrengthDamage(e));
+          let savesAttacks = currentHits >= neededHits && buffedHits < currentHits;
+          let dangerousHit = maxIncomingHit(e) >= Math.max(6, p.maxHp * 0.18) || e.atk >= p.hp * 0.25;
+          let lowHp = p.hp < p.maxHp * (meleeClass ? 0.9 : 0.8);
+          return savesAttacks && (dangerousHit || G.floor >= 2 || lowHp);
+      });
+  };
 
   // Strategy Tuning
-  const strategy = {
-    exitHp: p.class === 'rogue' ? 0.65 : 0.7, // We dive for stairs if we have NO healing and HP drops below this
-    kiteThreshold: (p.class === 'ranger' || p.class === 'mage') ? 3 : (p.class === 'rogue' ? 2 : 1),
-    exploreThreshold: 0.35, // When map is 35% revealed (approx 80% of walkable tiles + walls), we go to stairs
+  const bestPotionHeal = () => {
+    const potions = carriedPotions();
+    return potions.length ? (potions[0].heal || 0) : 0;
+  };
+  const wantsMorePotions = item => item.type === 'potion' && (carriedPotions().length < strategy.potionTarget || (item.heal || 0) > bestPotionHeal());
+  const wantsMoreBuffs = item => item.type === 'potion_buff' && carriedBuffs().length < strategy.buffTarget;
+  const wantsMoreTeleports = item => item.type === 'scroll_teleport' && carriedTeleports().length < strategy.teleportTarget;
+  const wantsMoreBombs = item => item.type === 'bomb' && carriedBombs().length < strategy.bombTarget;
+  const wantsMoreDetects = item => item.type === 'scroll' && /detection/i.test(item.name || '') && hiddenSecretsRemain() && carriedDetects().length < strategy.detectionTarget;
+  const upgradeBaseScore = item => getUpgradeBaseScore(item) * (strategy.upgradeWeights[item.stat] || 1);
+  const needPotionStock = carriedPotions().length < strategy.potionTarget;
+  const needBuffStock = carriedBuffs().length < strategy.buffTarget;
+  const needTeleportStock = carriedTeleports().length < strategy.teleportTarget;
+  const needBombStock = carriedBombs().length < strategy.bombTarget;
+  const criticalRecovery = p.hp < p.maxHp * strategy.exitHp || p.hp <= totalIncomingMax();
+  const shouldSpendGoldOn = item => {
+    if (item.type === 'potion') return criticalRecovery || carriedPotions().length < strategy.potionTarget;
+    if (item.type === 'potion_buff') return carriedBuffs().length < strategy.buffTarget && visEnemies.length === 0;
+    if (item.type === 'scroll_teleport') return criticalRecovery || carriedTeleports().length < strategy.teleportTarget;
+    if (item.type === 'bomb') return carriedBombs().length < strategy.bombTarget || (visEnemies.length > 0 && adjEnemies.length >= 2);
+    if (item.type === 'scroll') return wantsMoreDetects(item);
+    if (item.type === 'upgrade') return !criticalRecovery && upgradeBaseScore(item) >= 110;
+    if (item.type === 'weapon') return !criticalRecovery && weaponValue(item) - weaponValue(p.weapon) >= 8;
+    if (item.type === 'armor') return !criticalRecovery && armorValue(item) - armorValue(p.armor) >= 8;
+    return false;
   };
 
   // ECONOMY & ITEMS
   const usefulShopItem = item => {
     if (item.sold || p.gold < item.price) return false;
-    if (item.type === 'upgrade') return true;
+    if (shouldUseStrengthBuff()) return false;
+    if (p.gold - item.price < reserveGold() && !shouldSpendGoldOn(item)) return false;
+    if (item.type === 'upgrade') return upgradeBaseScore(item) > 0;
     if ((item.type === 'weapon' || item.type === 'armor') && !canEquip(item)) return false;
     if (item.type === 'weapon') return weaponValue(item) > weaponValue(p.weapon);
     if (item.type === 'armor') return armorValue(item) > armorValue(p.armor);
-    if (item.type === 'potion' || item.type === 'potion_buff' || item.type === 'bomb' || item.type === 'scroll' || item.type === 'scroll_teleport') return true;
+    if (item.type === 'potion') return wantsMorePotions(item) || p.hp < p.maxHp * strategy.exitHp;
+    if (item.type === 'potion_buff') return wantsMoreBuffs(item) && visEnemies.length === 0;
+    if (item.type === 'bomb') return wantsMoreBombs(item) || (visEnemies.length > 0 && adjEnemies.length >= 2);
+    if (item.type === 'scroll_teleport') return wantsMoreTeleports(item) || p.hp < p.maxHp * strategy.exitHp;
+    if (item.type === 'scroll') return wantsMoreDetects(item);
     return false;
   };
   const usefulFloorItem = item => {
-    if (item.type === 'potion' || item.type === 'potion_buff' || item.type === 'bomb' || item.type === 'scroll' || item.type === 'scroll_teleport') return true;
+    if (item.type === 'potion') return wantsMorePotions(item);
+    if (item.type === 'potion_buff') return wantsMoreBuffs(item);
+    if (item.type === 'bomb') return wantsMoreBombs(item);
+    if (item.type === 'scroll_teleport') return wantsMoreTeleports(item);
+    if (item.type === 'scroll') return wantsMoreDetects(item);
     if (item.type === 'upgrade' || item.type === 'key') return true;
     if (item.type === 'weapon') return canEquip(item) && weaponValue(item) > weaponValue(p.weapon);
     if (item.type === 'armor') return canEquip(item) && armorValue(item) > armorValue(p.armor);
-    if (item.type === 'shrine' && !item.used) return true;
+    if (item.type === 'shrine' && !item.used) return shouldAcceptShrineType(p, G, item.shrineType || '');
     return false;
   };
 
   const shopItemScore = item => {
     if (item.type === 'upgrade') {
-      let statScore = item.stat === 'perception' ? 35 : item.stat === 'hp' ? 32 : item.stat === 'def' ? 30 : item.stat === 'atk' ? 30 : 25;
-      return 800 + statScore + (item.amount || 0) * 8;
+      return (criticalRecovery ? 520 : 800) + upgradeBaseScore(item);
     }
-    if (item.type === 'weapon') return 650 + (weaponValue(item) - weaponValue(p.weapon));
-    if (item.type === 'armor') return 620 + (armorValue(item) - armorValue(p.armor));
+    if (item.type === 'weapon') return (criticalRecovery ? 500 : 650) + (weaponValue(item) - weaponValue(p.weapon));
+    if (item.type === 'armor') return (criticalRecovery ? 480 : 620) + (armorValue(item) - armorValue(p.armor));
     if (item.type === 'potion') {
-      let needHealing = p.hp < p.maxHp * 0.65 || carriedPotions().length === 0;
-      return (needHealing ? 560 : 260) + (item.heal || 0);
+      let needHealing = criticalRecovery || needPotionStock;
+      return (needHealing ? 1100 : 240) + (item.heal || 0) * 5 + ((p.class === 'mage' || p.class === 'necromancer') ? 30 : 0);
     }
-    if (item.type === 'scroll_teleport') return 380 + (carriedTeleports().length ? 0 : 80) + (G.floor >= 4 ? 50 : 0);
-    if (item.type === 'bomb') return 360 + (carriedBombs().length ? 0 : 60) + (G.floor >= 4 ? 50 : 0);
-    if (item.type === 'potion_buff') return 330 + (carriedBuffs().length ? 0 : 40) + (G.floor >= 4 ? 50 : 0);
-    if (item.type === 'scroll') return 260 + (hiddenSecretsRemain() ? 80 : 0);
+    if (item.type === 'scroll_teleport') return ((criticalRecovery || needTeleportStock) ? 1000 : 380) + (needTeleportStock ? 80 : 0) + (G.floor >= 4 ? 50 : 0) + (['mage', 'rogue', 'ranger', 'necromancer', 'paladin'].includes(p.class) ? 40 : 20);
+    if (item.type === 'bomb') return ((criticalRecovery || needBombStock) ? 920 : 360) + (needBombStock ? 60 : 0) + (G.floor >= 4 ? 50 : 0) + (['warrior', 'barbarian', 'monk'].includes(p.class) ? 40 : 20);
+    if (item.type === 'potion_buff') return ((criticalRecovery || needBuffStock) ? 840 : 330) + (needBuffStock ? 40 : 0) + (G.floor >= 4 ? 50 : 0) + (['warrior', 'barbarian', 'paladin'].includes(p.class) ? 40 : (['rogue', 'monk'].includes(p.class) ? 20 : 10));
+    if (item.type === 'scroll') return (wantsMoreDetects(item) ? 600 : 260) + (hiddenSecretsRemain() ? 80 : 0) + (['ranger', 'rogue', 'monk'].includes(p.class) ? 20 : 0);
     return 0;
   };
 
@@ -216,27 +1165,12 @@ window.botDecisionLogic = function() {
       // In combat: Prevent death
       if (p.hp <= totalIncomingMax() && potions.length > 0) {
           bestPotion = [...potions].reverse().find(pot => p.hp + pot.heal > totalIncomingMax()) || potions[0];
-      } else if (p.hp < p.maxHp * 0.4 && potions.length > 0) {
+      } else if (p.hp <= p.maxHp * (strategy.combatPotionFloor ?? strategy.combatHpFloor) && potions.length > 0) {
           bestPotion = potions[0];
       }
   }
 
   let itemToUse = bestPotion;
-  
-  const shouldUseStrengthBuff = () => {
-      if ((p.strengthTurns || 0) > 0 || carriedBuffs().length === 0 || visEnemies.length === 0) return false;
-      if (visEnemies.some(e => e.isElite || e.boss)) return true;
-      if (adjEnemies.length >= 2 && totalIncomingMax() >= p.hp * 0.35) return true;
-      return visEnemies.some(e => {
-          let dist = Math.abs(e.x - p.x) + Math.abs(e.y - p.y);
-          if (dist > 3) return false;
-          let currentHits = Math.ceil(e.hp / maxNormalDamage(e));
-          let buffedHits = Math.ceil(e.hp / maxStrengthDamage(e));
-          let savesAttacks = currentHits >= 3 && buffedHits < currentHits;
-          let dangerousHit = maxIncomingHit(e) >= Math.max(6, p.maxHp * 0.18) || e.atk >= p.hp * 0.25;
-          return savesAttacks && (dangerousHit || G.floor >= 2 || p.hp < p.maxHp * 0.8);
-      });
-  };
 
   // Strength is worth using before durable ordinary fights, not only elites or bosses.
   if (!itemToUse && shouldUseStrengthBuff()) {
@@ -249,6 +1183,7 @@ window.botDecisionLogic = function() {
   // Bomb dense melee packs, lethal adjacent clusters, or the boss once phase 2 pressure begins.
   let bombKills = adjEnemies.filter(e => e.hp <= 30).length;
   let adjacentBoss = adjEnemies.some(e => e.boss);
+  let panicBomb = panicMode && adjEnemies.length >= 2 && ['mage', 'necromancer', 'rogue', 'ranger'].includes(p.class);
   let bombRemovesPressure = adjEnemies.some(e =>
       e.hp <= 30 &&
       (p.hp <= totalIncomingMax() + Math.max(6, p.maxHp * 0.08) ||
@@ -259,6 +1194,7 @@ window.botDecisionLogic = function() {
       (adjEnemies.length >= 3 ||
        bombKills >= 2 ||
        bombRemovesPressure ||
+       panicBomb ||
        (adjEnemies.length >= 2 && totalIncomingMax() >= p.hp * 0.65 && p.hp < p.maxHp * 0.6) ||
        (adjacentBoss && (bossPhase >= 2 || p.hp < p.maxHp * 0.7 || adjEnemies.length >= 2)))) {
       itemToUse = carriedBombs()[0];
@@ -268,7 +1204,8 @@ window.botDecisionLogic = function() {
   let losingMelee = adjEnemies.length > 0 && p.hp <= totalIncomingMax() + Math.max(4, p.maxHp * 0.05);
   let criticallyExposed = p.hp < p.maxHp * 0.18 && (adjEnemies.length > 0 || visEnemies.length >= 2 || (G.floor >= 3 && visEnemies.length > 0));
   if (!itemToUse && carriedTeleports().length > 0 && potions.length === 0 &&
-      (lethalAdjacent ||
+      ((visEnemies.length > 0 && p.hp <= p.maxHp * (strategy.combatPotionFloor ?? strategy.combatHpFloor)) ||
+       lethalAdjacent ||
        losingMelee ||
        criticallyExposed ||
        (adjEnemies.length >= 2 && p.hp <= totalIncomingMax() * 2) ||
@@ -332,8 +1269,19 @@ window.botDecisionLogic = function() {
     return false;
   };
   const shouldExitWithoutPotion = () => p.hp < p.maxHp * strategy.exitHp && potions.length === 0;
-  const shouldHeadForStairs = () => G.floor < FINAL_FLOOR && liveEnemies.length === 0 && hasKnownStairs() && (G.seen.size / (MAP_W * MAP_H)) >= strategy.exploreThreshold;
-  const shouldAvoidVoluntaryCombat = () => G.floor >= 3 && potions.length === 0 && !hasKnownStairs() && adjEnemies.length === 0 && p.hp < p.maxHp * 0.45;
+  const shouldHeadForStairs = () => {
+    if (G.floor >= FINAL_FLOOR || !hasKnownStairs()) return false;
+    if (visEnemies.length > 0) return false;
+    if (G.floor >= FINAL_FLOOR - 1) return true;
+    const exploredRatio = G.seen.size / (MAP_W * MAP_H);
+    return exploredRatio >= strategy.exploreThreshold;
+  };
+  const shouldAvoidVoluntaryCombat = () => {
+    if (G.floor < 2 || adjEnemies.length > 0) return false;
+    const hpThreshold = hasKnownStairs() ? strategy.exitHp : strategy.combatHpFloor;
+    return p.hp < p.maxHp * hpThreshold;
+  };
+  const shouldRecover = () => G.floor >= 2 && adjEnemies.length === 0 && p.hp < p.maxHp * strategy.combatHpFloor;
 
   if (G.map[p.y][p.x] === STAIRS && (isMapCleared() || shouldExitWithoutPotion() || shouldHeadForStairs() || G.won)) {
       return { type: 'key', val: '>' };
@@ -377,15 +1325,22 @@ window.botDecisionLogic = function() {
       if (p.class === 'rogue' && (adjEnemies.length >= 2 || (adjEnemies.length >= 1 && p.hp < p.maxHp * 0.65) || (visEnemies.length > 0 && (p.hp < p.maxHp * 0.45 || G.floor >= 5)) || (boss && bossPhase >= 2))) return { type: 'key', val: 'v' }; // VANISH
       if (p.class === 'mage' && (adjEnemies.length > 0 || p.hp < p.maxHp * 0.4) && visEnemies.length > 0) {
           let safeTiles = false;
-          for(let y=1; y<MAP_H-1; y++) {
-            for(let x=1; x<MAP_W-1; x++) {
-              if(G.map[y][x] === FLOOR && !G.enemies.some(e=>e.x===x&&e.y===y) && G.seen.has(y*MAP_W+x)) safeTiles = true;
+          for(let y=0; y<MAP_H && !safeTiles; y++) {
+            for(let x=0; x<MAP_W; x++) {
+              if (x === p.x && y === p.y) continue;
+              if (G.map[y][x] !== FLOOR) continue;
+              if (!G.visible.has(y * MAP_W + x)) continue;
+              if (G.enemies.some(e => e.x === x && e.y === y)) continue;
+              if ((G.traps || []).some(t => t.x === x && t.y === y && !t.triggered)) continue;
+              safeTiles = true;
+              break;
             }
           }
           if(safeTiles) return { type: 'key', val: 'v' }; // BLINK
       }
       if (p.class === 'paladin' && p.hp <= p.maxHp * 0.8) return { type: 'key', val: 'v' }; // HEAL
       if (p.class === 'ranger' && adjEnemies.length > 0) {
+          if (desperateRecovery) return null;
           let safeAdj = false;
           let dirs = [[0,-1],[0,1],[-1,0],[1,0]];
           for(let d of dirs) {
@@ -394,7 +1349,7 @@ window.botDecisionLogic = function() {
           }
           if(safeAdj) return { type: 'key', val: 'v' }; // BEAR TRAP
       }
-      if (p.class === 'barbarian' && ((adjEnemies.length >= 2 || p.hp < p.maxHp * 0.5) || boss) && visEnemies.length > 0 && (p.bloodlustTurns || 0) === 0) return { type: 'key', val: 'v' }; // BLOODLUST
+      if (p.class === 'barbarian' && !desperateRecovery && ((adjEnemies.length >= 2 || p.hp < p.maxHp * 0.5) || boss) && visEnemies.length > 0 && (p.bloodlustTurns || 0) === 0) return { type: 'key', val: 'v' }; // BLOODLUST
       if (p.class === 'necromancer') {
          let markTargets = visEnemies.filter(e => !e.boss && !e.raiseCorpseTarget);
          if (markTargets.length >= 1 && (visEnemies.length >= 2 || boss)) return { type: 'key', val: 'v' }; // RAISE DEAD
@@ -421,18 +1376,20 @@ window.botDecisionLogic = function() {
          let knownThreats = visEnemies.length ? visEnemies : liveEnemies.filter(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y) <= 3);
          let hasKillableAdjacent = adjEnemies.some(e => e.hp <= maxNormalDamage(e) || e.hp <= minSneakDamage(e));
          let dashTarget = null;
-         if ((p.vanishTurns || 0) === 0 && !adjEnemies.length && p.hp > p.maxHp * 0.6 && knownThreats.length === 1) dashTarget = knownThreats[0];
-         else if ((p.vanishTurns || 0) === 0 && !hasKillableAdjacent && adjEnemies.length === 1 && p.hp < p.maxHp * 0.7 && p.hp > p.maxHp * 0.4) dashTarget = adjEnemies[0];
-         else if ((p.vanishTurns || 0) === 0 && !hasKillableAdjacent && adjEnemies.length >= 2 && p.hp > p.maxHp * 0.45) dashTarget = adjEnemies[0];
+         if (!(shouldExitWithoutPotion() && hasKnownStairs())) {
+           if ((p.vanishTurns || 0) === 0 && !adjEnemies.length && p.hp > p.maxHp * 0.6 && knownThreats.length === 1) dashTarget = knownThreats[0];
+           else if ((p.vanishTurns || 0) === 0 && !hasKillableAdjacent && adjEnemies.length === 1 && p.hp < p.maxHp * 0.7 && p.hp > p.maxHp * 0.4) dashTarget = adjEnemies[0];
+           else if ((p.vanishTurns || 0) === 0 && !hasKillableAdjacent && adjEnemies.length >= 2 && p.hp > p.maxHp * 0.45) dashTarget = adjEnemies[0];
+         }
          if (dashTarget) return { type: 'key', val: 'b' };
       }
-      if (p.class === 'mage' && visEnemies.length >= 1) return { type: 'key', val: 'b' }; 
+      if (p.class === 'mage' && visEnemies.length >= 1 && !desperateRecovery) return { type: 'key', val: 'b' }; 
       if (p.class === 'paladin' && adjEnemies.length > 0) return { type: 'key', val: 'b' }; 
       if (p.class === 'ranger') {
          let aligned = visEnemies.some(e => e.x === p.x || e.y === p.y);
          if (aligned) return { type: 'key', val: 'b' }; 
       }
-      if (p.class === 'barbarian' && adjEnemies.length >= 2) return { type: 'key', val: 'b' }; 
+      if (p.class === 'barbarian' && !desperateRecovery && adjEnemies.length >= 2) return { type: 'key', val: 'b' }; 
       if (p.class === 'necromancer') {
         let target = visEnemies.find(e => Math.abs(e.x - p.x) <= 2 && Math.abs(e.y - p.y) <= 2);
         if (target) return { type: 'key', val: 'b' }; 
@@ -446,7 +1403,8 @@ window.botDecisionLogic = function() {
   // RANGED ATTACK
   const rangedAttack = () => {
       if (shouldAvoidVoluntaryCombat()) return null;
-      let targets = visEnemies.filter(e => Math.max(Math.abs(e.x - p.x), Math.abs(e.y - p.y)) <= 2 && Math.abs(e.x - p.x) + Math.abs(e.y - p.y) > 1);
+      const maxRange = p.class === 'ranger' && isBow(p.weapon) ? 3 : 2;
+      let targets = visEnemies.filter(e => Math.max(Math.abs(e.x - p.x), Math.abs(e.y - p.y)) <= maxRange && Math.abs(e.x - p.x) + Math.abs(e.y - p.y) > 1);
       if (targets.length) {
           let target = targets.sort((a, b) => a.hp - b.hp)[0];
           let killable = target.hp <= minSneakDamage(target);
@@ -464,7 +1422,10 @@ window.botDecisionLogic = function() {
 
   // KITING LOGIC
   const shouldKite = () => {
-      if (p.hp < p.maxHp * 0.3) return true; // Emergency
+      if (panicMode) {
+          if (hasKnownStairs() && shouldExitWithoutPotion() && adjEnemies.length === 0) return false;
+          if (!shouldHeadForStairs()) return true; // Emergency
+      }
       if (adjEnemies.length > 0 && totalIncomingMax() >= p.hp) {
           if (p.class === 'rogue' && potions.length === 0 && !hasKnownStairs()) return false;
           return true;
@@ -517,14 +1478,21 @@ window.botDecisionLogic = function() {
         let isStairs = G.map[curr.y][curr.x] === STAIRS;
         let isShopTarget = G.shops && G.shops.some(s => s.x === curr.x && s.y === curr.y && s.stock.some(usefulShopItem));
         
-        let leavingFloor = shouldExitWithoutPotion() || shouldHeadForStairs();
+        let headingForStairs = shouldHeadForStairs();
+        let leavingFloor = shouldExitWithoutPotion() || headingForStairs;
+        let recovering = shouldRecover();
         
         let validTarget = false;
         let label = '';
         
         if (targetStairsOnly || leavingFloor) {
-             if (!targetStairsOnly && isShopTarget) { validTarget = true; label = 'path to shop'; }
+             if (!targetStairsOnly && shouldExitWithoutPotion() && !headingForStairs && isShopTarget) { validTarget = true; label = 'path to shop'; }
              else if (isStairs) { validTarget = true; label = 'path to stairs'; }
+        } else if (recovering) {
+             if (isItem) { validTarget = true; label = 'path to item'; }
+             else if (isShopTarget) { validTarget = true; label = 'path to shop'; }
+             else if (isStairs && (isMapCleared() || shouldHeadForStairs())) { validTarget = true; label = 'path to stairs'; }
+             else if (isUnseen) { validTarget = true; label = 'explore'; }
         } else {
              if (isEnemy) { validTarget = true; label = 'path to enemy'; }
              else if (isItem) { validTarget = true; label = 'path to item'; }
