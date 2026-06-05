@@ -646,7 +646,9 @@ function createRuntime(seed, options = {}) {
     const p = sandbox.G && sandbox.G.player;
     if (!p) return 0;
     const weapon = p.weapon;
-    const watk = weapon ? sandbox.weaponPower(weapon) : 0;
+    const watk = typeof sandbox.weaponDamage === 'function'
+      ? sandbox.weaponDamage(weapon)
+      : (weapon ? sandbox.weaponPower(weapon) : 0);
     let total = p.atk + watk;
     if (p.class === 'barbarian') {
       total += Math.floor((p.maxHp - p.hp) / 6);

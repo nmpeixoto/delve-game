@@ -1169,6 +1169,60 @@ test('monk unarmed weapon power rounds up by level', () => {
   assert.strictEqual(context.weaponPower(null), 2);
 });
 
+function loadAttackStats(overrides = {}) {
+  const context = {
+    G: {
+      player: {
+        class: 'warrior',
+        lvl: 1,
+        hp: 20,
+        maxHp: 20,
+        atk: 4,
+        def: 1,
+        weapon: null,
+        armor: null,
+        strengthTurns: 0,
+      },
+    },
+    MAP_W,
+    MAP_H,
+    TILE,
+    document: { getElementById: () => null, querySelector: () => null },
+    round1: value => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 0;
+      return Math.round((n + Number.EPSILON) * 10) / 10;
+    },
+    fmt1: value => {
+      let n = context.round1(value);
+      if (Object.is(n, -0)) n = 0;
+      return Number.isInteger(n) ? `${n}` : n.toFixed(1);
+    },
+    fmtPct: value => `${context.fmt1(Number(value) * 100)}%`,
+    getStat: () => 0,
+    ...overrides,
+  };
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/items.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/render.js'), 'utf8'), context);
+  return context;
+}
+
+test('combat attack stat excludes secondary weapon valuation bonuses', () => {
+  const context = loadAttackStats();
+  context.G.player.weapon = {
+    name: 'Drain Blade',
+    type: 'weapon',
+    atk: 5,
+    vampirism: 2,
+    critChance: 0.25,
+    dodgeBonus: 0.1,
+  };
+
+  assert.ok(vm.runInContext('weaponPower(G.player.weapon)', context) > 5);
+  assert.strictEqual(vm.runInContext('gatk()', context), 9);
+});
+
 test('full-health potion use is ignored instead of wasting the potion and a turn', () => {
   let turns = 0;
   const logs = [];
@@ -1382,4 +1436,22 @@ test('bloodlust modifier is included in fatal-hit prompt math', () => {
 
   assert.strictEqual(afterCalled, false);
   assert.strictEqual(context.elements['emergency-overlay'].style.display, 'flex');
+});
+
+test('fatal emergency hit with no potions logs why no prompt is shown', () => {
+  let afterCalled = false;
+  const logs = [];
+  const context = loadEmergency({
+    G: {
+      player: { hp: 2, maxHp: 20, shieldWallTurns: 0, bloodlustTurns: 0 },
+      items: [],
+    },
+    addLog: msg => logs.push(msg),
+  });
+
+  context.checkEmergencyPotion({ name: 'Goblin', atk: 8 }, 8, () => { afterCalled = true; });
+
+  assert.strictEqual(afterCalled, true);
+  assert.strictEqual(context.elements['emergency-overlay'].style.display, 'none');
+  assert.ok(logs.includes('No potions available.'));
 });

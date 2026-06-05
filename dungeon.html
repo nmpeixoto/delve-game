@@ -1127,9 +1127,9 @@ function iDesc(item){
 }
 const gatk=()=>{
   let w = G.player.weapon;
-  let watk = typeof weaponPower === 'function' ? weaponPower(w) : (w ? w.atk : 0);
-  if(typeof weaponPower !== 'function' && G.player.class === 'monk' && !w) watk += Math.ceil(G.player.lvl / 2);
-  if(typeof weaponPower !== 'function' && G.player.class === 'mage' && w && w.sym === '♦') watk += Math.floor(watk / 5);
+  let watk = typeof weaponDamage === 'function' ? weaponDamage(w) : (typeof weaponPower === 'function' ? weaponPower(w) : (w ? w.atk : 0));
+  if(typeof weaponDamage !== 'function' && typeof weaponPower !== 'function' && G.player.class === 'monk' && !w) watk += Math.ceil(G.player.lvl / 2);
+  if(typeof weaponDamage !== 'function' && typeof weaponPower !== 'function' && G.player.class === 'mage' && w && w.sym === '♦') watk += Math.floor(watk / 5);
   let total = G.player.atk + watk;
   if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 6);
   if(G.player.strengthTurns > 0) total += 10;
@@ -1612,6 +1612,7 @@ function checkEmergencyPotion(enemy, dmg, afterFn){
   // Do we have any potions?
   let potions=G.items.filter(i=>i.carried&&i.type==='potion');
   if(!potions.length){
+    addLog('No potions available.', 'log-info');
     afterFn(); return; // no potions — nothing to offer
   }
   // How much heal do we need to survive the max hit?
@@ -1906,12 +1907,18 @@ function canEquip(it) {
   return true;
 }
 
-function weaponPower(it) {
+function weaponDamage(it) {
   if (!it) {
     return G.player.class === 'monk' ? Math.ceil(G.player.lvl / 2) : 0;
   }
   let power = it.atk || 0;
   if (G.player.class === 'mage' && it.sym === '\u2666') power += Math.floor(power / 5);
+  return power;
+}
+
+function weaponPower(it) {
+  let power = weaponDamage(it);
+  if (!it) return power;
   
   let sec = 0;
   if(it.vampirism) sec += it.vampirism * 0.1;

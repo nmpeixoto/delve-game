@@ -41,12 +41,18 @@ function canEquip(it) {
   return true;
 }
 
-function weaponPower(it) {
+function weaponDamage(it) {
   if (!it) {
     return G.player.class === 'monk' ? Math.ceil(G.player.lvl / 2) : 0;
   }
   let power = it.atk || 0;
   if (G.player.class === 'mage' && it.sym === '\u2666') power += Math.floor(power / 5);
+  return power;
+}
+
+function weaponPower(it) {
+  let power = weaponDamage(it);
+  if (!it) return power;
   
   let sec = 0;
   if(it.vampirism) sec += it.vampirism * 0.1;

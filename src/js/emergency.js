@@ -32,6 +32,7 @@ function checkEmergencyPotion(enemy, dmg, afterFn){
   // Do we have any potions?
   let potions=G.items.filter(i=>i.carried&&i.type==='potion');
   if(!potions.length){
+    addLog('No potions available.', 'log-info');
     afterFn(); return; // no potions — nothing to offer
   }
   // How much heal do we need to survive the max hit?

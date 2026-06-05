@@ -80,9 +80,9 @@ function iDesc(item){
 }
 const gatk=()=>{
   let w = G.player.weapon;
-  let watk = typeof weaponPower === 'function' ? weaponPower(w) : (w ? w.atk : 0);
-  if(typeof weaponPower !== 'function' && G.player.class === 'monk' && !w) watk += Math.ceil(G.player.lvl / 2);
-  if(typeof weaponPower !== 'function' && G.player.class === 'mage' && w && w.sym === '♦') watk += Math.floor(watk / 5);
+  let watk = typeof weaponDamage === 'function' ? weaponDamage(w) : (typeof weaponPower === 'function' ? weaponPower(w) : (w ? w.atk : 0));
+  if(typeof weaponDamage !== 'function' && typeof weaponPower !== 'function' && G.player.class === 'monk' && !w) watk += Math.ceil(G.player.lvl / 2);
+  if(typeof weaponDamage !== 'function' && typeof weaponPower !== 'function' && G.player.class === 'mage' && w && w.sym === '♦') watk += Math.floor(watk / 5);
   let total = G.player.atk + watk;
   if(G.player.class === 'barbarian') total += Math.floor((G.player.maxHp - G.player.hp) / 6);
   if(G.player.strengthTurns > 0) total += 10;
