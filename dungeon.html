@@ -1434,13 +1434,19 @@ function closeInv(){
 // ===================== SHRINE OVERLAY =====================
 let _currentShrine = null;
 
+function getBloodShrineOffer(maxHp) {
+  let cost = Math.max(1, Math.floor(maxHp * 0.3));
+  let atkGain = Math.max(1, Math.floor(cost / 12));
+  return { cost, atkGain };
+}
+
 function showShrinePrompt(shrine) {
   _currentShrine = shrine;
   document.getElementById('shrine-title').textContent = shrine.shrineType ? `${shrine.shrineType.toUpperCase()} SHRINE` : 'SHRINE';
   let msg = '';
   if(shrine.shrineType === 'Blood') {
-    let cost = Math.max(1, Math.floor(G.player.maxHp * 0.3));
-    msg = `Sacrifice ${fmt1(cost)} Max HP permanently to gain +1 ATK permanently? (HP: ${fmt1(G.player.hp)}/${fmt1(G.player.maxHp)})`;
+    let offer = getBloodShrineOffer(G.player.maxHp);
+    msg = `Sacrifice ${fmt1(offer.cost)} Max HP permanently to gain +${fmt1(offer.atkGain)} ATK permanently? (HP: ${fmt1(G.player.hp)}/${fmt1(G.player.maxHp)})`;
   } else if(shrine.shrineType === 'Greed') {
     msg = `Sacrifice all your current Gold to instantly gain 2 Levels? (Gold: ${fmt1(G.player.gold)})`;
   } else if(shrine.shrineType === 'Cursed') {
@@ -1466,12 +1472,14 @@ document.getElementById('shrine-accept-btn').addEventListener('click', () => {
   if(idx > -1) G.items.splice(idx, 1);
 
   if(shrine.shrineType === 'Blood') {
-    let cost = Math.max(1, Math.floor(G.player.maxHp * 0.3));
+    let offer = getBloodShrineOffer(G.player.maxHp);
+    let cost = offer.cost;
+    let atkGain = offer.atkGain;
     G.player.maxHp = round1(Math.max(1, G.player.maxHp - cost));
     G.player.hp = round1(Math.min(G.player.hp, G.player.maxHp));
-    G.player.atk = round1(G.player.atk + 1);
-    addLog(`Sacrificed ${fmt1(cost)} Max HP for +1 ATK!`, 'log-combat');
-    floatText('+1 ATK', G.player.x, G.player.y, '#f87171');
+    G.player.atk = round1(G.player.atk + atkGain);
+    addLog(`Sacrificed ${fmt1(cost)} Max HP for +${fmt1(atkGain)} ATK!`, 'log-combat');
+    floatText(`+${fmt1(atkGain)} ATK`, G.player.x, G.player.y, '#f87171');
     flashDamage();
     SFX.hit();
   } else if(shrine.shrineType === 'Greed') {
@@ -3723,17 +3731,20 @@ function buildFloor(){
     G.traps.push({x:tx, y:ty, type, triggered: false});
   }
 
-  for(let i=0; i<rr(1, 2); i++) {
-    if(rooms.length <= 1) break;
-    let r = rooms[rr(1, rooms.length-1)];
-    if(r.type === 'normal') {
-      let kx, ky, attempts = 0;
-      do {
-        kx = r.x+rr(0,r.w-1); ky = r.y+rr(0,r.h-1);
-        attempts++;
-      } while(map[ky] && map[ky][kx] === TILE.STAIRS && attempts < 20);
-      G.items.push({id:uid(), x:kx, y:ky, name:'Key', type:'key', rarity:'common', sym:'⚷', carried:false});
-    }
+  let keyRooms = rooms.slice(1).filter(r => r.type === 'normal');
+  for (let i = keyRooms.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [keyRooms[i], keyRooms[j]] = [keyRooms[j], keyRooms[i]];
+  }
+  let keyCount = Math.min(keyRooms.length, rr(1, 2));
+  for(let i=0; i<keyCount; i++) {
+    let r = keyRooms[i];
+    let kx, ky, attempts = 0;
+    do {
+      kx = r.x+rr(0,r.w-1); ky = r.y+rr(0,r.h-1);
+      attempts++;
+    } while(map[ky] && map[ky][kx] === TILE.STAIRS && attempts < 20);
+    G.items.push({id:uid(), x:kx, y:ky, name:'Key', type:'key', rarity:'common', sym:'⚷', carried:false});
   }
 
   computeVision();render();
@@ -3759,7 +3770,7 @@ const CLASS_DATA = {
   warrior: { name: 'Warrior', tagline: 'A sturdy fighter who excels in sustained combat.', hp: 32, atk: 4, def: 3, weapon: 'Bare Hands', armor: 'Chain Mail', ability1: 'BASH', desc1: 'Deals 1.5x damage to a nearby visible enemy. Cooldown: 5', ability2: 'SHIELD WALL', desc2: '(Lvl 5) Reduces incoming damage by 40% for 3 turns. Cooldown: 10', passive: 'Regenerates 1 HP every 12 tiles explored.', critChance: 0.05 },
   rogue: { name: 'Rogue', tagline: 'A nimble assassin who relies on positioning.', hp: 24, atk: 7, def: 2, weapon: 'Rusty Dagger', armor: 'Leather Vest', ability1: 'DASH', desc1: 'Instantly take 2 free moves. Cooldown: 3', ability2: 'VANISH', desc2: '(Lvl 5) Become invisible for 3 turns. Next attack deals 2x damage. Cooldown: 10', passive: 'Dodges 40% of all incoming attacks.', dodgeBonus: 0.4 },
   mage: { name: 'Mage', tagline: 'A fragile spellcaster with potent magic.', hp: 20, atk: 4, def: 2, weapon: 'Bone Staff', armor: 'Apprentice Robe', ability1: 'FIREBALL', desc1: 'Deals damage to all enemies in a 3x3 area around a target. Cooldown: 5', ability2: 'BLINK', desc2: '(Lvl 5) Teleport instantly to a safe, visible tile. Cooldown: 8', passive: 'Magic weapons (♦) deal about +20% damage.', critChance: 0.1 },
-  paladin: { name: 'Paladin', tagline: 'A holy champion focused on sustain and defense.', hp: 20, atk: 1, def: 1, weapon: 'Iron Mace', armor: 'Iron Plate', ability1: 'SMITE', desc1: 'Deals damage and stuns the enemy for 1 turn. Cooldown: 5', ability2: 'LAY ON HANDS', desc2: '(Lvl 5) Heals for 20% of Max HP. Cooldown: 15', passive: 'Max HP increases by 2 upon leveling up.', critChance: 0.05 },
+  paladin: { name: 'Paladin', tagline: 'A holy champion focused on sustain and defense.', hp: 26, atk: 1, def: 1, weapon: 'Iron Mace', armor: 'Iron Plate', ability1: 'SMITE', desc1: 'Deals damage and stuns the enemy for 1 turn. Cooldown: 5', ability2: 'LAY ON HANDS', desc2: '(Lvl 5) Heals for 20% of Max HP. Cooldown: 15', passive: 'Max HP increases by 2 upon leveling up.', critChance: 0.05 },
   ranger: { name: 'Ranger', tagline: 'A master of ranged combat and traps.', hp: 20, atk: 2, def: 1, weapon: 'Shortbow', armor: 'Ranger Tunic', ability1: 'PIERCING SHOT', desc1: 'Fires an arrow that damages all enemies in a straight line. Cooldown: 4', ability2: 'BEAR TRAP', desc2: '(Lvl 5) Drops a trap that stuns and damages an enemy, then jumps back 1 tile. Cooldown: 10', passive: 'Bows allow attacking from 3 tiles away. Avoids counter-attacks at max range.', perception: 1, critChance: 0.1 },
   barbarian: { name: 'Barbarian', tagline: 'A fearless brute who thrives in chaos.', hp: 42, atk: 5, def: 2, weapon: 'Great Axe', armor: 'Furs', ability1: 'CLEAVE', desc1: 'Deals damage to all adjacent enemies. Cooldown: 4', ability2: 'BLOODLUST', desc2: '(Lvl 5) For 3 turns, heal 50% of damage dealt, but take 15% more damage. Cooldown: 12', passive: 'Deals +1 damage for every 6 missing HP.', critChance: 0.15 },
   necromancer: { name: 'Necromancer', tagline: 'A dark caster who drains life from foes.', hp: 18, atk: 4, def: 1, weapon: 'Skull Rod', armor: 'Apprentice Robe', ability1: 'SIPHON LIFE', desc1: 'Deals damage and heals yourself for the same amount. Cooldown: 5', ability2: 'RAISE DEAD', desc2: '(Lvl 5) Mark an enemy for 3 turns. If it dies while marked, it becomes a loyal pet with 50% HP for 25 turns. Cooldown: 8', passive: 'Heals 2 HP whenever an enemy dies.', critChance: 0.05 },

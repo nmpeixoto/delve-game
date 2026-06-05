@@ -99,13 +99,19 @@ function closeInv(){
 // ===================== SHRINE OVERLAY =====================
 let _currentShrine = null;
 
+function getBloodShrineOffer(maxHp) {
+  let cost = Math.max(1, Math.floor(maxHp * 0.3));
+  let atkGain = Math.max(1, Math.floor(cost / 12));
+  return { cost, atkGain };
+}
+
 function showShrinePrompt(shrine) {
   _currentShrine = shrine;
   document.getElementById('shrine-title').textContent = shrine.shrineType ? `${shrine.shrineType.toUpperCase()} SHRINE` : 'SHRINE';
   let msg = '';
   if(shrine.shrineType === 'Blood') {
-    let cost = Math.max(1, Math.floor(G.player.maxHp * 0.3));
-    msg = `Sacrifice ${fmt1(cost)} Max HP permanently to gain +1 ATK permanently? (HP: ${fmt1(G.player.hp)}/${fmt1(G.player.maxHp)})`;
+    let offer = getBloodShrineOffer(G.player.maxHp);
+    msg = `Sacrifice ${fmt1(offer.cost)} Max HP permanently to gain +${fmt1(offer.atkGain)} ATK permanently? (HP: ${fmt1(G.player.hp)}/${fmt1(G.player.maxHp)})`;
   } else if(shrine.shrineType === 'Greed') {
     msg = `Sacrifice all your current Gold to instantly gain 2 Levels? (Gold: ${fmt1(G.player.gold)})`;
   } else if(shrine.shrineType === 'Cursed') {
@@ -131,12 +137,14 @@ document.getElementById('shrine-accept-btn').addEventListener('click', () => {
   if(idx > -1) G.items.splice(idx, 1);
 
   if(shrine.shrineType === 'Blood') {
-    let cost = Math.max(1, Math.floor(G.player.maxHp * 0.3));
+    let offer = getBloodShrineOffer(G.player.maxHp);
+    let cost = offer.cost;
+    let atkGain = offer.atkGain;
     G.player.maxHp = round1(Math.max(1, G.player.maxHp - cost));
     G.player.hp = round1(Math.min(G.player.hp, G.player.maxHp));
-    G.player.atk = round1(G.player.atk + 1);
-    addLog(`Sacrificed ${fmt1(cost)} Max HP for +1 ATK!`, 'log-combat');
-    floatText('+1 ATK', G.player.x, G.player.y, '#f87171');
+    G.player.atk = round1(G.player.atk + atkGain);
+    addLog(`Sacrificed ${fmt1(cost)} Max HP for +${fmt1(atkGain)} ATK!`, 'log-combat');
+    floatText(`+${fmt1(atkGain)} ATK`, G.player.x, G.player.y, '#f87171');
     flashDamage();
     SFX.hit();
   } else if(shrine.shrineType === 'Greed') {

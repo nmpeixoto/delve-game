@@ -356,17 +356,20 @@ function buildFloor(){
     G.traps.push({x:tx, y:ty, type, triggered: false});
   }
 
-  for(let i=0; i<rr(1, 2); i++) {
-    if(rooms.length <= 1) break;
-    let r = rooms[rr(1, rooms.length-1)];
-    if(r.type === 'normal') {
-      let kx, ky, attempts = 0;
-      do {
-        kx = r.x+rr(0,r.w-1); ky = r.y+rr(0,r.h-1);
-        attempts++;
-      } while(map[ky] && map[ky][kx] === TILE.STAIRS && attempts < 20);
-      G.items.push({id:uid(), x:kx, y:ky, name:'Key', type:'key', rarity:'common', sym:'⚷', carried:false});
-    }
+  let keyRooms = rooms.slice(1).filter(r => r.type === 'normal');
+  for (let i = keyRooms.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [keyRooms[i], keyRooms[j]] = [keyRooms[j], keyRooms[i]];
+  }
+  let keyCount = Math.min(keyRooms.length, rr(1, 2));
+  for(let i=0; i<keyCount; i++) {
+    let r = keyRooms[i];
+    let kx, ky, attempts = 0;
+    do {
+      kx = r.x+rr(0,r.w-1); ky = r.y+rr(0,r.h-1);
+      attempts++;
+    } while(map[ky] && map[ky][kx] === TILE.STAIRS && attempts < 20);
+    G.items.push({id:uid(), x:kx, y:ky, name:'Key', type:'key', rarity:'common', sym:'⚷', carried:false});
   }
 
   computeVision();render();

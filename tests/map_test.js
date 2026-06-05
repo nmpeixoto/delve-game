@@ -154,7 +154,7 @@ test('paladin starts with an iron mace and plate for sustain', () => {
 
   context.initGame('paladin');
 
-  assert.strictEqual(context.G.player.maxHp, 20);
+  assert.strictEqual(context.G.player.maxHp, 26);
   assert.strictEqual(context.G.player.atk, 1);
   assert.strictEqual(context.G.player.def, 1);
   assert.strictEqual(context.G.player.weapon.name, 'Iron Mace');
@@ -351,6 +351,18 @@ test('non-boss floors guarantee every designed special room type', () => {
       assert.ok(types.has(type), `seed ${seed} missing ${type}`);
     }
   }
+});
+
+test('locked doors always have at least one key somewhere on the floor', () => {
+  const { createRuntime } = require('../automation/headless-balance/headless_balance');
+  const runtime = createRuntime(2);
+  const { context, flushTimers } = runtime;
+
+  context.initGame('warrior');
+  flushTimers();
+
+  const keys = context.G.items.filter(item => item.type === 'key');
+  assert.ok(keys.length >= 1, 'expected at least one key on the generated floor');
 });
 
 test('spawnItem keeps data-layer filtering and supports exact coordinate spawns', () => {

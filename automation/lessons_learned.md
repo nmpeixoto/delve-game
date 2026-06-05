@@ -172,3 +172,69 @@ This file serves as the permanent memory ledger for the DELVE gameplay bot. When
  32. Rogue dash should not trigger when `shouldExitWithoutPotion()` is true and the stairs are already known.
  33. Suppressing a risky ability should fall through to the normal movement logic; do not return `null` and stall the turn.
 - **Audit Notes**: The bot still has no wins in the seed-9000 sweep, but the rogue escape behavior is safer and the low-HP count did not regress.
+
+### Iteration 23 (Reject Overeager Teleport Escapes)
+- **Outcome**: `npm test` passed after removing an emergency low-HP teleport override that looked helpful in isolation but raised the seeded 8-class audit from **low-hp combat no healing 425** to **677**. Reverting that branch restored the better sweep baseline and kept all existing teleport/bomb regressions green.
+- **Analysis**: The new melee-only teleport shortcut was too broad. It fired in moderate-pressure situations where the existing teleport floor logic was already handling the real escapes, so it changed the run shape without reducing the low-hp combat count. The broader sweep proved the override was a regression, not an improvement.
+- **New Rules**:
+ 34. Do not add a low-HP escape shortcut unless a seeded sweep shows the metric it is supposed to fix actually improves.
+ 35. If a new escape heuristic only overlaps existing teleport logic in trace samples, remove it and keep the narrower rule set.
+- **Audit Notes**: The current baseline is back to the pre-experiment state. The next tuning pass should focus on the underlying class-by-class survival problem, not a second teleport trigger.
+
+### Iteration 24 (Barbarian Bloodlust Respects Escape Mode)
+- **Outcome**: `npm test` passed after teaching barbarian to skip `bloodlust` while it is already in no-potion escape mode. The seeded 8-class audit improved from **low-hp combat no healing 425** to **386**, and barbarian’s own low-hp count dropped from **130** to **91**.
+- **Analysis**: Barbarian was still spending `bloodlust` while it was already trying to get out through a shop or stairs with no healing left. The earlier low-HP checks were too narrow; tying the ability gate to `shouldExitWithoutPotion()` blocks the offensive buff only when the run is already in escape mode, which is the case that showed up in trace.
+- **New Rules**:
+ 36. Barbarian should not spend `bloodlust` when `shouldExitWithoutPotion()` is already true.
+ 37. Escape mode should suppress offensive buffs before movement or kiting logic gets a chance to turn them into extra low-HP combat turns.
+- **Audit Notes**: The bot is still not winning the sample sweep, but the low-HP combat profile is better and the barbarian escape path is less self-destructive.
+
+### Iteration 25 (Rogue Stops Panic-Kiting Without a Real Exit)
+- **Outcome**: `npm test` passed after making rogue fall through to normal escape/pathing when it is critically low, out of potions, and has no known stairs. A rogue-only audit on seeds `9000, 9010, 9020` improved `low-hp combat no healing` from **101** to **18**.
+- **Analysis**: Rogue was still burning turns on panic kiting even when it had no potion backup and no known stairs to run toward. That behavior bypassed the usual escape logic and kept the bot in low-HP combat longer than necessary. Narrowing `shouldKite()` for that exact no-exit case lets the normal movement logic handle the situation instead of forcing a bad kite.
+- **New Rules**:
+ 38. Rogue should not panic-kite when it is below the exit threshold, has no potions, and has no known stairs.
+ 39. If a class-specific kite rule is blocking the real escape path, fall through to normal pathing instead of trying to force a weak reposition.
+- **Audit Notes**: The rogue low-HP count is much better on the traced seeds, but there is still residual close-quarters combat pressure to tune in later passes.
+
+### Iteration 26 (Monk Keeps Escape Mode Out of Offense)
+- **Outcome**: `npm test` passed after tightening monk so it does not spend `push kick` or `flurry` in the low-HP no-potion escape state when a passable escape tile exists. The full 8-class audit improved from **low-hp combat no healing 303** to **283**, and `lethalNonEscape` dropped from **12** to **1**.
+- **Analysis**: Monk was using its offensive buttons as a default answer while already trying to leave the floor, which either killed the run or left the harness classifying the run as stuck. The fix keeps those abilities available when the monk is boxed in, but skips them when there is a real tile to escape onto so movement/pathing can take over.
+- **New Rules**:
+ 40. Monk should not spend `push kick` or `flurry` in escape mode if there is a passable adjacent tile to move onto.
+ 41. Never suppress a monk ability by returning `null` from the top-level decision path; if the ability is blocked, fall through to the remaining movement and pathfinding logic.
+- **Audit Notes**: The monk runs are still not winning, but the class is no longer self-destructing in the low-HP escape corridor and the remaining pressure is broader combat tuning rather than a hard escape bug.
+
+### Iteration 27 (Barbarian Stops Panic-Kiting Without a Real Exit)
+- **Outcome**: `npm test` passed after extending the low-HP no-potion no-known-stairs kite suppression to barbarian as well as rogue. The full 8-class audit improved from **low-hp combat no healing 291** to **278**, and barbarian’s own low-hp count dropped from **91** to **78**.
+- **Analysis**: Barbarian was still burning several turns in the same no-exit kite loop that rogue had already hit. The class was low on HP, had no healing left, and still had no known stairs, so the kite branch was delaying the real escape path instead of helping it. Reusing the rogue-style gate keeps the bot out of that dead-end loop and lets normal pathing take over sooner.
+- **New Rules**:
+ 42. Barbarian should not panic-kite when it is below the exit threshold, has no potions, and has no known stairs.
+ 43. If a low-HP kite branch is preventing the real escape path, fall through to normal movement instead of forcing more reposition turns.
+- **Audit Notes**: The sweep is still not producing wins, but the low-HP combat profile improved again and the barbarian escape loop is less wasteful.
+
+### Iteration 28 (Warrior Stops Bashing Through Escape Mode)
+- **Outcome**: `npm test` passed after teaching warrior to fall through instead of spending `bash` while it is already in no-potion escape mode and has at least one passable adjacent tile. The warrior-only sweep on seeds `9000, 9010, 9020` reached **floor 5 on seed 9020**, raising warrior’s average floor from **3.3** to **3.7**.
+- **Analysis**: Warrior was still willing to burn `bash` as an offensive finish even when the run had already switched into escape mode. That kept it fighting through low-HP corridors instead of moving toward an exit route. Suppressing `bash` only when a real escape tile exists preserves the ability when the warrior is boxed in and lets movement/pathing handle the escape when it is not.
+- **New Rules**:
+ 44. Warrior should not spend `bash` in no-potion escape mode if at least one adjacent tile is passable.
+ 45. Escape-mode suppression should fall through to movement instead of trying to “solve” the turn with another attack.
+- **Audit Notes**: The warrior now reaches deeper floors on the sample sweep, including a floor 5 hit, but it does so with more low-HP turns. The next pass should decide whether to tighten earlier healing or stair commitment without losing that progression gain.
+
+### Iteration 29 (Warrior Shields Up on Floor 5 Instead of Kiting)
+- **Outcome**: `npm test` passed after adding a floor-5-specific shield-wall gate for warrior when it is critically low, has no potions, and adjacent enemies are present. The synthetic floor-5 regression now returns `v` instead of the `kite` loop.
+- **Analysis**: The trace on floor 5 showed warrior oscillating between two tiles on the final floor before spending shield wall, which wasted turns and delayed the emergency defense. Narrowing the shield-wall rule to the final floor avoids the earlier floor-4 regression while addressing the specific floor-5 kite loop.
+- **New Rules**:
+ 46. Warrior may spend shield wall on the final floor in no-potion escape mode when critically low and adjacent enemies are present.
+ 47. Floor-specific escape rules should be narrower than the generic low-HP combat rule so earlier floors keep their behavior.
+- **Audit Notes**: The full 8-class sweep is unchanged for now, but the floor-5 loop is now covered by a regression and the earlier floor-4 shield-wall regression remains fixed.
+
+### Iteration 30 (Paladin Escape Hygiene and Small HP Buff)
+- **Outcome**: `npm test` passed after adding regressions for paladin no-potion escape behavior, adjacent emergency pickups, and exit-directed kiting. The final seed `9000,9010,9020` 8-class audit remained **avg floor 3.1**, **floor5 4.2%**, and **low-hp combat no healing 568**. A broader 12-run-per-class headless sample showed paladin improving only from **avg floor 2.5** to **2.6** with base HP 26; base HP 30 was rejected because it lengthened runs without improving floor progress.
+- **Analysis**: Paladin had real automation mistakes: spending `smite` while already below the no-potion exit threshold, picking up non-recovery loot or strength buffs while weak in melee, and kiting without considering known-stairs distance. Fixing those made the policy more coherent but did not materially change aggregate balance, which means paladin still needs broader class or encounter tuning.
+- **New Rules**:
+ 48. Paladin should not spend `smite` once `shouldExitWithoutPotion()` is true; escape mode must suppress offensive class buttons before generic fighting.
+ 49. Adjacent pickup in weak no-potion melee should be limited to immediate recovery or escape items; delayed buffs and loot can wait.
+ 50. Kiting in no-potion escape mode should prefer moves that reduce distance to known stairs while still requiring a real separation gain.
+ 51. Treat a balance buff as provisional until a wider seeded sample confirms it improves floor progression, not just survival turns.
+- **Audit Notes**: The classes are still not balanced. The next pass should focus on true class/encounter balance for paladin, ranger, warrior, and monk while preserving the now-covered automation escape rules.

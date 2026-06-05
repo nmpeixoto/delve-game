@@ -1268,6 +1268,14 @@ window.botDecisionLogic = function() {
     }
     return false;
   };
+  const knownStairsPosition = () => {
+    for (let y = 0; y < MAP_H; y++) {
+      for (let x = 0; x < MAP_W; x++) {
+        if (G.map[y][x] === STAIRS && G.seen.has(y * MAP_W + x)) return { x, y };
+      }
+    }
+    return null;
+  };
   const shouldExitWithoutPotion = () => p.hp < p.maxHp * strategy.exitHp && potions.length === 0;
   const shouldHeadForStairs = () => {
     if (G.floor >= FINAL_FLOOR || !hasKnownStairs()) return false;
@@ -1290,7 +1298,9 @@ window.botDecisionLogic = function() {
   // PICKUP ADJACENT
   let bag = G.items.filter(i => i.carried);
   let adjItem = G.items.find(i => !i.carried && Math.abs(i.x - p.x) + Math.abs(i.y - p.y) === 1);
-  if (adjItem && usefulFloorItem(adjItem) && !isDangerousTrap(adjItem.x, adjItem.y)) {
+  const isRecoveryFloorItem = item => item.type === 'potion' || item.type === 'scroll_teleport' || item.type === 'bomb';
+  const shouldPickupAdjacent = item => !shouldExitWithoutPotion() || adjEnemies.length === 0 || isRecoveryFloorItem(item);
+  if (adjItem && usefulFloorItem(adjItem) && shouldPickupAdjacent(adjItem) && !isDangerousTrap(adjItem.x, adjItem.y)) {
     if (bag.length < 12 || adjItem.type === 'key' || adjItem.type === 'upgrade') {
       if (adjItem.x < p.x) return { type: 'key', val: 'ArrowLeft', label: 'pickup' };
       if (adjItem.x > p.x) return { type: 'key', val: 'ArrowRight', label: 'pickup' };
@@ -1308,6 +1318,30 @@ window.botDecisionLogic = function() {
       if (en.y > p.y) return { type: 'key', val: 'ArrowDown' };
       return null;
   };
+  const stepTowardKnownStairs = () => {
+      const stairs = knownStairsPosition();
+      if (!stairs) return null;
+      const currentDist = Math.abs(stairs.x - p.x) + Math.abs(stairs.y - p.y);
+      let bestMove = null;
+      let bestScore = -Infinity;
+      for (let d of dirs) {
+          let nx = p.x + d.dx, ny = p.y + d.dy;
+          if (nx < 0 || nx >= MAP_W || ny < 0 || ny >= MAP_H) continue;
+          if (!isPassable(nx, ny, true)) continue;
+          if (liveEnemies.some(e => e.x === nx && e.y === ny)) continue;
+          const dist = Math.abs(stairs.x - nx) + Math.abs(stairs.y - ny);
+          if (dist >= currentDist) continue;
+          const incomingAfter = liveEnemies
+            .filter(e => Math.abs(e.x - nx) + Math.abs(e.y - ny) === 1)
+            .reduce((sum, e) => sum + maxIncomingHit(e), 0);
+          const score = (currentDist - dist) * 20 - incomingAfter * 4 + (G.seen.has(ny * MAP_W + nx) ? 2 : 0);
+          if (score > bestScore) {
+              bestScore = score;
+              bestMove = d.k;
+          }
+      }
+      return bestMove ? { type: 'key', val: bestMove, label: 'path to stairs' } : null;
+  };
   const monkWallSlams = en => {
       let dx = Math.sign(en.x - p.x), dy = Math.sign(en.y - p.y);
       let nx = en.x + dx, ny = en.y + dy;
@@ -1317,10 +1351,18 @@ window.botDecisionLogic = function() {
   };
   const monkPushKickMaxDamage = en => maxNormalDamage(en) * (monkWallSlams(en) ? 2 : 1);
   const monkFlurryMaxDamage = en => maxNormalDamage(en) * 3;
+  const monkEscapeOnly = p.class === 'monk' && shouldExitWithoutPotion() && !hasKnownStairs();
+  const hasOpenAdjacentTile = () => dirs.some(d => {
+      let nx = p.x + d.dx, ny = p.y + d.dy;
+      return nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H &&
+        isPassable(nx, ny, false, true) &&
+        !G.enemies.some(e => e.x === nx && e.y === ny);
+  });
 
   // CLASS ABILITIES (Phase 3)
   const ability2Decision = () => {
       if (G.ability2Cooldown !== 0 || p.lvl < 5) return null;
+      if (p.class === 'warrior' && G.floor >= FINAL_FLOOR && shouldExitWithoutPotion() && adjEnemies.length > 0 && p.hp < p.maxHp * 0.2) return { type: 'key', val: 'v' }; // SHIELD WALL
       if (p.class === 'warrior' && (totalIncomingMax() >= p.hp * 0.6 || (adjEnemies.length >= 2 && p.hp < p.maxHp * 0.9) || (adjacentBoss && bossPhase >= 2))) return { type: 'key', val: 'v' }; // SHIELD WALL
       if (p.class === 'rogue' && (adjEnemies.length >= 2 || (adjEnemies.length >= 1 && p.hp < p.maxHp * 0.65) || (visEnemies.length > 0 && (p.hp < p.maxHp * 0.45 || G.floor >= 5)) || (boss && bossPhase >= 2))) return { type: 'key', val: 'v' }; // VANISH
       if (p.class === 'mage' && (adjEnemies.length > 0 || p.hp < p.maxHp * 0.4) && visEnemies.length > 0) {
@@ -1349,7 +1391,7 @@ window.botDecisionLogic = function() {
           }
           if(safeAdj) return { type: 'key', val: 'v' }; // BEAR TRAP
       }
-      if (p.class === 'barbarian' && !desperateRecovery && ((adjEnemies.length >= 2 || p.hp < p.maxHp * 0.5) || boss) && visEnemies.length > 0 && (p.bloodlustTurns || 0) === 0) return { type: 'key', val: 'v' }; // BLOODLUST
+      if (p.class === 'barbarian' && !desperateRecovery && !shouldExitWithoutPotion() && ((adjEnemies.length >= 2 || p.hp < p.maxHp * 0.5) || boss) && visEnemies.length > 0 && (p.bloodlustTurns || 0) === 0) return { type: 'key', val: 'v' }; // BLOODLUST
       if (p.class === 'necromancer') {
          let markTargets = visEnemies.filter(e => !e.boss && !e.raiseCorpseTarget);
          if (markTargets.length >= 1 && (visEnemies.length >= 2 || boss)) return { type: 'key', val: 'v' }; // RAISE DEAD
@@ -1359,6 +1401,7 @@ window.botDecisionLogic = function() {
             e.hp <= monkFlurryMaxDamage(e) &&
             (p.hp < p.maxHp * 0.6 || maxIncomingHit(e) >= p.hp * 0.35)
           );
+          if (monkEscapeOnly && hasOpenAdjacentTile() && adjEnemies.length >= 2 && !flurryKill) return null;
           if (p.hp > p.maxHp * 0.75 || adjEnemies.length >= 2 || flurryKill) return { type: 'key', val: 'v' }; // FLURRY
       }
       return null;
@@ -1369,8 +1412,10 @@ window.botDecisionLogic = function() {
 
   if (G.ability1Cooldown === 0 && !shouldAvoidVoluntaryCombat()) {
       if (p.class === 'warrior' && adjEnemies.length > 0) {
-         let target = adjEnemies.find(e => e.hp <= minBashDamage(e)) || adjEnemies[0];
-         if (target) return { type: 'key', val: 'b' }; 
+         if (!(shouldExitWithoutPotion() && hasOpenAdjacentTile())) {
+           let target = adjEnemies.find(e => e.hp <= minBashDamage(e)) || adjEnemies[0];
+           if (target) return { type: 'key', val: 'b' }; 
+         }
       }
       if (p.class === 'rogue') {
          let knownThreats = visEnemies.length ? visEnemies : liveEnemies.filter(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y) <= 3);
@@ -1384,7 +1429,9 @@ window.botDecisionLogic = function() {
          if (dashTarget) return { type: 'key', val: 'b' };
       }
       if (p.class === 'mage' && visEnemies.length >= 1 && !desperateRecovery) return { type: 'key', val: 'b' }; 
-      if (p.class === 'paladin' && adjEnemies.length > 0) return { type: 'key', val: 'b' }; 
+      if (p.class === 'paladin' && adjEnemies.length > 0) {
+         if (!shouldExitWithoutPotion()) return { type: 'key', val: 'b' };
+      } 
       if (p.class === 'ranger') {
          let aligned = visEnemies.some(e => e.x === p.x || e.y === p.y);
          if (aligned) return { type: 'key', val: 'b' }; 
@@ -1395,8 +1442,10 @@ window.botDecisionLogic = function() {
         if (target) return { type: 'key', val: 'b' }; 
       }
       if (p.class === 'monk' && adjEnemies.length > 0) {
-         let target = adjEnemies.sort((a, b) => monkPushKickMaxDamage(b) - monkPushKickMaxDamage(a))[0];
-         if (target && target.hp > minSneakDamage(target)) return { type: 'key', val: 'b' };
+         if (!(monkEscapeOnly && hasOpenAdjacentTile())) {
+           let target = adjEnemies.sort((a, b) => monkPushKickMaxDamage(b) - monkPushKickMaxDamage(a))[0];
+           if (target && target.hp > minSneakDamage(target)) return { type: 'key', val: 'b' };
+         }
       } 
   }
 
@@ -1420,14 +1469,20 @@ window.botDecisionLogic = function() {
   let killableAdjEnemy = adjEnemies.sort((a, b) => a.hp - b.hp).find(e => e.hp <= minSneakDamage(e));
   if (killableAdjEnemy) return attackMove(killableAdjEnemy);
 
+  if (shouldExitWithoutPotion() && hasKnownStairs() && adjEnemies.length > 0) {
+      let stairsAction = stepTowardKnownStairs();
+      if (stairsAction) return stairsAction;
+  }
+
   // KITING LOGIC
   const shouldKite = () => {
+      if ((p.class === 'rogue' || p.class === 'barbarian') && shouldExitWithoutPotion() && !hasKnownStairs()) return false;
       if (panicMode) {
           if (hasKnownStairs() && shouldExitWithoutPotion() && adjEnemies.length === 0) return false;
           if (!shouldHeadForStairs()) return true; // Emergency
       }
       if (adjEnemies.length > 0 && totalIncomingMax() >= p.hp) {
-          if (p.class === 'rogue' && potions.length === 0 && !hasKnownStairs()) return false;
+          if ((p.class === 'rogue' || p.class === 'barbarian') && potions.length === 0 && !hasKnownStairs()) return false;
           return true;
       }
       if (p.class === 'mage' || p.class === 'ranger') {
@@ -1440,20 +1495,24 @@ window.botDecisionLogic = function() {
   if (visEnemies.length > 0 && shouldKite()) {
       let bestMove = null;
       let bestScore = -Infinity;
+      let bestDistance = -Infinity;
+      let exitStairs = shouldExitWithoutPotion() ? knownStairsPosition() : null;
       for (let d of dirs) {
           let nx = p.x + d.dx, ny = p.y + d.dy;
           if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && isPassable(nx, ny) && !G.enemies.some(e => e.x === nx && e.y === ny)) {
               let minDist = Math.min(...visEnemies.map(e => Math.abs(e.x - nx) + Math.abs(e.y - ny)));
               let score = minDist * 10 + (G.seen.has(ny*MAP_W+nx) ? 5 : 0); // Prefer explored areas
+              if (exitStairs) score -= (Math.abs(exitStairs.x - nx) + Math.abs(exitStairs.y - ny)) * 6;
               if (score > bestScore) {
                   bestScore = score;
                   bestMove = d.k;
+                  bestDistance = minDist;
               }
           }
       }
-      // If we can achieve a distance of >= 2 (score >= 20), we successfully kite.
+      // If we can achieve a distance of >= 2, we successfully kite.
       // Otherwise we are cornered and should stand our ground.
-      if (bestMove && bestScore >= 20) {
+      if (bestMove && bestDistance >= 2) {
           return { type: 'key', val: bestMove, label: 'kite' };
       }
   }
@@ -1480,6 +1539,7 @@ window.botDecisionLogic = function() {
         
         let headingForStairs = shouldHeadForStairs();
         let leavingFloor = shouldExitWithoutPotion() || headingForStairs;
+        if (p.class === 'paladin' && shouldExitWithoutPotion() && !hasKnownStairs()) leavingFloor = false;
         let recovering = shouldRecover();
         
         let validTarget = false;
