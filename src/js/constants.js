@@ -11,5 +11,5 @@ const CLASS_INFO = {
   ranger: { passive: 'Bows (🏹) have range 3.', a1: { name: 'PIERCING SHOT', desc: 'Damage all enemies in a line.' }, a2: { name: 'BEAR TRAP', desc: 'Drop a trap and jump back to safety.' } },
   barbarian: { passive: 'Gain ATK as your HP gets lower.', a1: { name: 'CLEAVE', desc: 'Damage all adjacent enemies.' }, a2: { name: 'BLOODLUST', desc: 'Deal damage to heal, but take 15% more damage for 3 turns.' } },
   necromancer: { passive: 'Heal 2 HP when an enemy dies.', a1: { name: 'SIPHON LIFE', desc: 'Damage an enemy and heal for the same amount.' }, a2: { name: 'RAISE DEAD', desc: 'Marked enemy rises as a temporary pet if it dies in time.' } },
-  monk: { passive: 'Unarmed damage scales with your level.', a1: { name: 'PUSH KICK', desc: 'Knock an enemy back. Double damage if they hit a wall.' }, a2: { name: 'FLURRY OF BLOWS', desc: 'Attack 3 times but root yourself for 2 turns.' } }
+  monk: { passive: 'Unarmed damage scales with your level.', a1: { name: 'PUSH KICK', desc: 'Knock an enemy back. Double damage if they hit a wall.' }, a2: { name: 'FLURRY OF BLOWS', desc: 'Attack 3 times but root yourself for your next turn.' } }
 };

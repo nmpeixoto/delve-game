@@ -19,8 +19,8 @@ function generateShopStock(){
     addStock(pots[i]);
   }
 
-  let weaponCandidates = WEAPONS.filter(w=>w.atk<=4+floorScale*3);
-  let armorCandidates = ARMORS.filter(a=>a.def<=2+floorScale*2);
+  let weaponCandidates = WEAPONS.filter(w=>w.atk<=4+floorScale*3 && nearLevel(w));
+  let armorCandidates = ARMORS.filter(a=>a.def<=2+floorScale*2 && nearLevel(a));
   let classGear = [...weaponCandidates, ...armorCandidates].filter(item => nearLevel(item) && canUseGear(item));
   let classSpecificGear = classGear.filter(item => item.reqClass && item.reqClass.includes(G.player.class));
   let priorityGear = classSpecificGear.length ? classSpecificGear : classGear;
@@ -38,7 +38,7 @@ function generateShopStock(){
     addStock(arms[i]);
   }
 
-  // 2-4 upgrades (floors 2+)
+  // 2 upgrades (floors 2+)
   if(G.floor>=2){
     let ups=UPGRADES.filter(u=>u.rarity!=='legendary'||G.floor>=4).sort(()=>Math.random()-.5);
     for(let i=0; i<Math.min(ups.length, 2); i++) {

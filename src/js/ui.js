@@ -150,12 +150,25 @@ document.getElementById('shrine-accept-btn').addEventListener('click', () => {
   } else if(shrine.shrineType === 'Greed') {
     let gold = G.player.gold;
     G.player.gold = 0;
-    G.player.lvl += 2;
-    G.player.maxHp = round1(G.player.maxHp + 4); G.player.hp = round1(G.player.hp + 4);
-    G.player.atk = round1(G.player.atk + 2); G.player.def = round1(G.player.def + 1);
+    for(let i = 0; i < 2; i++) {
+      G.player.lvl++;
+      G.player.xpNext = Math.round(G.player.xpNext * 1.6);
+      G.player.maxHp = round1(G.player.maxHp + 8);
+      G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + 8));
+      G.player.atk = round1(G.player.atk + 1);
+      G.player.def = round1(G.player.def + 1);
+      if(G.player.class === 'paladin') {
+        G.player.maxHp = round1(G.player.maxHp + 2);
+        G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + 2));
+      }
+      addLog(`LEVEL UP! Now level ${G.player.lvl}!`,'log-level');
+      floatText('LVL UP!',G.player.x,G.player.y,'#c084fc');
+      SFX.levelUp();
+      fireTip('firstLevelUp');
+    }
+    checkBagUpgrades();
     addLog(`Sacrificed ${fmt1(gold)} Gold for 2 Levels!`, 'log-info');
     floatText('LEVEL UP!', G.player.x, G.player.y, '#fbbf24');
-    SFX.levelUp();
   } else if(shrine.shrineType === 'Cursed') {
     G.player.hp = G.player.maxHp;
     addLog(`Fully healed, but the curse awakens!`, 'log-combat');
@@ -190,7 +203,12 @@ document.getElementById('shrine-accept-btn').addEventListener('click', () => {
 });
 
 document.getElementById('shrine-decline-btn').addEventListener('click', () => {
+  if(_currentShrine) {
+    let idx = G.items.findIndex(i => i.id === _currentShrine.id);
+    if(idx > -1) G.items.splice(idx, 1);
+  }
   closeShrinePrompt();
+  advanceTurn({allowFreeMove:true});
 });
 
 // ===================== HELP MODAL =====================

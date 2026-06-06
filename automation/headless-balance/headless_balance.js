@@ -565,23 +565,32 @@ function createRuntime(seed, options = {}) {
     const p = sandbox.G.player;
     if (shrine.shrineType === 'Blood') {
       const cost = Math.max(1, Math.floor(p.maxHp * 0.3));
+      const atkGain = Math.max(1, Math.floor(cost / 12));
       p.maxHp = Math.max(1, p.maxHp - cost);
       p.hp = Math.min(p.hp, p.maxHp);
-      p.atk += 1;
-      sandbox.addLog(`Sacrificed ${cost} Max HP for +1 ATK!`, 'log-combat');
+      p.atk += atkGain;
+      sandbox.addLog(`Sacrificed ${cost} Max HP for +${atkGain} ATK!`, 'log-combat');
     } else if (shrine.shrineType === 'Greed') {
       const gold = p.gold;
       p.gold = 0;
-      p.lvl += 2;
-      p.maxHp += 4;
-      p.hp += 4;
-      p.atk += 2;
-      p.def += 1;
+      for (let i = 0; i < 2; i++) {
+        p.lvl++;
+        p.xpNext = Math.round(p.xpNext * 1.6);
+        p.maxHp += 8;
+        p.hp = Math.min(p.hp + 8, p.maxHp);
+        p.atk += 1;
+        p.def += 1;
+        if (p.class === 'paladin') {
+          p.maxHp += 2;
+          p.hp = Math.min(p.hp + 2, p.maxHp);
+        }
+      }
       sandbox.addLog(`Sacrificed ${gold} Gold for 2 Levels!`, 'log-info');
     } else if (shrine.shrineType === 'Cursed') {
       p.hp = p.maxHp;
       sandbox.addLog('Fully healed, but the curse awakens!', 'log-combat');
       let spawned = 0;
+      const enemyProfile = sandbox.getFloorEnemyProfile ? sandbox.getFloorEnemyProfile(sandbox.G.floor) : { tierMin: 0, tierMax: 1, scale: 1 };
       for (let r = 1; r <= 2 && spawned < 3; r++) {
         for (let y = p.y - r; y <= p.y + r && spawned < 3; y++) {
           for (let x = p.x - r; x <= p.x + r && spawned < 3; x++) {
@@ -591,18 +600,20 @@ function createRuntime(seed, options = {}) {
               !sandbox.G.enemies.some(e => e.x === x && e.y === y) &&
               (x !== p.x || y !== p.y)
             ) {
-              const scale = Math.max(1, sandbox.G.floor || 1);
+              const tier = Math.floor(sandbox.Math.random() * (enemyProfile.tierMax - enemyProfile.tierMin + 1)) + enemyProfile.tierMin;
+              const baseEnemy = sandbox.ENEMIES[tier] || sandbox.ENEMIES[0];
+              const scale = enemyProfile.scale;
               sandbox.G.enemies.push({
                 id: `headless-cursed-${seed}-${spawned}`,
-                name: 'Cursed Elite',
-                sym: 'C',
-                hp: 20 * scale,
-                maxHp: 20 * scale,
-                atk: 6 * scale,
-                def: 2 * scale,
-                xp: 8 * scale,
-                gold: 4 * scale,
-                color: '#a78bfa',
+                name: 'Cursed ' + baseEnemy.name,
+                sym: baseEnemy.sym,
+                hp: Math.round(baseEnemy.hp * scale) * 2,
+                maxHp: Math.round(baseEnemy.hp * scale) * 2,
+                atk: Math.round(baseEnemy.atk * scale) * 2,
+                def: Math.round(baseEnemy.def * scale),
+                xp: Math.round(baseEnemy.xp * scale) * 2,
+                gold: Math.round(baseEnemy.gold * scale) * 2,
+                color: baseEnemy.color,
                 x,
                 y,
                 stunnedTurns: 0,

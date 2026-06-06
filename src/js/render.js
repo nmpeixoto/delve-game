@@ -46,7 +46,8 @@ function iDesc(item){
   let pAtk = typeof weaponPower === 'function' ? weaponPower(G.player.weapon) : (G.player.weapon ? G.player.weapon.atk : 0);
   let pDef = typeof armorPower === 'function' ? armorPower(G.player.armor) : (G.player.armor ? G.player.armor.def : 0);
   let itemAtk = typeof weaponPower === 'function' ? weaponPower(item) : (item.atk || 0);
-  let isBetter = (item.type==='weapon' && itemAtk > pAtk) || (item.type==='armor' && item.def > pDef);
+  let itemDefPower = typeof armorPower === 'function' ? armorPower(item) : (item.def || 0);
+  let isBetter = (item.type==='weapon' && itemAtk > pAtk) || (item.type==='armor' && itemDefPower > pDef);
 
   if(item.reqLvl) reqs.push(`Lvl ${item.reqLvl}`);
   if(item.reqClass) reqs.push(`${item.reqClass.map(c=>c.substring(0,3).toUpperCase()).join('/')}`);

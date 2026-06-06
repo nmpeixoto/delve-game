@@ -21,7 +21,7 @@ function fmtPct(value){
 function addDamageDealt(amount){
   G.player.damageDealt = round1((G.player.damageDealt || 0) + amount);
 }
-// Debounce tile actions — 400ms safety net against double-fire
+  // Debounce tile actions — 120ms safety net against double-fire
 function canAct(opts={}){
   if(typeof isOverlayOpen === 'function' && isOverlayOpen()){
     if(!opts.allowShopOverlay || typeof isShopActionOverlayOpen !== 'function' || !isShopActionOverlayOpen()) return false;

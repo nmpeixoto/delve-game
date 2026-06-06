@@ -249,115 +249,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .c-stat-lbl { font-size:.45rem; color:var(--dim); margin-bottom:4px; }
 .c-stat-val { font-family:'Press Start 2P',monospace; font-size:.5rem; color:var(--text); }
 .c-section { margin-bottom:12px; }
-
-/* ── INVENTORY DRAWER ── */
-#inv-drawer{position:fixed;bottom:0;left:0;right:0;z-index:80;background:var(--panel);border-top:2px solid var(--accent);transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);max-height:65vh;overflow-y:auto;padding:14px 16px max(16px,env(safe-area-inset-bottom));}
-#inv-drawer.open{transform:translateY(0);}
-@media(orientation:landscape) and (max-height:600px){
-  #inv-drawer{max-height:80vh;}
-}
-.drawer-handle{width:40px;height:4px;background:var(--dim);border-radius:2px;margin:0 auto 14px;}
-.panel-title{font-family:'Press Start 2P',monospace;font-size:.38rem;color:var(--accent);letter-spacing:.2em;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:8px;}
-.inv-section{margin-bottom:14px;}
-.inv-slot{padding:8px 10px;border:1px solid var(--border);margin-bottom:5px;cursor:pointer;transition:all .12s;display:flex;justify-content:space-between;align-items:center;gap:8px;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
-.inv-slot:active{border-color:var(--gold);background:rgba(251,191,36,.07);}
-.inv-slot.equipped{border-color:var(--accent);background:rgba(192,132,252,.08);}
-.inv-name{color:var(--text);font-size:.65rem;}
-.inv-type{color:var(--dim);font-size:.52rem;}
-.inv-bonus{color:var(--green);font-size:.6rem;white-space:nowrap;}
-.inv-empty{color:var(--dim);font-size:.62rem;font-style:italic;padding:4px 0;}
-.inv-close-row{text-align:center;margin-top:8px;}
-#drawer-backdrop{position:fixed;inset:0;z-index:75;background:rgba(0,0,0,.5);display:none;}
-#drawer-backdrop.open{display:block;}
-
-/* ── SHOP OVERLAY ── */
-#shop-overlay{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:16px;animation:fadeIn .3s;}
-#shop-overlay.open{display:flex;}
-#shop-modal{background:var(--panel);border:2px solid var(--gold);padding:20px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 60px rgba(251,191,36,.25);touch-action:pan-y;}
-#shop-modal h2{font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--gold);text-align:center;margin-bottom:4px;}
-.shop-subtitle{color:var(--dim);font-size:.58rem;text-align:center;margin-bottom:14px;}
-.shop-gold-display{font-size:.7rem;color:var(--gold);text-align:center;margin-bottom:14px;}
-.shop-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);margin-bottom:6px;cursor:pointer;transition:all .15s;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
-.shop-item:active,.shop-item:hover{border-color:var(--gold);background:rgba(251,191,36,.06);}
-.shop-item.sold{opacity:.35;pointer-events:none;}
-.shop-item-left{flex:1;}
-.shop-item-name{color:var(--text);font-size:.65rem;}
-.shop-item-desc{color:var(--dim);font-size:.65rem;margin-top:2px;}
-.shop-item-price{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--gold);white-space:nowrap;}
-.shop-item-price.cant-afford{color:var(--red);}
-.shop-tabs{display:flex;gap:6px;margin-bottom:12px;}
-.shop-tab{font-family:'Press Start 2P',monospace;font-size:.4rem;padding:8px 16px;background:transparent;border:1px solid var(--border);color:var(--dim);cursor:pointer;flex:1;transition:all .15s;letter-spacing:.1em;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
-.shop-tab.active{border-color:var(--gold);color:var(--gold);background:rgba(251,191,36,.08);}
-.shop-tab:active{background:var(--border);}
-#shop-buy-panel,#shop-sell-panel{padding-bottom:24px;}
-.sell-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);margin-bottom:6px;cursor:pointer;transition:all .15s;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
-.sell-item:active,.sell-item:hover{border-color:var(--green);background:rgba(74,222,128,.06);}
-.sell-item-left{flex:1;}
-.sell-item-name{color:var(--text);font-size:.65rem;}
-.sell-item-desc{color:var(--dim);font-size:.65rem;margin-top:2px;}
-.sell-item-price{font-family:'Press Start 2P',monospace;font-size:.45rem;color:var(--green);white-space:nowrap;}
-.sell-empty{color:var(--dim);font-size:.62rem;font-style:italic;padding:8px 0;text-align:center;}
-.emergency-potion-row{display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--green);background:rgba(74,222,128,.06);}
-.emergency-potion-name{color:var(--text);font-size:.65rem;}
-.emergency-potion-heal{color:var(--green);font-family:'Press Start 2P',monospace;font-size:.45rem;}
-.emergency-warn{color:var(--red);font-size:.55rem;text-align:center;margin-top:6px;}
-.help-table{width:100%;border-collapse:collapse;font-size:.62rem;}
-.help-table tr{border-bottom:1px solid var(--border);}
-.help-table tr:last-child{border-bottom:none;}
-.help-table td{padding:8px 6px;vertical-align:top;line-height:1.7;color:#9ca3af;}
-.help-table td:last-child{color:var(--text);}
-.help-key{color:var(--accent)!important;font-family:'Press Start 2P',monospace;font-size:.38rem;white-space:nowrap;width:70px;padding-right:10px!important;}
-.help-sym{font-family:'Share Tech Mono',monospace!important;font-size:.7rem!important;}
-.green{color:var(--green)!important;}
-.gold-c{color:var(--gold)!important;}
-
-/* ── OTHER OVERLAYS ── */
-.overlay{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;animation:fadeIn .3s;padding:16px;}
-.modal{background:var(--panel);border:2px solid var(--accent);padding:28px 24px;text-align:center;max-width:360px;width:100%;box-shadow:0 0 60px rgba(192,132,252,.3);}
-.modal h2{font-family:'Press Start 2P',monospace;font-size:.9rem;margin-bottom:14px;color:var(--accent);}
-.modal.death h2{color:var(--red);}
-.modal.victory h2{color:var(--gold);}
-.modal p{font-size:.65rem;line-height:2;color:var(--dim);margin-bottom:16px;}
-.modal .stats-list{font-size:.62rem;line-height:2.4;margin-bottom:18px;}
-.modal .stats-list span{color:var(--text);}
-#tooltip{position:fixed;background:var(--panel);border:1px solid var(--accent);padding:7px 11px;font-size:.6rem;line-height:1.9;pointer-events:none;z-index:90;display:none;max-width:160px;}
-
-/* FX */
-#map-wrap.shake{animation:shake .18s ease;}
-.float-text{position:fixed;font-family:'Press Start 2P',monospace;font-size:.45rem;pointer-events:none;z-index:200;animation:floatup .85s ease forwards;}
-#damage-flash{position:fixed;inset:0;z-index:300;background:rgba(248,113,113,0.35);pointer-events:none;opacity:0;}
-#damage-flash.flash{animation:damageFlash .4s ease-out forwards;}
-@keyframes damageFlash{0%{opacity:1;}100%{opacity:0;}}
-@keyframes enemyDeath{0%{filter:brightness(3) saturate(0);}100%{filter:brightness(0);opacity:0;}}
-.tile-enemy-dying{animation:enemyDeath .3s ease-out forwards;pointer-events:none;}
-@keyframes pulse{0%,100%{text-shadow:0 0 40px rgba(192,132,252,.6)}50%{text-shadow:0 0 80px rgba(192,132,252,.95),0 0 120px rgba(192,132,252,.4)}}
-@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
-@keyframes floatup{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-28px)}}
-.pop-text{position:fixed;font-size:1.4rem;pointer-events:none;z-index:200;animation:popAnim .4s ease-out forwards;text-shadow:0 0 10px rgba(255,255,255,0.5);}
-@keyframes popAnim{0%{opacity:0;transform:scale(0.2) translateY(10px)}30%{opacity:1;transform:scale(1.2) translateY(-5px)}100%{opacity:0;transform:scale(1.5) translateY(-15px)}}
-@keyframes shopPulse{0%,100%{opacity:1}50%{opacity:.6}}
-@keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
-.hidden{display:none!important;}
-::-webkit-scrollbar{width:3px;}
-::-webkit-scrollbar-thumb{background:var(--dim);}
-.req-tag{display:inline-block;background:rgba(248,113,113,0.15);border:1px solid var(--red);color:#ff9999;padding:1px 4px;border-radius:2px;font-size:0.5rem;margin-left:4px;vertical-align:middle;}
-.req-tag.req-match{background:rgba(74,222,128,0.15);border-color:var(--green);color:#86efac;}
-.req-tag.req-wait{background:rgba(251,146,60,0.15);border-color:var(--orange);color:#fdba74;}
-.req-tag.req-dim-match{background:rgba(74,222,128,0.05);border-color:#4a5a4a;color:#7a9a7a;}
-
-/* ── CLASS SELECT ── */
-#class-select-body { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-#class-list { width:100%; height:130px; border-bottom:1px solid var(--border); overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:6px; padding:10px; flex-shrink:0; }
-#class-details { flex:1; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
-.class-btn { font-family:'Press Start 2P',monospace; font-size:.45rem; padding:12px 6px; background:var(--bg); border:1px solid var(--border); color:var(--dim); cursor:pointer; text-align:center; transition:all .15s; user-select:none; }
-.class-btn.selected { border-color:var(--accent); color:var(--text); background:rgba(192,132,252,.1); }
-.class-title { font-family:'Press Start 2P',monospace; font-size:.7rem; color:var(--accent); margin-bottom:4px; text-transform:uppercase; }
-.class-tagline { font-size:.55rem; color:var(--dim); margin-bottom:12px; }
-.class-stat-box { background:var(--bg); border:1px solid var(--border); padding:10px; display:flex; justify-content:space-between; margin-bottom:10px; }
-.c-stat { text-align:center; flex:1; }
-.c-stat-lbl { font-size:.45rem; color:var(--dim); margin-bottom:4px; }
-.c-stat-val { font-family:'Press Start 2P',monospace; font-size:.5rem; color:var(--text); }
-.c-section { margin-bottom:12px; }
 .c-sec-title { font-size:.5rem; color:var(--dim); text-transform:uppercase; margin-bottom:6px; letter-spacing:.1em; }
 .c-ability { background:rgba(255,255,255,.03); border:1px solid var(--border); padding:8px; margin-bottom:6px; }
 .c-ab-name { font-family:'Press Start 2P',monospace; font-size:.4rem; color:var(--gold); margin-bottom:4px; }
@@ -675,7 +566,7 @@ const CLASS_INFO = {
   ranger: { passive: 'Bows (🏹) have range 3.', a1: { name: 'PIERCING SHOT', desc: 'Damage all enemies in a line.' }, a2: { name: 'BEAR TRAP', desc: 'Drop a trap and jump back to safety.' } },
   barbarian: { passive: 'Gain ATK as your HP gets lower.', a1: { name: 'CLEAVE', desc: 'Damage all adjacent enemies.' }, a2: { name: 'BLOODLUST', desc: 'Deal damage to heal, but take 15% more damage for 3 turns.' } },
   necromancer: { passive: 'Heal 2 HP when an enemy dies.', a1: { name: 'SIPHON LIFE', desc: 'Damage an enemy and heal for the same amount.' }, a2: { name: 'RAISE DEAD', desc: 'Marked enemy rises as a temporary pet if it dies in time.' } },
-  monk: { passive: 'Unarmed damage scales with your level.', a1: { name: 'PUSH KICK', desc: 'Knock an enemy back. Double damage if they hit a wall.' }, a2: { name: 'FLURRY OF BLOWS', desc: 'Attack 3 times but root yourself for 2 turns.' } }
+  monk: { passive: 'Unarmed damage scales with your level.', a1: { name: 'PUSH KICK', desc: 'Knock an enemy back. Double damage if they hit a wall.' }, a2: { name: 'FLURRY OF BLOWS', desc: 'Attack 3 times but root yourself for your next turn.' } }
 };
 
 </script>
@@ -898,7 +789,7 @@ function fmtPct(value){
 function addDamageDealt(amount){
   G.player.damageDealt = round1((G.player.damageDealt || 0) + amount);
 }
-// Debounce tile actions — 400ms safety net against double-fire
+  // Debounce tile actions — 120ms safety net against double-fire
 function canAct(opts={}){
   if(typeof isOverlayOpen === 'function' && isOverlayOpen()){
     if(!opts.allowShopOverlay || typeof isShopActionOverlayOpen !== 'function' || !isShopActionOverlayOpen()) return false;
@@ -1093,7 +984,8 @@ function iDesc(item){
   let pAtk = typeof weaponPower === 'function' ? weaponPower(G.player.weapon) : (G.player.weapon ? G.player.weapon.atk : 0);
   let pDef = typeof armorPower === 'function' ? armorPower(G.player.armor) : (G.player.armor ? G.player.armor.def : 0);
   let itemAtk = typeof weaponPower === 'function' ? weaponPower(item) : (item.atk || 0);
-  let isBetter = (item.type==='weapon' && itemAtk > pAtk) || (item.type==='armor' && item.def > pDef);
+  let itemDefPower = typeof armorPower === 'function' ? armorPower(item) : (item.def || 0);
+  let isBetter = (item.type==='weapon' && itemAtk > pAtk) || (item.type==='armor' && itemDefPower > pDef);
 
   if(item.reqLvl) reqs.push(`Lvl ${item.reqLvl}`);
   if(item.reqClass) reqs.push(`${item.reqClass.map(c=>c.substring(0,3).toUpperCase()).join('/')}`);
@@ -1485,12 +1377,25 @@ document.getElementById('shrine-accept-btn').addEventListener('click', () => {
   } else if(shrine.shrineType === 'Greed') {
     let gold = G.player.gold;
     G.player.gold = 0;
-    G.player.lvl += 2;
-    G.player.maxHp = round1(G.player.maxHp + 4); G.player.hp = round1(G.player.hp + 4);
-    G.player.atk = round1(G.player.atk + 2); G.player.def = round1(G.player.def + 1);
+    for(let i = 0; i < 2; i++) {
+      G.player.lvl++;
+      G.player.xpNext = Math.round(G.player.xpNext * 1.6);
+      G.player.maxHp = round1(G.player.maxHp + 8);
+      G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + 8));
+      G.player.atk = round1(G.player.atk + 1);
+      G.player.def = round1(G.player.def + 1);
+      if(G.player.class === 'paladin') {
+        G.player.maxHp = round1(G.player.maxHp + 2);
+        G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + 2));
+      }
+      addLog(`LEVEL UP! Now level ${G.player.lvl}!`,'log-level');
+      floatText('LVL UP!',G.player.x,G.player.y,'#c084fc');
+      SFX.levelUp();
+      fireTip('firstLevelUp');
+    }
+    checkBagUpgrades();
     addLog(`Sacrificed ${fmt1(gold)} Gold for 2 Levels!`, 'log-info');
     floatText('LEVEL UP!', G.player.x, G.player.y, '#fbbf24');
-    SFX.levelUp();
   } else if(shrine.shrineType === 'Cursed') {
     G.player.hp = G.player.maxHp;
     addLog(`Fully healed, but the curse awakens!`, 'log-combat');
@@ -1525,7 +1430,12 @@ document.getElementById('shrine-accept-btn').addEventListener('click', () => {
 });
 
 document.getElementById('shrine-decline-btn').addEventListener('click', () => {
+  if(_currentShrine) {
+    let idx = G.items.findIndex(i => i.id === _currentShrine.id);
+    if(idx > -1) G.items.splice(idx, 1);
+  }
   closeShrinePrompt();
+  advanceTurn({allowFreeMove:true});
 });
 
 // ===================== HELP MODAL =====================
@@ -2094,90 +2004,6 @@ function useItem(id){
     G.player.hp=round1(G.player.hp+h);
     addLog(`Drank ${it.name}: +${fmt1(h)} HP`,'log-item');
     floatText(`+${fmt1(h)} HP`,G.player.x,G.player.y,'#4ade80');
-    let idx = G.items.findIndex(i=>i.id===id);
-    if(idx > -1) G.items.splice(idx,1);
-    advanceTurn();closeInv();
-    return;
-  }
-
-  if(it.type==='potion_buff'){
-    if(it.buff === 'strength') {
-      G.player.strengthTurns = 10;
-      addLog(`Drank ${it.name}: Strength surged!`, 'log-item');
-      floatText('STRENGTH', G.player.x, G.player.y, '#f87171');
-      SFX.levelUp();
-    }
-    let idx = G.items.findIndex(i=>i.id===id);
-    if(idx > -1) G.items.splice(idx,1);
-    advanceTurn();closeInv();
-    return;
-  }
-
-  if(it.type==='bomb'){
-    addLog(`Threw a Bomb!`, 'log-combat');
-    floatText('BOOM!', G.player.x, G.player.y, '#fbbf24');
-    SFX.damage();shakeMap();
-    let killed = 0;
-    for(let y = G.player.y - 1; y <= G.player.y + 1; y++){
-      for(let x = G.player.x - 1; x <= G.player.x + 1; x++){
-        let en = G.enemies.find(e => e.x === x && e.y === y && !e.dying);
-        if(en){
-          en.hp = round1(en.hp - 30);
-          floatText(`-${fmt1(30)}`, en.x, en.y, '#f87171');
-          if(en.hp <= 0) {
-            killEnemy(en, true);
-            killed++;
-          }
-        }
-      }
-    }
-    if(killed === 0) addLog(`The bomb hit nothing.`, 'log-info');
-    let idx = G.items.findIndex(i=>i.id===id);
-    if(idx > -1) G.items.splice(idx,1);
-    advanceTurn();closeInv();
-    return;
-  }
-
-  if(it.type==='scroll_teleport'){
-    let safeTiles = getTeleportSafeTiles();
-    if(safeTiles.length > 0) {
-      let t = safeTiles[Math.floor(Math.random()*safeTiles.length)];
-      G.player.x = t.x; G.player.y = t.y;
-      addLog(`Teleported to a random location!`, 'log-info');
-      floatText('TELEPORT', G.player.x, G.player.y, '#c084fc');
-      SFX.pickup();
-      computeVision();
-    }
-    let idx = G.items.findIndex(i=>i.id===id);
-    if(idx > -1) G.items.splice(idx,1);
-    advanceTurn();closeInv();
-    return;
-  }
-
-  if(it.type==='scroll') {
-    if(it.name==='Scroll of Detection') {
-      let revealedSomething = false;
-      for(let y=0; y<MAP_H; y++) {
-        for(let x=0; x<MAP_W; x++) {
-          if(G.map[y][x] === TILE.SECRET_DOOR) {
-            G.map[y][x] = TILE.FLOOR;
-            revealedSomething = true;
-          }
-          let trap = G.traps.find(t => t.x === x && t.y === y && !t.revealed);
-          if(trap) {
-            trap.revealed = true;
-            revealedSomething = true;
-          }
-        }
-      }
-      if(revealedSomething) {
-        addLog('The scroll revealed hidden secrets nearby!', 'log-info');
-        floatText('REVEALED', G.player.x, G.player.y, '#fbbf24');
-      } else {
-        addLog('The scroll revealed nothing.', 'log-info');
-      }
-      SFX.levelUp();
-    }
     let idx = G.items.findIndex(i=>i.id===id);
     if(idx > -1) G.items.splice(idx,1);
     advanceTurn();closeInv();
@@ -3051,7 +2877,107 @@ function doAbility2(){
       p.rootedTurns = 2;
       let en = t[0];
       addLog('Flurry of Blows! You are rooted.', 'log-combat');
-      attackEnemy(en.id, 3);
+      for(let i = 0; i < 3; i++) {
+        if(en.dying || en.hp <= 0) break;
+        let mult = 1;
+        if(i === 0 && G.player.vanishTurns > 0) {
+          mult *= 2;
+          G.player.vanishTurns = 0;
+          addLog('Sneak Attack!', 'log-combat');
+        }
+        if(getStat('critChance') > 0 && Math.random() < getStat('critChance')) {
+          mult *= 2;
+          addLog('Critical Hit!', 'log-combat');
+        }
+        if(en.dodge && Math.random() < en.dodge) {
+          addLog(`${en.name} agilely dodged your attack!`, 'log-combat');
+          floatText('DODGED', en.x, en.y, '#fbbf24');
+          popText('💨', en.x, en.y);
+          SFX.hit();
+        } else {
+          let dmg=round1(Math.max(1,gatk()-en.def+rand(3)));
+          if(mult>1){dmg=round1(dmg*mult);SFX.bash();}else{SFX.hit();}
+          en.hp=round1(en.hp-dmg);
+          addDamageDealt(dmg);
+          let atkSym = G.player.weapon ? G.player.weapon.sym : '🗡️';
+          if(atkSym === '🏹') atkSym = '🎯';
+          if(atkSym === '🪄') atkSym = '💥';
+          popText(atkSym, en.x, en.y);
+          floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171');
+          let multTag=mult>1?' (CRIT!)':'';
+          addLog(`Hit ${en.name} for ${fmt1(dmg)}${multTag}`, 'log-combat');
+          if(G.player.bloodlustTurns > 0) {
+            let heal = Math.floor(dmg / 2);
+            if(heal > 0) {
+              G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + heal));
+              floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
+            }
+          }
+          if(en.enrage && en.hp <= en.maxHp / 2 && en.color !== '#dc2626') {
+            en.color = '#dc2626';
+            popText('💢', en.x, en.y);
+            floatText('ENRAGED', en.x, en.y, '#dc2626');
+          }
+        }
+        if(en.hp<=0){
+          if(en.reviveTurns > 0) {
+            addLog(`You shattered the bones!`, 'log-combat');
+            popText('💥', en.x, en.y);
+            killEnemy(en, false);
+            return;
+          } else if(en.revive) {
+            en.revive = false;
+            en.reviveTurns = 2;
+            en.hp = 0;
+            en.sym = '🦴';
+            en.color = '#94a3b8';
+            en.name = 'Bones';
+            addLog(`The Skeleton collapsed into a pile of bones!`, 'log-combat');
+            floatText('COLLAPSED', en.x, en.y, '#94a3b8');
+            popText('🦴', en.x, en.y);
+          } else {
+            killEnemy(en, false);
+            return;
+          }
+        }
+      }
+      if(en.stunnedTurns>0){
+        advanceTurn();
+        return;
+      }
+      let edm=round1(Math.max(1,en.atk-gdef()+rand(3)));
+      if(en.enrage && en.hp <= en.maxHp / 2) edm = Math.floor(edm * 1.5);
+      if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
+      if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
+      edm = round1(edm);
+      let dodgeChance = playerDodgeChance();
+      if(dodgeChance > 0 && ch(dodgeChance)) {
+        addLog(`Dodged ${en.name}'s attack!`, 'log-info');
+        popText('💨', G.player.x, G.player.y);
+        advanceTurn();
+      } else {
+        checkEmergencyPotion(en, edm, ()=>{
+          G.player.hp=round1(Math.max(0,G.player.hp-edm));
+          popText('🩸', G.player.x, G.player.y);
+          floatText(`-${fmt1(edm)}`,G.player.x,G.player.y,'#60a5fa');
+          addLog(`${en.name} hits you for ${fmt1(edm)}`,'log-combat');
+          SFX.damage();shakeMap();flashDamage();
+          if(en.vampiric && edm > 0) {
+            let heal = Math.floor(edm * en.vampiric);
+            if(heal > 0) {
+              en.hp = round1(Math.min(en.maxHp, en.hp + heal));
+              floatText(`+${fmt1(heal)}`, en.x, en.y, '#4ade80');
+            }
+          }
+          if(en.freezeChance && Math.random() < en.freezeChance) {
+            G.player.rootedTurns = 2;
+            addLog(`The ${en.name} froze you!`, 'log-combat');
+            floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
+          }
+          advanceTurn();
+          if(G.player.hp<=0){G.gameOver=true;showDeath();}
+        });
+      }
     } else addLog('No adjacent enemies for Flurry', 'log-info');
   }
 }
@@ -3079,8 +3005,8 @@ function generateShopStock(){
     addStock(pots[i]);
   }
 
-  let weaponCandidates = WEAPONS.filter(w=>w.atk<=4+floorScale*3);
-  let armorCandidates = ARMORS.filter(a=>a.def<=2+floorScale*2);
+  let weaponCandidates = WEAPONS.filter(w=>w.atk<=4+floorScale*3 && nearLevel(w));
+  let armorCandidates = ARMORS.filter(a=>a.def<=2+floorScale*2 && nearLevel(a));
   let classGear = [...weaponCandidates, ...armorCandidates].filter(item => nearLevel(item) && canUseGear(item));
   let classSpecificGear = classGear.filter(item => item.reqClass && item.reqClass.includes(G.player.class));
   let priorityGear = classSpecificGear.length ? classSpecificGear : classGear;
@@ -3098,7 +3024,7 @@ function generateShopStock(){
     addStock(arms[i]);
   }
 
-  // 2-4 upgrades (floors 2+)
+  // 2 upgrades (floors 2+)
   if(G.floor>=2){
     let ups=UPGRADES.filter(u=>u.rarity!=='legendary'||G.floor>=4).sort(()=>Math.random()-.5);
     for(let i=0; i<Math.min(ups.length, 2); i++) {
@@ -3962,7 +3888,15 @@ document.addEventListener('keydown',e=>{
     if(document.getElementById('shop-overlay').classList.contains('open')){closeShop();return;}
     if(document.getElementById('help-overlay').style.display==='flex'){closeHelp();return;}
     if(document.getElementById('inv-drawer').classList.contains('open')){closeInv();return;}
-    if(document.getElementById('shrine-overlay').style.display==='flex'){closeShrinePrompt();return;}
+    if(document.getElementById('shrine-overlay').style.display==='flex'){
+      if(_currentShrine) {
+        let idx = G.items.findIndex(i => i.id === _currentShrine.id);
+        if(idx > -1) G.items.splice(idx, 1);
+      }
+      closeShrinePrompt();
+      advanceTurn({allowFreeMove:true});
+      return;
+    }
     return;
   }
   // Block game input when overlays are open

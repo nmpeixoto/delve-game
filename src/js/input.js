@@ -51,7 +51,15 @@ document.addEventListener('keydown',e=>{
     if(document.getElementById('shop-overlay').classList.contains('open')){closeShop();return;}
     if(document.getElementById('help-overlay').style.display==='flex'){closeHelp();return;}
     if(document.getElementById('inv-drawer').classList.contains('open')){closeInv();return;}
-    if(document.getElementById('shrine-overlay').style.display==='flex'){closeShrinePrompt();return;}
+    if(document.getElementById('shrine-overlay').style.display==='flex'){
+      if(_currentShrine) {
+        let idx = G.items.findIndex(i => i.id === _currentShrine.id);
+        if(idx > -1) G.items.splice(idx, 1);
+      }
+      closeShrinePrompt();
+      advanceTurn({allowFreeMove:true});
+      return;
+    }
     return;
   }
   // Block game input when overlays are open

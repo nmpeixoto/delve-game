@@ -722,7 +722,107 @@ function doAbility2(){
       p.rootedTurns = 2;
       let en = t[0];
       addLog('Flurry of Blows! You are rooted.', 'log-combat');
-      attackEnemy(en.id, 3);
+      for(let i = 0; i < 3; i++) {
+        if(en.dying || en.hp <= 0) break;
+        let mult = 1;
+        if(i === 0 && G.player.vanishTurns > 0) {
+          mult *= 2;
+          G.player.vanishTurns = 0;
+          addLog('Sneak Attack!', 'log-combat');
+        }
+        if(getStat('critChance') > 0 && Math.random() < getStat('critChance')) {
+          mult *= 2;
+          addLog('Critical Hit!', 'log-combat');
+        }
+        if(en.dodge && Math.random() < en.dodge) {
+          addLog(`${en.name} agilely dodged your attack!`, 'log-combat');
+          floatText('DODGED', en.x, en.y, '#fbbf24');
+          popText('💨', en.x, en.y);
+          SFX.hit();
+        } else {
+          let dmg=round1(Math.max(1,gatk()-en.def+rand(3)));
+          if(mult>1){dmg=round1(dmg*mult);SFX.bash();}else{SFX.hit();}
+          en.hp=round1(en.hp-dmg);
+          addDamageDealt(dmg);
+          let atkSym = G.player.weapon ? G.player.weapon.sym : '🗡️';
+          if(atkSym === '🏹') atkSym = '🎯';
+          if(atkSym === '🪄') atkSym = '💥';
+          popText(atkSym, en.x, en.y);
+          floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171');
+          let multTag=mult>1?' (CRIT!)':'';
+          addLog(`Hit ${en.name} for ${fmt1(dmg)}${multTag}`, 'log-combat');
+          if(G.player.bloodlustTurns > 0) {
+            let heal = Math.floor(dmg / 2);
+            if(heal > 0) {
+              G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + heal));
+              floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
+            }
+          }
+          if(en.enrage && en.hp <= en.maxHp / 2 && en.color !== '#dc2626') {
+            en.color = '#dc2626';
+            popText('💢', en.x, en.y);
+            floatText('ENRAGED', en.x, en.y, '#dc2626');
+          }
+        }
+        if(en.hp<=0){
+          if(en.reviveTurns > 0) {
+            addLog(`You shattered the bones!`, 'log-combat');
+            popText('💥', en.x, en.y);
+            killEnemy(en, false);
+            return;
+          } else if(en.revive) {
+            en.revive = false;
+            en.reviveTurns = 2;
+            en.hp = 0;
+            en.sym = '🦴';
+            en.color = '#94a3b8';
+            en.name = 'Bones';
+            addLog(`The Skeleton collapsed into a pile of bones!`, 'log-combat');
+            floatText('COLLAPSED', en.x, en.y, '#94a3b8');
+            popText('🦴', en.x, en.y);
+          } else {
+            killEnemy(en, false);
+            return;
+          }
+        }
+      }
+      if(en.stunnedTurns>0){
+        advanceTurn();
+        return;
+      }
+      let edm=round1(Math.max(1,en.atk-gdef()+rand(3)));
+      if(en.enrage && en.hp <= en.maxHp / 2) edm = Math.floor(edm * 1.5);
+      if(G.player.shieldWallTurns > 0) edm = Math.ceil(edm * 3 / 5);
+      if(G.player.bloodlustTurns > 0) edm = Math.ceil(edm * 23 / 20);
+      edm = round1(edm);
+      let dodgeChance = playerDodgeChance();
+      if(dodgeChance > 0 && ch(dodgeChance)) {
+        addLog(`Dodged ${en.name}'s attack!`, 'log-info');
+        popText('💨', G.player.x, G.player.y);
+        advanceTurn();
+      } else {
+        checkEmergencyPotion(en, edm, ()=>{
+          G.player.hp=round1(Math.max(0,G.player.hp-edm));
+          popText('🩸', G.player.x, G.player.y);
+          floatText(`-${fmt1(edm)}`,G.player.x,G.player.y,'#60a5fa');
+          addLog(`${en.name} hits you for ${fmt1(edm)}`,'log-combat');
+          SFX.damage();shakeMap();flashDamage();
+          if(en.vampiric && edm > 0) {
+            let heal = Math.floor(edm * en.vampiric);
+            if(heal > 0) {
+              en.hp = round1(Math.min(en.maxHp, en.hp + heal));
+              floatText(`+${fmt1(heal)}`, en.x, en.y, '#4ade80');
+            }
+          }
+          if(en.freezeChance && Math.random() < en.freezeChance) {
+            G.player.rootedTurns = 2;
+            addLog(`The ${en.name} froze you!`, 'log-combat');
+            floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
+          }
+          advanceTurn();
+          if(G.player.hp<=0){G.gameOver=true;showDeath();}
+        });
+      }
     } else addLog('No adjacent enemies for Flurry', 'log-info');
   }
 }
