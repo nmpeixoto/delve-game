@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "totalRuns": 680,
+  "classStats": {
+    "warrior": {
+      "runs": 85,
+      "wins": 0,
+      "deaths": 85,
+      "timeouts": 0,
+      "stuck": 0,
+      "totalFloor": 272,
+      "totalTurns": 52332,
+      "bestFloor": 4,
+      "deathsWithResources": 3
+    },
+    "rogue": {
+      "runs": 85,
+      "wins": 0,
+      "deaths": 85,
+      "timeouts": 0,
+      "stuck": 0,
+      "totalFloor": 281,
+      "totalTurns": 43071,
+      "bestFloor": 5,
+      "deathsWithResources": 0
+    },
+    "mage": {
+      "runs": 85,
+      "wins": 1,
+      "deaths": 84,
+      "timeouts": 0,
+      "stuck": 0,
+      "totalFloor": 296,
+      "totalTurns": 65701,
+      "bestFloor": 5,
+      "deathsWithResources": 3
+    },
+    "paladin": {
+      "runs": 85,
+      "wins": 0,
+      "deaths": 85,
+      "timeouts": 0,
+      "stuck": 0,
+      "totalFloor": 238,
+      "totalTurns": 53244,
+      "bestFloor": 4,
+      "deathsWithResources": 1
+    },
+    "ranger": {
+      "runs": 85,
+      "wins": 0,
+      "deaths": 85,
+      "timeouts": 0,
+      "stuck": 0,
+      "totalFloor": 269,
+      "totalTurns": 36927,
+      "bestFloor": 5,
+      "deathsWithResources": 0
+    },
+    "barbarian": {
+      "runs": 85,
+      "wins": 0,
+      "deaths": 85,
+      "timeouts": 0,
+      "stuck": 0,
+      "totalFloor": 288,
+      "totalTurns": 56924,
+      "bestFloor": 5,
+      "deathsWithResources": 2
+    },
+    "necromancer": {
+      "runs": 85,
+      "wins": 0,
+      "deaths": 85,
+      "timeouts": 0,
+      "stuck": 0,
+      "totalFloor": 285,
+      "totalTurns": 54872,
+      "bestFloor": 5,
+      "deathsWithResources": 2
+    },
+    "monk": {
+      "runs": 85,
+      "wins": 0,
+      "deaths": 85,
+      "timeouts": 0,
+      "stuck": 0,
+      "totalFloor": 245,
+      "totalTurns": 42423,
+      "bestFloor": 4,
+      "deathsWithResources": 3
+    }
+  },
+  "strategyHistory": [],
+  "bugs": [],
+  "lastUpdated": "2026-06-06T16:14:42.593Z",
+  "iteration": 1
+}

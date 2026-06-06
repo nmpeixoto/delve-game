@@ -1748,7 +1748,7 @@ test('paladin heals before smiting when below the lay on hands threshold', () =>
   assert.strictEqual(decision.val, 'v');
 });
 
-test('paladin does not smite while critically low with no potions and no known stairs', () => {
+test('paladin smites to survive when surrounded with no known stairs', () => {
   const map = makeMap();
   setFloor(map, [
     [22, 20],
@@ -1770,7 +1770,7 @@ test('paladin does not smite while critically low with no potions and no known s
   const decision = decide(G);
 
   assert.strictEqual(decision.type, 'key');
-  assert.notStrictEqual(decision.val, 'b');
+  assert.strictEqual(decision.val, 'b');
 });
 
 test('paladin does not smite while weak with no potions and known stairs', () => {
@@ -1909,7 +1909,7 @@ test('ranger uses bear trap before piercing shot when an enemy is adjacent', () 
   assert.strictEqual(decision.val, 'v');
 });
 
-test('ranger does not spend bear trap while in panic range with no potion', () => {
+test('ranger uses bear trap to create space while panicked with no potion', () => {
   const map = makeMap();
   setFloor(map, [
     [5, 4],
@@ -1928,7 +1928,7 @@ test('ranger does not spend bear trap while in panic range with no potion', () =
   const decision = decide(G);
 
   assert.strictEqual(decision.type, 'key');
-  assert.notStrictEqual(decision.val, 'v');
+  assert.strictEqual(decision.val, 'v');
 });
 
 test('barbarian uses bloodlust before cleaving into a crowd', () => {

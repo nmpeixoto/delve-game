@@ -155,7 +155,7 @@ test('paladin starts with an iron mace and plate for sustain', () => {
   context.initGame('paladin');
 
   assert.strictEqual(context.G.player.maxHp, 26);
-  assert.strictEqual(context.G.player.atk, 1);
+  assert.strictEqual(context.G.player.atk, 4);
   assert.strictEqual(context.G.player.def, 1);
   assert.strictEqual(context.G.player.weapon.name, 'Iron Mace');
   assert.strictEqual(context.G.player.weapon.atk, 5);

@@ -586,6 +586,7 @@ function createRuntime(seed, options = {}) {
         }
       }
       sandbox.addLog(`Sacrificed ${gold} Gold for 2 Levels!`, 'log-info');
+      if (typeof sandbox.checkBagUpgrades === 'function') sandbox.checkBagUpgrades();
     } else if (shrine.shrineType === 'Cursed') {
       p.hp = p.maxHp;
       sandbox.addLog('Fully healed, but the curse awakens!', 'log-combat');
@@ -663,6 +664,12 @@ function createRuntime(seed, options = {}) {
     let total = p.atk + watk;
     if (p.class === 'barbarian') {
       total += Math.floor((p.maxHp - p.hp) / 6);
+    }
+    if (p.strengthTurns > 0) {
+      total += 10;
+    }
+    if (p.magicMult && weapon && weapon.sym === '♦') {
+      total = Math.floor(total * p.magicMult);
     }
     return total;
   };

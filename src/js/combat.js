@@ -29,13 +29,17 @@ function tileAttack(id){
 function attackEnemy(id,multiplier=1,opts={}){
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
   if(en.dying)return;
+  let isSneak = false;
+  let isCrit = false;
   if(G.player.vanishTurns > 0) {
     multiplier *= 2;
     G.player.vanishTurns = 0;
+    isSneak = true;
     addLog('Sneak Attack!', 'log-combat');
   }
   if(getStat('critChance') > 0 && Math.random() < getStat('critChance')) {
     multiplier *= 2;
+    isCrit = true;
     addLog('Critical Hit!', 'log-combat');
   }
   if(en.dodge && Math.random() < en.dodge) {
@@ -53,7 +57,10 @@ function attackEnemy(id,multiplier=1,opts={}){
     if(atkSym === '🪄') atkSym = '💥';
     popText(atkSym, en.x, en.y);
     floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171');
-    let multTag=multiplier>1?' (CRIT!)':'';
+    let multTag='';
+    if(isSneak && isCrit) multTag=' (SNEAK CRIT!)';
+    else if(isSneak) multTag=' (SNEAK!)';
+    else if(isCrit) multTag=' (CRIT!)';
     addLog(`Hit ${en.name} for ${fmt1(dmg)}${multTag}`, 'log-combat');
 
     if(G.player.bloodlustTurns > 0) {
@@ -725,13 +732,17 @@ function doAbility2(){
       for(let i = 0; i < 3; i++) {
         if(en.dying || en.hp <= 0) break;
         let mult = 1;
+        let hitSneak = false;
+        let hitCrit = false;
         if(i === 0 && G.player.vanishTurns > 0) {
           mult *= 2;
           G.player.vanishTurns = 0;
+          hitSneak = true;
           addLog('Sneak Attack!', 'log-combat');
         }
         if(getStat('critChance') > 0 && Math.random() < getStat('critChance')) {
           mult *= 2;
+          hitCrit = true;
           addLog('Critical Hit!', 'log-combat');
         }
         if(en.dodge && Math.random() < en.dodge) {
@@ -749,7 +760,10 @@ function doAbility2(){
           if(atkSym === '🪄') atkSym = '💥';
           popText(atkSym, en.x, en.y);
           floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171');
-          let multTag=mult>1?' (CRIT!)':'';
+          let multTag='';
+          if(hitSneak && hitCrit) multTag=' (SNEAK CRIT!)';
+          else if(hitSneak) multTag=' (SNEAK!)';
+          else if(hitCrit) multTag=' (CRIT!)';
           addLog(`Hit ${en.name} for ${fmt1(dmg)}${multTag}`, 'log-combat');
           if(G.player.bloodlustTurns > 0) {
             let heal = Math.floor(dmg / 2);
