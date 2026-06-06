@@ -478,6 +478,15 @@ function createRuntime(seed, options = {}) {
   sandbox.self = sandbox;
   sandbox.__seed = seed;
 
+  // Load external strategy config if available
+  const strategyConfigPath = path.join(__dirname, '..', 'strategy_config.json');
+  if (fs.existsSync(strategyConfigPath)) {
+    try {
+      const strategyConfig = JSON.parse(fs.readFileSync(strategyConfigPath, 'utf8'));
+      sandbox.STRATEGY_CONFIG = strategyConfig.classes;
+    } catch(e) { /* ignore config errors */ }
+  }
+
   const tipKeys = [
     'firstEnemy',
     'firstPotion',

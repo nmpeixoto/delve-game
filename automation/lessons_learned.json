@@ -1,98 +1,1471 @@
 {
   "version": 1,
-  "totalRuns": 680,
+  "totalRuns": 2376,
   "classStats": {
     "warrior": {
-      "runs": 85,
+      "runs": 143,
       "wins": 0,
       "deaths": 85,
       "timeouts": 0,
       "stuck": 0,
-      "totalFloor": 272,
+      "totalFloor": 451,
       "totalTurns": 52332,
-      "bestFloor": 4,
+      "bestFloor": 5,
       "deathsWithResources": 3
     },
     "rogue": {
-      "runs": 85,
+      "runs": 143,
       "wins": 0,
       "deaths": 85,
       "timeouts": 0,
       "stuck": 0,
-      "totalFloor": 281,
+      "totalFloor": 452,
       "totalTurns": 43071,
       "bestFloor": 5,
       "deathsWithResources": 0
     },
     "mage": {
-      "runs": 85,
-      "wins": 1,
+      "runs": 143,
+      "wins": 2,
       "deaths": 84,
       "timeouts": 0,
       "stuck": 0,
-      "totalFloor": 296,
+      "totalFloor": 485,
       "totalTurns": 65701,
       "bestFloor": 5,
       "deathsWithResources": 3
     },
     "paladin": {
-      "runs": 85,
-      "wins": 0,
+      "runs": 143,
+      "wins": 1,
       "deaths": 85,
       "timeouts": 0,
       "stuck": 0,
-      "totalFloor": 238,
+      "totalFloor": 420,
       "totalTurns": 53244,
-      "bestFloor": 4,
+      "bestFloor": 5,
       "deathsWithResources": 1
     },
     "ranger": {
-      "runs": 85,
-      "wins": 0,
+      "runs": 143,
+      "wins": 1,
       "deaths": 85,
       "timeouts": 0,
       "stuck": 0,
-      "totalFloor": 269,
+      "totalFloor": 445,
       "totalTurns": 36927,
       "bestFloor": 5,
       "deathsWithResources": 0
     },
     "barbarian": {
-      "runs": 85,
+      "runs": 143,
       "wins": 0,
       "deaths": 85,
       "timeouts": 0,
       "stuck": 0,
-      "totalFloor": 288,
+      "totalFloor": 466,
       "totalTurns": 56924,
       "bestFloor": 5,
       "deathsWithResources": 2
     },
     "necromancer": {
-      "runs": 85,
+      "runs": 143,
       "wins": 0,
       "deaths": 85,
       "timeouts": 0,
       "stuck": 0,
-      "totalFloor": 285,
+      "totalFloor": 462,
       "totalTurns": 54872,
       "bestFloor": 5,
       "deathsWithResources": 2
     },
     "monk": {
-      "runs": 85,
+      "runs": 143,
       "wins": 0,
       "deaths": 85,
       "timeouts": 0,
       "stuck": 0,
-      "totalFloor": 245,
+      "totalFloor": 415,
       "totalTurns": 42423,
-      "bestFloor": 4,
+      "bestFloor": 5,
       "deathsWithResources": 3
     }
   },
   "strategyHistory": [],
   "bugs": [],
   "lastUpdated": "2026-06-06T16:14:42.593Z",
-  "iteration": 1
+  "iteration": 1,
+  "iterations": [
+    {
+      "iteration": 0,
+      "timestamp": "2026-06-06T18:09:06.069Z",
+      "results": {
+        "warrior": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 1,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 8,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 0,
+            "lethalNonEscape": 0,
+            "noOpStalls": 0
+          }
+        },
+        "rogue": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 1,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 8,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 0,
+            "lethalNonEscape": 0,
+            "noOpStalls": 0
+          }
+        },
+        "mage": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 1,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 8,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 0,
+            "lethalNonEscape": 0,
+            "noOpStalls": 0
+          }
+        },
+        "paladin": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 1,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 8,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 0,
+            "lethalNonEscape": 0,
+            "noOpStalls": 0
+          }
+        },
+        "ranger": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 1,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 8,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 0,
+            "lethalNonEscape": 0,
+            "noOpStalls": 0
+          }
+        },
+        "barbarian": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 1,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 8,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 0,
+            "lethalNonEscape": 0,
+            "noOpStalls": 0
+          }
+        },
+        "necromancer": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 1,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 8,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 0,
+            "lethalNonEscape": 0,
+            "noOpStalls": 0
+          }
+        },
+        "monk": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 1,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 8,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 0,
+            "lethalNonEscape": 0,
+            "noOpStalls": 0
+          }
+        }
+      }
+    },
+    {
+      "iteration": 1,
+      "timestamp": "2026-06-06T18:12:41.249Z",
+      "results": {
+        "warrior": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.3,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 347,
+            "lethalNonEscape": 5,
+            "noOpStalls": 18
+          }
+        },
+        "rogue": {
+          "winRate": 0,
+          "floor5Rate": 0.125,
+          "avgFloor": 3.5,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 304,
+            "lethalNonEscape": 0,
+            "noOpStalls": 9
+          }
+        },
+        "mage": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.6,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 190,
+            "lethalNonEscape": 2,
+            "noOpStalls": 21
+          }
+        },
+        "paladin": {
+          "winRate": 0,
+          "floor5Rate": 0.125,
+          "avgFloor": 3.5,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 169,
+            "lethalNonEscape": 6,
+            "noOpStalls": 21
+          }
+        },
+        "ranger": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 77,
+            "lethalNonEscape": 3,
+            "noOpStalls": 0
+          }
+        },
+        "barbarian": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.5,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 377,
+            "lethalNonEscape": 0,
+            "noOpStalls": 19
+          }
+        },
+        "necromancer": {
+          "winRate": 0,
+          "floor5Rate": 0.125,
+          "avgFloor": 3.5,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 76,
+            "lethalNonEscape": 5,
+            "noOpStalls": 14
+          }
+        },
+        "monk": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.3,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 475,
+            "lethalNonEscape": 0,
+            "noOpStalls": 4
+          }
+        }
+      }
+    },
+    {
+      "iteration": 2,
+      "timestamp": "2026-06-06T18:16:14.928Z",
+      "results": {
+        "warrior": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.3,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 347,
+            "lethalNonEscape": 5,
+            "noOpStalls": 18
+          }
+        },
+        "rogue": {
+          "winRate": 0,
+          "floor5Rate": 0.125,
+          "avgFloor": 3.5,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 304,
+            "lethalNonEscape": 0,
+            "noOpStalls": 9
+          }
+        },
+        "mage": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.6,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 190,
+            "lethalNonEscape": 2,
+            "noOpStalls": 21
+          }
+        },
+        "paladin": {
+          "winRate": 0,
+          "floor5Rate": 0.125,
+          "avgFloor": 3.5,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 169,
+            "lethalNonEscape": 6,
+            "noOpStalls": 21
+          }
+        },
+        "ranger": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.1,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 283,
+            "lethalNonEscape": 4,
+            "noOpStalls": 0
+          }
+        },
+        "barbarian": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.5,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 377,
+            "lethalNonEscape": 0,
+            "noOpStalls": 19
+          }
+        },
+        "necromancer": {
+          "winRate": 0,
+          "floor5Rate": 0.125,
+          "avgFloor": 3.5,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 76,
+            "lethalNonEscape": 5,
+            "noOpStalls": 14
+          }
+        },
+        "monk": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.3,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 475,
+            "lethalNonEscape": 0,
+            "noOpStalls": 4
+          }
+        }
+      }
+    },
+    {
+      "iteration": 3,
+      "timestamp": "2026-06-06T18:18:39.368Z",
+      "results": {
+        "warrior": {
+          "winRate": 0,
+          "floor5Rate": 0.125,
+          "avgFloor": 3.6,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 371,
+            "lethalNonEscape": 3,
+            "noOpStalls": 14
+          }
+        },
+        "rogue": {
+          "winRate": 0,
+          "floor5Rate": 0.125,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 121,
+            "lethalNonEscape": 0,
+            "noOpStalls": 9
+          }
+        },
+        "mage": {
+          "winRate": 0,
+          "floor5Rate": 0.125,
+          "avgFloor": 3.6,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 2108,
+            "lethalNonEscape": 0,
+            "noOpStalls": 13
+          }
+        },
+        "paladin": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.5,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 153,
+            "lethalNonEscape": 1,
+            "noOpStalls": 15
+          }
+        },
+        "ranger": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.6,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 276,
+            "lethalNonEscape": 6,
+            "noOpStalls": 0
+          }
+        },
+        "barbarian": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.9,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 256,
+            "lethalNonEscape": 0,
+            "noOpStalls": 25
+          }
+        },
+        "necromancer": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.1,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 80,
+            "lethalNonEscape": 3,
+            "noOpStalls": 8
+          }
+        },
+        "monk": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 270,
+            "lethalNonEscape": 1,
+            "noOpStalls": 13
+          }
+        }
+      }
+    },
+    {
+      "iteration": 4,
+      "timestamp": "2026-06-06T18:21:03.903Z",
+      "results": {
+        "warrior": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 73,
+            "lethalNonEscape": 1,
+            "noOpStalls": 12
+          }
+        },
+        "rogue": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 2.8,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 86,
+            "lethalNonEscape": 0,
+            "noOpStalls": 6
+          }
+        },
+        "mage": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.9,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 166,
+            "lethalNonEscape": 2,
+            "noOpStalls": 23
+          }
+        },
+        "paladin": {
+          "winRate": 0,
+          "floor5Rate": 0.125,
+          "avgFloor": 3.6,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 214,
+            "lethalNonEscape": 7,
+            "noOpStalls": 17
+          }
+        },
+        "ranger": {
+          "winRate": 0,
+          "floor5Rate": 0.125,
+          "avgFloor": 3.9,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 118,
+            "lethalNonEscape": 3,
+            "noOpStalls": 0
+          }
+        },
+        "barbarian": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 274,
+            "lethalNonEscape": 0,
+            "noOpStalls": 18
+          }
+        },
+        "necromancer": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.6,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 72,
+            "lethalNonEscape": 7,
+            "noOpStalls": 18
+          }
+        },
+        "monk": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.1,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 288,
+            "lethalNonEscape": 1,
+            "noOpStalls": 11
+          }
+        }
+      }
+    },
+    {
+      "iteration": 5,
+      "timestamp": "2026-06-06T18:23:24.812Z",
+      "results": {
+        "warrior": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.8,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 160,
+            "lethalNonEscape": 3,
+            "noOpStalls": 26
+          }
+        },
+        "rogue": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 2.9,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 267,
+            "lethalNonEscape": 0,
+            "noOpStalls": 9
+          }
+        },
+        "mage": {
+          "winRate": 0.125,
+          "floor5Rate": 0.125,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 153,
+            "lethalNonEscape": 1,
+            "noOpStalls": 17
+          }
+        },
+        "paladin": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 163,
+            "lethalNonEscape": 3,
+            "noOpStalls": 17
+          }
+        },
+        "ranger": {
+          "winRate": 0.125,
+          "floor5Rate": 0.125,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 1,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 184,
+            "lethalNonEscape": 3,
+            "noOpStalls": 0
+          }
+        },
+        "barbarian": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 2.8,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 221,
+            "lethalNonEscape": 0,
+            "noOpStalls": 15
+          }
+        },
+        "necromancer": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.3,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 192,
+            "lethalNonEscape": 5,
+            "noOpStalls": 15
+          }
+        },
+        "monk": {
+          "winRate": 0,
+          "floor5Rate": 0.25,
+          "avgFloor": 3.6,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 912,
+            "lethalNonEscape": 3,
+            "noOpStalls": 15
+          }
+        }
+      }
+    },
+    {
+      "iteration": 6,
+      "timestamp": "2026-06-06T18:25:50.682Z",
+      "results": {
+        "warrior": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.2,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 267,
+            "lethalNonEscape": 4,
+            "noOpStalls": 14
+          }
+        },
+        "rogue": {
+          "winRate": 0,
+          "floor5Rate": 0.2,
+          "avgFloor": 3.6,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 251,
+            "lethalNonEscape": 0,
+            "noOpStalls": 7
+          }
+        },
+        "mage": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 140,
+            "lethalNonEscape": 2,
+            "noOpStalls": 12
+          }
+        },
+        "paladin": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 79,
+            "lethalNonEscape": 0,
+            "noOpStalls": 13
+          }
+        },
+        "ranger": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 65,
+            "lethalNonEscape": 2,
+            "noOpStalls": 0
+          }
+        },
+        "barbarian": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.6,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 288,
+            "lethalNonEscape": 0,
+            "noOpStalls": 15
+          }
+        },
+        "necromancer": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.2,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 57,
+            "lethalNonEscape": 3,
+            "noOpStalls": 8
+          }
+        },
+        "monk": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 315,
+            "lethalNonEscape": 1,
+            "noOpStalls": 3
+          }
+        }
+      }
+    },
+    {
+      "iteration": 7,
+      "timestamp": "2026-06-06T18:27:19.044Z",
+      "results": {
+        "warrior": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 101,
+            "lethalNonEscape": 1,
+            "noOpStalls": 7
+          }
+        },
+        "rogue": {
+          "winRate": 0,
+          "floor5Rate": 0.2,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 138,
+            "lethalNonEscape": 0,
+            "noOpStalls": 8
+          }
+        },
+        "mage": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.8,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 34,
+            "lethalNonEscape": 1,
+            "noOpStalls": 12
+          }
+        },
+        "paladin": {
+          "winRate": 0.2,
+          "floor5Rate": 0.2,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 124,
+            "lethalNonEscape": 4,
+            "noOpStalls": 11
+          }
+        },
+        "ranger": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 22,
+            "lethalNonEscape": 3,
+            "noOpStalls": 0
+          }
+        },
+        "barbarian": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.2,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 128,
+            "lethalNonEscape": 0,
+            "noOpStalls": 9
+          }
+        },
+        "necromancer": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 107,
+            "lethalNonEscape": 2,
+            "noOpStalls": 7
+          }
+        },
+        "monk": {
+          "winRate": 0,
+          "floor5Rate": 0,
+          "avgFloor": 3.4,
+          "stuck": 0,
+          "timeouts": 0,
+          "errors": 0,
+          "events": {
+            "missedHeal": 0,
+            "missedTeleport": 0,
+            "missedBomb": 0,
+            "missedBuff": 0,
+            "overclearSteps": 0,
+            "lowHpCombatNoHealing": 61,
+            "lethalNonEscape": 0,
+            "noOpStalls": 13
+          }
+        }
+      }
+    },
+    {
+      "iteration": 9,
+      "timestamp": "2026-06-06T18:31:06.783Z",
+      "bestClass": "rogue",
+      "bestScore": 46,
+      "worstClass": "barbarian",
+      "worstScore": 30,
+      "improvements": 1
+    },
+    {
+      "iteration": 10,
+      "timestamp": "2026-06-06T18:32:01.227Z",
+      "bestClass": "mage",
+      "bestScore": 38,
+      "worstClass": "monk",
+      "worstScore": 28,
+      "improvements": 2
+    },
+    {
+      "iteration": 11,
+      "ts": "2026-06-06T18:36:10.020Z",
+      "best": "warrior",
+      "bestS": 76.5,
+      "worst": "monk",
+      "worstS": 26,
+      "improvements": 1
+    },
+    {
+      "iteration": 12,
+      "ts": "2026-06-06T18:51:14.333Z",
+      "best": "mage",
+      "bestS": 60,
+      "worst": "rogue",
+      "worstS": 30,
+      "improvements": 1
+    },
+    {
+      "iteration": 13,
+      "ts": "2026-06-06T18:53:08.172Z",
+      "best": "rogue",
+      "bestS": 40,
+      "worst": "necromancer",
+      "worstS": 29,
+      "improvements": 2
+    },
+    {
+      "iteration": 14,
+      "ts": "2026-06-06T18:55:13.735Z",
+      "best": "ranger",
+      "bestS": 47,
+      "worst": "rogue",
+      "worstS": 29,
+      "improvements": 2
+    },
+    {
+      "iteration": 15,
+      "ts": "2026-06-06T18:57:16.116Z",
+      "best": "warrior",
+      "bestS": 57,
+      "worst": "monk",
+      "worstS": 30,
+      "improvements": 3
+    },
+    {
+      "iteration": 16,
+      "ts": "2026-06-06T19:04:18.789Z",
+      "best": "warrior",
+      "bestS": 48.5,
+      "worst": "rogue",
+      "worstS": 30,
+      "improvements": 1
+    },
+    {
+      "iteration": 17,
+      "ts": "2026-06-06T19:06:11.140Z",
+      "best": "paladin",
+      "bestS": 61,
+      "worst": "necromancer",
+      "worstS": 31,
+      "improvements": 1
+    },
+    {
+      "iteration": 18,
+      "ts": "2026-06-06T19:07:48.257Z",
+      "best": "rogue",
+      "bestS": 46.5,
+      "worst": "monk",
+      "worstS": 30,
+      "improvements": 2
+    },
+    {
+      "iteration": 19,
+      "ts": "2026-06-06T19:09:34.690Z",
+      "best": "mage",
+      "bestS": 77.5,
+      "worst": "ranger",
+      "worstS": 33,
+      "improvements": 3
+    },
+    {
+      "iteration": 20,
+      "ts": "2026-06-06T19:12:20.329Z",
+      "best": "barbarian",
+      "bestS": 65,
+      "worst": "monk",
+      "worstS": 30,
+      "improvements": 4
+    },
+    {
+      "iteration": 21,
+      "ts": "2026-06-06T19:14:25.178Z",
+      "best": "warrior",
+      "bestS": 47.5,
+      "worst": "mage",
+      "worstS": 31,
+      "improvements": 1
+    },
+    {
+      "iteration": 22,
+      "ts": "2026-06-06T19:16:03.277Z",
+      "best": "rogue",
+      "bestS": 75.5,
+      "worst": "necromancer",
+      "worstS": 30,
+      "improvements": 2
+    },
+    {
+      "iteration": 23,
+      "ts": "2026-06-06T19:17:34.391Z",
+      "best": "warrior",
+      "bestS": 50.5,
+      "worst": "ranger",
+      "worstS": 28,
+      "improvements": 3
+    },
+    {
+      "iteration": 24,
+      "ts": "2026-06-06T19:19:16.725Z",
+      "best": "mage",
+      "bestS": 63,
+      "worst": "barbarian",
+      "worstS": 29,
+      "improvements": 4
+    },
+    {
+      "iteration": 25,
+      "ts": "2026-06-06T19:20:58.967Z",
+      "best": "mage",
+      "bestS": 64,
+      "worst": "monk",
+      "worstS": 31,
+      "improvements": 5
+    },
+    {
+      "iteration": 26,
+      "ts": "2026-06-06T19:22:39.480Z",
+      "best": "warrior",
+      "bestS": 52.5,
+      "worst": "rogue",
+      "worstS": 28,
+      "improvements": 6
+    },
+    {
+      "iteration": 27,
+      "ts": "2026-06-06T19:25:02.375Z",
+      "best": "mage",
+      "bestS": 64,
+      "worst": "rogue",
+      "worstS": 28,
+      "improvements": 7
+    }
+  ]
 }

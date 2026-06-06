@@ -171,7 +171,9 @@ function initGame(playerClass = 'warrior', hardMode = false){
   p.hp = cData.hp || 20; p.maxHp = cData.hp || 20; 
   p.atk = cData.atk || 1; p.def = cData.def || 0;
   if(playerClass === 'warrior') {
+    p.weapon = {id:uid(), name:'Short Sword', type:'weapon', atk:4, rarity:'common', sym:'†', price:50};
     p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◆', price:60};
+    p.bestWeapon = 'Short Sword (ATK+4)';
   } else if(playerClass === 'rogue') {
     p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'†', price:25};
     p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◆', price:35};

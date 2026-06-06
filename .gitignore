@@ -31,6 +31,7 @@ out.json
 headless_out.txt
 balance_*.json
 balance_logs_*/
+balance_reports/
 class_logs/
 *.err.log
 *.out.log

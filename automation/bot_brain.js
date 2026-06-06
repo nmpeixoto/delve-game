@@ -51,6 +51,12 @@ function getClassStrategy(className) {
     },
   };
 
+  // External config override (set by headless runner or browser)
+  const cfg = (typeof window !== 'undefined' && window.STRATEGY_CONFIG) || {};
+  if (cfg[className]) {
+    return { ...base, ...cfg[className] };
+  }
+
   switch (className) {
     case 'warrior':
       return {
@@ -131,8 +137,8 @@ function getClassStrategy(className) {
         upgradeWeights: {
           ...base.upgradeWeights,
           atk: 1.05,
-          def: 0.85,
-          hp: 0.95,
+          def: 1.35,
+          hp: 1.3,
           all: 1,
           all5: 1,
           vamp: 1,
@@ -389,7 +395,7 @@ function getClassStrategy(className) {
         trapHpThreshold: 0.65,
         goldReserve: 65,
         potionTarget: 3,
-        weaponBias: 1.3,
+        weaponBias: 1.5,
         armorBias: 1.35,
         secondaryWeights: {
           ...base.secondaryWeights,
@@ -404,7 +410,7 @@ function getClassStrategy(className) {
         },
         upgradeWeights: {
           ...base.upgradeWeights,
-          atk: 0.9,
+          atk: 1.25,
           def: 1.1,
           hp: 1.05,
           all: 1,
@@ -420,8 +426,9 @@ function getClassStrategy(className) {
         },
       };
     default:
-      return base;
+      break;
   }
+  return base;
 }
 
 function getUpgradeBaseScore(item) {
@@ -1038,7 +1045,7 @@ window.botDecisionLogic = function() {
   const ability2Decision = () => {
       if (G.ability2Cooldown !== 0 || p.lvl < 5) return null;
       if (p.class === 'warrior' && G.floor >= FINAL_FLOOR && shouldExitWithoutPotion() && adjEnemies.length > 0 && p.hp < p.maxHp * 0.2) return { type: 'key', val: 'v' }; // SHIELD WALL
-      if (p.class === 'warrior' && (totalIncomingMax() >= p.hp * 0.6 || (adjEnemies.length >= 2 && p.hp < p.maxHp * 0.9) || (adjacentBoss && bossPhase >= 2))) return { type: 'key', val: 'v' }; // SHIELD WALL
+      if (p.class === 'warrior' && (totalIncomingMax() >= p.hp * 0.5 || (adjEnemies.length >= 3 && p.hp < p.maxHp * 0.6) || (adjacentBoss && bossPhase >= 2))) return { type: 'key', val: 'v' }; // SHIELD WALL
       if (p.class === 'rogue' && (adjEnemies.length >= 2 || (adjEnemies.length >= 1 && p.hp < p.maxHp * 0.65) || (visEnemies.length > 0 && (p.hp < p.maxHp * 0.45 || G.floor >= 5)) || (boss && bossPhase >= 2))) return { type: 'key', val: 'v' }; // VANISH
       if (p.class === 'mage' && (adjEnemies.length > 0 || p.hp < p.maxHp * 0.4) && visEnemies.length > 0) {
           let safeTiles = false;
@@ -1065,7 +1072,10 @@ window.botDecisionLogic = function() {
           }
           if(safeAdj) return { type: 'key', val: 'v' }; // BEAR TRAP
       }
-      if (p.class === 'barbarian' && !desperateRecovery && !shouldExitWithoutPotion() && ((adjEnemies.length >= 2 || p.hp < p.maxHp * 0.5) || boss) && visEnemies.length > 0 && (p.bloodlustTurns || 0) === 0) return { type: 'key', val: 'v' }; // BLOODLUST
+      if (p.class === 'barbarian' && !desperateRecovery && !shouldExitWithoutPotion() && 
+          ((adjEnemies.length >= 2 && p.hp > p.maxHp * 0.55) || 
+           (boss && p.hp > p.maxHp * 0.40)) && 
+          visEnemies.length > 0 && (p.bloodlustTurns || 0) === 0) return { type: 'key', val: 'v' }; // BLOODLUST
       if (p.class === 'necromancer') {
          let markTargets = visEnemies.filter(e => !e.boss && !e.raiseCorpseTarget);
          if (markTargets.length >= 1 && (visEnemies.length >= 2 || boss)) return { type: 'key', val: 'v' }; // RAISE DEAD
@@ -1076,7 +1086,7 @@ window.botDecisionLogic = function() {
             (p.hp < p.maxHp * 0.6 || maxIncomingHit(e) >= p.hp * 0.35)
           );
           if (monkEscapeOnly && hasOpenAdjacentTile() && adjEnemies.length >= 2 && !flurryKill) return null;
-          if (p.hp > p.maxHp * 0.75 || adjEnemies.length >= 2 || flurryKill) return { type: 'key', val: 'v' }; // FLURRY
+          if ((p.hp > p.maxHp * 0.75 && adjEnemies.length <= 1) || flurryKill) return { type: 'key', val: 'v' }; // FLURRY
       }
       return null;
   };
@@ -1105,8 +1115,10 @@ window.botDecisionLogic = function() {
       }
       if (p.class === 'mage' && visEnemies.length >= 1) return { type: 'key', val: 'b' }; 
       if (p.class === 'paladin' && adjEnemies.length > 0) {
-         // SMITE — always better than basic attack, but escape if dying with known stairs
+         // SMITE — prioritize enemies that can't be killed in 1 hit or are high-threat
          if (!(shouldExitWithoutPotion() && hasKnownStairs() && hasOpenAdjacentTile())) {
+           let target = adjEnemies.find(e => e.hp > minNormalDamage(e) || maxIncomingHit(e) >= p.maxHp * 0.15);
+           if (!target) target = adjEnemies[0]; // Fallback: SMITE any enemy if nothing better
            return { type: 'key', val: 'b' };
          }
       } 
@@ -1120,13 +1132,11 @@ window.botDecisionLogic = function() {
         if (target) return { type: 'key', val: 'b' }; 
       }
       if (p.class === 'monk' && adjEnemies.length > 0) {
-         // PUSH KICK — use when enemy can't be killed by basic attack (wall slam doubles damage)
-         // Don't use when critically low with no stairs and escape available (should explore instead)
+         // PUSH KICK — always better than basic attack (pushback + possible wall slam 2x)
+         // Only skip when dying with escape available (should explore instead)
          let target = adjEnemies.sort((a, b) => monkPushKickMaxDamage(b) - monkPushKickMaxDamage(a))[0];
          if (target && !(monkEscapeOnly && hasOpenAdjacentTile())) {
-           let canBasicKill = target.hp <= maxNormalDamage(target);
-           let canFlurryKill = (p.lvl >= 5 && G.ability2Cooldown === 0 && target.hp <= monkFlurryMaxDamage(target));
-           if (!canBasicKill && !canFlurryKill) return { type: 'key', val: 'b' };
+           return { type: 'key', val: 'b' };
          }
       } 
   }
@@ -1167,9 +1177,9 @@ window.botDecisionLogic = function() {
           if ((p.class === 'rogue' || p.class === 'barbarian') && potions.length === 0 && !hasKnownStairs()) return false;
           return true;
       }
-      if (p.class === 'mage' || p.class === 'ranger') {
-          let canShoot = (p.class === 'mage' && G.ability1Cooldown === 0) || (p.class === 'ranger' && isBow(p.weapon));
-          if (canShoot && visEnemies.some(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y) <= 2)) return true;
+      if (p.class === 'mage' || p.class === 'ranger' || p.class === 'necromancer') {
+          let maxDist = p.class === 'ranger' && isBow(p.weapon) ? 3 : (p.class === 'necromancer' ? 2 : 3);
+          if (visEnemies.some(e => Math.max(Math.abs(e.x - p.x), Math.abs(e.y - p.y)) <= maxDist)) return true;
       }
       return false;
   };
@@ -1182,7 +1192,7 @@ window.botDecisionLogic = function() {
       for (let d of dirs) {
           let nx = p.x + d.dx, ny = p.y + d.dy;
           if (nx >= 0 && nx < MAP_W && ny >= 0 && ny < MAP_H && isPassable(nx, ny) && !G.enemies.some(e => e.x === nx && e.y === ny)) {
-              let minDist = Math.min(...visEnemies.map(e => Math.abs(e.x - nx) + Math.abs(e.y - ny)));
+              let minDist = Math.min(...visEnemies.map(e => Math.max(Math.abs(e.x - nx), Math.abs(e.y - ny))));
               let score = minDist * 10 + (G.seen.has(ny*MAP_W+nx) ? 5 : 0); // Prefer explored areas
               if (exitStairs) score -= (Math.abs(exitStairs.x - nx) + Math.abs(exitStairs.y - ny)) * 6;
               if (score > bestScore) {
@@ -1225,7 +1235,6 @@ window.botDecisionLogic = function() {
         
         let headingForStairs = shouldHeadForStairs();
         let leavingFloor = shouldExitWithoutPotion() || headingForStairs;
-        if (p.class === 'paladin' && shouldExitWithoutPotion() && !hasKnownStairs()) leavingFloor = false;
         let recovering = shouldRecover();
         
         let validTarget = false;
