@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastImproved": "2026-06-06T19:25:02.374Z",
+  "lastImproved": "2026-06-06T21:16:42.835Z",
   "classes": {
     "warrior": {
       "exitHp": 0.62,
@@ -147,7 +147,7 @@
       "bloodMinRemainingHp": 16,
       "greedGoldCap": 210,
       "cursedHpThreshold": 0.35,
-      "weaponBias": 1.4,
+      "weaponBias": 1.5,
       "armorBias": 1.25,
       "buffAggression": 0.9,
       "upgradeWeights": {

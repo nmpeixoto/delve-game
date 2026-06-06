@@ -61,25 +61,26 @@ function getClassStrategy(className) {
     case 'warrior':
       return {
         ...base,
-        exitHp: 0.62,
-        combatHpFloor: 0.5,
-        combatPotionFloor: 0.4,
+        exitHp: 0.58,
+        combatHpFloor: 0.48,
+        combatPotionFloor: 0.45,
         exploreThreshold: 0.35,
         trapHpThreshold: 0.55,
-        goldReserve: 70,
-        potionTarget: 3,
+        goldReserve: 55,
+        potionTarget: 4,
+        teleportTarget: 2,
         detectionTarget: 0,
         bloodHpThreshold: 0.7,
         bloodMinRemainingHp: 18,
         greedGoldCap: 220,
         cursedHpThreshold: 0.3,
-        weaponBias: 1.35,
-        armorBias: 1.65,
+        weaponBias: 1.5,
+        armorBias: 1.45,
         buffAggression: 1.6,
         secondaryWeights: {
           ...base.secondaryWeights,
           perception: 0.8,
-          vampirism: 0.9,
+          vampirism: 1.15,
           regen: 1.1,
           swiftness: 0.8,
           goldBonus: 0.9,
@@ -89,12 +90,12 @@ function getClassStrategy(className) {
         },
         upgradeWeights: {
           ...base.upgradeWeights,
-          atk: 1.15,
-          def: 1.45,
+          atk: 1.35,
+          def: 1.3,
           hp: 1.3,
           all: 1.3,
           all5: 1.3,
-          vamp: 0.9,
+          vamp: 1.1,
           regen: 1.05,
           swift: 0.8,
           perception: 0.8,
@@ -107,12 +108,12 @@ function getClassStrategy(className) {
     case 'rogue':
       return {
         ...base,
-        exitHp: 0.7,
-        combatHpFloor: 0.64,
-        combatPotionFloor: 0.56,
+        exitHp: 0.60,
+        combatHpFloor: 0.48,
+        combatPotionFloor: 0.42,
         exploreThreshold: 0.30,
-        trapHpThreshold: 0.7,
-        goldReserve: 55,
+        trapHpThreshold: 0.55,
+        goldReserve: 50,
         potionTarget: 4,
         teleportTarget: 2,
         detectionTarget: 1,
@@ -136,9 +137,9 @@ function getClassStrategy(className) {
         },
         upgradeWeights: {
           ...base.upgradeWeights,
-          atk: 1.05,
-          def: 1.35,
-          hp: 1.3,
+          atk: 1.4,
+          def: 0.95,
+          hp: 1.0,
           all: 1,
           all5: 1,
           vamp: 1,
@@ -154,21 +155,21 @@ function getClassStrategy(className) {
     case 'mage':
       return {
         ...base,
-        exitHp: 0.72,
-        combatHpFloor: 0.68,
-        combatPotionFloor: 0.62,
+        exitHp: 0.68,
+        combatHpFloor: 0.58,
+        combatPotionFloor: 0.52,
         exploreThreshold: 0.32,
-        trapHpThreshold: 0.75,
-        goldReserve: 80,
+        trapHpThreshold: 0.65,
+        goldReserve: 60,
         potionTarget: 3,
-        teleportTarget: 2,
+        teleportTarget: 3,
         detectionTarget: 1,
         bloodHpThreshold: 0.82,
         bloodMinRemainingHp: 14,
         greedGoldCap: 160,
         cursedHpThreshold: 0.45,
-        weaponBias: 1.45,
-        armorBias: 1.1,
+        weaponBias: 1.55,
+        armorBias: 1.4,
         buffAggression: 1.1,
         secondaryWeights: {
           ...base.secondaryWeights,
@@ -184,8 +185,8 @@ function getClassStrategy(className) {
         upgradeWeights: {
           ...base.upgradeWeights,
           atk: 1,
-          def: 0.9,
-          hp: 1.05,
+          def: 1.25,
+          hp: 1.3,
           all: 1,
           all5: 1,
           vamp: 1.15,
@@ -201,12 +202,12 @@ function getClassStrategy(className) {
     case 'paladin':
       return {
         ...base,
-        exitHp: 0.75,
-        combatHpFloor: 0.58,
-        combatPotionFloor: 0.5,
-        exploreThreshold: 0.40,
+        exitHp: 0.60,
+        combatHpFloor: 0.48,
+        combatPotionFloor: 0.40,
+        exploreThreshold: 0.35,
         trapHpThreshold: 0.6,
-        goldReserve: 75,
+        goldReserve: 60,
         potionTarget: 3,
         teleportTarget: 2,
         detectionTarget: 0,
@@ -230,9 +231,9 @@ function getClassStrategy(className) {
         },
         upgradeWeights: {
           ...base.upgradeWeights,
-          atk: 1,
-          def: 1.3,
-          hp: 1.45,
+          atk: 1.25,
+          def: 1.15,
+          hp: 1.3,
           all: 1.35,
           all5: 1.35,
           vamp: 1,
@@ -248,12 +249,12 @@ function getClassStrategy(className) {
     case 'ranger':
       return {
         ...base,
-        exitHp: 0.72,
-        combatHpFloor: 0.63,
-        combatPotionFloor: 0.55,
+        exitHp: 0.55,
+        combatHpFloor: 0.42,
+        combatPotionFloor: 0.38,
         exploreThreshold: 0.30,
-        trapHpThreshold: 0.72,
-        goldReserve: 65,
+        trapHpThreshold: 0.60,
+        goldReserve: 55,
         potionTarget: 3,
         buffTarget: 1,
         teleportTarget: 2,
@@ -278,8 +279,8 @@ function getClassStrategy(className) {
         },
         upgradeWeights: {
           ...base.upgradeWeights,
-          atk: 1.05,
-          def: 0.9,
+          atk: 1.35,
+          def: 0.75,
           hp: 1,
           all: 1,
           all5: 1,
@@ -296,12 +297,12 @@ function getClassStrategy(className) {
     case 'barbarian':
       return {
         ...base,
-        exitHp: 0.58,
-        combatHpFloor: 0.5,
-        combatPotionFloor: 0.42,
+        exitHp: 0.55,
+        combatHpFloor: 0.50,
+        combatPotionFloor: 0.45,
         exploreThreshold: 0.30,
         trapHpThreshold: 0.55,
-        goldReserve: 50,
+        goldReserve: 45,
         potionTarget: 3,
         detectionTarget: 0,
         bloodHpThreshold: 0.62,
@@ -325,11 +326,11 @@ function getClassStrategy(className) {
         upgradeWeights: {
           ...base.upgradeWeights,
           atk: 1.35,
-          def: 0.9,
-          hp: 1.2,
+          def: 1.15,
+          hp: 1.35,
           all: 1.1,
           all5: 1.1,
-          vamp: 1.2,
+          vamp: 1.3,
           regen: 0.9,
           swift: 0.8,
           perception: 0.8,
@@ -342,20 +343,20 @@ function getClassStrategy(className) {
     case 'necromancer':
       return {
         ...base,
-        exitHp: 0.68,
-        combatHpFloor: 0.6,
-        combatPotionFloor: 0.52,
+        exitHp: 0.62,
+        combatHpFloor: 0.52,
+        combatPotionFloor: 0.45,
         exploreThreshold: 0.30,
-        trapHpThreshold: 0.75,
-        goldReserve: 80,
-        potionTarget: 3,
+        trapHpThreshold: 0.65,
+        goldReserve: 55,
+        potionTarget: 4,
         detectionTarget: 1,
         bloodHpThreshold: 0.82,
         bloodMinRemainingHp: 14,
         greedGoldCap: 160,
         cursedHpThreshold: 0.4,
-        weaponBias: 1.4,
-        armorBias: 1.15,
+        weaponBias: 1.5,
+        armorBias: 1.5,
         buffAggression: 0.9,
         secondaryWeights: {
           ...base.secondaryWeights,
@@ -371,8 +372,8 @@ function getClassStrategy(className) {
         upgradeWeights: {
           ...base.upgradeWeights,
           atk: 1.05,
-          def: 0.9,
-          hp: 1,
+          def: 1.5,
+          hp: 1.4,
           all: 1,
           all5: 1,
           vamp: 1.5,
@@ -388,12 +389,12 @@ function getClassStrategy(className) {
     case 'monk':
       return {
         ...base,
-        exitHp: 0.65,
-        combatHpFloor: 0.56,
-        combatPotionFloor: 0.48,
+        exitHp: 0.55,
+        combatHpFloor: 0.45,
+        combatPotionFloor: 0.40,
         exploreThreshold: 0.35,
-        trapHpThreshold: 0.65,
-        goldReserve: 65,
+        trapHpThreshold: 0.60,
+        goldReserve: 55,
         potionTarget: 3,
         weaponBias: 1.5,
         armorBias: 1.35,
@@ -412,11 +413,11 @@ function getClassStrategy(className) {
           ...base.upgradeWeights,
           atk: 1.25,
           def: 1.1,
-          hp: 1.05,
+          hp: 1.25,
           all: 1,
           all5: 1,
-          vamp: 0.9,
-          regen: 1,
+          vamp: 1.15,
+          regen: 1.1,
           swift: 1.45,
           perception: 1.25,
           crit: 1,
@@ -526,6 +527,7 @@ window.botDecisionLogic = function() {
   const MAP_H = G.map ? G.map.length : 36;
   const MAP_W = G.map && G.map[0] ? G.map[0].length : 56;
   const FINAL_FLOOR = typeof FLOORS !== 'undefined' ? FLOORS : 5;
+  const onBossFloor = G.floor >= FINAL_FLOOR;
   const WALL = 0, FLOOR = 1, STAIRS = 2, SHOP = 3, LOCKED_DOOR = 4, SECRET_DOOR = 5;
   const p = G.player;
   const hasKey = () => G.items.some(i => i.carried && i.type === 'key');
@@ -681,7 +683,7 @@ window.botDecisionLogic = function() {
     return false;
   };
   const combatPotionFloor = strategy.combatPotionFloor ?? strategy.combatHpFloor;
-  const panicFloor = ['mage', 'ranger', 'paladin', 'necromancer'].includes(p.class) ? 0.3 : 0.25;
+  const panicFloor = 0.3; // All classes enter panic at 30% HP
   const panicMode = p.hp <= p.maxHp * Math.min(combatPotionFloor, panicFloor);
   const desperateRecovery = panicMode && carriedPotions().length === 0;
 
@@ -812,23 +814,25 @@ window.botDecisionLogic = function() {
   let bestPotion = null;
   
   if (visEnemies.length === 0) {
-      // Out of combat: heal if below exitHp threshold to prepare for next fight
-      if (p.hp < p.maxHp * strategy.exitHp && potions.length > 0) {
-          bestPotion = potions.find(pot => p.maxHp - p.hp >= pot.heal) || potions[0];
+      // Out of combat: heal when below 55% to be ready for next fight
+      if (p.hp < p.maxHp * 0.55 && potions.length > 0) {
+          // Use smallest potion that covers at least half the deficit (avoid waste)
+          let deficit = p.maxHp - p.hp;
+          bestPotion = potions.find(pot => pot.heal >= deficit * 0.5) || potions[0];
       }
   } else if (adjEnemies.length > 0) {
       // In melee combat: heal earlier to prevent death spiral
-      let combatHealThreshold = Math.max(strategy.combatHpFloor, 0.55); // At least 55%
+      let combatHealThreshold = Math.max(strategy.combatHpFloor, 0.6); // At least 60%
       if (p.hp <= p.maxHp * combatHealThreshold && potions.length > 0) {
-          bestPotion = potions.find(pot => p.hp + pot.heal > totalIncomingMax()) || potions[0];
+          bestPotion = potions[0]; // Use best potion for maximum safety
       } else if (p.hp <= totalIncomingMax() && potions.length > 0) {
           // Emergency: incoming damage will kill us
           bestPotion = potions[0];
       }
   } else {
-      // Enemies visible but not adjacent: heal if critically hurt or below combat potion threshold
-      if (p.hp < p.maxHp * 0.3 && potions.length > 0) {
-          bestPotion = potions[potions.length - 1]; // Use smallest potion when critical
+      // Enemies visible but not adjacent: heal if hurt to prepare for engagement
+      if (p.hp < p.maxHp * 0.4 && potions.length > 0) {
+          bestPotion = potions[0]; // Use best potion before entering combat
       } else if (p.hp <= p.maxHp * (strategy.combatPotionFloor ?? strategy.combatHpFloor) && potions.length > 0) {
           bestPotion = potions[0];
       }
@@ -934,27 +938,32 @@ window.botDecisionLogic = function() {
     }
     return true;
   };
+  const _stairCache = { floor: -1, known: false, pos: null };
   const hasKnownStairs = () => {
+    if (_stairCache.floor === G.floor) return _stairCache.known;
     for (let y = 0; y < MAP_H; y++) {
       for (let x = 0; x < MAP_W; x++) {
-        if (G.map[y][x] === STAIRS && G.seen.has(y * MAP_W + x)) return true;
+        if (G.map[y][x] === STAIRS && G.seen.has(y * MAP_W + x)) {
+          _stairCache.floor = G.floor; _stairCache.known = true; _stairCache.pos = {x, y};
+          return true;
+        }
       }
     }
+    _stairCache.floor = G.floor; _stairCache.known = false; _stairCache.pos = null;
     return false;
   };
   const knownStairsPosition = () => {
-    for (let y = 0; y < MAP_H; y++) {
-      for (let x = 0; x < MAP_W; x++) {
-        if (G.map[y][x] === STAIRS && G.seen.has(y * MAP_W + x)) return { x, y };
-      }
-    }
-    return null;
+    if (_stairCache.floor === G.floor) return _stairCache.pos;
+    hasKnownStairs();
+    return _stairCache.pos;
   };
   const shouldExitWithoutPotion = () => p.hp < p.maxHp * strategy.exitHp && potions.length === 0;
   const shouldHeadForStairs = () => {
     if (G.floor >= FINAL_FLOOR || !hasKnownStairs()) return false;
-    if (visEnemies.length > 0) return false;
     if (G.floor >= FINAL_FLOOR - 1) return true;
+    // Only block stair descent when enemies are CLOSE (adjacent or 1 tile away), not just visible
+    let closeEnemies = visEnemies.filter(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y) <= 2);
+    if (closeEnemies.length > 0 && !shouldExitWithoutPotion()) return false;
     
     const exploredRatio = G.seen.size / (MAP_W * MAP_H);
     const hpRatio = p.hp / p.maxHp;
@@ -968,10 +977,46 @@ window.botDecisionLogic = function() {
   };
   const shouldAvoidVoluntaryCombat = () => {
     if (G.floor < 2 || adjEnemies.length > 0) return false;
+    // If stairs are known and should head there, skip fights
+    if (hasKnownStairs() && shouldHeadForStairs()) return true;
     const hpThreshold = hasKnownStairs() ? strategy.exitHp : strategy.combatHpFloor;
     return p.hp < p.maxHp * hpThreshold;
   };
   const shouldRecover = () => G.floor >= 2 && adjEnemies.length === 0 && p.hp < p.maxHp * strategy.combatHpFloor;
+
+  // BOSS FLOOR SPECIAL LOGIC
+  if (onBossFloor) {
+    // Boss floor: use strength buffs before engaging if boss is visible and we're healthy
+    if (!itemToUse && carriedBuffs().length > 0 && boss && (p.strengthTurns || 0) === 0 &&
+        p.hp > p.maxHp * 0.6 && Math.abs(boss.x - p.x) + Math.abs(boss.y - p.y) <= 5) {
+      itemToUse = carriedBuffs()[0];
+    }
+    // Boss floor: use bombs on boss or boss + adds
+    if (!itemToUse && carriedBombs().length > 0 && adjEnemies.length >= 1) {
+      let bossAdjacent = adjEnemies.some(e => e.boss);
+      if (bossAdjacent || adjEnemies.length >= 2) {
+        itemToUse = carriedBombs()[0];
+      }
+    }
+    // Boss floor: heal more aggressively - use potion if below 65% during boss fight
+    if (!itemToUse && boss && potions.length > 0 && p.hp < p.maxHp * 0.65) {
+      bestPotion = potions[0];
+      itemToUse = bestPotion;
+    }
+    // Boss floor: teleport away if critically low and overwhelmed
+    if (!itemToUse && carriedTeleports().length > 0 && potions.length === 0 &&
+        p.hp < p.maxHp * 0.3 && adjEnemies.length >= 2) {
+      itemToUse = carriedTeleports()[0];
+    }
+
+    if (itemToUse) {
+      if (!bagOpen) return { type: 'key', val: 'i' };
+      else {
+        let visibleItem = G.items.find(i => i.carried && i.type === itemToUse.type && i.name === itemToUse.name) || itemToUse;
+        return { type: 'click', target: `.inv-slot[onclick*="${visibleItem.id}"]` };
+      }
+    }
+  }
 
   if (G.map[p.y][p.x] === STAIRS && (isMapCleared() || shouldExitWithoutPotion() || shouldHeadForStairs() || G.won)) {
       return { type: 'key', val: '>' };
@@ -1045,7 +1090,7 @@ window.botDecisionLogic = function() {
   const ability2Decision = () => {
       if (G.ability2Cooldown !== 0 || p.lvl < 5) return null;
       if (p.class === 'warrior' && G.floor >= FINAL_FLOOR && shouldExitWithoutPotion() && adjEnemies.length > 0 && p.hp < p.maxHp * 0.2) return { type: 'key', val: 'v' }; // SHIELD WALL
-      if (p.class === 'warrior' && (totalIncomingMax() >= p.hp * 0.5 || (adjEnemies.length >= 3 && p.hp < p.maxHp * 0.6) || (adjacentBoss && bossPhase >= 2))) return { type: 'key', val: 'v' }; // SHIELD WALL
+      if (p.class === 'warrior' && (totalIncomingMax() >= p.hp * 0.4 || (adjEnemies.length >= 2 && p.hp < p.maxHp * 0.7) || (adjacentBoss) || (G.floor >= FINAL_FLOOR && adjEnemies.length > 0))) return { type: 'key', val: 'v' }; // SHIELD WALL
       if (p.class === 'rogue' && (adjEnemies.length >= 2 || (adjEnemies.length >= 1 && p.hp < p.maxHp * 0.65) || (visEnemies.length > 0 && (p.hp < p.maxHp * 0.45 || G.floor >= 5)) || (boss && bossPhase >= 2))) return { type: 'key', val: 'v' }; // VANISH
       if (p.class === 'mage' && (adjEnemies.length > 0 || p.hp < p.maxHp * 0.4) && visEnemies.length > 0) {
           let safeTiles = false;
@@ -1062,7 +1107,7 @@ window.botDecisionLogic = function() {
           }
           if(safeTiles) return { type: 'key', val: 'v' }; // BLINK
       }
-      if (p.class === 'paladin' && p.hp <= p.maxHp * 0.65) return { type: 'key', val: 'v' }; // HEAL
+      if (p.class === 'paladin' && p.hp <= p.maxHp * 0.40) return { type: 'key', val: 'v' }; // HEAL
       if (p.class === 'ranger' && adjEnemies.length > 0 && !(shouldExitWithoutPotion() && hasKnownStairs())) {
           let safeAdj = false;
           let dirs = [[0,-1],[0,1],[-1,0],[1,0]];
@@ -1073,20 +1118,20 @@ window.botDecisionLogic = function() {
           if(safeAdj) return { type: 'key', val: 'v' }; // BEAR TRAP
       }
       if (p.class === 'barbarian' && !desperateRecovery && !shouldExitWithoutPotion() && 
-          ((adjEnemies.length >= 2 && p.hp > p.maxHp * 0.55) || 
-           (boss && p.hp > p.maxHp * 0.40)) && 
+          ((adjEnemies.length >= 2 && p.hp > p.maxHp * 0.45) || 
+           (adjEnemies.length >= 1 && p.hp > p.maxHp * 0.55) ||
+           (boss && p.hp > p.maxHp * 0.35)) && 
           visEnemies.length > 0 && (p.bloodlustTurns || 0) === 0) return { type: 'key', val: 'v' }; // BLOODLUST
       if (p.class === 'necromancer') {
          let markTargets = visEnemies.filter(e => !e.boss && !e.raiseCorpseTarget);
-         if (markTargets.length >= 1 && (visEnemies.length >= 2 || boss)) return { type: 'key', val: 'v' }; // RAISE DEAD
+         if (markTargets.length >= 1) return { type: 'key', val: 'v' }; // RAISE DEAD
       }
       if (p.class === 'monk' && adjEnemies.length > 0) {
           let flurryKill = adjEnemies.some(e =>
-            e.hp <= monkFlurryMaxDamage(e) &&
-            (p.hp < p.maxHp * 0.6 || maxIncomingHit(e) >= p.hp * 0.35)
+            e.hp <= monkFlurryMaxDamage(e)
           );
           if (monkEscapeOnly && hasOpenAdjacentTile() && adjEnemies.length >= 2 && !flurryKill) return null;
-          if ((p.hp > p.maxHp * 0.75 && adjEnemies.length <= 1) || flurryKill) return { type: 'key', val: 'v' }; // FLURRY
+          if ((p.hp > p.maxHp * 0.5 && adjEnemies.length >= 1) || flurryKill) return { type: 'key', val: 'v' }; // FLURRY
       }
       return null;
   };
@@ -1126,7 +1171,7 @@ window.botDecisionLogic = function() {
           let aligned = visEnemies.some(e => e.x === p.x || e.y === p.y || Math.abs(e.x - p.x) === Math.abs(e.y - p.y));
           if (aligned) return { type: 'key', val: 'b' }; 
       }
-      if (p.class === 'barbarian' && !desperateRecovery && adjEnemies.length >= 1) return { type: 'key', val: 'b' }; 
+      if (p.class === 'barbarian' && !desperateRecovery && adjEnemies.length >= 2) return { type: 'key', val: 'b' }; 
       if (p.class === 'necromancer') {
         let target = visEnemies.find(e => Math.abs(e.x - p.x) <= 2 && Math.abs(e.y - p.y) <= 2);
         if (target) return { type: 'key', val: 'b' }; 
@@ -1134,8 +1179,10 @@ window.botDecisionLogic = function() {
       if (p.class === 'monk' && adjEnemies.length > 0) {
          // PUSH KICK — always better than basic attack (pushback + possible wall slam 2x)
          // Only skip when dying with escape available (should explore instead)
+         // Also skip when a basic attack can finish the enemy (save cooldown)
+         let killableAdj = adjEnemies.some(e => e.hp <= minSneakDamage(e));
          let target = adjEnemies.sort((a, b) => monkPushKickMaxDamage(b) - monkPushKickMaxDamage(a))[0];
-         if (target && !(monkEscapeOnly && hasOpenAdjacentTile())) {
+         if (target && !killableAdj && !(monkEscapeOnly && hasOpenAdjacentTile())) {
            return { type: 'key', val: 'b' };
          }
       } 
@@ -1168,6 +1215,14 @@ window.botDecisionLogic = function() {
 
   // KITING LOGIC
   const shouldKite = () => {
+      // Boss floor: only ranged classes kite (when abilities on cooldown), melee commits
+      if (onBossFloor) {
+          if (['mage', 'necromancer', 'ranger'].includes(p.class)) {
+              // Kite when both abilities on cooldown and we have HP to spare
+              if (G.ability1Cooldown > 0 && G.ability2Cooldown > 0 && p.hp > p.maxHp * 0.3) return true;
+          }
+          return false;
+      }
       if ((p.class === 'rogue' || p.class === 'barbarian') && shouldExitWithoutPotion() && !hasKnownStairs()) return false;
       if (panicMode) {
           if (hasKnownStairs() && shouldExitWithoutPotion() && adjEnemies.length === 0) return false;
@@ -1211,7 +1266,18 @@ window.botDecisionLogic = function() {
 
   // FIGHT - but avoid fights when outnumbered and low on HP
   if (adjEnemies.length > 0) {
-      let target = adjEnemies.sort((a,b) => maxIncomingHit(b) - maxIncomingHit(a))[0]; 
+      let target;
+      if (onBossFloor && boss) {
+        // Necromancer: prioritize marked adds for pet creation, then boss
+        if (p.class === 'necromancer') {
+          let markedAdd = adjEnemies.find(e => e.raiseCorpseTarget && !e.boss);
+          target = markedAdd || adjEnemies.find(e => e.boss) || adjEnemies[0];
+        } else {
+          target = adjEnemies.find(e => e.boss) || adjEnemies[0];
+        }
+      } else {
+        target = adjEnemies.sort((a,b) => maxIncomingHit(b) - maxIncomingHit(a))[0];
+      }
       let overwhelmed = adjEnemies.length >= 2 && p.hp < p.maxHp * 0.4 && hasOpenAdjacentTile();
       if (!overwhelmed) {
         return attackMove(target);
@@ -1240,7 +1306,10 @@ window.botDecisionLogic = function() {
         let validTarget = false;
         let label = '';
         
-        if (targetStairsOnly || leavingFloor) {
+        // Boss floor: always target the boss
+        if (onBossFloor && isEnemy) {
+          validTarget = true; label = 'path to boss';
+        } else if (targetStairsOnly || leavingFloor) {
              if (!targetStairsOnly && shouldExitWithoutPotion() && !headingForStairs && isShopTarget) { validTarget = true; label = 'path to shop'; }
              else if (isStairs) { validTarget = true; label = 'path to stairs'; }
         } else if (recovering) {
@@ -1253,7 +1322,7 @@ window.botDecisionLogic = function() {
              else if (isItem) { validTarget = true; label = 'path to item'; }
              else if (isShopTarget) { validTarget = true; label = 'path to shop'; }
              else if (isUnseen) { validTarget = true; label = 'explore'; }
-             else if (isStairs && isMapCleared()) { validTarget = true; label = 'path to stairs'; }
+             else if (isStairs && (isMapCleared() || shouldHeadForStairs())) { validTarget = true; label = 'path to stairs'; }
         }
 
         if (validTarget && curr.path.length > 0) {

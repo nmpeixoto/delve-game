@@ -213,7 +213,7 @@ function initGame(playerClass = 'warrior', hardMode = false){
     ability1Cooldown:0, ability2Cooldown:0,
     gameOver:false,won:false,
   };
-  if(!G.hardMode && ['warrior','paladin','monk'].includes(playerClass)) {
+  if(!G.hardMode) {
     let potion = POTIONS.find(item => item.name === 'Health Potion');
     if(potion) G.items.push({...potion, id:`starter-potion-${playerClass}`, carried:true, x:undefined, y:undefined});
   }

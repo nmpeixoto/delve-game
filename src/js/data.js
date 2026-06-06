@@ -108,7 +108,11 @@ function spawnItem(r, itemFilter=null, forceHighTier=false, opts={}){
   let preferredGear = opts.preferClassGear ? preferredClassGearPool() : [];
   if(ch(.3)||forceHighTier) pool.push(...weaponPool);
   if(ch(.3)||forceHighTier) pool.push(...armorPool);
-  if(!forceHighTier) pool.push(...POTIONS);
+  if(!forceHighTier) {
+    pool.push(...POTIONS);
+    // Weight healing potions higher to ensure adequate supply
+    pool.push(...POTIONS.filter(p => p.type === 'potion'));
+  }
   
   if(itemFilter) pool = pool.filter(itemFilter);
   if(opts.preferClassGear && preferredGear.length) {

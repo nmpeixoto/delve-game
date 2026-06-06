@@ -557,7 +557,7 @@ test('rogue drinks a potion when below the combat floor threshold', () => {
   setFloor(map, [[5, 5], [6, 5], [7, 5], [5, 6]]);
   const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 7]);
   const G = baseGame(map, {
-    player: { class: 'rogue', hp: 10, maxHp: 20, weapon: { atk: 2 } },
+    player: { class: 'rogue', hp: 7, maxHp: 20, weapon: { atk: 2 } },
     seen: new Set(visible),
     visible,
     enemies: [{ id: 'g1', name: 'Goblin', x: 7, y: 5, hp: 10, maxHp: 10, atk: 4, def: 1 }],
@@ -686,7 +686,7 @@ test('avoids chasing a visible enemy when wounded but still carrying a potion', 
   ]);
   const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 7]);
   const G = baseGame(map, {
-    player: { class: 'warrior', hp: 18, maxHp: 40, weapon: { atk: 4 } },
+    player: { class: 'warrior', hp: 23, maxHp: 40, weapon: { atk: 4 } },
     seen: new Set([5 * MAP_W + 5, 5 * MAP_W + 7]),
     visible,
     enemies: [{ id: 'g1', name: 'Goblin', x: 7, y: 5, hp: 20, maxHp: 20, atk: 8, def: 2 }],
@@ -1007,7 +1007,7 @@ test('rogue does not dash into melee when low on hp, out of potions, and known s
   ]);
   const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 6, 5 * MAP_W + 7]);
   const G = baseGame(map, {
-    player: { class: 'rogue', hp: 21, maxHp: 32, weapon: { atk: 2 } },
+    player: { class: 'rogue', hp: 16, maxHp: 32, weapon: { atk: 2 } },
     seen: new Set(visible),
     visible,
     enemies: [{ id: 'g1', name: 'Goblin', x: 5, y: 6, hp: 10, maxHp: 10, atk: 4, def: 1 }],
@@ -1335,7 +1335,7 @@ test('uses a teleportation scroll when out of potions and below the combat floor
   ]);
   const visible = new Set([5 * MAP_W + 5, 5 * MAP_W + 7]);
   const G = baseGame(map, {
-    player: { class: 'ranger', hp: 10, maxHp: 20, weapon: { atk: 3, sym: '🏹' } },
+    player: { class: 'ranger', hp: 7, maxHp: 20, weapon: { atk: 3, sym: '🏹' } },
     seen: new Set(visible),
     visible,
     enemies: [{ id: 'g1', name: 'Goblin', x: 7, y: 5, hp: 12, maxHp: 12, atk: 5, def: 1 }],
@@ -1736,7 +1736,7 @@ test('paladin heals before smiting when below the lay on hands threshold', () =>
   ]);
   const visible = new Set([4 * MAP_W + 5, 5 * MAP_W + 5, 6 * MAP_W + 5]);
   const G = baseGame(map, {
-    player: { class: 'paladin', lvl: 5, hp: 16, maxHp: 25, weapon: { atk: 2 } },
+    player: { class: 'paladin', lvl: 5, hp: 10, maxHp: 25, weapon: { atk: 2 } },
     seen: new Set(visible),
     visible,
     enemies: [{ id: 'g1', name: 'Goblin', x: 5, y: 6, hp: 10, maxHp: 10, atk: 4, def: 1 }],
@@ -1875,7 +1875,7 @@ test('moves toward known stairs instead of trading melee while weak with no poti
   const visible = new Set([5 * MAP_W + 4, 5 * MAP_W + 5, 5 * MAP_W + 6]);
   const G = baseGame(map, {
     floor: 2,
-    player: { class: 'paladin', x: 5, y: 5, lvl: 4, hp: 30, maxHp: 50, weapon: { atk: 5 }, armor: { def: 5 } },
+    player: { class: 'paladin', x: 5, y: 5, lvl: 4, hp: 25, maxHp: 50, weapon: { atk: 5 }, armor: { def: 5 } },
     seen: new Set(visible),
     visible,
     enemies: [{ id: 'g1', name: 'Goblin', x: 6, y: 5, hp: 18, maxHp: 18, atk: 6, def: 1 }],
