@@ -21,8 +21,8 @@ class DelveVectorEnv:
     
     def __init__(self, num_envs=128, envs_per_worker=8):
         self.num_envs = num_envs
-        self.envs_per_worker = num_envs  # Use single worker for all envs
-        self.pool = WorkerPool(num_envs, num_envs)
+        self.envs_per_worker = envs_per_worker
+        self.pool = WorkerPool(num_envs, envs_per_worker)
         self.states = [None] * num_envs
         self.prev_states = [None] * num_envs
         self.episode_rewards = [0.0] * num_envs
@@ -33,13 +33,10 @@ class DelveVectorEnv:
         """Initialize all environments."""
         seeds = [random.randint(1, 10_000_000) for _ in range(self.num_envs)]
         classes = [CLASSES[i % len(CLASSES)] for i in range(self.num_envs)]
-        self.pool.init_all(seeds, classes)
-        
-        # Get initial states
+        states = self.pool.init_all(seeds, classes)
+
         for i in range(self.num_envs):
-            results = self.pool.step_all({i: {'type': 'key', 'val': '.'}})
-            if i in results:
-                self.states[i] = results[i][0]
+            self.states[i] = states[i]
             self.prev_states[i] = self.states[i]
             self.episode_rewards[i] = 0.0
             self.episode_lengths[i] = 0
@@ -48,20 +45,103 @@ class DelveVectorEnv:
         """Reset specific environments."""
         if env_ids is None:
             env_ids = list(range(self.num_envs))
-        
-        decisions = {}
+
+        specs = {
+            eid: (random.randint(1, 10_000_000), CLASSES[eid % len(CLASSES)])
+            for eid in env_ids
+        }
+        states = self.pool.reset_envs(specs)
+
         for eid in env_ids:
-            decisions[eid] = {'type': 'key', 'val': 'i'}  # dummy action to get state
-        
-        results = self.pool.step_all(decisions)
-        
-        for eid in env_ids:
-            if eid in results:
-                state, _ = results[eid]
-                self.states[eid] = state
-                self.prev_states[eid] = state
-                self.episode_rewards[eid] = 0.0
-                self.episode_lengths[eid] = 0
+            state = states[eid]
+            self.states[eid] = state
+            self.prev_states[eid] = state
+            self.episode_rewards[eid] = 0.0
+            self.episode_lengths[eid] = 0
+        return [self.states[eid] for eid in env_ids]
+
+    def action_to_decision(self, state, action):
+        """Map a discrete RL action to the runner's game decision format."""
+        p = state.get('player', {}) if state else {}
+        enemies = [e for e in (state or {}).get('enemies', []) if not e.get('dying') and not e.get('isPet')]
+        items = [i for i in (state or {}).get('items', []) if i.get('carried')]
+
+        if action == 0:
+            return {'type': 'key', 'val': 'ArrowUp'}
+        if action == 1:
+            return {'type': 'key', 'val': 'ArrowDown'}
+        if action == 2:
+            return {'type': 'key', 'val': 'ArrowLeft'}
+        if action == 3:
+            return {'type': 'key', 'val': 'ArrowRight'}
+        if action in (4, 5):
+            adjacent = [
+                e for e in enemies
+                if abs(e.get('x', 0) - p.get('x', 0)) + abs(e.get('y', 0) - p.get('y', 0)) == 1
+            ]
+            adjacent.sort(key=lambda e: (0 if e.get('boss') else 1, e.get('hp', 0), str(e.get('id', ''))))
+            idx = action - 4
+            if idx < len(adjacent):
+                return {'type': 'attack', 'target': adjacent[idx]['id']}
+            return {'type': 'wait'}
+        if action == 6:
+            return {'type': 'key', 'val': 'b'}
+        if action == 7:
+            return {'type': 'key', 'val': 'v'}
+        if action == 8:
+            potion = self._choose_potion(items, p)
+            return self._item_click(potion) if potion else {'type': 'wait'}
+        if action == 9:
+            item = next((i for i in items if i.get('type') == 'potion_buff'), None)
+            return self._item_click(item) if item else {'type': 'wait'}
+        if action == 10:
+            item = next((i for i in items if i.get('type') == 'bomb'), None)
+            return self._item_click(item) if item else {'type': 'wait'}
+        if action == 11:
+            item = next((i for i in items if i.get('type') == 'scroll_teleport'), None)
+            return self._item_click(item) if item else {'type': 'wait'}
+        if action == 12:
+            item = next((i for i in items if i.get('type') == 'scroll' and 'detection' in i.get('name', '').lower()), None)
+            return self._item_click(item) if item else {'type': 'wait'}
+        if action == 13:
+            return {'type': 'key', 'val': '>'}
+        if action == 14:
+            return {'type': 'key', 'val': 't'}
+        if action == 15:
+            item = self._choose_shop_item(state)
+            return {'type': 'click', 'target': f'.shop-item[onclick*="{item["id"]}"]'} if item else {'type': 'wait'}
+        if action == 16:
+            return {'type': 'click', 'target': 'button[onclick="sellWeakerGear()"]'}
+        if action == 17:
+            return {'type': 'key', 'val': 'Escape'}
+        if action == 18:
+            return {'type': 'key', 'val': 'i'}
+        return {'type': 'wait'}
+
+    def _item_click(self, item):
+        return {'type': 'click', 'target': f'.inv-slot[onclick*="{item["id"]}"]'}
+
+    def _choose_potion(self, items, player):
+        potions = [i for i in items if i.get('type') == 'potion']
+        if not potions:
+            return None
+        missing = max(player.get('maxHp', 1) - player.get('hp', 0), 0)
+        sufficient = [i for i in potions if i.get('heal', 0) >= missing]
+        if sufficient:
+            return min(sufficient, key=lambda i: i.get('heal', 0))
+        return max(potions, key=lambda i: i.get('heal', 0))
+
+    def _choose_shop_item(self, state):
+        if not state or not state.get('shopOpen'):
+            return None
+        gold = state.get('player', {}).get('gold', 0)
+        stock = []
+        for shop in state.get('shops', []):
+            stock.extend(shop.get('stock', []))
+        affordable = [i for i in stock if not i.get('sold') and i.get('price', 0) <= gold]
+        priority = {'potion': 0, 'weapon': 1, 'armor': 2, 'potion_buff': 3, 'bomb': 4, 'scroll_teleport': 5, 'scroll': 6}
+        affordable.sort(key=lambda i: (priority.get(i.get('type'), 99), -i.get('heal', 0), i.get('price', 0)))
+        return affordable[0] if affordable else None
     
     def step(self, actions):
         """
@@ -76,36 +156,9 @@ class DelveVectorEnv:
             dones: numpy array of booleans
             infos: list of info dicts
         """
-        ACTION_MAP = {
-            0: {'type': 'key', 'val': 'ArrowUp'},
-            1: {'type': 'key', 'val': 'ArrowDown'},
-            2: {'type': 'key', 'val': 'ArrowLeft'},
-            3: {'type': 'key', 'val': 'ArrowRight'},
-            4: {'type': 'key', 'val': 'b'},  # ability1
-            5: {'type': 'key', 'val': 'v'},  # ability2
-            6: {'type': 'key', 'val': 'b'},  # alias
-            7: {'type': 'key', 'val': 'v'},  # alias
-            8: {'type': 'key', 'val': 'i'},  # open inventory (will need follow-up click)
-            9: {'type': 'key', 'val': 'i'},  # open inventory
-            10: {'type': 'key', 'val': 'i'},  # open inventory
-            11: {'type': 'key', 'val': 'i'},  # open inventory
-            12: {'type': 'key', 'val': 'i'},  # open inventory
-            13: {'type': 'key', 'val': '>'},  # descend
-            14: {'type': 'key', 'val': 't'},  # open shop
-            15: {'type': 'key', 'val': 't'},  # buy (needs shop open)
-            16: {'type': 'key', 'val': 'Escape'},  # sell
-            17: {'type': 'key', 'val': 'Escape'},  # close shop
-            18: {'type': 'key', 'val': 'i'},  # inventory toggle
-            19: {'type': 'key', 'val': '.'},  # wait
-        }
-        
         decisions = {}
         for i, action in enumerate(actions):
-            a = int(action)
-            if a in ACTION_MAP:
-                decisions[i] = ACTION_MAP[a]
-            else:
-                decisions[i] = {'type': 'key', 'val': '.'}
+            decisions[i] = self.action_to_decision(self.states[i], int(action))
         
         results = self.pool.step_all(decisions)
         
@@ -133,15 +186,23 @@ class DelveVectorEnv:
                 dones.append(done)
                 infos.append({
                     'won': state.get('won', False) if state else False,
+                    'final_floor': state.get('floor', 0) if state else 0,
                     'total_reward': self.episode_rewards[i],
                     'total_steps': self.episode_lengths[i],
+                    'terminal_state': state if done else None,
                 })
             else:
                 new_states.append(None)
                 rewards.append(0.0)
                 dones.append(True)
                 infos.append({'won': False, 'total_reward': 0, 'total_steps': 0})
-        
+
+        done_ids = [i for i, done in enumerate(dones) if done]
+        if done_ids:
+            reset_states = self.reset(done_ids)
+            for env_id, reset_state in zip(done_ids, reset_states):
+                new_states[env_id] = reset_state
+
         return new_states, np.array(rewards), np.array(dones), infos
     
     def get_states(self):

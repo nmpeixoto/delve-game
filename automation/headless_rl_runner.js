@@ -66,16 +66,43 @@ function createRuntime(seed) {
     }
   };
 
-  const document = {
-    getElementById: (id) => ({
-      style: { display: 'none' },
-      classList: { contains: () => false, add() {}, remove() {} },
+  const elements = new Map();
+  const makeElement = id => {
+    const classes = new Set();
+    return {
+      id,
+      style: { display: 'none', left: '', top: '' },
+      classList: {
+        contains: cls => classes.has(cls),
+        add(...names) { names.forEach(name => classes.add(name)); },
+        remove(...names) { names.forEach(name => classes.delete(name)); },
+        toggle(name, force) {
+          if (force === true) { classes.add(name); return true; }
+          if (force === false) { classes.delete(name); return false; }
+          if (classes.has(name)) { classes.delete(name); return false; }
+          classes.add(name);
+          return true;
+        },
+      },
+      dataset: {},
       textContent: '',
       innerHTML: '',
-    }),
+      appendChild() {},
+      addEventListener() {},
+      remove() {},
+      closest: () => null,
+    };
+  };
+
+  const document = {
+    getElementById: (id) => {
+      if (!elements.has(id)) elements.set(id, makeElement(id));
+      return elements.get(id);
+    },
     querySelector: () => null,
     querySelectorAll: () => [],
-    createElement: () => ({ style: {}, classList: { contains: () => false }, appendChild() {}, innerHTML: '' }),
+    createElement: () => makeElement('anonymous'),
+    addEventListener() {},
     body: { appendChild() {} },
   };
 
@@ -185,6 +212,21 @@ function createRuntime(seed) {
       ready: true,
       floor: G.floor,
       turn: G.turn,
+      player: {
+        hp: p.hp, maxHp: p.maxHp, atk: p.atk, def: p.def, lvl: p.lvl,
+        xp: p.xp, xpNext: p.xpNext, gold: p.gold,
+        x: p.x, y: p.y, class: p.class,
+        weapon: p.weapon ? { atk: p.weapon.atk, sym: p.weapon.sym, name: p.weapon.name, id: p.weapon.id } : null,
+        armor: p.armor ? { def: p.armor.def, name: p.armor.name, id: p.armor.id } : null,
+        shieldWallTurns: p.shieldWallTurns || 0, vanishTurns: p.vanishTurns || 0,
+        freeMoves: p.freeMoves || 0, bloodlustTurns: p.bloodlustTurns || 0,
+        rootedTurns: p.rootedTurns || 0, poisonedTurns: p.poisonedTurns || 0,
+        stunnedTurns: p.stunnedTurns || 0, strengthTurns: p.strengthTurns || 0,
+        vampirism: p.vampirism || 0, regen: p.regen || 0, swiftness: p.swiftness || 0,
+        critChance: p.critChance || 0, dodgeBonus: p.dodgeBonus || 0,
+        goldBonus: p.goldBonus || 0, xpMult: p.xpMult || 0, perception: p.perception || 0,
+        tilesExplored: p.tilesExplored || 0,
+      },
       hp: p.hp, maxHp: p.maxHp, atk: p.atk, def: p.def, lvl: p.lvl,
       xp: p.xp, xpNext: p.xpNext, gold: p.gold,
       x: p.x, y: p.y,
@@ -213,6 +255,8 @@ function createRuntime(seed) {
       })),
       shops: (G.shops || []).map(s => ({ x: s.x, y: s.y, stock: (s.stock||[]).map(i => ({ id: i.id, name: i.name, type: i.type, price: i.price, heal: i.heal, atk: i.atk, def: i.def, sold: !!i.sold })) })),
       map: G.map,
+      seen: Array.from(seen),
+      visible: G.visible ? Array.from(G.visible) : [],
       seen_count: seen.size,
       visible_count: G.visible ? G.visible.size : 0,
       known_stairs: (() => {
@@ -244,6 +288,7 @@ function createRuntime(seed) {
       if (t === 'button[onclick="sellWeakerGear()"]') { if (typeof context.sellWeakerGear === 'function') context.sellWeakerGear(); return; }
       return;
     }
+    if (decision.type === 'wait') { context.advanceTurn(); return; }
     if (decision.type === 'attack') { context.tileAttack(decision.target); return; }
     if (decision.type === 'key') {
       const key = decision.val;
@@ -277,12 +322,13 @@ function runWorker() {
       
       if (msg.type === 'init') {
         // Create new environment
-        const envId = nextEnvId++;
+        const envId = Number.isInteger(msg.envId) ? msg.envId : nextEnvId++;
+        nextEnvId = Math.max(nextEnvId, envId + 1);
         const runtime = createRuntime(msg.seed || envId * 10000);
         runtime.context.initGame(msg.className || 'warrior');
         runtime.flushTimers();
         envs.set(envId, runtime);
-        process.stdout.write(JSON.stringify({ type: 'ready', envId }) + '\n');
+        process.stdout.write(JSON.stringify({ type: 'ready', envId, state: runtime.captureSnapshot() }) + '\n');
       }
       else if (msg.type === 'step') {
         // Execute action in environment

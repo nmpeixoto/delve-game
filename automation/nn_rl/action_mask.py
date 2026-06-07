@@ -90,7 +90,7 @@ def get_action_mask(G):
             mask[10] = True  # USE_BOMB
     if any(i.get('type') == 'scroll_teleport' for i in carried):
         mask[11] = True  # USE_TELEPORT
-    if any(i.get('type') == 'scroll' and 'detection' in i.get('name', '') for i in carried):
+    if any(i.get('type') == 'scroll' and 'detection' in i.get('name', '').lower() for i in carried):
         mask[12] = True  # USE_DETECTION
     
     # ── DESCEND (13) ────────────────────────────────────────────────────────
@@ -119,10 +119,10 @@ def get_action_mask(G):
 
 def _visible_enemies(G, seen, MAP_W):
     """Get list of visible enemies."""
-    p = G.get('player', {})
     enemies = G.get('enemies', [])
+    visible = G.get('visible', seen)
     return [e for e in enemies if not e.get('dying') and not e.get('isPet') and 
-            (e.get('y', 0) * MAP_W + e.get('x', 0)) in seen]
+            (e.get('y', 0) * MAP_W + e.get('x', 0)) in visible]
 
 
 def _has_key(G):
