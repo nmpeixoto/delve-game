@@ -175,13 +175,15 @@ class PPO:
             'entropy': total_entropy / max(num_batches, 1),
         }
     
-    def save(self, path):
+    def save(self, path, **metadata):
         """Save model checkpoint."""
-        torch.save({
+        checkpoint = {
             'network': self.network.state_dict(),
             'optimizer': self.optimizer.state_dict(),
             'scheduler': self.scheduler.state_dict(),
-        }, path)
+        }
+        checkpoint.update(metadata)
+        torch.save(checkpoint, path)
     
     def load(self, path):
         """Load model checkpoint."""
@@ -189,3 +191,4 @@ class PPO:
         self.network.load_state_dict(checkpoint['network'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         self.scheduler.load_state_dict(checkpoint['scheduler'])
+        return checkpoint

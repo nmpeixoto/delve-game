@@ -13,13 +13,13 @@ class DelveNet(nn.Module):
     
     Architecture:
         Backbone: 148 -> 256 -> 256 -> 128 (MLP with LayerNorm)
-        Policy Head: 128 -> 64 -> 20 (action logits)
+        Policy Head: 128 -> 64 -> action_dim (action logits)
         Value Head: 128 -> 64 -> 1 (state value)
     
     Total parameters: ~350K
     """
     
-    def __init__(self, state_dim=148, action_dim=20, hidden_dim=256):
+    def __init__(self, state_dim=148, action_dim=18, hidden_dim=256):
         super().__init__()
         
         # Backbone

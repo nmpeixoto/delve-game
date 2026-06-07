@@ -32,7 +32,7 @@ import json
 import sys
 sys.path.insert(0, '${__dirname}')
 from network import DelveNet
-model = DelveNet(state_dim=148, action_dim=20, hidden_dim=256)
+model = DelveNet(state_dim=148, action_dim=18, hidden_dim=256)
 model.load_state_dict(torch.load('${modelPath.replace(/\\/g, '\\\\')}', map_location='cpu'))
 weights = {}
 for name, param in model.named_parameters():
@@ -183,37 +183,36 @@ function extractStateJS(G) {
  * This is a JavaScript port of action_mask.py.
  */
 function getActionMaskJS(G) {
-    if (!G || !G.player) return new Array(20).fill(false);
+    if (!G || !G.player) return new Array(18).fill(false);
     
-    const mask = new Array(20).fill(false);
+    const mask = new Array(18).fill(false);
     const p = G.player;
     const MAP_W = 56;
     
     if (G.gameOver || G.won) return mask;
-    if (p.stunnedTurns > 0) { mask[19] = true; return mask; }
     
     // Movement
-    if (!p.rootedTurns || p.rootedTurns <= 0) {
-        const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
-        for (let i = 0; i < 4; i++) {
-            const nx = p.x + dirs[i][0], ny = p.y + dirs[i][1];
-            if (ny >= 0 && ny < 36 && nx >= 0 && nx < 56) {
-                const tile = G.map[ny][nx];
-                if (tile !== 0 && tile !== 4) {
-                    const blocking = G.enemies.some(e => e.x === nx && e.y === ny && !e.dying);
-                    if (!blocking) mask[i] = true;
-                }
+    const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
+    for (let i = 0; i < 4; i++) {
+        const nx = p.x + dirs[i][0], ny = p.y + dirs[i][1];
+        if (ny >= 0 && ny < 36 && nx >= 0 && nx < 56) {
+            const tile = G.map[ny][nx];
+            if (tile !== 0 && tile !== 4) {
+                const blocking = G.enemies.some(e => e.x === nx && e.y === ny && !e.dying);
+                if (!blocking) mask[i] = true;
             }
         }
     }
     
+    const visEnemies = G.enemies.filter(e => !e.dying && !e.isPet && G.visible && G.visible.has(e.y * MAP_W + e.x));
+
     // Attack adjacent enemies
     const adjEnemies = G.enemies.filter(e => !e.dying && !e.isPet && Math.abs(e.x - p.x) + Math.abs(e.y - p.y) === 1);
     for (let i = 0; i < Math.min(2, adjEnemies.length); i++) mask[4 + i] = true;
     
     // Abilities
-    if (G.ability1Cooldown === 0) mask[6] = true;
-    if (p.lvl >= 5 && G.ability2Cooldown === 0) mask[7] = true;
+    if (G.ability1Cooldown === 0 && visEnemies.length > 0) mask[6] = true;
+    if (p.lvl >= 5 && G.ability2Cooldown === 0 && (visEnemies.length > 0 || p.hp / Math.max(p.maxHp, 1) <= 0.8)) mask[7] = true;
     
     // Items
     const carried = G.items.filter(i => i.carried);
@@ -231,10 +230,7 @@ function getActionMaskJS(G) {
     if (nearShop) mask[14] = true;
     if (G.shopOpen) { mask[15] = true; mask[16] = true; mask[17] = true; }
     
-    // Inventory
-    mask[18] = true;
-    // Wait
-    mask[19] = true;
+    if (!mask.some(Boolean)) mask[17] = true;
     
     return mask;
 }
@@ -251,12 +247,13 @@ function nnActionToDecision(actionIdx, G) {
         case 1: return { type: 'key', val: 'ArrowDown' };
         case 2: return { type: 'key', val: 'ArrowLeft' };
         case 3: return { type: 'key', val: 'ArrowRight' };
-        case 4: case 6:
+        case 4: case 5:
             // Attack first adjacent enemy
             const adjEnemies = G.enemies.filter(e => !e.dying && !e.isPet && Math.abs(e.x - p.x) + Math.abs(e.y - p.y) === 1);
-            if (adjEnemies.length > 0) return { type: 'attack', target: adjEnemies[0].id };
-            return null;
-        case 5: case 7: return { type: 'key', val: 'v' }; // ability2
+            if (adjEnemies.length > actionIdx - 4) return { type: 'attack', target: adjEnemies[actionIdx - 4].id };
+            return { type: 'key', val: 'Escape' };
+        case 6: return { type: 'key', val: 'b' }; // ability1
+        case 7: return { type: 'key', val: 'v' }; // ability2
         case 8: return { type: 'key', val: 'i' }; // open inventory (potion)
         case 9: return { type: 'key', val: 'i' }; // open inventory (buff)
         case 10: return { type: 'key', val: 'i' }; // open inventory (bomb)
@@ -266,10 +263,8 @@ function nnActionToDecision(actionIdx, G) {
         case 14: return { type: 'key', val: 't' }; // open shop
         case 15: return { type: 'key', val: 't' }; // buy
         case 16: return { type: 'key', val: 'Escape' }; // sell
-        case 17: return { type: 'key', val: 'Escape' }; // close shop
-        case 18: return { type: 'key', val: 'i' }; // inventory toggle
-        case 19: return { type: 'key', val: '.' }; // wait
-        default: return null;
+        case 17: return { type: 'key', val: 'Escape' }; // escape/close shop
+        default: return { type: 'key', val: 'Escape' };
     }
 }
 

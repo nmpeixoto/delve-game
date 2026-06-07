@@ -12,7 +12,7 @@ CLASSES = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necrom
 
 # ─── STATE / ACTION ──────────────────────────────────────────────────────────
 STATE_DIM = 148        # 128 original + 6 missing features (shop, keys, floor difficulty, etc.)
-ACTION_DIM = 20        # 4 move + 2 attack + 2 ability + 5 item + descend + shop + inventory + wait
+ACTION_DIM = 18        # 4 move + 2 attack + 2 ability + 5 item + descend + shop/open/buy/sell/escape
 
 # Action indices
 ACTIONS = {
@@ -21,8 +21,7 @@ ACTIONS = {
     'ABILITY1': 6, 'ABILITY2': 7,
     'USE_POTION': 8, 'USE_BUFF': 9, 'USE_BOMB': 10, 'USE_TELEPORT': 11, 'USE_DETECTION': 12,
     'DESCEND': 13,
-    'SHOP_OPEN': 14, 'SHOP_BUY': 15, 'SHOP_SELL': 16, 'SHOP_CLOSE': 17,
-    'INVENTORY': 18, 'WAIT': 19,
+    'SHOP_OPEN': 14, 'SHOP_BUY': 15, 'SHOP_SELL': 16, 'ESCAPE': 17,
 }
 
 # ─── NETWORK ─────────────────────────────────────────────────────────────────

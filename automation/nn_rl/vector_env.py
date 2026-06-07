@@ -10,6 +10,7 @@ from headless_bridge import WorkerPool
 from state_extractor import extract_state
 from action_mask import get_action_mask
 from reward import compute_reward
+from config import ACTION_DIM
 
 CLASSES = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk']
 
@@ -19,9 +20,21 @@ class DelveVectorEnv:
     Wraps multiple headless DELVE game instances for parallel RL training.
     """
     
-    def __init__(self, num_envs=128, envs_per_worker=8):
+    def __init__(
+        self,
+        num_envs=128,
+        envs_per_worker=8,
+        max_episode_steps=5000,
+        timeout_penalty=-250.0,
+        curriculum_max_floor=None,
+        curriculum_reward=125.0,
+    ):
         self.num_envs = num_envs
         self.envs_per_worker = envs_per_worker
+        self.max_episode_steps = max_episode_steps
+        self.timeout_penalty = timeout_penalty
+        self.curriculum_max_floor = curriculum_max_floor
+        self.curriculum_reward = curriculum_reward
         self.pool = WorkerPool(num_envs, envs_per_worker)
         self.states = [None] * num_envs
         self.prev_states = [None] * num_envs
@@ -60,6 +73,9 @@ class DelveVectorEnv:
             self.episode_lengths[eid] = 0
         return [self.states[eid] for eid in env_ids]
 
+    def set_curriculum_max_floor(self, max_floor):
+        self.curriculum_max_floor = max_floor
+
     def action_to_decision(self, state, action):
         """Map a discrete RL action to the runner's game decision format."""
         p = state.get('player', {}) if state else {}
@@ -83,40 +99,41 @@ class DelveVectorEnv:
             idx = action - 4
             if idx < len(adjacent):
                 return {'type': 'attack', 'target': adjacent[idx]['id']}
-            return {'type': 'wait'}
+            return self._escape_decision()
         if action == 6:
             return {'type': 'key', 'val': 'b'}
         if action == 7:
             return {'type': 'key', 'val': 'v'}
         if action == 8:
             potion = self._choose_potion(items, p)
-            return self._item_click(potion) if potion else {'type': 'wait'}
+            return self._item_click(potion) if potion else self._escape_decision()
         if action == 9:
             item = next((i for i in items if i.get('type') == 'potion_buff'), None)
-            return self._item_click(item) if item else {'type': 'wait'}
+            return self._item_click(item) if item else self._escape_decision()
         if action == 10:
             item = next((i for i in items if i.get('type') == 'bomb'), None)
-            return self._item_click(item) if item else {'type': 'wait'}
+            return self._item_click(item) if item else self._escape_decision()
         if action == 11:
             item = next((i for i in items if i.get('type') == 'scroll_teleport'), None)
-            return self._item_click(item) if item else {'type': 'wait'}
+            return self._item_click(item) if item else self._escape_decision()
         if action == 12:
             item = next((i for i in items if i.get('type') == 'scroll' and 'detection' in i.get('name', '').lower()), None)
-            return self._item_click(item) if item else {'type': 'wait'}
+            return self._item_click(item) if item else self._escape_decision()
         if action == 13:
             return {'type': 'key', 'val': '>'}
         if action == 14:
             return {'type': 'key', 'val': 't'}
         if action == 15:
             item = self._choose_shop_item(state)
-            return {'type': 'click', 'target': f'.shop-item[onclick*="{item["id"]}"]'} if item else {'type': 'wait'}
+            return {'type': 'click', 'target': f'.shop-item[onclick*="{item["id"]}"]'} if item else self._escape_decision()
         if action == 16:
             return {'type': 'click', 'target': 'button[onclick="sellWeakerGear()"]'}
         if action == 17:
             return {'type': 'key', 'val': 'Escape'}
-        if action == 18:
-            return {'type': 'key', 'val': 'i'}
-        return {'type': 'wait'}
+        return self._escape_decision()
+
+    def _escape_decision(self):
+        return {'type': 'key', 'val': 'Escape'}
 
     def _item_click(self, item):
         return {'type': 'click', 'target': f'.inv-slot[onclick*="{item["id"]}"]'}
@@ -142,6 +159,66 @@ class DelveVectorEnv:
         priority = {'potion': 0, 'weapon': 1, 'armor': 2, 'potion_buff': 3, 'bomb': 4, 'scroll_teleport': 5, 'scroll': 6}
         affordable.sort(key=lambda i: (priority.get(i.get('type'), 99), -i.get('heal', 0), i.get('price', 0)))
         return affordable[0] if affordable else None
+
+    def _apply_terminal_rules(self, env_id, state, done, reward):
+        if state is None:
+            return reward, True, {
+                'won': False,
+                'timeout': False,
+                'curriculum_success': False,
+                'outcome': 'done',
+                'final_floor': 0,
+                'total_reward': self.episode_rewards[env_id],
+                'total_steps': self.episode_lengths[env_id],
+                'terminal_state': None,
+            }
+
+        timed_out = (
+            not done
+            and self.max_episode_steps > 0
+            and self.episode_lengths[env_id] >= self.max_episode_steps
+        )
+        curriculum_success = (
+            not done
+            and not timed_out
+            and self.curriculum_max_floor is not None
+            and state.get('floor', 1) > self.curriculum_max_floor
+        )
+
+        if timed_out:
+            reward += self.timeout_penalty
+            self.episode_rewards[env_id] += self.timeout_penalty
+            done = True
+        elif curriculum_success:
+            reward += self.curriculum_reward
+            self.episode_rewards[env_id] += self.curriculum_reward
+            done = True
+
+        won = bool(state.get('won', False))
+        game_over = bool(state.get('gameOver', False))
+        if won:
+            outcome = 'won'
+        elif curriculum_success:
+            outcome = 'curriculum'
+        elif timed_out:
+            outcome = 'timeout'
+        elif game_over:
+            outcome = 'dead'
+        elif done:
+            outcome = 'done'
+        else:
+            outcome = 'running'
+
+        return reward, done, {
+            'won': won,
+            'timeout': timed_out,
+            'curriculum_success': curriculum_success,
+            'outcome': outcome,
+            'final_floor': state.get('floor', 0),
+            'total_reward': self.episode_rewards[env_id],
+            'total_steps': self.episode_lengths[env_id],
+            'terminal_state': state if done else None,
+        }
     
     def step(self, actions):
         """
@@ -180,17 +257,13 @@ class DelveVectorEnv:
                 else:
                     reward = 0.0
                     done = True
+
+                reward, done, info = self._apply_terminal_rules(i, state, done, reward)
                 
                 new_states.append(state)
                 rewards.append(reward)
                 dones.append(done)
-                infos.append({
-                    'won': state.get('won', False) if state else False,
-                    'final_floor': state.get('floor', 0) if state else 0,
-                    'total_reward': self.episode_rewards[i],
-                    'total_steps': self.episode_lengths[i],
-                    'terminal_state': state if done else None,
-                })
+                infos.append(info)
             else:
                 new_states.append(None)
                 rewards.append(0.0)
@@ -216,7 +289,7 @@ class DelveVectorEnv:
             if state:
                 masks.append(get_action_mask(state))
             else:
-                masks.append(np.zeros(20, dtype=bool))
+                masks.append(np.zeros(ACTION_DIM, dtype=bool))
         return np.array(masks)
     
     def close(self):

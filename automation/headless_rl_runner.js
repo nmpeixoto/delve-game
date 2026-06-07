@@ -244,7 +244,8 @@ function createRuntime(seed) {
       tilesExplored: p.tilesExplored || 0,
       enemies: (G.enemies || []).map(e => ({
         id: e.id, name: e.name, x: e.x, y: e.y, hp: e.hp, maxHp: e.maxHp,
-        atk: e.atk, def: e.def, boss: !!e.boss, isElite: !!e.isElite,
+        atk: e.atk, def: e.def, xp: e.xp || 0, gold: e.gold || 0,
+        boss: !!e.boss, isElite: !!e.isElite,
         dying: !!e.dying, isPet: !!e.isPet, stunnedTurns: e.stunnedTurns || 0,
         reviveTurns: e.reviveTurns || 0, raiseCorpseTarget: !!e.raiseCorpseTarget,
       })),
@@ -252,6 +253,11 @@ function createRuntime(seed) {
         id: i.id, name: i.name, type: i.type, carried: !!i.carried,
         x: i.x, y: i.y, heal: i.heal, price: i.price, atk: i.atk, def: i.def,
         sold: !!i.sold, used: !!i.used, shrineType: i.shrineType,
+      })),
+      traps: (G.traps || []).map(t => ({
+        x: t.x, y: t.y, type: t.type,
+        revealed: !!t.revealed,
+        triggered: !!t.triggered,
       })),
       shops: (G.shops || []).map(s => ({ x: s.x, y: s.y, stock: (s.stock||[]).map(i => ({ id: i.id, name: i.name, type: i.type, price: i.price, heal: i.heal, atk: i.atk, def: i.def, sold: !!i.sold })) })),
       map: G.map,
@@ -288,7 +294,7 @@ function createRuntime(seed) {
       if (t === 'button[onclick="sellWeakerGear()"]') { if (typeof context.sellWeakerGear === 'function') context.sellWeakerGear(); return; }
       return;
     }
-    if (decision.type === 'wait') { context.advanceTurn(); return; }
+    if (decision.type === 'wait') { return; }
     if (decision.type === 'attack') { context.tileAttack(decision.target); return; }
     if (decision.type === 'key') {
       const key = decision.val;
@@ -316,6 +322,22 @@ function runWorker() {
   const envs = new Map();
   let nextEnvId = 0;
 
+  function stepEnv(envId, decision) {
+    const env = envs.get(envId);
+    if (!env) return { envId, error: 'Unknown env', state: null, done: true, won: false };
+
+    env.interpretDecision(decision);
+    env.flushTimers();
+    const after = env.captureSnapshot();
+    const done = after.gameOver || after.won;
+    return {
+      envId,
+      state: after,
+      done,
+      won: after.won,
+    };
+  }
+
   rl.on('line', (line) => {
     try {
       const msg = JSON.parse(line);
@@ -332,25 +354,12 @@ function runWorker() {
       }
       else if (msg.type === 'step') {
         // Execute action in environment
-        const env = envs.get(msg.envId);
-        if (!env) {
-          process.stdout.write(JSON.stringify({ type: 'error', envId: msg.envId, error: 'Unknown env' }) + '\n');
-          return;
-        }
-        
-        const before = env.captureSnapshot();
-        env.interpretDecision(msg.decision);
-        env.flushTimers();
-        const after = env.captureSnapshot();
-        const done = after.gameOver || after.won;
-        
-        process.stdout.write(JSON.stringify({
-          type: 'result',
-          envId: msg.envId,
-          state: after,
-          done,
-          won: after.won,
-        }) + '\n');
+        const result = stepEnv(msg.envId, msg.decision);
+        process.stdout.write(JSON.stringify({ type: 'result', ...result }) + '\n');
+      }
+      else if (msg.type === 'stepBatch') {
+        const results = (msg.steps || []).map(step => stepEnv(step.envId, step.decision));
+        process.stdout.write(JSON.stringify({ type: 'results', results }) + '\n');
       }
       else if (msg.type === 'reset') {
         const env = envs.get(msg.envId);
