@@ -43,3 +43,681 @@
     [HIGH] Died 1x with potions
     [HIGH] 307 turns fighting low HP no heal
     [HIGH] Never floor 5 (avg 3.1)
+
+  ✓ barbarian.combatPotionFloor improved (+5.0)
+
+  improvements: 2 | runs: 2504
+
+════════════════════════════════════════════════════════════
+  ITERATION 30
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  rogue        win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  mage         win   0.0% | floor5   0.0% | avg 3.8 | score   38
+  paladin      win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  ranger       win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  barbarian    win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  necromancer  win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  monk         win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  ──────────────────────────────────────────────────
+  Best: mage (38) | Worst: ranger (33)
+
+  Analysis of ranger:
+    [HIGH] 221 turns fighting low HP no heal
+    [HIGH] Never floor 5 (avg 3.3)
+
+  ✓ ranger.combatHpFloor improved (+2.0)
+
+  improvements: 3 | runs: 2568
+
+════════════════════════════════════════════════════════════
+  ITERATION 31
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  rogue        win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  mage         win   0.0% | floor5   0.0% | avg 3.9 | score   39
+  paladin      win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  ranger       win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  barbarian    win   0.0% | floor5  12.5% | avg 3.8 | score   51
+  necromancer  win   0.0% | floor5  12.5% | avg 3.4 | score   47
+  monk         win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  ──────────────────────────────────────────────────
+  Best: barbarian (51) | Worst: monk (34)
+
+  Analysis of monk:
+    [HIGH] 308 turns fighting low HP no heal
+    [HIGH] Never floor 5 (avg 3.4)
+
+  improvements: 3 | runs: 2632
+
+════════════════════════════════════════════════════════════
+  ITERATION 32
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  rogue        win   0.0% | floor5  12.5% | avg 3.4 | score   47
+  mage         win   0.0% | floor5   0.0% | avg 3.8 | score   38
+  paladin      win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  ranger       win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  barbarian    win   0.0% | floor5   0.0% | avg 3.0 | score   30
+  necromancer  win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  monk         win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  ──────────────────────────────────────────────────
+  Best: rogue (47) | Worst: barbarian (30)
+
+  Analysis of barbarian:
+    [HIGH] Never floor 5 (avg 3.0)
+
+  ✓ barbarian.exploreThreshold improved (+5.0)
+
+  improvements: 4 | runs: 2696
+
+════════════════════════════════════════════════════════════
+  ITERATION 33
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  rogue        win   0.0% | floor5  12.5% | avg 3.8 | score    1
+  mage         win  12.5% | floor5  12.5% | avg 3.6 | score   61
+  paladin      win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  ranger       win  12.5% | floor5  12.5% | avg 3.5 | score   60
+  barbarian    win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  necromancer  win   0.0% | floor5   0.0% | avg 2.9 | score   29
+  monk         win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  ──────────────────────────────────────────────────
+  Best: mage (61) | Worst: rogue (1)
+
+  Analysis of rogue:
+    [MEDIUM] Floor5 13% but 0 wins
+
+  ✓ rogue.weaponBias improved (+30.5)
+
+  improvements: 5 | runs: 2760
+
+════════════════════════════════════════════════════════════
+  ITERATION 34
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 2.3 | score   23
+  rogue        win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  mage         win   0.0% | floor5   0.0% | avg 3.9 | score   39
+  paladin      win   0.0% | floor5   0.0% | avg 2.8 | score   28
+  ranger       win   0.0% | floor5  12.5% | avg 3.0 | score   43
+  barbarian    win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  necromancer  win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  monk         win   0.0% | floor5   0.0% | avg 2.8 | score   28
+  ──────────────────────────────────────────────────
+  Best: ranger (43) | Worst: warrior (23)
+
+  Analysis of warrior:
+    [HIGH] Never floor 5 (avg 2.3)
+    [MEDIUM] Avg floor 2.3
+    [LOW] Gold reserve 70 too high
+
+  ✓ warrior.exploreThreshold improved (+12.0)
+
+  improvements: 6 | runs: 2824
+
+════════════════════════════════════════════════════════════
+  ITERATION 35
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  rogue        win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  mage         win   0.0% | floor5   0.0% | avg 3.9 | score   39
+  paladin      win   0.0% | floor5   0.0% | avg 3.1 | score  -19
+  ranger       win  12.5% | floor5  12.5% | avg 3.9 | score   64
+  barbarian    win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  necromancer  win   0.0% | floor5  12.5% | avg 3.3 | score   46
+  monk         win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  ──────────────────────────────────────────────────
+  Best: ranger (64) | Worst: paladin (-19)
+
+  Analysis of paladin:
+    [HIGH] Never floor 5 (avg 3.1)
+    [LOW] Gold reserve 75 too high
+
+  ✓ paladin.exploreThreshold improved (+53.0)
+
+  improvements: 7 | runs: 2888
+
+════════════════════════════════════════════════════════════
+  ITERATION 36
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  rogue        win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  mage         win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  paladin      win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  ranger       win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  barbarian    win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  necromancer  win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  monk         win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  ──────────────────────────────────────────────────
+  Best: mage (36) | Worst: rogue (33)
+
+  Analysis of rogue:
+    [HIGH] Died 1x with teleports
+    [HIGH] Never floor 5 (avg 3.3)
+
+  ✓ rogue.exitHp improved (+13.5)
+
+  improvements: 8 | runs: 2952
+
+════════════════════════════════════════════════════════════
+  ITERATION 37
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  rogue        win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  mage         win   0.0% | floor5   0.0% | avg 3.9 | score   39
+  paladin      win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  ranger       win   0.0% | floor5   0.0% | avg 3.8 | score   38
+  barbarian    win   0.0% | floor5  12.5% | avg 3.6 | score   49
+  necromancer  win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  monk         win   0.0% | floor5  37.5% | avg 3.9 | score   77
+  ──────────────────────────────────────────────────
+  Best: monk (77) | Worst: necromancer (31)
+
+  Analysis of necromancer:
+    [HIGH] Died 1x with potions
+    [HIGH] Died 1x with teleports
+    [HIGH] Never floor 5 (avg 3.1)
+
+  improvements: 8 | runs: 3016
+
+════════════════════════════════════════════════════════════
+  ITERATION 38
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5  12.5% | avg 3.6 | score   -2
+  rogue        win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  mage         win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  paladin      win   0.0% | floor5   0.0% | avg 3.0 | score   30
+  ranger       win   0.0% | floor5  12.5% | avg 3.5 | score   48
+  barbarian    win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  necromancer  win   0.0% | floor5   0.0% | avg 3.0 | score   30
+  monk         win   0.0% | floor5  12.5% | avg 3.5 | score   48
+  ──────────────────────────────────────────────────
+  Best: ranger (48) | Worst: warrior (-2)
+
+  Analysis of warrior:
+    [HIGH] Died 1x with potions
+    [HIGH] Died 1x with teleports
+    [MEDIUM] Floor5 13% but 0 wins
+
+  ✓ warrior.combatPotionFloor improved (+37.5)
+
+  improvements: 9 | runs: 3080
+
+════════════════════════════════════════════════════════════
+  ITERATION 39
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  rogue        win   0.0% | floor5  12.5% | avg 3.3 | score   46
+  mage         win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  paladin      win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  ranger       win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  barbarian    win   0.0% | floor5  12.5% | avg 3.8 | score   51
+  necromancer  win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  monk         win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  ──────────────────────────────────────────────────
+  Best: barbarian (51) | Worst: warrior (31)
+
+  Analysis of warrior:
+    [HIGH] Never floor 5 (avg 3.1)
+    [LOW] Gold reserve 70 too high
+
+  improvements: 9 | runs: 3144
+
+════════════════════════════════════════════════════════════
+  ITERATION 40
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  rogue        win   0.0% | floor5  25.0% | avg 3.9 | score   64
+  mage         win  12.5% | floor5  12.5% | avg 3.9 | score   64
+  paladin      win   0.0% | floor5  12.5% | avg 3.5 | score   48
+  ranger       win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  barbarian    win   0.0% | floor5  12.5% | avg 3.4 | score   -4
+  necromancer  win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  monk         win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  ──────────────────────────────────────────────────
+  Best: rogue (64) | Worst: barbarian (-4)
+
+  Analysis of barbarian:
+    [HIGH] 249 turns fighting low HP no heal
+    [MEDIUM] Floor5 13% but 0 wins
+
+  ✓ barbarian.combatHpFloor improved (+39.5)
+
+  improvements: 10 | runs: 3208
+
+════════════════════════════════════════════════════════════
+  ITERATION 41
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  rogue        win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  mage         win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  paladin      win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  ranger       win   0.0% | floor5  12.5% | avg 4.0 | score    3
+  barbarian    win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  necromancer  win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  monk         win   0.0% | floor5   0.0% | avg 2.5 | score   25
+  ──────────────────────────────────────────────────
+  Best: paladin (36) | Worst: ranger (3)
+
+  Analysis of ranger:
+    [HIGH] Died 2x with potions
+    [HIGH] Died 2x with teleports
+    [MEDIUM] Floor5 13% but 0 wins
+
+  ✓ ranger.combatPotionFloor improved (+31.5)
+
+  improvements: 11 | runs: 3272
+
+════════════════════════════════════════════════════════════
+  ITERATION 42
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  rogue        win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  mage         win  12.5% | floor5  12.5% | avg 3.9 | score   64
+  paladin      win   0.0% | floor5  12.5% | avg 3.6 | score   49
+  ranger       win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  barbarian    win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  necromancer  win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  monk         win   0.0% | floor5   0.0% | avg 3.8 | score   38
+  ──────────────────────────────────────────────────
+  Best: mage (64) | Worst: warrior (31)
+
+  Analysis of warrior:
+    [HIGH] 264 turns fighting low HP no heal
+    [HIGH] Never floor 5 (avg 3.1)
+    [LOW] Gold reserve 70 too high
+
+  ✓ warrior.combatHpFloor improved (+4.0)
+
+  improvements: 12 | runs: 3336
+
+════════════════════════════════════════════════════════════
+  ITERATION 43
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  rogue        win   0.0% | floor5  12.5% | avg 3.4 | score   47
+  mage         win   0.0% | floor5   0.0% | avg 3.9 | score   39
+  paladin      win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  ranger       win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  barbarian    win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  necromancer  win   0.0% | floor5   0.0% | avg 2.9 | score   29
+  monk         win   0.0% | floor5  12.5% | avg 3.3 | score   46
+  ──────────────────────────────────────────────────
+  Best: rogue (47) | Worst: necromancer (29)
+
+  Analysis of necromancer:
+    [HIGH] Died 1x with potions
+    [HIGH] Died 1x with teleports
+    [HIGH] Never floor 5 (avg 2.9)
+
+  ✓ necromancer.combatPotionFloor improved (+4.0)
+
+  improvements: 13 | runs: 3400
+
+════════════════════════════════════════════════════════════
+  ITERATION 44
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5  12.5% | avg 3.5 | score   48
+  rogue        win   0.0% | floor5  12.5% | avg 3.5 | score   48
+  mage         win   0.0% | floor5   0.0% | avg 3.8 | score   38
+  paladin      win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  ranger       win  12.5% | floor5  12.5% | avg 4.0 | score   65
+  barbarian    win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  necromancer  win   0.0% | floor5  12.5% | avg 3.6 | score   49
+  monk         win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  ──────────────────────────────────────────────────
+  Best: ranger (65) | Worst: barbarian (33)
+
+  Analysis of barbarian:
+    [HIGH] Died 1x with teleports
+    [HIGH] 221 turns fighting low HP no heal
+    [HIGH] Never floor 5 (avg 3.3)
+
+  ✓ barbarian.exitHp improved (+14.5)
+
+  improvements: 14 | runs: 3464
+
+════════════════════════════════════════════════════════════
+  ITERATION 45
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  rogue        win   0.0% | floor5   0.0% | avg 2.9 | score   29
+  mage         win   0.0% | floor5   0.0% | avg 3.9 | score   39
+  paladin      win   0.0% | floor5   0.0% | avg 3.8 | score   38
+  ranger       win   0.0% | floor5  12.5% | avg 3.5 | score   48
+  barbarian    win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  necromancer  win   0.0% | floor5   0.0% | avg 3.8 | score   38
+  monk         win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  ──────────────────────────────────────────────────
+  Best: ranger (48) | Worst: rogue (29)
+
+  Analysis of rogue:
+    [HIGH] Never floor 5 (avg 2.9)
+    [MEDIUM] Avg floor 2.9
+
+  ✓ rogue.exploreThreshold improved (+7.0)
+
+  improvements: 15 | runs: 3528
+
+════════════════════════════════════════════════════════════
+  ITERATION 46
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  rogue        win   0.0% | floor5  25.0% | avg 4.1 | score   16
+  mage         win   0.0% | floor5   0.0% | avg 3.8 | score   38
+  paladin      win   0.0% | floor5  12.5% | avg 3.6 | score   49
+  ranger       win   0.0% | floor5  12.5% | avg 4.0 | score   53
+  barbarian    win   0.0% | floor5  12.5% | avg 3.5 | score   48
+  necromancer  win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  monk         win   0.0% | floor5   0.0% | avg 3.0 | score   30
+  ──────────────────────────────────────────────────
+  Best: ranger (53) | Worst: rogue (16)
+
+  Analysis of rogue:
+    [HIGH] 221 turns fighting low HP no heal
+    [MEDIUM] Floor5 25% but 0 wins
+
+  ✓ rogue.combatHpFloor improved (+26.5)
+
+  improvements: 16 | runs: 3592
+
+════════════════════════════════════════════════════════════
+  ITERATION 47
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  rogue        win   0.0% | floor5  12.5% | avg 3.5 | score   48
+  mage         win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  paladin      win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  ranger       win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  barbarian    win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  necromancer  win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  monk         win   0.0% | floor5   0.0% | avg 2.9 | score   29
+  ──────────────────────────────────────────────────
+  Best: rogue (48) | Worst: monk (29)
+
+  Analysis of monk:
+    [HIGH] 405 turns fighting low HP no heal
+    [HIGH] Never floor 5 (avg 2.9)
+    [MEDIUM] Avg floor 2.9
+
+  ✓ monk.combatHpFloor improved (+5.0)
+
+  improvements: 17 | runs: 3656
+
+════════════════════════════════════════════════════════════
+  ITERATION 48
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  rogue        win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  mage         win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  paladin      win   0.0% | floor5  12.5% | avg 3.4 | score   47
+  ranger       win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  barbarian    win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  necromancer  win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  monk         win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  ──────────────────────────────────────────────────
+  Best: paladin (47) | Worst: warrior (33)
+
+  Analysis of warrior:
+    [HIGH] 573 turns fighting low HP no heal
+    [HIGH] Never floor 5 (avg 3.3)
+
+  ✓ warrior.combatHpFloor improved (+2.0)
+
+  improvements: 18 | runs: 3720
+
+════════════════════════════════════════════════════════════
+  ITERATION 49
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  rogue        win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  mage         win   0.0% | floor5   0.0% | avg 4.0 | score   40
+  paladin      win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  ranger       win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  barbarian    win   0.0% | floor5  25.0% | avg 3.6 | score   61
+  necromancer  win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  monk         win   0.0% | floor5  12.5% | avg 3.6 | score   49
+  ──────────────────────────────────────────────────
+  Best: barbarian (61) | Worst: paladin (31)
+
+  Analysis of paladin:
+    [HIGH] Never floor 5 (avg 3.1)
+    [LOW] Gold reserve 75 too high
+
+  ✓ paladin.exploreThreshold improved (+7.0)
+
+  improvements: 19 | runs: 3784
+
+════════════════════════════════════════════════════════════
+  ITERATION 50
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  rogue        win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  mage         win   0.0% | floor5   0.0% | avg 3.8 | score   38
+  paladin      win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  ranger       win   0.0% | floor5  12.5% | avg 4.0 | score   53
+  barbarian    win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  necromancer  win   0.0% | floor5   0.0% | avg 3.0 | score   30
+  monk         win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  ──────────────────────────────────────────────────
+  Best: ranger (53) | Worst: necromancer (30)
+
+  Analysis of necromancer:
+    [HIGH] Never floor 5 (avg 3.0)
+    [LOW] Gold reserve 80 too high
+
+  improvements: 19 | runs: 3848
+
+════════════════════════════════════════════════════════════
+  ITERATION 51
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5  12.5% | avg 3.0 | score   43
+  rogue        win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  mage         win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  paladin      win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  ranger       win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  barbarian    win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  necromancer  win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  monk         win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  ──────────────────────────────────────────────────
+  Best: warrior (43) | Worst: necromancer (31)
+
+  Analysis of necromancer:
+    [HIGH] Never floor 5 (avg 3.1)
+    [LOW] Gold reserve 80 too high
+
+  ✓ necromancer.exploreThreshold improved (+3.0)
+
+  improvements: 20 | runs: 3912
+
+════════════════════════════════════════════════════════════
+  ITERATION 52
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  rogue        win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  mage         win   0.0% | floor5  12.5% | avg 4.0 | score   53
+  paladin      win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  ranger       win  12.5% | floor5  12.5% | avg 3.8 | score   63
+  barbarian    win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  necromancer  win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  monk         win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  ──────────────────────────────────────────────────
+  Best: ranger (63) | Worst: rogue (31)
+
+  Analysis of rogue:
+    [HIGH] Never floor 5 (avg 3.1)
+
+  ✓ rogue.exploreThreshold improved (+3.0)
+
+  improvements: 21 | runs: 3976
+
+════════════════════════════════════════════════════════════
+  ITERATION 53
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  rogue        win   0.0% | floor5  12.5% | avg 3.6 | score   49
+  mage         win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  paladin      win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  ranger       win   0.0% | floor5   0.0% | avg 3.1 | score  -19
+  barbarian    win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  necromancer  win   0.0% | floor5   0.0% | avg 3.0 | score   30
+  monk         win   0.0% | floor5  12.5% | avg 3.5 | score   48
+  ──────────────────────────────────────────────────
+  Best: rogue (49) | Worst: ranger (-19)
+
+  Analysis of ranger:
+    [HIGH] Never floor 5 (avg 3.1)
+    [LOW] Gold reserve 65 too high
+
+  ✓ ranger.exploreThreshold improved (+49.0)
+
+  improvements: 22 | runs: 4040
+
+════════════════════════════════════════════════════════════
+  ITERATION 54
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  rogue        win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  mage         win   0.0% | floor5   0.0% | avg 3.9 | score   39
+  paladin      win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  ranger       win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  barbarian    win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  necromancer  win   0.0% | floor5  12.5% | avg 3.8 | score    1
+  monk         win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  ──────────────────────────────────────────────────
+  Best: mage (39) | Worst: necromancer (1)
+
+  Analysis of necromancer:
+    [HIGH] Died 1x with potions
+    [MEDIUM] Floor5 13% but 0 wins
+
+  ✓ necromancer.combatPotionFloor improved (+9.5)
+
+  improvements: 23 | runs: 4104
+
+════════════════════════════════════════════════════════════
+  ITERATION 55
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.3 | score  -17
+  rogue        win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  mage         win   0.0% | floor5  12.5% | avg 3.8 | score   51
+  paladin      win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  ranger       win   0.0% | floor5  12.5% | avg 3.9 | score   52
+  barbarian    win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  necromancer  win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  monk         win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  ──────────────────────────────────────────────────
+  Best: ranger (52) | Worst: warrior (-17)
+
+  Analysis of warrior:
+    [HIGH] 217 turns fighting low HP no heal
+    [HIGH] Never floor 5 (avg 3.3)
+    [HIGH] Stuck 1x
+
+  ✓ warrior.combatHpFloor improved (+52.0)
+
+  improvements: 24 | runs: 4168
+
+════════════════════════════════════════════════════════════
+  ITERATION 56
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  rogue        win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  mage         win  25.0% | floor5  25.0% | avg 3.9 | score   89
+  paladin      win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  ranger       win   0.0% | floor5  12.5% | avg 3.8 | score    1
+  barbarian    win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  necromancer  win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  monk         win   0.0% | floor5   0.0% | avg 3.3 | score  -17
+  ──────────────────────────────────────────────────
+  Best: mage (89) | Worst: monk (-17)
+
+  Analysis of monk:
+    [HIGH] 212 turns fighting low HP no heal
+    [HIGH] Never floor 5 (avg 3.3)
+
+  ✓ monk.combatHpFloor improved (+64.5)
+
+  improvements: 25 | runs: 4232
+
+════════════════════════════════════════════════════════════
+  ITERATION 57
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.1 | score   31
+  rogue        win   0.0% | floor5  12.5% | avg 3.5 | score   -3
+  mage         win   0.0% | floor5   0.0% | avg 3.8 | score   38
+  paladin      win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  ranger       win   0.0% | floor5  25.0% | avg 4.0 | score   65
+  barbarian    win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  necromancer  win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  monk         win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  ──────────────────────────────────────────────────
+  Best: ranger (65) | Worst: rogue (-3)
+
+  Analysis of rogue:
+    [MEDIUM] Floor5 13% but 0 wins
+
+  ✓ rogue.weaponBias improved (+38.5)
+
+  improvements: 26 | runs: 4296
+
+════════════════════════════════════════════════════════════
+  ITERATION 58
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 2.9 | score   29
+  rogue        win   0.0% | floor5  12.5% | avg 3.3 | score   -5
+  mage         win   0.0% | floor5   0.0% | avg 3.8 | score   38
+  paladin      win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  ranger       win  12.5% | floor5  12.5% | avg 3.8 | score   63
+  barbarian    win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  necromancer  win   0.0% | floor5  12.5% | avg 3.6 | score   -2
+  monk         win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  ──────────────────────────────────────────────────
+  Best: ranger (63) | Worst: rogue (-5)
+
+  Analysis of rogue:
+    [MEDIUM] Floor5 13% but 0 wins
+
+  ✓ rogue.weaponBias improved (+37.5)
+
+  improvements: 27 | runs: 4360
+
+════════════════════════════════════════════════════════════
+  ITERATION 59
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  rogue        win   0.0% | floor5  12.5% | avg 3.8 | score   51
+  mage         win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  paladin      win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  ranger       win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  barbarian    win   0.0% | floor5  12.5% | avg 3.5 | score   48
+  necromancer  win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  monk         win   0.0% | floor5   0.0% | avg 2.8 | score   28
+  ──────────────────────────────────────────────────
+  Best: rogue (51) | Worst: monk (28)
+
+  Analysis of monk:
+    [HIGH] Never floor 5 (avg 2.8)
+    [MEDIUM] Avg floor 2.8
+    [LOW] Gold reserve 65 too high
+
+  improvements: 27 | runs: 4424
+
+════════════════════════════════════════════════════════════
+  ITERATION 60
+════════════════════════════════════════════════════════════
+  warrior      win   0.0% | floor5  12.5% | avg 3.5 | score   48
+  rogue        win   0.0% | floor5  37.5% | avg 4.3 | score  -20
+  mage         win  12.5% | floor5  12.5% | avg 3.6 | score   61
+  paladin      win   0.0% | floor5   0.0% | avg 3.5 | score   35
+  ranger       win   0.0% | floor5   0.0% | avg 3.4 | score   34
+  barbarian    win   0.0% | floor5   0.0% | avg 3.6 | score   36
+  necromancer  win   0.0% | floor5   0.0% | avg 2.6 | score  -24
+  monk         win   0.0% | floor5   0.0% | avg 3.3 | score   33
+  ──────────────────────────────────────────────────
+  Best: mage (61) | Worst: necromancer (-24)
+
+  Analysis of necromancer:
+    [HIGH] Died 1x with potions
+    [HIGH] Never floor 5 (avg 2.6)
+    [MEDIUM] Avg floor 2.6

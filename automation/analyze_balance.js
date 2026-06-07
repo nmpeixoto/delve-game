@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 function analyzeResults(report, lessons) {
   const analysis = {
     classPerformance: {},
@@ -136,8 +139,6 @@ function main() {
 }
 
 if (require.main === module) {
-  const fs = require('fs');
-  const path = require('path');
   main();
 }
 

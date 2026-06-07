@@ -4,6 +4,8 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
+const os = require('os');
 
 const REPO_ROOT = path.resolve(__dirname, '../../');
 const DEFAULT_CLASSES = [
@@ -29,6 +31,7 @@ const SOURCE_FILES = [
   'src/js/combat.js',
   'src/js/shop.js',
   'src/js/map.js',
+  'automation/astar.js',
   'automation/bot_brain.js',
 ].map(rel => path.join(REPO_ROOT, rel));
 
@@ -43,6 +46,7 @@ function parseArgs(argv) {
     perClass: 20,
     seedBase: 1,
     maxTurns: 5000,
+    workers: 0,
     output: '',
     trace: false,
     verbose: false,
@@ -72,6 +76,10 @@ function parseArgs(argv) {
       out.maxTurns = parseInt(argv[++i], 10);
     } else if (arg.startsWith('--max-turns=')) {
       out.maxTurns = parseInt(arg.slice(12), 10);
+    } else if (arg === '--workers') {
+      out.workers = parseInt(argv[++i], 10);
+    } else if (arg.startsWith('--workers=')) {
+      out.workers = parseInt(arg.slice(10), 10);
     } else if (arg === '--output') {
       out.output = argv[++i] || '';
     } else if (arg.startsWith('--output=')) {
@@ -116,13 +124,14 @@ function parseArgs(argv) {
 function printUsage() {
   console.log([
     'Usage:',
-    '  node automation/headless-balance/headless_balance.js --classes warrior,rogue --per-class 20 --seed-base 1 --max-turns 5000 --output bot_findings.json',
+    '  node automation/headless-balance/headless_balance.js --classes warrior,rogue --per-class 20 --seed-base 1 --max-turns 5000 --workers 8 --output bot_findings.json',
     '',
     'Flags:',
     '  --classes, --class   Comma-separated class list',
     '  --per-class          Runs per class',
     '  --seed-base          Starting seed',
     '  --max-turns          Step cap per run',
+    '  --workers            Number of parallel worker threads (0=auto, default)',
     '  --output             Write JSON report',
     '  --trace              Include per-step traces',
     '  --verbose            Print per-run progress',
@@ -1218,46 +1227,137 @@ function main() {
     throw new Error('No valid classes selected');
   }
 
-  const results = [];
+  // Build task list
+  const tasks = [];
   for (let classIndex = 0; classIndex < args.classList.length; classIndex++) {
     const className = args.classList[classIndex];
     for (let runIndex = 0; runIndex < args.perClass; runIndex++) {
       const seed = args.seedBase + classIndex * 100000 + runIndex;
-      const result = runSingle({
-        className,
-        seed,
-        maxTurns: args.maxTurns,
-        trace: args.trace,
-        verbose: args.verbose,
-      });
-      results.push(result);
-
-      if (args.verbose) {
-        console.log(
-          `[${className} #${runIndex + 1}/${args.perClass}] seed=${seed} status=${result.status} floor=${result.finalFloor} turns=${result.gameTurns} steps=${result.decisionSteps}`
-        );
-        if (result.errors.length) {
-          console.log(`  errors: ${result.errors.join(' | ')}`);
-        }
-      }
+      tasks.push({ className, seed, maxTurns: args.maxTurns, trace: args.trace, verbose: false });
     }
   }
 
-  const report = aggregate(results, args);
-  printSummary(report);
+  const totalTasks = tasks.length;
+  // Default: use all cores minus 1 (leave headroom for the OS/main thread)
+  const defaultWorkers = Math.max(1, os.cpus().length - 1);
+  const numWorkers = args.workers > 0 ? args.workers : Math.min(defaultWorkers, totalTasks);
 
-  if (args.output) {
-    const resolved = writeOutput(report, args.output);
-    console.log('');
-    console.log(`Wrote report to ${resolved}`);
+  if (numWorkers <= 1 || totalTasks <= 1) {
+    // Single-threaded fallback
+    const results = [];
+    for (const task of tasks) {
+      const result = runSingle(task);
+      results.push(result);
+      if (args.verbose) {
+        console.log(`[${task.className}] seed=${task.seed} status=${result.status} floor=${result.finalFloor} turns=${result.gameTurns} steps=${result.decisionSteps}`);
+      }
+    }
+    const report = aggregate(results, args);
+    printSummary(report);
+    if (args.output) {
+      const resolved = writeOutput(report, args.output);
+      console.log('');
+      console.log(`Wrote report to ${resolved}`);
+    }
+    return report;
   }
 
-  return report;
+  // Multi-threaded execution
+  return new Promise((resolve, reject) => {
+    console.log(`Running ${totalTasks} games across ${numWorkers} worker threads...`);
+    const startTime = Date.now();
+
+    const results = new Array(totalTasks);
+    let completed = 0;
+    let nextTask = 0;
+    const workers = [];
+
+    function onWorkerMessage(worker, msg) {
+      if (msg.type === 'result') {
+        results[msg.taskIndex] = msg.result;
+        completed++;
+
+        if (args.verbose) {
+          const r = msg.result;
+          console.log(`[${r.class}] seed=${r.seed} status=${r.status} floor=${r.finalFloor} turns=${r.gameTurns} steps=${r.decisionSteps} (${completed}/${totalTasks})`);
+        }
+
+        if (completed === totalTasks) {
+          // All done - terminate workers and produce report
+          for (const w of workers) w.terminate();
+          const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+          console.log(`Completed ${totalTasks} games in ${elapsed}s (${(totalTasks / (Date.now() - startTime) * 1000).toFixed(1)} games/sec)`);
+
+          const report = aggregate(results.filter(Boolean), args);
+          printSummary(report);
+          if (args.output) {
+            const resolved = writeOutput(report, args.output);
+            console.log('');
+            console.log(`Wrote report to ${resolved}`);
+          }
+          resolve(report);
+        } else if (nextTask < totalTasks) {
+          // Send next task to this worker
+          const task = tasks[nextTask++];
+          task.taskIndex = nextTask - 1;
+          worker.postMessage({ type: 'run', task });
+        }
+      } else if (msg.type === 'error') {
+        console.error(`Worker error: ${msg.error}`);
+      }
+    }
+
+    function spawnWorker() {
+      const worker = new Worker(__filename, {
+        workerData: { isWorker: true },
+        eval: false,
+      });
+      workers.push(worker);
+
+      worker.on('message', msg => onWorkerMessage(worker, msg));
+      worker.on('error', err => {
+        console.error(`Worker crashed: ${err.message}`);
+        // Try to replace the dead worker
+        if (nextTask < totalTasks) {
+          spawnWorker();
+        }
+      });
+
+      // Send first task
+      if (nextTask < totalTasks) {
+        const task = tasks[nextTask++];
+        task.taskIndex = nextTask - 1;
+        worker.postMessage({ type: 'run', task });
+      }
+    }
+
+    for (let i = 0; i < numWorkers; i++) {
+      spawnWorker();
+    }
+  });
 }
 
-if (require.main === module) {
+// Worker thread entry point - must be checked BEFORE require.main
+if (!isMainThread && workerData && workerData.isWorker) {
+  parentPort.on('message', (msg) => {
+    if (msg.type === 'run') {
+      try {
+        const result = runSingle(msg.task);
+        parentPort.postMessage({ type: 'result', taskIndex: msg.task.taskIndex, result });
+      } catch (err) {
+        parentPort.postMessage({ type: 'error', error: err.message });
+      }
+    }
+  });
+} else if (isMainThread && require.main === module) {
   try {
-    main();
+    const result = main();
+    if (result && typeof result.then === 'function') {
+      result.catch(err => {
+        console.error(err.stack || err.message);
+        process.exitCode = 1;
+      });
+    }
   } catch (err) {
     console.error(err.stack || err.message);
     process.exitCode = 1;

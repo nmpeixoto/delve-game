@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "totalRuns": 2440,
+  "totalRuns": 4424,
   "classStats": {
     "warrior": {
       "runs": 143,
@@ -1475,6 +1475,285 @@
       "worst": "ranger",
       "worstS": 14,
       "improvements": 1
+    },
+    {
+      "iteration": 29,
+      "ts": "2026-06-06T21:18:14.255Z",
+      "best": "mage",
+      "bestS": 64,
+      "worst": "barbarian",
+      "worstS": 31,
+      "improvements": 2
+    },
+    {
+      "iteration": 30,
+      "ts": "2026-06-06T21:19:43.635Z",
+      "best": "mage",
+      "bestS": 38,
+      "worst": "ranger",
+      "worstS": 33,
+      "improvements": 3
+    },
+    {
+      "iteration": 31,
+      "ts": "2026-06-06T21:21:21.044Z",
+      "best": "barbarian",
+      "bestS": 50.5,
+      "worst": "monk",
+      "worstS": 34,
+      "improvements": 3
+    },
+    {
+      "iteration": 32,
+      "ts": "2026-06-06T21:22:48.682Z",
+      "best": "rogue",
+      "bestS": 46.5,
+      "worst": "barbarian",
+      "worstS": 30,
+      "improvements": 4
+    },
+    {
+      "iteration": 33,
+      "ts": "2026-06-06T21:24:25.949Z",
+      "best": "mage",
+      "bestS": 61,
+      "worst": "rogue",
+      "worstS": 0.5,
+      "improvements": 5
+    },
+    {
+      "iteration": 34,
+      "ts": "2026-06-06T21:25:54.361Z",
+      "best": "ranger",
+      "bestS": 42.5,
+      "worst": "warrior",
+      "worstS": 23,
+      "improvements": 6
+    },
+    {
+      "iteration": 35,
+      "ts": "2026-06-06T21:27:29.074Z",
+      "best": "ranger",
+      "bestS": 64,
+      "worst": "paladin",
+      "worstS": -19,
+      "improvements": 7
+    },
+    {
+      "iteration": 36,
+      "ts": "2026-06-06T21:29:02.205Z",
+      "best": "mage",
+      "bestS": 36,
+      "worst": "rogue",
+      "worstS": 33,
+      "improvements": 8
+    },
+    {
+      "iteration": 37,
+      "ts": "2026-06-06T21:30:46.106Z",
+      "best": "monk",
+      "bestS": 76.5,
+      "worst": "necromancer",
+      "worstS": 31,
+      "improvements": 8
+    },
+    {
+      "iteration": 38,
+      "ts": "2026-06-06T21:32:16.809Z",
+      "best": "ranger",
+      "bestS": 47.5,
+      "worst": "warrior",
+      "worstS": -1.5,
+      "improvements": 9
+    },
+    {
+      "iteration": 39,
+      "ts": "2026-06-06T21:33:49.165Z",
+      "best": "barbarian",
+      "bestS": 50.5,
+      "worst": "warrior",
+      "worstS": 31,
+      "improvements": 9
+    },
+    {
+      "iteration": 40,
+      "ts": "2026-06-06T21:35:20.629Z",
+      "best": "rogue",
+      "bestS": 64,
+      "worst": "barbarian",
+      "worstS": -3.5,
+      "improvements": 10
+    },
+    {
+      "iteration": 41,
+      "ts": "2026-06-06T21:36:55.948Z",
+      "best": "paladin",
+      "bestS": 36,
+      "worst": "ranger",
+      "worstS": 2.5,
+      "improvements": 11
+    },
+    {
+      "iteration": 42,
+      "ts": "2026-06-06T21:38:33.769Z",
+      "best": "mage",
+      "bestS": 64,
+      "worst": "warrior",
+      "worstS": 31,
+      "improvements": 12
+    },
+    {
+      "iteration": 43,
+      "ts": "2026-06-06T21:40:10.700Z",
+      "best": "rogue",
+      "bestS": 46.5,
+      "worst": "necromancer",
+      "worstS": 29,
+      "improvements": 13
+    },
+    {
+      "iteration": 44,
+      "ts": "2026-06-06T21:41:51.921Z",
+      "best": "ranger",
+      "bestS": 65,
+      "worst": "barbarian",
+      "worstS": 33,
+      "improvements": 14
+    },
+    {
+      "iteration": 45,
+      "ts": "2026-06-06T21:43:32.731Z",
+      "best": "ranger",
+      "bestS": 47.5,
+      "worst": "rogue",
+      "worstS": 29,
+      "improvements": 15
+    },
+    {
+      "iteration": 46,
+      "ts": "2026-06-06T21:45:14.505Z",
+      "best": "ranger",
+      "bestS": 52.5,
+      "worst": "rogue",
+      "worstS": 16,
+      "improvements": 16
+    },
+    {
+      "iteration": 47,
+      "ts": "2026-06-06T21:46:57.863Z",
+      "best": "rogue",
+      "bestS": 47.5,
+      "worst": "monk",
+      "worstS": 29,
+      "improvements": 17
+    },
+    {
+      "iteration": 48,
+      "ts": "2026-06-06T21:48:39.218Z",
+      "best": "paladin",
+      "bestS": 46.5,
+      "worst": "warrior",
+      "worstS": 33,
+      "improvements": 18
+    },
+    {
+      "iteration": 49,
+      "ts": "2026-06-06T21:50:28.580Z",
+      "best": "barbarian",
+      "bestS": 61,
+      "worst": "paladin",
+      "worstS": 31,
+      "improvements": 19
+    },
+    {
+      "iteration": 50,
+      "ts": "2026-06-06T21:52:01.433Z",
+      "best": "ranger",
+      "bestS": 52.5,
+      "worst": "necromancer",
+      "worstS": 30,
+      "improvements": 19
+    },
+    {
+      "iteration": 51,
+      "ts": "2026-06-06T21:53:56.550Z",
+      "best": "warrior",
+      "bestS": 42.5,
+      "worst": "necromancer",
+      "worstS": 31,
+      "improvements": 20
+    },
+    {
+      "iteration": 52,
+      "ts": "2026-06-06T21:55:43.863Z",
+      "best": "ranger",
+      "bestS": 63,
+      "worst": "rogue",
+      "worstS": 31,
+      "improvements": 21
+    },
+    {
+      "iteration": 53,
+      "ts": "2026-06-06T21:57:23.677Z",
+      "best": "rogue",
+      "bestS": 48.5,
+      "worst": "ranger",
+      "worstS": -19,
+      "improvements": 22
+    },
+    {
+      "iteration": 54,
+      "ts": "2026-06-06T21:59:07.991Z",
+      "best": "mage",
+      "bestS": 39,
+      "worst": "necromancer",
+      "worstS": 0.5,
+      "improvements": 23
+    },
+    {
+      "iteration": 55,
+      "ts": "2026-06-06T22:00:51.269Z",
+      "best": "ranger",
+      "bestS": 51.5,
+      "worst": "warrior",
+      "worstS": -17,
+      "improvements": 24
+    },
+    {
+      "iteration": 56,
+      "ts": "2026-06-06T22:02:46.672Z",
+      "best": "mage",
+      "bestS": 89,
+      "worst": "monk",
+      "worstS": -17,
+      "improvements": 25
+    },
+    {
+      "iteration": 57,
+      "ts": "2026-06-06T22:04:37.458Z",
+      "best": "ranger",
+      "bestS": 65,
+      "worst": "rogue",
+      "worstS": -2.5,
+      "improvements": 26
+    },
+    {
+      "iteration": 58,
+      "ts": "2026-06-06T22:10:06.947Z",
+      "best": "ranger",
+      "bestS": 63,
+      "worst": "rogue",
+      "worstS": -4.5,
+      "improvements": 27
+    },
+    {
+      "iteration": 59,
+      "ts": "2026-06-06T22:11:30.670Z",
+      "best": "rogue",
+      "bestS": 50.5,
+      "worst": "monk",
+      "worstS": 28,
+      "improvements": 27
     }
   ]
 }
