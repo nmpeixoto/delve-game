@@ -99,7 +99,9 @@ def parse_args():
     parser.add_argument("--save-every", type=int, default=SAVE_EVERY)
     parser.add_argument("--resume", nargs="?", const="latest", default=None,
                         help="Resume from a checkpoint path, or use latest checkpoint when passed without a value.")
-    parser.add_argument("--max-episode-steps", type=int, default=5000)
+    parser.add_argument("--reset-optimizer", action="store_true",
+                        help="Load model weights from --resume but start optimizer and LR schedule fresh.")
+    parser.add_argument("--max-episode-steps", type=int, default=8000)
     parser.add_argument("--timeout-penalty", type=float, default=-250.0)
     parser.add_argument("--no-tensorboard", action="store_true")
     return parser.parse_args()
@@ -160,7 +162,10 @@ def summarize_actions(action_counts):
         "Up", "Down", "Left", "Right", "Atk1", "Atk2", "Ab1", "Ab2", "Pot", "Buff",
         "Bomb", "Tele", "Detect", "Desc", "Shop", "Buy", "Sell", "Esc",
     ]
-    top = np.argsort(action_counts)[-3:][::-1]
+    top = list(np.argsort(action_counts)[-3:][::-1])
+    descend_idx = ACTIONS['DESCEND']
+    if descend_idx not in top:
+        top.append(descend_idx)
     return "Actions: " + ", ".join(f"{names[i]} {action_counts[i] / total:.0%}" for i in top)
 
 
@@ -186,7 +191,7 @@ def main():
     resume_path, resume_step = resolve_resume_checkpoint(args.resume, args.checkpoint_dir)
     total_steps = 0
     if resume_path:
-        checkpoint = ppo.load(resume_path)
+        checkpoint = ppo.load(resume_path, load_optimizer=not args.reset_optimizer)
         total_steps = int(checkpoint.get('total_steps') or resume_step or 0)
     
     # TensorBoard
@@ -208,6 +213,7 @@ def main():
     print(f"  Total steps:  {args.total_timesteps:,}")
     print(f"  Episode cap:  {args.max_episode_steps:,} steps")
     print(f"  Resume:       {resume_path or 'No'}")
+    print(f"  Optimizer:    {'Reset' if args.reset_optimizer else 'Checkpoint'}")
     print(f"  TensorBoard:  {'Yes' if writer else 'No'} (tensorboard --logdir=runs)")
     print(f"  Checkpoints:  {args.checkpoint_dir}/delve_ppo_<step>.pt")
     print("=" * 60)
@@ -305,7 +311,7 @@ def main():
 
                 print(f"Step {total_steps:>10,} | "
                       f"Win Rate: {win_rate:.1%} | "
-                      f"Goal: {curriculum_rate:.1%} | "
+                      f"Floor 5: {curriculum_rate:.1%} | "
                       f"Avg Reward: {avg_reward:.1f} | "
                       f"Avg Length: {avg_length:.0f} | "
                       f"Avg Floor: {avg_floor:.2f} | "

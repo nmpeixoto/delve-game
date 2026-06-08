@@ -185,10 +185,11 @@ class PPO:
         checkpoint.update(metadata)
         torch.save(checkpoint, path)
     
-    def load(self, path):
+    def load(self, path, load_optimizer=True):
         """Load model checkpoint."""
         checkpoint = torch.load(path, map_location=self.device)
         self.network.load_state_dict(checkpoint['network'])
-        self.optimizer.load_state_dict(checkpoint['optimizer'])
-        self.scheduler.load_state_dict(checkpoint['scheduler'])
+        if load_optimizer:
+            self.optimizer.load_state_dict(checkpoint['optimizer'])
+            self.scheduler.load_state_dict(checkpoint['scheduler'])
         return checkpoint

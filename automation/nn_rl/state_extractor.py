@@ -1,6 +1,6 @@
 """
 State extractor for DELVE RL bot.
-Extracts a 148-dimensional feature vector from the game state G.
+Extracts a 155-dimensional feature vector from the game state G.
 """
 
 import numpy as np
@@ -17,19 +17,25 @@ def manhattan(a, b):
 
 def extract_state(G):
     """
-    Extract a 148-dimensional feature vector from game state G.
+    Extract a 155-dimensional feature vector from game state G.
     
     Args:
         G: Game state dict with keys: player, map, enemies, items, shops, 
            seen, visible, floor, turn, ability1Cooldown, ability2Cooldown, etc.
     
     Returns:
-        np.ndarray of shape (148,) with float32 features
+        np.ndarray of shape (155,) with float32 features
     """
     p = G.get('player', {})
     features = []
     
-    # ── PLAYER CORE (10 floats) ──────────────────────────────────────────────
+    # Convert seen/visible from JSON lists to sets for O(1) lookup
+    if isinstance(G.get('seen'), list):
+        G['seen'] = set(G['seen'])
+    if isinstance(G.get('visible'), list):
+        G['visible'] = set(G['visible'])
+    
+    # ── PLAYER CORE (15 floats: 7 scalars + 8 one-hot class) ─────────────────
     features.append(p.get('hp', 0) / max(p.get('maxHp', 1), 1))  # hp_ratio
     features.append(p.get('maxHp', 0) / 100)                      # max_hp_norm
     features.append(p.get('atk', 0) / 30)                         # atk_norm
@@ -43,7 +49,7 @@ def extract_state(G):
     class_id = CLASS_NAMES.index(p.get('class', 'warrior')) if p.get('class') in CLASS_NAMES else 0
     for i in range(NUM_CLASSES):
         features.append(1.0 if i == class_id else 0.0)
-    # Total: 10
+    # Total: 15 (7 scalars + 8 one-hot)
     
     # ── PLAYER BUFFS (9 floats) ──────────────────────────────────────────────
     features.append(1.0 if p.get('shieldWallTurns', 0) > 0 else 0.0)
@@ -79,7 +85,7 @@ def extract_state(G):
     features.append(p.get('xpMult', 0) / 0.5)
     # Total: 6
     
-    # ── DUNGEON CONTEXT (14 floats) ──────────────────────────────────────────
+    # ── DUNGEON CONTEXT (13 floats) ──────────────────────────────────────────
     features.append(G.get('floor', 1) / FLOORS)
     features.append(1.0 if G.get('floor', 1) >= FLOORS else 0.0)
     features.append(min(G.get('turn', 0) / 2000, 1.0))
@@ -94,6 +100,12 @@ def extract_state(G):
     features.append(min(_locked_door_count(G) / 4, 1.0))
     features.append(G.get('floor', 1) * _get_pressure_scale(G) / 5)
     # Total: 13 (was 8, now 13)
+    
+    # ── STAIR DIRECTION (2 floats) ────────────────────────────────────────────
+    stair_dx, stair_dy = _stair_direction(G)
+    features.append(stair_dx)   # normalized dx to nearest seen stairs (-1 to 1)
+    features.append(stair_dy)   # normalized dy to nearest seen stairs (-1 to 1)
+    # Total: 2
     
     # ── CARRIED ITEMS (8 floats) ─────────────────────────────────────────────
     carried = _carried_items(G)
@@ -137,12 +149,12 @@ def extract_state(G):
     features.extend(local_features)
     # Total: 48
     
-    # ── PAD TO 148 ───────────────────────────────────────────────────────────
+    # ── PAD TO 155 ───────────────────────────────────────────────────────────
     current_len = len(features)
-    if current_len < 148:
-        features.extend([0.0] * (148 - current_len))
-    elif current_len > 148:
-        features = features[:148]
+    if current_len < 155:
+        features.extend([0.0] * (155 - current_len))
+    elif current_len > 155:
+        features = features[:155]
     
     return np.array(features, dtype=np.float32)
 
@@ -198,6 +210,33 @@ def _has_stairs(G):
             if map_data[y][x] == 2 and (y * MAP_W + x) in seen:
                 return True
     return False
+
+def _stair_direction(G):
+    """Compute normalized direction from player to nearest seen stairs.
+    Returns (dx, dy) in range [-1, 1]. Returns (0, 0) if stairs not known."""
+    p = G.get('player', {})
+    px, py = p.get('x', 0), p.get('y', 0)
+    map_data = G.get('map', [])
+    seen = G.get('seen', set())
+    MAP_W = 56
+    
+    best_dist = float('inf')
+    best_dx, best_dy = 0, 0
+    
+    for y in range(len(map_data)):
+        for x in range(len(map_data[0])):
+            if map_data[y][x] == 2 and (y * MAP_W + x) in seen:
+                dx, dy = x - px, y - py
+                dist = abs(dx) + abs(dy)
+                if dist < best_dist:
+                    best_dist = dist
+                    best_dx, best_dy = dx, dy
+    
+    if best_dist == 0:
+        return 0.0, 0.0
+    # Normalize to [-1, 1] using tanh-like scaling
+    scale = 10.0  # 10 tiles = full direction
+    return max(-1.0, min(1.0, best_dx / scale)), max(-1.0, min(1.0, best_dy / scale))
 
 def _shop_distance(G):
     """Distance to nearest shop."""
@@ -266,7 +305,7 @@ def _local_map_encoding(G, radius_x=6, radius_y=2):
     """
     Encode a 12x4 local map around the player.
     Each tile has 4 features: is_floor, is_seen, has_enemy, has_item.
-    Total: 12 * 4 * 4 = 192 features (too many, subsample to 48).
+    Total: 12 * 4 = 48 features.
     """
     p = G.get('player', {})
     px, py = p.get('x', 0), p.get('y', 0)
@@ -277,9 +316,9 @@ def _local_map_encoding(G, radius_x=6, radius_y=2):
     MAP_W = 56
     
     features = []
-    # Sample every other tile: 6x2 grid = 12 tiles, 4 features each = 48
-    for dy in range(-radius_y, radius_y + 1, 2):
-        for dx in range(-radius_x, radius_x + 1, 2):
+    # 3x4 grid: dy in {-1, 0, 1}, dx in {-3, -1, 1, 3} = 12 tiles, 4 features each = 48
+    for dy in range(-1, 2, 1):  # -1, 0, 1
+        for dx in [-3, -1, 1, 3]:  # 4 columns
             x, y = px + dx, py + dy
             if 0 <= y < len(map_data) and 0 <= x < len(map_data[0]):
                 tile = map_data[y][x]

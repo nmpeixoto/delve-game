@@ -6,6 +6,11 @@ Designed to prevent reward hacking and encourage winning.
 
 import numpy as np
 
+MAP_W = 56
+FLOORS = 5
+STAIRS = 2
+ACTION_DESCEND = 13
+
 def manhattan(a, b):
     return abs(a['x'] - b['x']) + abs(a['y'] - b['y'])
 
@@ -99,6 +104,25 @@ def compute_reward(prev_G, action, curr_G):
     stair_discovered = not prev_G.get('known_stairs') and curr_G.get('known_stairs')
     if stair_discovered:
         reward += 30.0
+
+    stair_distance_improved = False
+    if curr_G.get('floor', 1) == prev_G.get('floor', 1):
+        prev_stair_dist = _nearest_seen_stairs_distance(prev_G)
+        curr_stair_dist = _nearest_seen_stairs_distance(curr_G)
+        if prev_stair_dist is not None and curr_stair_dist is not None:
+            stair_delta = prev_stair_dist - curr_stair_dist
+            if stair_delta > 0:
+                reward += min(0.35 * stair_delta, 1.5)
+                stair_distance_improved = True
+            elif stair_delta < 0:
+                reward -= min(0.15 * abs(stair_delta), 0.75)
+
+        if (
+            prev_stair_dist == 0
+            and action != ACTION_DESCEND
+            and prev_G.get('floor', 1) < FLOORS
+        ):
+            reward -= 0.5
     
     # ── GOLD ─────────────────────────────────────────────────────────────────
     gold_delta = p.get('gold', 0) - pp.get('gold', 0)
@@ -114,6 +138,9 @@ def compute_reward(prev_G, action, curr_G):
     if level_up:
         reward += 8.0
 
+    # ── STAGNATION PENALTY ─────────────────────────────────────────────────
+    # Only penalize if truly stuck (no progress AND no exploration for a while)
+    # The turn penalty already handles efficiency; this catches truly dead states
     made_progress = (
         floor_progress
         or len(killed) > 0
@@ -123,6 +150,7 @@ def compute_reward(prev_G, action, curr_G):
         or revealed_traps > 0
         or explored_delta > 0
         or stair_discovered
+        or stair_distance_improved
         or gold_delta > 0
         or xp_delta > 0
         or level_up
@@ -138,13 +166,43 @@ def compute_reward(prev_G, action, curr_G):
 
 
 def _visible_enemies(G):
-    """Get list of visible enemies."""
+    """Get list of currently visible enemies."""
     p = G.get('player', {})
     enemies = G.get('enemies', [])
-    seen = G.get('seen', set())
+    # Use 'visible' (current FOV), not 'seen' (all-time explored)
+    visible = G.get('visible', G.get('seen', set()))
+    if isinstance(visible, list):
+        visible = set(visible)
     MAP_W = 56
     return [e for e in enemies if not e.get('dying') and not e.get('isPet') and 
-            (e.get('y', 0) * MAP_W + e.get('x', 0)) in seen]
+            (e.get('y', 0) * MAP_W + e.get('x', 0)) in visible]
+
+
+def _nearest_seen_stairs_distance(G):
+    p = G.get('player', {})
+    map_data = G.get('map', [])
+    if not map_data or not p:
+        return None
+
+    seen = _seen_set(G)
+    known_stairs = bool(G.get('known_stairs'))
+    best = None
+    for y, row in enumerate(map_data):
+        for x, tile in enumerate(row):
+            if tile != STAIRS:
+                continue
+            if not known_stairs and (y * MAP_W + x) not in seen:
+                continue
+            dist = abs(p.get('x', 0) - x) + abs(p.get('y', 0) - y)
+            best = dist if best is None else min(best, dist)
+    return best
+
+
+def _seen_set(G):
+    seen = G.get('seen', set())
+    if isinstance(seen, set):
+        return seen
+    return set(seen or [])
 
 
 def _carried_count(G, item_type):

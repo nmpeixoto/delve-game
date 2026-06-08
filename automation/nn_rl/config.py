@@ -11,7 +11,7 @@ NUM_CLASSES = 8
 CLASSES = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk']
 
 # ─── STATE / ACTION ──────────────────────────────────────────────────────────
-STATE_DIM = 148        # 128 original + 6 missing features (shop, keys, floor difficulty, etc.)
+STATE_DIM = 155        # Updated: +2 stair direction features (stair_dx, stair_dy)
 ACTION_DIM = 18        # 4 move + 2 attack + 2 ability + 5 item + descend + shop/open/buy/sell/escape
 
 # Action indices
@@ -25,7 +25,7 @@ ACTIONS = {
 }
 
 # ─── NETWORK ─────────────────────────────────────────────────────────────────
-STATE_DIM = 148
+# STATE_DIM is defined above in the STATE / ACTION section
 HIDDEN_DIM = 256
 
 # ─── PPO HYPERPARAMETERS ─────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ BATCH_SIZE = 1024         # Mini-batch size
 # ─── ROLLOUT ─────────────────────────────────────────────────────────────────
 NUM_ENVS = 8             # Parallel environments (single worker)
 ROLLOUT_STEPS = 256       # Steps per env per rollout
-TOTAL_TIMESTEPS = 10_000_000
+TOTAL_TIMESTEPS = 100_000_000
 
 # ─── LR SCHEDULE ─────────────────────────────────────────────────────────────
 LR_START = 3e-4
@@ -72,15 +72,12 @@ REWARD_TURN_PENALTY = -0.005
 REWARD_POTION_WASTE = -3.0
 
 # ─── CURRICULUM ──────────────────────────────────────────────────────────────
-# Phase 1: Floors 1-2 (easy enemies)
-# Phase 2: Floors 1-3 (add Skeletons, Orcs)
-# Phase 3: Floors 1-4 (add Trolls, Demons)
-# Phase 4: Floors 1-5 (add Boss)
+# No curriculum - train on full game from start
+# The bot should learn to play all 5 floors holistically,
+# including resource conservation, stair-finding, and boss strategies.
+# max_floor=4 means reaching floor 5 counts as "curriculum success"
 CURRICULUM = [
-    {'name': 'easy', 'max_floor': 2, 'steps': 2_000_000},
-    {'name': 'medium', 'max_floor': 3, 'steps': 3_000_000},
-    {'name': 'hard', 'max_floor': 4, 'steps': 3_000_000},
-    {'name': 'boss', 'max_floor': 5, 'steps': 2_000_000},
+    {'name': 'full_game', 'max_floor': 4, 'steps': TOTAL_TIMESTEPS},
 ]
 
 # ─── SELF-PLAY ───────────────────────────────────────────────────────────────

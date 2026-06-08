@@ -2,6 +2,9 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
+
+import numpy as np
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NN_RL_DIR = os.path.join(REPO_ROOT, "automation", "nn_rl")
@@ -9,10 +12,10 @@ sys.path.insert(0, NN_RL_DIR)
 
 from headless_bridge import HeadlessWorker, RL_RUNNER
 from action_mask import get_action_mask
-from config import ACTION_DIM, ACTIONS
+from config import ACTION_DIM, ACTIONS, STATE_DIM
 from reward import compute_reward
 from state_extractor import extract_state
-from train import curriculum_phase_for_step, resolve_resume_checkpoint
+from train import curriculum_phase_for_step, parse_args, resolve_resume_checkpoint, summarize_actions
 from vector_env import DelveVectorEnv
 
 
@@ -39,7 +42,7 @@ class NnRlBridgeTest(unittest.TestCase):
         try:
             state = env.get_states()[0]
             obs = extract_state(state)
-            self.assertEqual(obs.shape, (148,))
+            self.assertEqual(obs.shape, (STATE_DIM,))
             self.assertGreater(obs[0], 0.0)
 
             first_valid_action = int(env.get_action_masks()[0].nonzero()[0][0])
@@ -135,6 +138,18 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(curriculum_phase_for_step(30, curriculum), (2, 0))
         self.assertEqual(curriculum_phase_for_step(100, curriculum), (2, 70))
 
+    def test_train_default_episode_cap_limits_wandering_rollouts(self):
+        with patch.object(sys, "argv", ["train.py"]):
+            args = parse_args()
+
+        self.assertLessEqual(args.max_episode_steps, 8000)
+
+    def test_resume_can_reset_optimizer_for_changed_reward(self):
+        with patch.object(sys, "argv", ["train.py", "--resume", "latest", "--reset-optimizer"]):
+            args = parse_args()
+
+        self.assertTrue(args.reset_optimizer)
+
     def test_reward_penalizes_no_progress_seen_tile_loops(self):
         state = {
             "floor": 1,
@@ -173,6 +188,22 @@ class NnRlBridgeTest(unittest.TestCase):
         reward = compute_reward(state, 13, {**state, "floor": 2, "seen_count": 0})
 
         self.assertGreaterEqual(reward, 100.0)
+
+    def test_reward_prefers_moving_toward_known_stairs(self):
+        state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
+        after = {**state, "player": {**state["player"], "x": 6}}
+
+        reward = compute_reward(state, ACTIONS["MOVE_RIGHT"], after)
+
+        self.assertGreater(reward, 0.1)
+
+    def test_reward_penalizes_moving_away_from_known_stairs(self):
+        state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
+        after = {**state, "player": {**state["player"], "x": 4}}
+
+        reward = compute_reward(state, ACTIONS["MOVE_LEFT"], after)
+
+        self.assertLess(reward, -0.08)
 
     def test_reward_for_picking_up_key(self):
         state = {
@@ -281,6 +312,42 @@ class NnRlBridgeTest(unittest.TestCase):
         for action in range(ACTION_DIM + 3):
             decision = env.action_to_decision(state, action)
             self.assertNotEqual(decision.get("type"), "wait")
+
+    def test_action_summary_always_reports_descend_when_taken(self):
+        action_counts = np.zeros(ACTION_DIM, dtype=np.int64)
+        action_counts[ACTIONS["MOVE_RIGHT"]] = 260
+        action_counts[ACTIONS["MOVE_LEFT"]] = 260
+        action_counts[ACTIONS["MOVE_UP"]] = 220
+        action_counts[ACTIONS["MOVE_DOWN"]] = 210
+        action_counts[ACTIONS["DESCEND"]] = 5
+
+        summary = summarize_actions(action_counts)
+
+        self.assertIn("Desc", summary)
+
+    def _known_stairs_state(self, player_x, player_y, stairs_x, stairs_y):
+        width = 12
+        height = 10
+        map_data = [[1 for _ in range(width)] for _ in range(height)]
+        map_data[stairs_y][stairs_x] = 2
+        seen = {y * 56 + x for y in range(height) for x in range(width)}
+        return {
+            "floor": 1,
+            "player": {
+                "hp": 20,
+                "maxHp": 20,
+                "x": player_x,
+                "y": player_y,
+                "lvl": 1,
+                "gold": 0,
+            },
+            "enemies": [],
+            "items": [],
+            "map": map_data,
+            "seen": seen,
+            "seen_count": len(seen),
+            "known_stairs": True,
+        }
 
 
 if __name__ == "__main__":
