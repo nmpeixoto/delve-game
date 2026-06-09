@@ -132,6 +132,15 @@ function createRuntime(seed) {
   sandbox.render = () => {};
   sandbox.updateHUD = () => {};
   sandbox.updateActBtns = () => {};
+  // NOTE: openShop / closeShop / openInv / closeInv stubs below are SET here as
+  // initial values, but the game source files (shop.js, etc.) are loaded AFTER
+  // this sandbox is created.  Their `function foo(){}` declarations run in the
+  // same VM context and OVERRIDE these stubs, so the real game implementations
+  // execute at runtime.  The real openShop sets G.currentShop and adds the CSS
+  // class 'open' to the shop-overlay mock element, so captureSnapshot() correctly
+  // reports { shopOpen: true, currentShop: { stock: [...] } }.
+  // The stubs are kept here only as documentation and a fallback if the game
+  // source file list ever changes.
   sandbox.closeInv = () => {};
   sandbox.openInv = () => {};
   sandbox.closeShop = () => {};
@@ -197,6 +206,12 @@ function createRuntime(seed) {
   context.window.canAct = context.canAct;
   context._lastAction = 0;
 
+  // Delta-snapshot state: track what we last sent so we only send diffs.
+  let _snapshotFloor = null;     // floor at last snapshot — send full map on change
+  let _snapshotMap = null;       // deep copy of map for detecting mutations
+  let _snapshotSeenSize = 0;     // size of seen set at last snapshot
+  let _snapshotSeenArray = [];   // full seen array as of last full-send
+
   function captureSnapshot() {
     const G = context.G;
     if (!G || !G.player) return { ready: false };
@@ -204,9 +219,64 @@ function createRuntime(seed) {
     const MAP_W = 56;
     const seen = G.seen || new Set();
     const shopOverlay = document.getElementById('shop-overlay');
-    const invDrawer = document.getElementById('inv-drawer');
-    const emergencyOverlay = document.getElementById('emergency-overlay');
-    const shrineOverlay = document.getElementById('shrine-overlay');
+
+    let mapPayload = null;
+    let mapDelta = null;
+    let seenPayload = null;
+    let seenDelta = null;
+
+    const floorChanged = G.floor !== _snapshotFloor;
+    if (floorChanged) {
+      // New floor: send full map + full seen, reset delta tracking
+      mapPayload = G.map;
+      // create a deep copy for future mutation detection
+      _snapshotMap = (G.map || []).map(row => row.slice());
+      seenPayload = Array.from(seen);
+      _snapshotSeenArray = seenPayload;
+      _snapshotSeenSize = seen.size;
+      _snapshotFloor = G.floor;
+    } else {
+      // Detect map mutations (doors unlocking, bombing walls)
+      if (G.map && _snapshotMap) {
+        const delta = [];
+        for (let y = 0; y < G.map.length; y++) {
+          for (let x = 0; x < G.map[y].length; x++) {
+            if (G.map[y][x] !== _snapshotMap[y][x]) {
+              delta.push([x, y, G.map[y][x]]);
+              _snapshotMap[y][x] = G.map[y][x];
+            }
+          }
+        }
+        if (delta.length > 0) mapDelta = delta;
+      }
+
+      if (seen.size > _snapshotSeenSize) {
+        // Same floor, new tiles revealed: compute delta with a Set for O(1) lookup.
+        const prevSet = new Set(_snapshotSeenArray);
+        const delta = [];
+        for (const k of seen) {
+          if (!prevSet.has(k)) delta.push(k);
+        }
+        seenDelta = delta;
+        _snapshotSeenArray = _snapshotSeenArray.concat(delta);
+        _snapshotSeenSize = seen.size;
+      }
+    }
+
+    // ── known_stairs: compute from our tracked seen, not seen.has() every step ─
+    let known_stairs = false;
+    if (mapPayload) {
+      // We just sent the full map, compute from it
+      outer: for (let y = 0; y < (G.map||[]).length; y++)
+        for (let x = 0; x < (G.map[0]||[]).length; x++)
+          if (G.map[y][x] === 2 && seen.has(y * MAP_W + x)) { known_stairs = true; break outer; }
+    } else {
+      // Cheap: just check known_stairs flag from G if available (JS game sets it on stair discovery)
+      // Fall back to set scan only if truly needed
+      outer2: for (let y = 0; y < (G.map||[]).length; y++)
+        for (let x = 0; x < (G.map[0]||[]).length; x++)
+          if (G.map[y][x] === 2 && seen.has(y * MAP_W + x)) { known_stairs = true; break outer2; }
+    }
 
     return {
       ready: true,
@@ -243,17 +313,25 @@ function createRuntime(seed) {
         revealed: !!t.revealed,
         triggered: !!t.triggered,
       })),
-      shops: (G.shops || []).map(s => ({ x: s.x, y: s.y, stock: (s.stock||[]).map(i => ({ id: i.id, type: i.type, price: i.price, heal: i.heal, atk: i.atk, def: i.def, sold: !!i.sold })) })),
-      map: G.map,
-      seen: Array.from(seen),
+      shops: (G.shops || []).map(s => ({ x: s.x, y: s.y, stock: (s.stock||[]).map(i => ({ id: i.id, type: i.type, price: i.price, heal: i.heal, atk: i.atk, def: i.def, amount: i.amount, stat: i.stat, rarity: i.rarity, sold: !!i.sold })) })),
+      currentShop: G.currentShop ? {
+        x: G.currentShop.x,
+        y: G.currentShop.y,
+        stock: (G.currentShop.stock || []).map(i => ({
+          id: i.id, type: i.type, price: i.price, heal: i.heal,
+          atk: i.atk, def: i.def, amount: i.amount, stat: i.stat,
+          rarity: i.rarity, sold: !!i.sold,
+        })),
+      } : null,
+      // map is null when unchanged (floor hasn't changed); Python caches it.
+      map: mapPayload,
+      // seen is null when unchanged; seen_delta carries only new tile indices.
+      seen: seenPayload,
+      seen_delta: seenDelta,
+      // visible changes every step (LOS) — always send it. It's only ~100-200 ints.
       visible: G.visible ? Array.from(G.visible) : [],
       seen_count: seen.size,
-      known_stairs: (() => {
-        for (let y = 0; y < (G.map||[]).length; y++)
-          for (let x = 0; x < (G.map[0]||[]).length; x++)
-            if (G.map[y][x] === 2 && seen.has(y * 56 + x)) return true;
-        return false;
-      })(),
+      known_stairs,
       shopOpen: shopOverlay && shopOverlay.classList.contains('open'),
       gameOver: !!G.gameOver, won: !!G.won,
     };

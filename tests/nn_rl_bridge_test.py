@@ -12,7 +12,7 @@ sys.path.insert(0, NN_RL_DIR)
 
 from headless_bridge import HeadlessWorker, RL_RUNNER
 from action_mask import get_action_mask
-from config import ACTION_DIM, ACTIONS, CURRICULUM, STATE_DIM
+from config import ACTION_DIM, ACTIONS, CURRICULUM, MAX_SHOP_SLOTS, SHOP_ITEM_FEATURES, STATE_DIM
 from policy_probe import build_probe_scenarios, format_probe_summary
 from reward import compute_reward
 from state_extractor import extract_state
@@ -66,6 +66,32 @@ class NnRlBridgeTest(unittest.TestCase):
             self.assertIn("total_steps", infos[0])
         finally:
             env.close()
+
+    def test_extract_state_includes_current_shop_stock(self):
+        state = {
+            "floor": 2,
+            "turn": 10,
+            "player": {"hp": 20, "maxHp": 20, "atk": 5, "def": 3, "lvl": 1, "x": 1, "y": 1, "gold": 100, "class": "warrior"},
+            "map": [[1, 1], [1, 2]],
+            "items": [],
+            "enemies": [],
+            "seen": {0, 1, 2, 3},
+            "visible": {0, 1, 2, 3},
+            "shopOpen": True,
+            "currentShop": {
+                "stock": [
+                    {"id": "p1", "type": "potion", "price": 25, "heal": 15, "atk": 0, "def": 0, "amount": 0, "rarity": "common", "sold": False},
+                    {"id": "u1", "type": "upgrade", "price": 100, "heal": 0, "atk": 0, "def": 0, "amount": 2, "rarity": "rare", "sold": False},
+                ],
+            },
+        }
+
+        obs = extract_state(state)
+        shop_start = STATE_DIM - MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES
+
+        self.assertEqual(obs.shape, (STATE_DIM,))
+        self.assertEqual(obs[shop_start], 1.0)
+        self.assertEqual(obs[shop_start + 1], 1.0)
 
     def test_vector_env_caps_episode_length_with_timeout_penalty(self):
         env = DelveVectorEnv(
@@ -303,8 +329,8 @@ class NnRlBridgeTest(unittest.TestCase):
             args = parse_args()
 
         self.assertGreater(args.num_envs, args.envs_per_worker)
-        self.assertEqual(args.num_envs, 64)
-        self.assertEqual(args.envs_per_worker, 4)
+        self.assertEqual(args.num_envs, 128)
+        self.assertEqual(args.envs_per_worker, 16)
 
     def test_resume_can_reset_optimizer_for_changed_reward(self):
         with patch.object(sys, "argv", ["train.py", "--resume", "latest", "--reset-optimizer"]):
@@ -400,7 +426,7 @@ class NnRlBridgeTest(unittest.TestCase):
         after = {
             **state,
             "items": [],
-            "map": [[1, 1]],
+            "_doors_unlocked_this_step": 1,
             "_last_door_unlock_step": 10,
         }
 
@@ -417,7 +443,7 @@ class NnRlBridgeTest(unittest.TestCase):
             "seen_count": 100,
             "known_stairs": False,
         }
-        after = {**state, "map": [[1, 1]]}
+        after = {**state, "_secrets_revealed_this_step": 1}
 
         reward = compute_reward(state, 0, after)
 
@@ -439,10 +465,11 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertGreaterEqual(reward, 8.0)
 
     def test_action_space_excludes_non_gameplay_wait_and_inventory_toggle(self):
-        self.assertEqual(ACTION_DIM, 18)
+        self.assertEqual(ACTION_DIM, 36)
         self.assertNotIn("WAIT", ACTIONS)
         self.assertNotIn("INVENTORY", ACTIONS)
         self.assertEqual(max(ACTIONS.values()), ACTION_DIM - 1)
+        self.assertIn("SHOP_BUY_0", ACTIONS)
 
     def test_action_mask_uses_current_action_space_without_wait_slot(self):
         state = {
@@ -528,6 +555,40 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertTrue(mask[ACTIONS["MOVE_LEFT"]])
         self.assertTrue(mask[ACTIONS["ATTACK_1"]])
 
+    def test_action_mask_exposes_shop_buy_slots_for_visible_current_shop_stock(self):
+        state = {
+            "floor": 2,
+            "player": {"hp": 20, "maxHp": 20, "x": 1, "y": 1, "lvl": 1, "gold": 500, "class": "warrior"},
+            "map": [
+                [0, 0, 0],
+                [0, 1, 1],
+                [0, 1, 0],
+            ],
+            "enemies": [],
+            "items": [],
+            "shops": [{"x": 1, "y": 2, "stock": []}],
+            "currentShop": {
+                "x": 1,
+                "y": 2,
+                "stock": [
+                    {"id": "p1", "type": "potion", "price": 25, "heal": 15, "atk": 0, "def": 0, "amount": 0, "stat": None, "rarity": "common", "sold": False},
+                    {"id": "u1", "type": "upgrade", "price": 100, "heal": 0, "atk": 0, "def": 0, "amount": 2, "stat": "atk", "rarity": "rare", "sold": False},
+                ],
+            },
+            "seen": {57},
+            "visible": {57},
+            "shopOpen": True,
+            "ability1Cooldown": 0,
+            "ability2Cooldown": 0,
+        }
+
+        mask = get_action_mask(state)
+
+        self.assertTrue(mask[ACTIONS["SHOP_BUY_0"]])
+        self.assertTrue(mask[ACTIONS["SHOP_BUY_1"]])
+        self.assertTrue(mask[ACTIONS["SHOP_SELL"]])
+        self.assertTrue(mask[ACTIONS["ESCAPE"]])
+
     def test_action_to_decision_never_returns_hidden_wait(self):
         env = DelveVectorEnv.__new__(DelveVectorEnv)
         state = {
@@ -553,6 +614,36 @@ class NnRlBridgeTest(unittest.TestCase):
 
         self.assertIn("Desc", summary)
         self.assertIn("0.5%", summary)
+
+    def test_action_summary_handles_shop_buy_slots(self):
+        action_counts = np.zeros(ACTION_DIM, dtype=np.int64)
+        action_counts[ACTIONS["SHOP_BUY_0"]] = 120
+        action_counts[ACTIONS["DESCEND"]] = 5
+
+        summary = summarize_actions(action_counts)
+
+        self.assertIn("Buy1", summary)
+
+    def test_action_to_decision_targets_specific_shop_slot_when_open(self):
+        env = DelveVectorEnv.__new__(DelveVectorEnv)
+        state = {
+            "player": {"x": 1, "y": 1, "hp": 20, "maxHp": 20, "gold": 500},
+            "shopOpen": True,
+            "currentShop": {
+                "stock": [
+                    {"id": "p1", "type": "potion", "price": 25, "sold": False},
+                    {"id": "u1", "type": "upgrade", "price": 100, "sold": False},
+                ],
+            },
+            "shops": [{"x": 1, "y": 2, "stock": []}],
+            "items": [],
+            "enemies": [],
+        }
+
+        decision = env.action_to_decision(state, ACTIONS["SHOP_BUY_1"])
+
+        self.assertEqual(decision["type"], "click")
+        self.assertIn("u1", decision["target"])
 
     def test_probe_scenarios_do_not_force_directional_moves_via_mask(self):
         scenarios = build_probe_scenarios()
@@ -655,6 +746,8 @@ class NnRlBridgeTest(unittest.TestCase):
             "seen": seen,
             "seen_count": len(seen),
             "known_stairs": True,
+            "_stair_coords": [(stairs_x, stairs_y)],
+            "_walkable_total": width * height,
         }
 
 

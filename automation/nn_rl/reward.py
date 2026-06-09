@@ -6,6 +6,10 @@ Designed to prevent reward hacking and encourage winning.
 
 import numpy as np
 
+from pathfinding import (
+    floor_exploration_ratio as _floor_exploration_ratio,
+    shortest_stairs_distance as _shortest_stairs_distance,
+)
 MAP_W = 56
 FLOORS = 5
 STAIRS = 2
@@ -50,7 +54,7 @@ def compute_reward(prev_G, action, curr_G):
     if key_delta > 0:
         reward += 30.0 * key_delta  # Increased from 20
 
-    unlocked_doors = max(0, _tile_count(prev_G, 4) - _tile_count(curr_G, 4))
+    unlocked_doors = curr_G.get('_doors_unlocked_this_step', 0)
     if unlocked_doors > 0:
         reward += 50.0 * unlocked_doors  # Increased from 35
 
@@ -60,7 +64,7 @@ def compute_reward(prev_G, action, curr_G):
         if last_key_step >= 0 and (curr_step - last_key_step) <= KEY_DOOR_CHAIN_WINDOW:
             reward += 40.0  # Chain bonus
 
-    revealed_secrets = max(0, _tile_count(prev_G, 5) - _tile_count(curr_G, 5))
+    revealed_secrets = curr_G.get('_secrets_revealed_this_step', 0)
     if revealed_secrets > 0:
         reward += 25.0 * revealed_secrets
 
@@ -101,20 +105,19 @@ def compute_reward(prev_G, action, curr_G):
     if explored_delta > 0:
         reward += 0.1 * explored_delta  # Strong incentive to explore fast
 
-    # ── FLOOR COVERAGE BONUS ──────────────────────────────────────────────────
-    # Reward reaching exploration milestones on the current floor
+    # ── FLOOR COVERAGE BONUS ───────────────────────────────────────────────────────────
+    # Reward reaching exploration milestones on the CURRENT floor only.
+    # floor_exploration_ratio uses the current map to count explorable tiles,
+    # so it never exceeds 1.0 even on floor 2+ (unlike cumulative seen_count).
     curr_floor = curr_G.get('floor', 1)
-    curr_seen = curr_G.get('seen_count', 0)
     prev_floor = prev_G.get('floor', 1)
-    prev_seen = prev_G.get('seen_count', 0)
-    # Approximate total explorable tiles (rough estimate for a floor)
-    total_tiles = 56 * 36  # MAP_W * MAP_H
     if curr_floor == prev_floor:
-        curr_pct = curr_seen / total_tiles
-        prev_pct = prev_seen / total_tiles
-        # Give bonus when crossing 25%, 50%, 75% thresholds
+        curr_map = curr_G.get('map', [])
+        prev_map = prev_G.get('map', [])
+        curr_ratio = _floor_exploration_ratio(curr_G, curr_map)
+        prev_ratio = _floor_exploration_ratio(prev_G, prev_map)
         for threshold in [0.25, 0.50, 0.75]:
-            if prev_pct < threshold <= curr_pct:
+            if prev_ratio < threshold <= curr_ratio:
                 reward += 15.0  # Milestone bonus
 
     # ── RESOURCE MANAGEMENT ──────────────────────────────────────────────────
@@ -212,21 +215,10 @@ def _visible_enemies(G):
 def _nearest_seen_stairs_distance(G):
     p = G.get('player', {})
     map_data = G.get('map', [])
-    if not map_data or not p:
+    if len(map_data) == 0 or not p:
         return None
 
-    seen = _seen_set(G)
-    known_stairs = bool(G.get('known_stairs'))
-    best = None
-    for y, row in enumerate(map_data):
-        for x, tile in enumerate(row):
-            if tile != STAIRS:
-                continue
-            if not known_stairs and (y * MAP_W + x) not in seen:
-                continue
-            dist = abs(p.get('x', 0) - x) + abs(p.get('y', 0) - y)
-            best = dist if best is None else min(best, dist)
-    return best
+    return _shortest_stairs_distance(G, map_data, p.get('x', 0), p.get('y', 0))
 
 
 def _seen_set(G):
@@ -238,10 +230,6 @@ def _seen_set(G):
 
 def _carried_count(G, item_type):
     return sum(1 for item in G.get('items', []) if item.get('type') == item_type and item.get('carried'))
-
-
-def _tile_count(G, tile_id):
-    return sum(1 for row in G.get('map', []) for tile in row if tile == tile_id)
 
 
 def _revealed_trap_count(G):

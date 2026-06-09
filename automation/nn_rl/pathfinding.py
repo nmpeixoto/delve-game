@@ -16,7 +16,7 @@ DIRS = [(0, -1), (0, 1), (-1, 0), (1, 0)]
 
 def shortest_stairs_distance(G, map_data, start_x, start_y):
     """BFS distance from (start_x, start_y) to nearest known/seen stairs."""
-    if not map_data or start_y < 0 or start_y >= len(map_data):
+    if len(map_data) == 0 or start_y < 0 or start_y >= len(map_data):
         return None
     if start_x < 0 or start_x >= len(map_data[start_y]):
         return None
@@ -54,12 +54,11 @@ def shortest_stairs_distance(G, map_data, start_x, start_y):
 def known_stair_targets(G, map_data):
     """Set of (x, y) positions of stairs that have been seen or are globally known."""
     seen = _seen_set(G)
-    known_stairs = bool(G.get('known_stairs'))
+    stair_coords = G.get('_stair_coords', [])
     targets = set()
-    for y, row in enumerate(map_data):
-        for x, tile in enumerate(row):
-            if tile == STAIRS and (known_stairs or (y * MAP_W + x) in seen):
-                targets.add((x, y))
+    for x, y in stair_coords:
+        if (y * MAP_W + x) in seen:
+            targets.add((x, y))
     return targets
 
 
@@ -107,18 +106,13 @@ def nearest_shop_direction(G):
 
 def floor_exploration_ratio(G, map_data):
     """Fraction of explorable tiles that have been seen."""
-    seen = _seen_set(G)
-    explorable = 0
-    seen_count = 0
-    for y, row in enumerate(map_data):
-        for x, tile in enumerate(row):
-            if tile in (FLOOR, STAIRS, SHOP, LOCKED_DOOR):
-                explorable += 1
-                if (y * MAP_W + x) in seen:
-                    seen_count += 1
-    if explorable == 0:
+    walkable_total = G.get('_walkable_total', 0)
+    if walkable_total == 0:
         return 0.0
-    return seen_count / explorable
+    seen_count = len(G.get('seen', []))
+    # It's possible seen count exceeds walkable if player sees walls,
+    # but the rough ratio is fine for reward scaling.
+    return min(seen_count / walkable_total, 1.0)
 
 
 def _tile_passable(G, tile):

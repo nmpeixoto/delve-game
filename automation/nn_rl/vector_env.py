@@ -10,7 +10,7 @@ from headless_bridge import WorkerPool
 from state_extractor import extract_state
 from action_mask import get_action_mask
 from reward import compute_reward
-from config import ACTION_DIM
+from config import ACTION_DIM, ACTIONS, MAX_SHOP_SLOTS
 
 CLASSES = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk']
 
@@ -24,7 +24,7 @@ class DelveVectorEnv:
         self,
         num_envs=128,
         envs_per_worker=8,
-        max_episode_steps=5000,
+        max_episode_steps=10000,
         timeout_penalty=-400.0,
         curriculum_max_floor=None,
         curriculum_reward=125.0,
@@ -42,6 +42,7 @@ class DelveVectorEnv:
         self.episode_lengths = [0] * num_envs
         self.prev_actions = [None] * num_envs        # Track previous action per env
         self.last_floor = [1] * num_envs              # Track floor for change detection
+        self.last_floor_change_step = [0] * num_envs  # episode step when last floor change occurred
         self.last_key_pickup_step = [-999] * num_envs  # Step of last key pickup
         self.last_door_unlock_step = [-999] * num_envs # Step of last door unlock
         self.last_enemy_kill_step = [-999] * num_envs  # Step of last enemy kill
@@ -51,7 +52,9 @@ class DelveVectorEnv:
 
     def _reset_all(self):
         seeds = [random.randint(1, 10_000_000) for _ in range(self.num_envs)]
-        classes = [CLASSES[i % len(CLASSES)] for i in range(self.num_envs)]
+        # Randomly assign classes; with 64 envs and 8 classes every class
+        # receives ~8 slots in expectation, avoiding per-id bias.
+        classes = [random.choice(CLASSES) for _ in range(self.num_envs)]
         states = self.pool.init_all(seeds, classes)
 
         for i in range(self.num_envs):
@@ -61,6 +64,7 @@ class DelveVectorEnv:
             self.episode_lengths[i] = 0
             self.prev_actions[i] = None
             self.last_floor[i] = 1
+            self.last_floor_change_step[i] = 0
             self.last_key_pickup_step[i] = -999
             self.last_door_unlock_step[i] = -999
             self.last_enemy_kill_step[i] = -999
@@ -72,7 +76,7 @@ class DelveVectorEnv:
             env_ids = list(range(self.num_envs))
 
         specs = {
-            eid: (random.randint(1, 10_000_000), CLASSES[eid % len(CLASSES)])
+            eid: (random.randint(1, 10_000_000), random.choice(CLASSES))
             for eid in env_ids
         }
         states = self.pool.reset_envs(specs)
@@ -85,6 +89,7 @@ class DelveVectorEnv:
             self.episode_lengths[eid] = 0
             self.prev_actions[eid] = None
             self.last_floor[eid] = 1
+            self.last_floor_change_step[eid] = 0
             self.last_key_pickup_step[eid] = -999
             self.last_door_unlock_step[eid] = -999
             self.last_enemy_kill_step[eid] = -999
@@ -141,13 +146,16 @@ class DelveVectorEnv:
             return {'type': 'key', 'val': '>'}
         if action == 14:
             return {'type': 'key', 'val': 't'}
-        if action == 15:
-            item = self._choose_shop_item(state)
-            return {'type': 'click', 'target': f'.shop-item[onclick*="{item["id"]}"]'} if item else self._escape_decision()
+        # action 15 (SHOP_BUY, legacy) is never exposed by the action mask;
+        # it falls through to _escape_decision below.
         if action == 16:
             return {'type': 'click', 'target': 'button[onclick="sellWeakerGear()"]'}
         if action == 17:
             return {'type': 'key', 'val': 'Escape'}
+        shop_buy_start = ACTIONS.get('SHOP_BUY_0', 18)
+        if shop_buy_start <= action < shop_buy_start + MAX_SHOP_SLOTS:
+            item = self._choose_shop_item_at_slot(state, action - shop_buy_start)
+            return self._shop_item_click(item) if item else self._escape_decision()
         return self._escape_decision()
 
     def _escape_decision(self):
@@ -155,6 +163,9 @@ class DelveVectorEnv:
 
     def _item_click(self, item):
         return {'type': 'click', 'target': f'.inv-slot[onclick*="{item["id"]}"]'}
+
+    def _shop_item_click(self, item):
+        return {'type': 'click', 'target': f'.shop-item[onclick*="{item["id"]}"]'}
 
     def _choose_potion(self, items, player):
         potions = [i for i in items if i.get('type') == 'potion']
@@ -170,13 +181,34 @@ class DelveVectorEnv:
         if not state or not state.get('shopOpen'):
             return None
         gold = state.get('player', {}).get('gold', 0)
-        stock = []
-        for shop in state.get('shops', []):
-            stock.extend(shop.get('stock', []))
+        stock = self._current_shop_stock(state)
         affordable = [i for i in stock if not i.get('sold') and i.get('price', 0) <= gold]
         priority = {'potion': 0, 'weapon': 1, 'armor': 2, 'potion_buff': 3, 'bomb': 4, 'scroll_teleport': 5, 'scroll': 6}
         affordable.sort(key=lambda i: (priority.get(i.get('type'), 99), -i.get('heal', 0), i.get('price', 0)))
         return affordable[0] if affordable else None
+
+    def _choose_shop_item_at_slot(self, state, slot):
+        if not state or not state.get('shopOpen'):
+            return None
+        stock = self._current_shop_stock(state)
+        if slot < 0 or slot >= len(stock):
+            return None
+        item = stock[slot]
+        if not item or item.get('sold'):
+            return None
+        if item.get('price', 0) > state.get('player', {}).get('gold', 0):
+            return None
+        return item
+
+    def _current_shop_stock(self, state):
+        shop = state.get('currentShop') or {}
+        stock = list(shop.get('stock') or [])
+        if stock:
+            return stock
+        fallback_stock = []
+        for fallback_shop in state.get('shops', []):
+            fallback_stock.extend(fallback_shop.get('stock', []))
+        return fallback_stock
 
     def _detect_events(self, env_id, prev_state, curr_state, action):
         """Detect key game events for reward and state features."""
@@ -186,6 +218,7 @@ class DelveVectorEnv:
         # Floor change
         if curr_floor != prev_floor:
             self.last_floor[env_id] = curr_floor
+            self.last_floor_change_step[env_id] = self.episode_lengths[env_id]
             self.doors_opened_this_floor[env_id] = 0
             self.keys_used_this_floor[env_id] = 0
 
@@ -228,8 +261,8 @@ class DelveVectorEnv:
 
         # Compute steps-since features
         step = self.episode_lengths[env_id]
-        # Approximate: steps since floor change = steps on current floor
-        state['_steps_since_floor_change'] = min(step, 999)  # Simplified
+        # steps_since_floor_change resets to 0 on each floor descent, not at episode start.
+        state['_steps_since_floor_change'] = min(step - self.last_floor_change_step[env_id], 999)
         state['_steps_since_key_pickup'] = min(step - self.last_key_pickup_step[env_id], 999) if self.last_key_pickup_step[env_id] >= 0 else 999
         state['_steps_since_enemy_kill'] = min(step - self.last_enemy_kill_step[env_id], 999) if self.last_enemy_kill_step[env_id] >= 0 else 999
         state['_steps_since_door_unlock'] = min(step - self.last_door_unlock_step[env_id], 999) if self.last_door_unlock_step[env_id] >= 0 else 999
@@ -369,3 +402,160 @@ class DelveVectorEnv:
 
     def close(self):
         self.pool.shutdown()
+
+
+import multiprocessing as mp
+import numpy as np
+
+def _subproc_worker(pipe, env_kwargs):
+    from vector_env import DelveVectorEnv
+    from state_extractor import numpyize_states, numpyize_maps
+    from action_mask import get_action_mask
+    
+    env = DelveVectorEnv(**env_kwargs)
+    try:
+        while True:
+            cmd, args = pipe.recv()
+            if cmd == 'reset':
+                states = env.reset()
+                np_states = numpyize_states(states)
+                np_maps = numpyize_maps(states)
+                masks = np.stack([get_action_mask(s) for s in states]).astype(np.float32, copy=False)
+                pipe.send((np_states, np_maps, masks))
+            elif cmd == 'step':
+                actions = args['actions']
+                states, rewards, dones, infos = env.step(actions)
+                np_states = numpyize_states(states, env.prev_actions)
+                np_maps = numpyize_maps(states)
+                masks = np.stack([get_action_mask(s) for s in states]).astype(np.float32, copy=False)
+                pipe.send((np_states, np_maps, masks, rewards, dones, infos))
+            elif cmd == 'close':
+                env.pool.shutdown()
+                break
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+
+class SubprocVecEnv:
+    def __init__(self, num_envs=128, envs_per_worker=16, **kwargs):
+        self.num_envs = num_envs
+        self.envs_per_worker = envs_per_worker
+        self.num_workers = num_envs // envs_per_worker
+        self.pipes = []
+        self.processes = []
+        
+        for i in range(self.num_workers):
+            parent_pipe, child_pipe = mp.Pipe()
+            env_kwargs = kwargs.copy()
+            env_kwargs['num_envs'] = envs_per_worker
+            env_kwargs['envs_per_worker'] = envs_per_worker
+            p = mp.Process(target=_subproc_worker, args=(child_pipe, env_kwargs))
+            p.daemon = True
+            p.start()
+
+
+import multiprocessing as mp
+import numpy as np
+
+def _subproc_worker(pipe, env_kwargs):
+    from vector_env import DelveVectorEnv
+    from state_extractor import numpyize_states, numpyize_maps
+    from action_mask import get_action_mask
+    
+    env = DelveVectorEnv(**env_kwargs)
+    try:
+        while True:
+            cmd, args = pipe.recv()
+            if cmd == 'reset':
+                states = env.reset()
+                np_states = numpyize_states(states)
+                np_maps = numpyize_maps(states)
+                masks = np.stack([get_action_mask(s) for s in states]).astype(np.float32, copy=False)
+                pipe.send((np_states, np_maps, masks))
+            elif cmd == 'step':
+                actions = args['actions']
+                states, rewards, dones, infos = env.step(actions)
+                np_states = numpyize_states(states, env.prev_actions)
+                np_maps = numpyize_maps(states)
+                masks = np.stack([get_action_mask(s) for s in states]).astype(np.float32, copy=False)
+                pipe.send((np_states, np_maps, masks, rewards, dones, infos))
+            elif cmd == 'set_curriculum':
+                env.set_curriculum_max_floor(args['max_floor'])
+                pipe.send(True)
+            elif cmd == 'close':
+                env.pool.shutdown()
+                break
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+
+class SubprocVecEnv:
+    def __init__(self, num_envs=128, envs_per_worker=16, **kwargs):
+        self.num_envs = num_envs
+        self.envs_per_worker = envs_per_worker
+        self.num_workers = num_envs // envs_per_worker
+        self.pipes = []
+        self.processes = []
+        
+        for i in range(self.num_workers):
+            parent_pipe, child_pipe = mp.Pipe()
+            env_kwargs = kwargs.copy()
+            env_kwargs['num_envs'] = envs_per_worker
+            env_kwargs['envs_per_worker'] = envs_per_worker
+            p = mp.Process(target=_subproc_worker, args=(child_pipe, env_kwargs))
+            p.daemon = False
+            p.start()
+            self.pipes.append(parent_pipe)
+            self.processes.append(p)
+            
+    def reset(self, env_ids=None):
+        if env_ids is not None:
+            raise ValueError("SubprocVecEnv does not support partial reset from main thread.")
+        for p in self.pipes:
+            p.send(('reset', {}))
+        
+        np_states, np_maps, masks = [], [], []
+        for p in self.pipes:
+            ns, nm, m = p.recv()
+            np_states.append(ns)
+            np_maps.append(nm)
+            masks.append(m)
+            
+        return np.concatenate(np_states), np.concatenate(np_maps), np.concatenate(masks)
+
+    def step(self, actions):
+        for i, p in enumerate(self.pipes):
+            start = i * self.envs_per_worker
+            end = start + self.envs_per_worker
+            p.send(('step', {'actions': actions[start:end]}))
+            
+        np_states, np_maps, masks, rewards, dones, infos = [], [], [], [], [], []
+        for p in self.pipes:
+            ns, nm, m, r, d, i = p.recv()
+            np_states.append(ns)
+            np_maps.append(nm)
+            masks.append(m)
+            rewards.append(r)
+            dones.append(d)
+            infos.extend(i)
+            
+        return (
+            np.concatenate(np_states),
+            np.concatenate(np_maps),
+            np.concatenate(masks),
+            np.concatenate(rewards),
+            np.concatenate(dones),
+            infos
+        )
+        
+    def set_curriculum_max_floor(self, max_floor):
+        for p in self.pipes:
+            p.send(('set_curriculum', {'max_floor': max_floor}))
+        for p in self.pipes:
+            p.recv()
+        
+    def close(self):
+        for p in self.pipes:
+            p.send(('close', {}))
+        for p in self.processes:
+            p.join()

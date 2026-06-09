@@ -89,7 +89,7 @@ def evaluate_headless(agent, num_games=100, device='cuda'):
             pass
 
 
-def parse_args():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="Train the DELVE PPO bot against the real headless game runner.")
     parser.add_argument("--total-timesteps", type=int, default=TOTAL_TIMESTEPS)
     parser.add_argument("--num-envs", type=int, default=NUM_ENVS)
@@ -104,50 +104,24 @@ def parse_args():
                         help="Resume from a checkpoint path, or use latest checkpoint when passed without a value.")
     parser.add_argument("--reset-optimizer", action="store_true",
                         help="Load model weights from --resume but start optimizer and LR schedule fresh.")
-    parser.add_argument("--max-episode-steps", type=int, default=20000)
+    parser.add_argument("--max-episode-steps", type=int, default=10000)
     parser.add_argument("--timeout-penalty", type=float, default=-400.0)
-    parser.add_argument("--no-tensorboard", action="store_true")
-    return parser.parse_args()
+    parser.add_argument("--no-tensorboard", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--metrics-log", default=os.path.join("runs", "delve_ppo", "metrics.jsonl"),
+                        help="JSONL file for durable scalar/event logging. Pass an empty string to disable.")
+    return parser.parse_args(argv)
 
 
-def extract_local_map(G):
-    """Extract 8x8 local map around the player as a (6, 8, 8) tensor."""
-    p = G.get('player', {})
-    px, py = p.get('x', 0), p.get('y', 0)
-    map_data = G.get('map', [])
-    seen = G.get('seen', set())
-    enemies = G.get('enemies', [])
-    items = G.get('items', [])
-    channels = np.zeros((6, 8, 8), dtype=np.float32)
-    
-    for dy in range(-4, 4):
-        for dx in range(-4, 4):
-            x, y = px + dx, py + dy
-            if 0 <= y < len(map_data) and 0 <= x < len(map_data[0]):
-                tile = map_data[y][x]
-                channels[0, dy + 4, dx + 4] = 1.0 if tile in (1, 2, 3) else 0.0  # passable
-                channels[1, dy + 4, dx + 4] = 1.0 if (y * MAP_W + x) in seen else 0.0
-                channels[2, dy + 4, dx + 4] = 1.0 if any(e.get('x') == x and e.get('y') == y and not e.get('dying') for e in enemies) else 0.0
-                channels[3, dy + 4, dx + 4] = 1.0 if any(i.get('x') == x and i.get('y') == y and not i.get('carried') for i in items) else 0.0
-                channels[4, dy + 4, dx + 4] = 1.0 if 0 <= y < len(map_data) and 0 <= x < len(map_data[0]) and map_data[y][x] == 2 else 0.0
-                channels[5, dy + 4, dx + 4] = 1.0 if 0 <= y < len(map_data) and 0 <= x < len(map_data[0]) and map_data[y][x] == 4 else 0.0
-    return channels
+def should_use_tensorboard(args):
+    return bool(HAS_TB)
 
 
-def tensorize_states(states, device, prev_actions=None):
-    return torch.from_numpy(
-        np.stack([extract_state(s, pa) for s, pa in zip(states, prev_actions or [None] * len(states))]).astype(np.float32, copy=False)
-    ).to(device)
 
-
-def tensorize_maps(states, device):
-    return torch.from_numpy(
-        np.stack([extract_local_map(s) for s in states]).astype(np.float32, copy=False)
-    ).to(device)
 
 
 CHECKPOINT_RE = re.compile(r"delve_ppo_(\d+)\.pt$")
 LOG_WINDOW_EPISODES = 100
+DEFAULT_METRICS_LOG = os.path.join("runs", "delve_ppo", "metrics.jsonl")
 
 
 def checkpoint_step_from_path(path):
@@ -308,59 +282,102 @@ def summarize_actions(action_counts):
     names = [
         "Up", "Down", "Left", "Right", "Atk1", "Atk2", "Ab1", "Ab2", "Pot", "Buff",
         "Bomb", "Tele", "Detect", "Desc", "Shop", "Buy", "Sell", "Esc",
-    ]
+    ] + [f"Buy{slot + 1}" for slot in range(MAX_SHOP_SLOTS)]
     top = list(np.argsort(action_counts)[-3:][::-1])
     descend_idx = ACTIONS['DESCEND']
     if descend_idx not in top:
         top.append(descend_idx)
-    return "Actions: " + ", ".join(f"{names[i]} {_format_action_ratio(action_counts[i], total)}" for i in top)
+    return "Actions: " + ", ".join(
+        f"{names[i] if i < len(names) else f'Action{i}'} {_format_action_ratio(action_counts[i], total)}"
+        for i in top
+    )
+
+
+def build_training_metrics_row(*, total_steps, elapsed, phase_index, phase_name,
+                               progress_label, progress_rate, progress_raw_rate,
+                               win_rate, avg_reward, avg_length, avg_floor,
+                               timeout_rate, death_rate, policy_loss, value_loss,
+                               entropy, progress_delta=None, action_counts=None,
+                               episode_window=None, progress_key="wins",
+                               probe_metrics=None, status_text=None):
+    row = {
+        "event": "train_report",
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "total_steps": int(total_steps),
+        "elapsed_seconds": float(elapsed),
+        "phase_index": int(phase_index),
+        "phase_name": str(phase_name),
+        "progress_label": str(progress_label),
+        "progress_rate": float(progress_rate),
+        "progress_raw_rate": float(progress_raw_rate),
+        "win_rate": float(win_rate),
+        "avg_reward": float(avg_reward),
+        "avg_length": float(avg_length),
+        "avg_floor": float(avg_floor),
+        "timeout_rate": float(timeout_rate),
+        "death_rate": float(death_rate),
+        "policy_loss": float(policy_loss),
+        "value_loss": float(value_loss),
+        "entropy": float(entropy),
+    }
+    if progress_delta is not None:
+        row["progress_delta"] = float(progress_delta)
+    if episode_window is not None:
+        row["class_summary"] = episode_class_summary(episode_window, progress_key)
+    if action_counts is not None:
+        row["actions_summary"] = summarize_actions(action_counts)
+    if probe_metrics is not None:
+        row["probe_metrics"] = {
+            key: float(value) if isinstance(value, (int, float, np.integer, np.floating)) else value
+            for key, value in probe_metrics.items()
+        }
+    if status_text:
+        row["status_text"] = str(status_text)
+    return row
+
+
+def append_jsonl_record(path, record):
+    if not path:
+        return
+    abs_path = os.path.abspath(path)
+    os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+    with open(abs_path, "a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record, separators=(",", ":")) + "\n")
 
 
 def format_training_status(progress_label, progress_rate, progress_threshold,
                            timeout_rate, death_rate, avg_floor,
                            progress_delta=None, probe_metrics=None):
-    if progress_threshold is None:
-        target_bits = ["full-win phase"]
-    else:
+    bits = []
+
+    if progress_threshold is not None:
         gap = float(progress_threshold) - float(progress_rate)
-        target_bits = [
-            f"{progress_label} {progress_rate:.1%}",
-            "on target" if gap <= 0 else f"{gap * 100:.1f} pts below target",
-        ]
-
-    change_bits = []
-    if progress_delta is not None:
-        if abs(progress_delta) < 0.005:
-            change_bits.append("flat")
-        elif progress_delta > 0:
-            change_bits.append(f"improving (+{progress_delta * 100:.1f} pts)")
+        if gap <= 0:
+            bits.append("On target")
         else:
-            change_bits.append(f"slipping ({progress_delta * 100:.1f} pts)")
+            bits.append(f"{gap * 100:.1f}% below target")
 
-    issue_bits = []
-    if timeout_rate >= 0.65:
-        issue_bits.append("timeouts high")
-    elif timeout_rate >= 0.40:
-        issue_bits.append("timeouts common")
+    if progress_delta is not None and abs(progress_delta) >= 0.005:
+        if progress_delta > 0:
+            bits.append(f"Improving (+{progress_delta * 100:.1f}%)")
+        else:
+            bits.append(f"Slipping ({progress_delta * 100:.1f}%)")
+
+    if timeout_rate >= 0.40:
+        bits.append("Timeouts high")
 
     if death_rate >= 0.20:
-        issue_bits.append("deaths high")
-
-    if avg_floor < 2.0:
-        issue_bits.append("avg floor low")
+        bits.append("Deaths high")
 
     if probe_metrics:
-        directional_exact_rate = float(probe_metrics.get("directional_exact_rate", 0.0))
-        descend_prob = float(probe_metrics.get("descend_prob_on_stairs", 0.0))
-        if directional_exact_rate <= 0.30:
-            issue_bits.append("stairs still random")
-        elif directional_exact_rate >= 0.50:
-            issue_bits.append("stairs learning visible")
-        if descend_prob >= 0.90:
-            issue_bits.append("descend learned")
+        descend = float(probe_metrics.get("descend_prob_on_stairs", 0.0))
+        move_mean = float(probe_metrics.get("directional_exact_rate", 0.0))
+        explore = float(probe_metrics.get("explore_prob", 0.0))
+        bits.append(f"Probe: Desc {descend*100:.1f}% | Stairs {move_mean*100:.1f}% | Explore {explore*100:.1f}%")
+    else:
+        bits.append("Probe: Awaiting first run")
 
-    bits = target_bits + change_bits + issue_bits
-    return "Status: " + "; ".join(bits) + "."
+    return "  Status: " + " | ".join(bits)
 
 
 def _format_action_ratio(count, total):
@@ -405,10 +422,11 @@ def main():
     
     # TensorBoard
     writer = None
-    if HAS_TB and not args.no_tensorboard:
+    if should_use_tensorboard(args):
         writer = SummaryWriter('runs/delve_ppo')
     
     os.makedirs(args.checkpoint_dir, exist_ok=True)
+    metrics_log_path = (args.metrics_log or "").strip()
     
     print()
     print("=" * 60)
@@ -447,15 +465,16 @@ def main():
     episode_window = new_episode_window()
     latest_probe_metrics = None
     last_report_snapshot = None
-    env = DelveVectorEnv(
+    from vector_env import SubprocVecEnv
+    env = SubprocVecEnv(
         num_envs=args.num_envs,
         envs_per_worker=args.envs_per_worker,
         max_episode_steps=args.max_episode_steps,
         timeout_penalty=args.timeout_penalty,
         curriculum_max_floor=curriculum_max_floor,
     )
-    states = env.get_states()
-    print(f"=== Curriculum Phase {curriculum_phase + 1}: {active_phase.get('name')} ({curriculum_phase_target(active_phase)}) ===")
+    np_states, np_maps, np_masks = env.reset()
+    print(f"=== Training Goal: {active_phase.get('name')} ({curriculum_phase_target(active_phase)}) ===")
     print("  Read guide: class-avg is the recent per-class success rate.")
 
     try:
@@ -472,7 +491,7 @@ def main():
                 phase_budget_warned = False
                 episode_window = new_episode_window()
                 env.set_curriculum_max_floor(curriculum_max_floor)
-                print(f"\n=== Curriculum Phase {curriculum_phase + 1}: {active_phase.get('name')} ({curriculum_phase_target(active_phase)}) ===")
+                print(f"\n=== Training Goal: {active_phase.get('name')} ({curriculum_phase_target(active_phase)}) ===")
             elif (
                 curriculum_phase < len(CURRICULUM) - 1
                 and phase_budget > 0
@@ -494,13 +513,14 @@ def main():
             prev_actions = [None] * args.num_envs
             hidden = None  # GRU hidden state, carried across steps
             for step in range(args.rollout_steps):
-                state_tensor = tensorize_states(states, device, prev_actions)
-                map_tensor = tensorize_maps(states, device)
-                mask_tensor = torch.from_numpy(env.get_action_masks()).to(device=device, dtype=torch.bool)
+                state_tensor = torch.from_numpy(np_states).to(device)
+                map_tensor = torch.from_numpy(np_maps).to(device)
+                mask_tensor = torch.from_numpy(np_masks).to(device=device, dtype=torch.bool)
+                
                 actions, log_probs, values, hidden = ppo.get_action(state_tensor, map_tensor, mask_tensor, hidden)
                 action_counts += np.bincount(actions.cpu().numpy(), minlength=ACTION_DIM)
 
-                next_states, rewards_np, dones_np, infos = env.step(actions.cpu().numpy())
+                next_np_states, next_np_maps, next_np_masks, rewards_np, dones_np, infos = env.step(actions.cpu().numpy())
 
                 buffer.store(
                     step=step,
@@ -517,7 +537,10 @@ def main():
 
                 total_steps += args.num_envs
                 steps_in_phase += args.num_envs
-                states = next_states
+                
+                np_states = next_np_states
+                np_maps = next_np_maps
+                np_masks = next_np_masks
                 prev_actions = actions.cpu().tolist()
 
                 # Reset hidden state for done environments
@@ -530,9 +553,9 @@ def main():
                         record_episode(episode_window, infos[i])
 
             # Update policy.
-            last_states = tensorize_states(states, device, prev_actions)
-            last_maps = tensorize_maps(states, device)
-            last_masks = torch.tensor(env.get_action_masks(), dtype=torch.bool, device=device)
+            last_states = torch.from_numpy(np_states).to(device)
+            last_maps = torch.from_numpy(np_maps).to(device)
+            last_masks = torch.from_numpy(np_masks).to(device=device, dtype=torch.bool)
             info = ppo.update(buffer, last_states, last_maps, last_masks, hidden)
 
             # Logging.
@@ -556,7 +579,7 @@ def main():
                 progress_delta = None if last_report_snapshot is None else progress_rate - last_report_snapshot.get('progress_rate', progress_rate)
 
                 print(f"Step {total_steps:>10,} | "
-                      f"{progress_label}: {progress_rate:.1%} (raw {progress_raw_rate:.1%}) | "
+                      f"{progress_label}: {progress_rate:.1%} | "
                       f"Avg Floor {avg_floor:.2f} | "
                       f"Death {death_rate:.1%} | "
                       f"Timeout {timeout_rate:.1%} | "
@@ -580,7 +603,32 @@ def main():
                     progress_delta=progress_delta,
                     probe_metrics=latest_probe_metrics,
                 )
-                print(f"  {readout}")
+                if readout:
+                    print(f"  {readout}")
+                append_jsonl_record(metrics_log_path, build_training_metrics_row(
+                    total_steps=total_steps,
+                    elapsed=elapsed,
+                    phase_index=curriculum_phase,
+                    phase_name=active_phase.get('name', 'unknown'),
+                    progress_label=progress_label,
+                    progress_rate=progress_rate,
+                    progress_raw_rate=progress_raw_rate,
+                    progress_delta=progress_delta,
+                    win_rate=win_rate,
+                    avg_reward=avg_reward,
+                    avg_length=avg_length,
+                    avg_floor=avg_floor,
+                    timeout_rate=timeout_rate,
+                    death_rate=death_rate,
+                    policy_loss=info['policy_loss'],
+                    value_loss=info['value_loss'],
+                    entropy=info['entropy'],
+                    action_counts=action_counts,
+                    episode_window=episode_window,
+                    progress_key=progress_key,
+                    probe_metrics=latest_probe_metrics,
+                    status_text=readout,
+                ))
                 last_report_snapshot = report_snapshot
 
                 if writer:
@@ -607,6 +655,16 @@ def main():
             if next_probe is not None and total_steps >= next_probe:
                 probe = run_policy_probe(model, device, writer=writer, total_steps=total_steps)
                 latest_probe_metrics = probe['metrics']
+                append_jsonl_record(metrics_log_path, {
+                    "event": "probe",
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "total_steps": int(total_steps),
+                    "summary": probe['summary'],
+                    "metrics": {
+                        key: float(value) if isinstance(value, (int, float, np.integer, np.floating)) else value
+                        for key, value in probe['metrics'].items()
+                    },
+                })
                 next_probe += args.probe_every
 
             if total_steps >= next_save:
@@ -619,9 +677,25 @@ def main():
                     steps_in_phase=steps_in_phase,
                 )
                 print(f"  Saved: {path}")
+                append_jsonl_record(metrics_log_path, {
+                    "event": "checkpoint",
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "total_steps": int(total_steps),
+                    "path": path,
+                })
                 if next_probe is None:
                     probe = run_policy_probe(model, device, writer=writer, total_steps=total_steps)
                     latest_probe_metrics = probe['metrics']
+                    append_jsonl_record(metrics_log_path, {
+                        "event": "probe",
+                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "total_steps": int(total_steps),
+                        "summary": probe['summary'],
+                        "metrics": {
+                            key: float(value) if isinstance(value, (int, float, np.integer, np.floating)) else value
+                            for key, value in probe['metrics'].items()
+                        },
+                    })
                 next_save += args.save_every
 
         final_path = os.path.join(args.checkpoint_dir, "delve_ppo_final.pt")

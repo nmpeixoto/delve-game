@@ -11,8 +11,10 @@ NUM_CLASSES = 8
 CLASSES = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk']
 
 # ─── STATE / ACTION ──────────────────────────────────────────────────────────
-STATE_DIM = 28         # Stripped to core navigation features
-ACTION_DIM = 18        # 4 move + 2 attack + 2 ability + 5 item + descend + shop/open/buy/sell/escape
+MAX_SHOP_SLOTS = 18
+SHOP_ITEM_FEATURES = 19  # +4 upgrade-stat bits: atk/def/hp/other
+STATE_DIM = 28 + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES
+ACTION_DIM = 18 + MAX_SHOP_SLOTS        # Base gameplay actions + explicit shop buy-slot actions
 
 # Action indices
 ACTIONS = {
@@ -23,6 +25,9 @@ ACTIONS = {
     'DESCEND': 13,
     'SHOP_OPEN': 14, 'SHOP_BUY': 15, 'SHOP_SELL': 16, 'ESCAPE': 17,
 }
+
+for slot in range(MAX_SHOP_SLOTS):
+    ACTIONS[f'SHOP_BUY_{slot}'] = 18 + slot
 
 # ─── NETWORK ─────────────────────────────────────────────────────────────────
 HIDDEN_DIM = 256
@@ -39,11 +44,19 @@ EPOCHS_PER_UPDATE = 3     # Mini-batch epochs per rollout
 BATCH_SIZE = 1024         # Mini-batch size
 
 # ─── ROLLOUT ─────────────────────────────────────────────────────────────────
-NUM_ENVS = 64            # Parallel environments
-ENVS_PER_WORKER = 4      # Spread envs across multiple Node workers
-ROLLOUT_STEPS = 256      # Steps per env per rollout
+# Throughput notes:
+#   The env step bottleneck is JSON IPC over stdin/stdout between Python and
+#   Node.js workers.  Each step sends a full game snapshot (~15-20KB) across a
+#   pipe.  To amortize the per-message overhead:
+#     - Use fewer, larger workers (ENVS_PER_WORKER=16 → only 8 Node processes)
+#     - Use longer rollouts (ROLLOUT_STEPS=512) so we spend less % of time in
+#       the PPO update and more time collecting experience in parallel.
+#     - Keep NUM_ENVS high so Node processes stay busy.
+NUM_ENVS = 128           # Parallel environments (128 = 8 workers × 16 envs each)
+ENVS_PER_WORKER = 16     # 16 envs per Node.js worker → 8 workers total
+ROLLOUT_STEPS = 512      # Steps per env per rollout (longer = better GPU fill)
 TOTAL_TIMESTEPS = 100_000_000
-PROBE_EVERY = 100_000
+PROBE_EVERY = 10_000
 
 # ─── LR SCHEDULE ─────────────────────────────────────────────────────────────
 LR_START = 3e-4
@@ -74,11 +87,18 @@ REWARD_POTION_WASTE = -3.0
 REWARD_KEY_DOOR_CHAIN = 40.0    # NEW: bonus for unlocking door within 20 steps of key pickup
 
 # ─── CURRICULUM ──────────────────────────────────────────────────────────────
-# No floor limit — agent explores the full dungeon from the start.
-CURRICULUM = [
-    {'name': 'full_dungeon', 'max_floor': None, 'steps': TOTAL_TIMESTEPS},
-]
+# Staged curriculum: agent earns progressively harder floor goals.
+# Advances to next phase only when success_threshold is met over success_window
+# episodes (checked per-class so no single class can carry the window).
 
 # ─── SELF-PLAY ───────────────────────────────────────────────────────────────
 SELF_PLAY_START = 5_000_000   # Start self-play after 5M steps
 SELF_PLAY_SNAPSHOT_AGE = 100_000  # Play against policy from 100K steps ago
+
+CURRICULUM = [
+    {
+        'name': 'full_dungeon',
+        'max_floor': None,
+        'steps': 20_000_000,
+    },
+]

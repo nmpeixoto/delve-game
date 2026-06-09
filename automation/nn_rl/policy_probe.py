@@ -59,9 +59,9 @@ def build_probe_scenarios(class_name="warrior") -> List[Dict]:
     ]
 
 
+from state_extractor import extract_local_map
+
 def evaluate_policy_probe(model, device, class_names=None) -> Dict:
-    from train import extract_local_map
-    
     class_names = list(class_names or CLASS_NAMES)
     scenarios = []
     for class_name in class_names:

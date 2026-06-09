@@ -1,28 +1,39 @@
 """
 State extractor for DELVE RL bot.
-Extracts a 28-dimensional feature vector from game state G.
+Extracts a STATE_DIM-dimensional feature vector from game state G.
 
-Minimal feature set focused on navigation and survival:
-  - Player core (7): hp, atk, def, lvl, has_key, floor, on_stairs
+Feature breakdown (total = 28 non-shop + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES shop):
+  - Player core (7): hp_ratio, atk, def, lvl, has_key, floor, on_stairs
   - Navigation (4): stair_dx, stair_dy, bfs_stair_dist, exploration_ratio
-  - Context (6): enemy_count, nearest_enemy_dist, has_weapon, ability1/2_ready, any_buff
+  - Context (6): enemy_count, nearest_enemy_dist, has_weapon, ability1_ready, ability2_ready, any_buff
   - Resources (1): has_potion
-  - Temporal (5): prev_action (dx, dy, combat, item), steps_since_floor_change
-  - Event tracking (5): steps_since_key_pickup, steps_since_kill, steps_since_door, doors_opened, turns_norm
+  - Prev action (4): dx, dy, is_combat, is_item
+  - Temporal / event (6): steps_since_floor_change, steps_since_key_pickup,
+                           steps_since_enemy_kill, steps_since_door_unlock,
+                           doors_opened_this_floor, turns_norm
+  - Shop tail (MAX_SHOP_SLOTS x SHOP_ITEM_FEATURES): current shop stock encoding
+      Per slot (19 features): present, type_flags(8), price, heal, atk, def,
+                               amount, rarity, stat_atk, stat_def, stat_hp, stat_other
 """
 
 import numpy as np
 
+from config import MAX_SHOP_SLOTS, SHOP_ITEM_FEATURES, STATE_DIM, MAP_W
 from pathfinding import (
     shortest_stairs_distance,
     floor_exploration_ratio,
-    MAP_W,
+    _seen_set,
 )
 
 FLOORS = 5
-STATE_DIM = 28
 NUM_CLASSES = 8
 CLASS_NAMES = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk']
+SHOP_TYPE_ORDER = ['potion', 'potion_buff', 'bomb', 'scroll_teleport', 'scroll', 'weapon', 'armor', 'upgrade']
+RARITY_SCALE = {
+    'common': 0.0,
+    'rare': 0.5,
+    'legendary': 1.0,
+}
 
 
 def extract_state(G, prev_action=None):
@@ -88,6 +99,8 @@ def extract_state(G, prev_action=None):
     features.append(min(G.get('_doors_opened_this_floor', 0) / 4, 1.0))      # 26
     features.append(min(G.get('turn', 0) / 2000, 1.0))                       # 27
 
+    features.extend(_encode_current_shop(G))
+
     assert len(features) == STATE_DIM, f"Expected {STATE_DIM} features, got {len(features)}"
     return np.array(features, dtype=np.float32)
 
@@ -104,20 +117,19 @@ def _is_on_stairs(G):
 def _stair_direction(G):
     p = G.get('player', {})
     px, py = p.get('x', 0), p.get('y', 0)
-    map_data = G.get('map', [])
-    seen = G.get('seen', set())
+    seen = _seen_set(G)
 
     best_dist = float('inf')
     best_dx, best_dy = 0, 0
 
-    for y in range(len(map_data)):
-        for x in range(len(map_data[0])):
-            if map_data[y][x] == 2 and (y * MAP_W + x) in seen:
-                dx, dy = x - px, y - py
-                dist = abs(dx) + abs(dy)
-                if dist < best_dist:
-                    best_dist = dist
-                    best_dx, best_dy = dx, dy
+    stair_coords = G.get('_stair_coords', [])
+    for x, y in stair_coords:
+        if (y * MAP_W + x) in seen:
+            dx, dy = x - px, y - py
+            dist = abs(dx) + abs(dy)
+            if dist < best_dist:
+                best_dist = dist
+                best_dx, best_dy = dx, dy
 
     if best_dist == 0:
         return 0.0, 0.0
@@ -166,3 +178,75 @@ def _encode_prev_action(action):
         return [0.0, 0.0, 0.0, 1.0]
     else:
         return [0.0, 0.0, 0.0, 0.0]
+
+
+def _encode_current_shop(G):
+    shop = G.get('currentShop') if G.get('shopOpen') else None
+    stock = list((shop or {}).get('stock', []) or [])
+    features = []
+    for slot in range(MAX_SHOP_SLOTS):
+        item = stock[slot] if slot < len(stock) else None
+        features.extend(_encode_shop_item(item))
+    return features
+
+
+def _encode_shop_item(item):
+    if not item or item.get('sold'):
+        return [0.0] * SHOP_ITEM_FEATURES
+
+    item_type = item.get('type', '')
+    type_flags = [1.0 if item_type == kind else 0.0 for kind in SHOP_TYPE_ORDER]
+    rarity = RARITY_SCALE.get(str(item.get('rarity', '')).lower(), 0.0)
+
+    # Upgrade-stat one-hots: lets the network distinguish ATK/DEF/HP upgrades.
+    # 'all'/'all5' give all three stats so all three bits are set.
+    stat = item.get('stat', '') or ''
+    _all = stat in ('all', 'all5')
+    stat_atk   = 1.0 if (_all or stat == 'atk') else 0.0
+    stat_def   = 1.0 if (_all or stat == 'def') else 0.0
+    stat_hp    = 1.0 if (_all or stat == 'hp')  else 0.0
+    stat_other = 1.0 if (stat and not _all and stat not in ('atk', 'def', 'hp')) else 0.0
+
+    return [
+        1.0,                                                    # present
+        *type_flags,                                            # type one-hot (8)
+        min(max(item.get('price',  0) / 1000.0, 0.0), 1.0),
+        min(max(item.get('heal',   0) /   60.0, 0.0), 1.0),
+        min(max(item.get('atk',    0) /   20.0, 0.0), 1.0),
+        min(max(item.get('def',    0) /   15.0, 0.0), 1.0),
+        min(max(item.get('amount', 0) /   30.0, 0.0), 1.0),
+        rarity,
+        stat_atk,
+        stat_def,
+        stat_hp,
+        stat_other,
+    ]
+
+def extract_local_map(G):
+    p = G.get('player', {})
+    px, py = p.get('x', 0), p.get('y', 0)
+    map_data = G.get('map', [])
+    seen = _seen_set(G)
+    enemy_coords = {(e.get('x'), e.get('y')) for e in G.get('enemies', []) if not e.get('dying')}
+    item_coords = {(i.get('x'), i.get('y')) for i in G.get('items', []) if not i.get('carried')}
+    channels = np.zeros((6, 8, 8), dtype=np.float32)
+    if len(map_data) == 0:
+        return channels
+    for dy in range(-4, 4):
+        for dx in range(-4, 4):
+            x, y = px + dx, py + dy
+            if 0 <= y < len(map_data) and 0 <= x < len(map_data[0]):
+                tile = map_data[y][x]
+                channels[0, dy + 4, dx + 4] = 1.0 if tile in (1, 2, 3) else 0.0
+                channels[1, dy + 4, dx + 4] = 1.0 if (y * MAP_W + x) in seen else 0.0
+                channels[2, dy + 4, dx + 4] = 1.0 if (x, y) in enemy_coords else 0.0
+                channels[3, dy + 4, dx + 4] = 1.0 if (x, y) in item_coords else 0.0
+                channels[4, dy + 4, dx + 4] = 1.0 if tile == 2 else 0.0
+                channels[5, dy + 4, dx + 4] = 1.0 if tile == 4 else 0.0
+    return channels
+
+def numpyize_states(states, prev_actions=None):
+    return np.stack([extract_state(s, pa) for s, pa in zip(states, prev_actions or [None] * len(states))]).astype(np.float32, copy=False)
+
+def numpyize_maps(states):
+    return np.stack([extract_local_map(s) for s in states]).astype(np.float32, copy=False)

@@ -6,6 +6,8 @@ CNN + GRU + MLP actor-critic for spatial-temporal reasoning.
 import torch
 import torch.nn as nn
 
+from config import STATE_DIM, ACTION_DIM, HIDDEN_DIM
+
 
 class SpatialCNN(nn.Module):
     """CNN that processes 8x8 local map around the player."""
@@ -32,19 +34,17 @@ class SpatialCNN(nn.Module):
 class DelveNet(nn.Module):
     """
     Actor-Critic network for DELVE.
-    
+
     Architecture:
-        Flat features (28) -> CNN (8x8 map, 6ch) -> 128 dims
-        Concat -> GRU(28+128=156, 256) -> hidden state
-        Policy Head: 256 -> 64 -> action_dim
-        Value Head: 256 -> 64 -> 1
-    
-    Total parameters: ~730K
+        Flat features (state_dim) + CNN(8x8 local map, 6 channels) -> 128 dims
+        Concat -> GRU(state_dim+128, hidden_dim) -> hidden state
+        Policy Head: hidden_dim -> 64 -> action_dim
+        Value Head:  hidden_dim -> 64 -> 1
     """
-    
+
     GRU_HIDDEN = 256
-    
-    def __init__(self, state_dim=155, action_dim=18, hidden_dim=256):
+
+    def __init__(self, state_dim=STATE_DIM, action_dim=ACTION_DIM, hidden_dim=HIDDEN_DIM):
         super().__init__()
         self.hidden_dim = hidden_dim
         self.action_dim = action_dim
@@ -69,27 +69,32 @@ class DelveNet(nn.Module):
             nn.Linear(64, 1),
         )
     
-    def forward(self, state, map_tensor, action_mask=None, hidden=None):
+    def forward(self, state, map_tensor, action_mask=None, hidden=None, seq_len=1):
         """
         Args:
-            state: (batch, state_dim) flat features
-            map_tensor: (batch, 6, 8, 8) local map
-            action_mask: optional (batch, action_dim) bool
+            state: (batch * seq_len, state_dim) flat features
+            map_tensor: (batch * seq_len, 6, 8, 8) local map
+            action_mask: optional (batch * seq_len, action_dim) bool
             hidden: optional (1, batch, hidden_dim) GRU hidden state
+            seq_len: sequence length for BPTT unrolling
         
         Returns:
             logits, value, hidden
         """
-        cnn_features = self.cnn(map_tensor)  # (batch, 128)
-        combined = torch.cat([state, cnn_features], dim=-1)  # (batch, state_dim+128)
+        cnn_features = self.cnn(map_tensor)  # (batch*seq_len, 128)
+        combined = torch.cat([state, cnn_features], dim=-1)  # (batch*seq_len, state_dim+128)
         
-        # GRU needs (batch, seq_len, features)
+        batch_size = combined.shape[0] // seq_len
+        
+        # Reshape to (batch, seq_len, features)
+        combined_seq = combined.view(batch_size, seq_len, -1)
+        
         if hidden is None:
-            gru_out, hidden = self.gru(combined.unsqueeze(1))
+            gru_out, hidden = self.gru(combined_seq)
         else:
-            gru_out, hidden = self.gru(combined.unsqueeze(1), hidden)
-        
-        gru_out = gru_out.squeeze(1)  # (batch, hidden_dim)
+            gru_out, hidden = self.gru(combined_seq, hidden)
+            
+        gru_out = gru_out.contiguous().view(batch_size * seq_len, -1)  # (batch*seq_len, hidden_dim)
         
         logits = self.policy(gru_out)
         value = self.value(gru_out)

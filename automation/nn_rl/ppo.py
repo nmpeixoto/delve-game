@@ -55,31 +55,58 @@ class RolloutBuffer:
             self.advantages[t] = last_gae
             self.returns[t] = last_gae + self.values[t]
     
-    def get_batches(self, batch_size):
-        """Get shuffled mini-batches."""
-        total = self.rollout_steps * self.num_envs
+    def get_batches(self, batch_size, seq_len=16):
+        """Get mini-batches of sequential chunks to allow proper BPTT."""
+        # Ensure rollout_steps is divisible by seq_len
+        assert self.rollout_steps % seq_len == 0
+        num_chunks = self.rollout_steps // seq_len
         
-        states = self.states.reshape(total, -1)
-        maps = self.maps.reshape(total, 6, 8, 8)
-        actions = self.actions.reshape(total)
-        old_log_probs = self.log_probs.reshape(total)
-        returns = self.returns.reshape(total)
-        advantages = self.advantages.reshape(total)
-        masks = self.masks.reshape(total, -1)
+        def chunk_tensor(t):
+            # t shape: (rollout_steps, num_envs, ...)
+            # reshape to: (num_chunks, seq_len, num_envs, ...)
+            shape = (num_chunks, seq_len, self.num_envs) + t.shape[2:]
+            t_reshaped = t.view(shape)
+            # swap to: (num_chunks, num_envs, seq_len, ...)
+            t_swapped = t_reshaped.transpose(1, 2)
+            # flatten chunks and envs: (total_chunks, seq_len, ...)
+            return t_swapped.reshape(-1, seq_len, *t.shape[2:])
+
+        states = chunk_tensor(self.states)
+        maps = chunk_tensor(self.maps)
+        actions = chunk_tensor(self.actions)
+        old_log_probs = chunk_tensor(self.log_probs)
+        returns = chunk_tensor(self.returns)
+        advantages = chunk_tensor(self.advantages)
+        masks = chunk_tensor(self.masks)
         
-        indices = torch.randperm(total, device=self.device)
+        # For hiddens, we only need the hidden state at the start of each chunk
+        # self.hiddens shape: (rollout_steps, num_envs, hidden_dim)
+        hiddens_reshaped = self.hiddens.view(num_chunks, seq_len, self.num_envs, -1)
+        hiddens_swapped = hiddens_reshaped.transpose(1, 2)  # (num_chunks, num_envs, seq_len, hidden_dim)
+        hiddens_starts = hiddens_swapped[:, :, 0, :].reshape(-1, self.hiddens.shape[-1]) # (total_chunks, hidden_dim)
+
+        total_chunks = num_chunks * self.num_envs
+        # Batch size is in terms of total steps, so batch_chunks = batch_size // seq_len
+        batch_chunks = batch_size // seq_len
         
-        for start in range(0, total, batch_size):
-            end = min(start + batch_size, total)
+        indices = torch.randperm(total_chunks, device=self.device)
+        
+        for start in range(0, total_chunks, batch_chunks):
+            end = min(start + batch_chunks, total_chunks)
             batch_idx = indices[start:end]
+            
+            # We return flat tensors (batch_chunks * seq_len, ...) for the network
+            # But the network will reshape them internally to (batch_chunks, seq_len, ...) using seq_len
             yield {
-                'states': states[batch_idx],
-                'maps': maps[batch_idx],
-                'actions': actions[batch_idx],
-                'old_log_probs': old_log_probs[batch_idx],
-                'returns': returns[batch_idx],
-                'advantages': advantages[batch_idx],
-                'masks': masks[batch_idx],
+                'states': states[batch_idx].reshape(-1, states.shape[-1]),
+                'maps': maps[batch_idx].reshape(-1, *maps.shape[2:]),
+                'actions': actions[batch_idx].reshape(-1),
+                'old_log_probs': old_log_probs[batch_idx].reshape(-1),
+                'returns': returns[batch_idx].reshape(-1),
+                'advantages': advantages[batch_idx].reshape(-1),
+                'masks': masks[batch_idx].reshape(-1, masks.shape[-1]),
+                'hiddens': hiddens_starts[batch_idx],
+                'seq_len': seq_len,
             }
 
 
@@ -131,10 +158,13 @@ class PPO:
             returns = batch['returns']
             advantages = batch['advantages']
             masks = batch['masks']
-            
+            # Use the hidden state recorded at the start of the chunk
+            batch_hidden = batch['hiddens'].unsqueeze(0).contiguous()  # (1, batch_chunks, hidden_dim)
+            seq_len = batch['seq_len']
+
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-            
-            logits, value, _ = self.network(states, maps, action_mask=masks)
+
+            logits, value, _ = self.network(states, maps, action_mask=masks, hidden=batch_hidden, seq_len=seq_len)
             dist = torch.distributions.Categorical(logits=logits)
             
             new_log_probs = dist.log_prob(actions)

@@ -5,7 +5,7 @@ Computes which trainable actions are valid for the current game state.
 
 import numpy as np
 
-from config import ACTION_DIM, ACTIONS
+from config import ACTION_DIM, ACTIONS, MAX_SHOP_SLOTS
 from pathfinding import (
     shortest_stairs_distance as _bfs_stairs_distance,
     known_stair_targets as _known_stair_targets,
@@ -91,7 +91,17 @@ def get_action_mask(G):
     if near_shop:
         mask[ACTIONS['SHOP_OPEN']] = True
     if G.get('shopOpen'):
-        mask[ACTIONS['SHOP_BUY']] = True
+        current_shop = G.get('currentShop') or {}
+        stock = list((current_shop.get('stock') or []))
+        gold = p.get('gold', 0)
+        for idx in range(min(MAX_SHOP_SLOTS, len(stock))):
+            item = stock[idx]
+            if not item or item.get('sold'):
+                continue
+            if item.get('price', 0) <= gold:
+                action_key = f'SHOP_BUY_{idx}'
+                if action_key in ACTIONS:
+                    mask[ACTIONS[action_key]] = True
         mask[ACTIONS['SHOP_SELL']] = True
         mask[ACTIONS['ESCAPE']] = True
 
@@ -102,8 +112,13 @@ def get_action_mask(G):
 
 
 def _visible_enemies(G, seen):
-    visible = G.get('visible', seen)
-    if isinstance(visible, list):
+    # Use the explicit visibility set; fall back to empty (safest: assume nothing
+    # is visible rather than treating all seen tiles as visible, which would
+    # expose ATTACK actions for enemies that state_extractor considers invisible).
+    visible = G.get('visible')
+    if visible is None:
+        visible = set()
+    elif isinstance(visible, list):
         visible = set(visible)
     return [
         e for e in G.get('enemies', [])
@@ -165,10 +180,6 @@ def _floor_mostly_seen(G, map_data):
     return (seen_explorable / explorable) >= STAIR_BEELINE_EXPLORED_RATIO
 
 
-def _has_key(G):
-    return any(i.get('type') == 'key' for i in G.get('items', []) if i.get('carried'))
-
-
 def _seen_set(G):
     seen = G.get('seen', set())
     if isinstance(seen, set):
@@ -194,8 +205,10 @@ def _ability1_valid(G, p, vis_enemies, adj_enemies):
 def _ability2_valid(_G, p, vis_enemies, adj_enemies):
     cls = p.get('class', '')
     hp_ratio = p.get('hp', 0) / max(p.get('maxHp', 1), 1)
-    if cls in ('warrior', 'rogue', 'mage'):
+    if cls in ('warrior', 'mage'):
         return len(vis_enemies) > 0 or hp_ratio <= 0.5
+    if cls == 'rogue':
+        return len(vis_enemies) > 0
     if cls == 'paladin':
         return hp_ratio <= 0.8
     if cls == 'ranger':
