@@ -52,16 +52,15 @@ def get_action_mask(G):
                 continue
             if tile == LOCKED_DOOR and not _has_key(G):
                 continue
-            blocking = any(e.get('x') == nx and e.get('y') == ny and not e.get('dying') for e in enemies)
-            if not blocking:
-                mask[i] = True
+            mask[i] = True
 
     vis_enemies = _visible_enemies(G, seen)
     adj_enemies = [e for e in vis_enemies if manhattan(e, p) == 1]
     _apply_stair_beeline_mask(G, mask, p, vis_enemies)
 
-    for i, _enemy in enumerate(adj_enemies[:2]):
-        mask[ACTIONS['ATTACK_1'] + i] = True
+    # ATTACK_1 and ATTACK_2 are permanently disabled.
+    # The agent must learn to bump-attack using the directional MOVE actions.
+    # This prevents the agent from being trapped when surrounded, while preserving ACTION_DIM shape.
 
     if G.get('ability1Cooldown', 0) == 0 and _ability1_valid(G, p, vis_enemies, adj_enemies):
         mask[ACTIONS['ABILITY1']] = True

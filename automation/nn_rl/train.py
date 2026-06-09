@@ -15,7 +15,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import *
 from network import DelveNet
-from policy_probe import evaluate_policy_probe
 from ppo import PPO, RolloutBuffer
 from state_extractor import CLASS_NAMES, extract_state
 from vector_env import DelveVectorEnv
@@ -99,7 +98,6 @@ def parse_args(argv=None):
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--checkpoint-dir", default="checkpoints")
     parser.add_argument("--save-every", type=int, default=SAVE_EVERY)
-    parser.add_argument("--probe-every", type=int, default=PROBE_EVERY)
     parser.add_argument("--resume", nargs="?", const="latest", default=None,
                         help="Resume from a checkpoint path, or use latest checkpoint when passed without a value.")
     parser.add_argument("--reset-optimizer", action="store_true",
@@ -299,7 +297,7 @@ def build_training_metrics_row(*, total_steps, elapsed, phase_index, phase_name,
                                timeout_rate, death_rate, policy_loss, value_loss,
                                entropy, progress_delta=None, action_counts=None,
                                episode_window=None, progress_key="wins",
-                               probe_metrics=None, status_text=None):
+                               status_text=None):
     row = {
         "event": "train_report",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -326,11 +324,6 @@ def build_training_metrics_row(*, total_steps, elapsed, phase_index, phase_name,
         row["class_summary"] = episode_class_summary(episode_window, progress_key)
     if action_counts is not None:
         row["actions_summary"] = summarize_actions(action_counts)
-    if probe_metrics is not None:
-        row["probe_metrics"] = {
-            key: float(value) if isinstance(value, (int, float, np.integer, np.floating)) else value
-            for key, value in probe_metrics.items()
-        }
     if status_text:
         row["status_text"] = str(status_text)
     return row
@@ -347,7 +340,7 @@ def append_jsonl_record(path, record):
 
 def format_training_status(progress_label, progress_rate, progress_threshold,
                            timeout_rate, death_rate, avg_floor,
-                           progress_delta=None, probe_metrics=None):
+                           progress_delta=None):
     bits = []
 
     if progress_threshold is not None:
@@ -369,13 +362,7 @@ def format_training_status(progress_label, progress_rate, progress_threshold,
     if death_rate >= 0.20:
         bits.append("Deaths high")
 
-    if probe_metrics:
-        descend = float(probe_metrics.get("descend_prob_on_stairs", 0.0))
-        move_mean = float(probe_metrics.get("directional_exact_rate", 0.0))
-        explore = float(probe_metrics.get("explore_prob", 0.0))
-        bits.append(f"Probe: Desc {descend*100:.1f}% | Stairs {move_mean*100:.1f}% | Explore {explore*100:.1f}%")
-    else:
-        bits.append("Probe: Awaiting first run")
+
 
     return "  Status: " + " | ".join(bits)
 
@@ -383,15 +370,6 @@ def format_training_status(progress_label, progress_rate, progress_threshold,
 def _format_action_ratio(count, total):
     ratio = 100.0 * count / max(total, 1)
     return f"{ratio:.1f}%" if ratio < 1.0 else f"{ratio:.0f}%"
-
-
-def run_policy_probe(model, device, writer=None, total_steps=None):
-    probe = evaluate_policy_probe(model, device, class_names=CLASS_NAMES)
-    if writer and total_steps is not None:
-        for name, value in probe['metrics'].items():
-            writer.add_scalar(f'probe/{name}', value, total_steps)
-    print(f"  {probe['summary']}")
-    return probe
 
 
 def main():
@@ -441,7 +419,6 @@ def main():
     print(f"  Episode cap:  {args.max_episode_steps:,} steps")
     print(f"  Resume:       {resume_path or 'No'}")
     print(f"  Optimizer:    {'Reset' if args.reset_optimizer else 'Checkpoint'}")
-    print(f"  Probe every:  {args.probe_every:,} steps" if args.probe_every > 0 else "  Probe every:  Disabled")
     print(f"  TensorBoard:  {'Yes' if writer else 'No'} (tensorboard --logdir=runs)")
     print(f"  Checkpoints:  {args.checkpoint_dir}/delve_ppo_<step>.pt")
     print("=" * 60)
@@ -459,11 +436,9 @@ def main():
     active_phase = CURRICULUM[curriculum_phase] if CURRICULUM else {'name': 'full', 'max_floor': FLOORS}
     curriculum_max_floor = active_phase.get('max_floor')
     next_save = ((total_steps // args.save_every) + 1) * args.save_every
-    next_probe = None if args.probe_every <= 0 else ((total_steps // args.probe_every) + 1) * args.probe_every
     phase_budget = int(active_phase.get('steps', 0))
     phase_budget_warned = False
     episode_window = new_episode_window()
-    latest_probe_metrics = None
     last_report_snapshot = None
     from vector_env import SubprocVecEnv
     env = SubprocVecEnv(
@@ -601,7 +576,6 @@ def main():
                     death_rate,
                     avg_floor,
                     progress_delta=progress_delta,
-                    probe_metrics=latest_probe_metrics,
                 )
                 if readout:
                     print(f"  {readout}")
@@ -626,7 +600,6 @@ def main():
                     action_counts=action_counts,
                     episode_window=episode_window,
                     progress_key=progress_key,
-                    probe_metrics=latest_probe_metrics,
                     status_text=readout,
                 ))
                 last_report_snapshot = report_snapshot
@@ -652,20 +625,6 @@ def main():
                       f"Value Loss: {info['value_loss']:.4f} | "
                       f"Time: {elapsed:.0f}s")
 
-            if next_probe is not None and total_steps >= next_probe:
-                probe = run_policy_probe(model, device, writer=writer, total_steps=total_steps)
-                latest_probe_metrics = probe['metrics']
-                append_jsonl_record(metrics_log_path, {
-                    "event": "probe",
-                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                    "total_steps": int(total_steps),
-                    "summary": probe['summary'],
-                    "metrics": {
-                        key: float(value) if isinstance(value, (int, float, np.integer, np.floating)) else value
-                        for key, value in probe['metrics'].items()
-                    },
-                })
-                next_probe += args.probe_every
 
             if total_steps >= next_save:
                 path = os.path.join(args.checkpoint_dir, f"delve_ppo_{total_steps}.pt")
@@ -683,19 +642,6 @@ def main():
                     "total_steps": int(total_steps),
                     "path": path,
                 })
-                if next_probe is None:
-                    probe = run_policy_probe(model, device, writer=writer, total_steps=total_steps)
-                    latest_probe_metrics = probe['metrics']
-                    append_jsonl_record(metrics_log_path, {
-                        "event": "probe",
-                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                        "total_steps": int(total_steps),
-                        "summary": probe['summary'],
-                        "metrics": {
-                            key: float(value) if isinstance(value, (int, float, np.integer, np.floating)) else value
-                            for key, value in probe['metrics'].items()
-                        },
-                    })
                 next_save += args.save_every
 
         final_path = os.path.join(args.checkpoint_dir, "delve_ppo_final.pt")
@@ -707,8 +653,6 @@ def main():
             steps_in_phase=steps_in_phase,
         )
         print(f"Training complete! Saved: {final_path}")
-        probe = run_policy_probe(model, device, writer=writer, total_steps=total_steps)
-        latest_probe_metrics = probe['metrics']
     except KeyboardInterrupt:
         if total_steps > 0:
             path = os.path.join(args.checkpoint_dir, f"delve_ppo_{total_steps}.pt")
@@ -721,8 +665,6 @@ def main():
                 steps_in_phase=steps_in_phase,
             )
             print(f"\nInterrupted. Saved checkpoint: {path}")
-            probe = run_policy_probe(model, device, writer=writer, total_steps=total_steps)
-            latest_probe_metrics = probe['metrics']
         else:
             print("\nInterrupted before any training steps were collected.")
     finally:

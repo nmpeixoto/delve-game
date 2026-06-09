@@ -56,7 +56,6 @@ NUM_ENVS = 128           # Parallel environments (128 = 8 workers × 16 envs eac
 ENVS_PER_WORKER = 16     # 16 envs per Node.js worker → 8 workers total
 ROLLOUT_STEPS = 512      # Steps per env per rollout (longer = better GPU fill)
 TOTAL_TIMESTEPS = 100_000_000
-PROBE_EVERY = 10_000
 
 # ─── LR SCHEDULE ─────────────────────────────────────────────────────────────
 LR_START = 3e-4
@@ -82,7 +81,7 @@ REWARD_EXPLORE_MULT = 0.1
 REWARD_STAIR_DISCOVERY = 50.0   # increased from 30
 REWARD_GOLD_MULT = 0.01
 REWARD_LEVEL_UP = 8.0
-REWARD_TURN_PENALTY = -0.005
+REWARD_TURN_PENALTY = -0.075
 REWARD_POTION_WASTE = -3.0
 REWARD_KEY_DOOR_CHAIN = 40.0    # NEW: bonus for unlocking door within 20 steps of key pickup
 
