@@ -19,13 +19,13 @@ class DelveVectorEnv:
     """
     Wraps multiple headless DELVE game instances for parallel RL training.
     """
-    
+
     def __init__(
         self,
         num_envs=128,
         envs_per_worker=8,
         max_episode_steps=5000,
-        timeout_penalty=-250.0,
+        timeout_penalty=-400.0,
         curriculum_max_floor=None,
         curriculum_reward=125.0,
     ):
@@ -40,10 +40,16 @@ class DelveVectorEnv:
         self.prev_states = [None] * num_envs
         self.episode_rewards = [0.0] * num_envs
         self.episode_lengths = [0] * num_envs
+        self.prev_actions = [None] * num_envs        # Track previous action per env
+        self.last_floor = [1] * num_envs              # Track floor for change detection
+        self.last_key_pickup_step = [-999] * num_envs  # Step of last key pickup
+        self.last_door_unlock_step = [-999] * num_envs # Step of last door unlock
+        self.last_enemy_kill_step = [-999] * num_envs  # Step of last enemy kill
+        self.doors_opened_this_floor = [0] * num_envs
+        self.keys_used_this_floor = [0] * num_envs
         self._reset_all()
-    
+
     def _reset_all(self):
-        """Initialize all environments."""
         seeds = [random.randint(1, 10_000_000) for _ in range(self.num_envs)]
         classes = [CLASSES[i % len(CLASSES)] for i in range(self.num_envs)]
         states = self.pool.init_all(seeds, classes)
@@ -53,9 +59,15 @@ class DelveVectorEnv:
             self.prev_states[i] = self.states[i]
             self.episode_rewards[i] = 0.0
             self.episode_lengths[i] = 0
-    
+            self.prev_actions[i] = None
+            self.last_floor[i] = 1
+            self.last_key_pickup_step[i] = -999
+            self.last_door_unlock_step[i] = -999
+            self.last_enemy_kill_step[i] = -999
+            self.doors_opened_this_floor[i] = 0
+            self.keys_used_this_floor[i] = 0
+
     def reset(self, env_ids=None):
-        """Reset specific environments."""
         if env_ids is None:
             env_ids = list(range(self.num_envs))
 
@@ -71,13 +83,19 @@ class DelveVectorEnv:
             self.prev_states[eid] = state
             self.episode_rewards[eid] = 0.0
             self.episode_lengths[eid] = 0
+            self.prev_actions[eid] = None
+            self.last_floor[eid] = 1
+            self.last_key_pickup_step[eid] = -999
+            self.last_door_unlock_step[eid] = -999
+            self.last_enemy_kill_step[eid] = -999
+            self.doors_opened_this_floor[eid] = 0
+            self.keys_used_this_floor[eid] = 0
         return [self.states[eid] for eid in env_ids]
 
     def set_curriculum_max_floor(self, max_floor):
         self.curriculum_max_floor = max_floor
 
     def action_to_decision(self, state, action):
-        """Map a discrete RL action to the runner's game decision format."""
         p = state.get('player', {}) if state else {}
         enemies = [e for e in (state or {}).get('enemies', []) if not e.get('dying') and not e.get('isPet')]
         items = [i for i in (state or {}).get('items', []) if i.get('carried')]
@@ -160,6 +178,62 @@ class DelveVectorEnv:
         affordable.sort(key=lambda i: (priority.get(i.get('type'), 99), -i.get('heal', 0), i.get('price', 0)))
         return affordable[0] if affordable else None
 
+    def _detect_events(self, env_id, prev_state, curr_state, action):
+        """Detect key game events for reward and state features."""
+        prev_floor = self.last_floor[env_id]
+        curr_floor = curr_state.get('floor', 1) if curr_state else 1
+
+        # Floor change
+        if curr_floor != prev_floor:
+            self.last_floor[env_id] = curr_floor
+            self.doors_opened_this_floor[env_id] = 0
+            self.keys_used_this_floor[env_id] = 0
+
+        if prev_state is None or curr_state is None:
+            return
+
+        # Key pickup
+        prev_keys_carried = sum(1 for i in prev_state.get('items', [])
+                                if i.get('type') == 'key' and i.get('carried'))
+        curr_keys_carried = sum(1 for i in curr_state.get('items', [])
+                                if i.get('type') == 'key' and i.get('carried'))
+
+        if curr_keys_carried > prev_keys_carried:
+            self.last_key_pickup_step[env_id] = self.episode_lengths[env_id]
+
+        # Door unlock (locked doors disappeared)
+        prev_doors = sum(1 for row in prev_state.get('map', []) for t in row if t == 4)
+        curr_doors = sum(1 for row in curr_state.get('map', []) for t in row if t == 4)
+        if curr_doors < prev_doors:
+            self.last_door_unlock_step[env_id] = self.episode_lengths[env_id]
+            self.doors_opened_this_floor[env_id] += prev_doors - curr_doors
+            self.keys_used_this_floor[env_id] += prev_doors - curr_doors
+
+        # Enemy kill
+        prev_alive = {e['id'] for e in prev_state.get('enemies', []) if not e.get('dying')}
+        curr_alive = {e['id'] for e in curr_state.get('enemies', []) if not e.get('dying')}
+        if len(prev_alive) > len(curr_alive):
+            self.last_enemy_kill_step[env_id] = self.episode_lengths[env_id]
+
+    def _inject_state_metadata(self, env_id, state):
+        """Inject event tracking metadata into state dict for reward and features."""
+        if state is None:
+            return
+        state['_current_step'] = self.episode_lengths[env_id]
+        state['_last_key_pickup_step'] = self.last_key_pickup_step[env_id]
+        state['_last_door_unlock_step'] = self.last_door_unlock_step[env_id]
+        state['_last_enemy_kill_step'] = self.last_enemy_kill_step[env_id]
+        state['_doors_opened_this_floor'] = self.doors_opened_this_floor[env_id]
+        state['_keys_used_this_floor'] = self.keys_used_this_floor[env_id]
+
+        # Compute steps-since features
+        step = self.episode_lengths[env_id]
+        # Approximate: steps since floor change = steps on current floor
+        state['_steps_since_floor_change'] = min(step, 999)  # Simplified
+        state['_steps_since_key_pickup'] = min(step - self.last_key_pickup_step[env_id], 999) if self.last_key_pickup_step[env_id] >= 0 else 999
+        state['_steps_since_enemy_kill'] = min(step - self.last_enemy_kill_step[env_id], 999) if self.last_enemy_kill_step[env_id] >= 0 else 999
+        state['_steps_since_door_unlock'] = min(step - self.last_door_unlock_step[env_id], 999) if self.last_door_unlock_step[env_id] >= 0 else 999
+
     def _apply_terminal_rules(self, env_id, state, done, reward):
         if state is None:
             return reward, True, {
@@ -171,6 +245,7 @@ class DelveVectorEnv:
                 'total_reward': self.episode_rewards[env_id],
                 'total_steps': self.episode_lengths[env_id],
                 'terminal_state': None,
+                'class_name': None,
             }
 
         timed_out = (
@@ -218,38 +293,35 @@ class DelveVectorEnv:
             'total_reward': self.episode_rewards[env_id],
             'total_steps': self.episode_lengths[env_id],
             'terminal_state': state if done else None,
+            'class_name': state.get('player', {}).get('class'),
         }
-    
+
     def step(self, actions):
-        """
-        Execute actions in all environments.
-        
-        Args:
-            actions: numpy array of shape (num_envs,) with action indices
-        
-        Returns:
-            states: list of state dicts
-            rewards: numpy array of rewards
-            dones: numpy array of booleans
-            infos: list of info dicts
-        """
         decisions = {}
         for i, action in enumerate(actions):
             decisions[i] = self.action_to_decision(self.states[i], int(action))
-        
+
         results = self.pool.step_all(decisions)
-        
+
         new_states = []
         rewards = []
         dones = []
         infos = []
-        
+
         for i in range(self.num_envs):
             if i in results:
                 state, done = results[i]
                 self.prev_states[i] = self.states[i]
                 self.states[i] = state
-                
+
+                # Detect events before injecting metadata
+                self._detect_events(i, self.prev_states[i], state, int(actions[i]))
+
+                # Inject metadata for reward and features
+                self._inject_state_metadata(i, state)
+                if self.prev_states[i] is not None:
+                    self._inject_state_metadata(i, self.prev_states[i])
+
                 if state:
                     reward = compute_reward(self.prev_states[i], int(actions[i]), state)
                     self.episode_rewards[i] += reward
@@ -259,7 +331,9 @@ class DelveVectorEnv:
                     done = True
 
                 reward, done, info = self._apply_terminal_rules(i, state, done, reward)
-                
+
+                self.prev_actions[i] = int(actions[i])
+
                 new_states.append(state)
                 rewards.append(reward)
                 dones.append(done)
@@ -277,13 +351,14 @@ class DelveVectorEnv:
                 new_states[env_id] = reset_state
 
         return new_states, np.array(rewards), np.array(dones), infos
-    
+
     def get_states(self):
-        """Get current states for all environments."""
         return self.states.copy()
-    
+
+    def get_prev_actions(self):
+        return self.prev_actions.copy()
+
     def get_action_masks(self):
-        """Get action masks for all environments."""
         masks = []
         for state in self.states:
             if state:
@@ -291,7 +366,6 @@ class DelveVectorEnv:
             else:
                 masks.append(np.zeros(ACTION_DIM, dtype=bool))
         return np.array(masks)
-    
+
     def close(self):
-        """Shutdown all workers."""
         self.pool.shutdown()

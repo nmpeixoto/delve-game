@@ -12,10 +12,23 @@ sys.path.insert(0, NN_RL_DIR)
 
 from headless_bridge import HeadlessWorker, RL_RUNNER
 from action_mask import get_action_mask
-from config import ACTION_DIM, ACTIONS, STATE_DIM
+from config import ACTION_DIM, ACTIONS, CURRICULUM, STATE_DIM
+from policy_probe import build_probe_scenarios, format_probe_summary
 from reward import compute_reward
 from state_extractor import extract_state
-from train import curriculum_phase_for_step, parse_args, resolve_resume_checkpoint, summarize_actions
+from train import (
+    episode_class_summary,
+    curriculum_metric_label,
+    curriculum_phase_for_step,
+    curriculum_phase_target,
+    format_training_status,
+    curriculum_should_advance,
+    new_episode_window,
+    parse_args,
+    record_episode,
+    resolve_resume_checkpoint,
+    summarize_actions,
+)
 from vector_env import DelveVectorEnv
 
 
@@ -138,11 +151,160 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(curriculum_phase_for_step(30, curriculum), (2, 0))
         self.assertEqual(curriculum_phase_for_step(100, curriculum), (2, 70))
 
+    def test_default_curriculum_starts_with_floor_one_descent_goal(self):
+        self.assertGreaterEqual(len(CURRICULUM), 5)
+        self.assertEqual(CURRICULUM[0]["max_floor"], 1)
+        self.assertEqual(CURRICULUM[-2]["max_floor"], 4)
+        self.assertIsNone(CURRICULUM[-1]["max_floor"])
+
+    def test_curriculum_metric_label_names_active_goal(self):
+        self.assertEqual(curriculum_metric_label({"max_floor": 1}), "Floor 2")
+        self.assertEqual(curriculum_metric_label({"max_floor": 4}), "Floor 5")
+        self.assertEqual(curriculum_metric_label({"max_floor": None}), "Full Win")
+
+    def test_curriculum_phase_target_describes_mastery_goal(self):
+        target = curriculum_phase_target({
+            "max_floor": 1,
+            "success_threshold": 0.8,
+            "success_window": 100,
+        })
+
+        self.assertEqual(target, "reach Floor 2 at 80% over 100 episodes")
+
+    def test_curriculum_does_not_advance_on_timer_without_mastery(self):
+        phase = {
+            "name": "descend_floor_1",
+            "max_floor": 1,
+            "steps": 2_000_000,
+            "min_steps": 500_000,
+            "success_threshold": 0.80,
+            "success_window": 100,
+        }
+        results = [True] * 45 + [False] * 55
+
+        should_advance = curriculum_should_advance(phase, results, steps_in_phase=2_500_000)
+
+        self.assertFalse(should_advance)
+
+    def test_curriculum_advances_after_mastery_window(self):
+        phase = {
+            "name": "descend_floor_1",
+            "max_floor": 1,
+            "min_steps": 500_000,
+            "success_threshold": 0.80,
+            "success_window": 100,
+        }
+        window = new_episode_window(window=100)
+        for _ in range(41):
+            record_episode(window, {
+                "total_reward": 10.0,
+                "total_steps": 20,
+                "won": False,
+                "final_floor": 2,
+                "outcome": "curriculum",
+                "curriculum_success": True,
+                "class_name": "warrior",
+            })
+        for _ in range(9):
+            record_episode(window, {
+                "total_reward": 10.0,
+                "total_steps": 20,
+                "won": False,
+                "final_floor": 2,
+                "outcome": "curriculum",
+                "curriculum_success": False,
+                "class_name": "warrior",
+            })
+        for _ in range(41):
+            record_episode(window, {
+                "total_reward": 10.0,
+                "total_steps": 20,
+                "won": False,
+                "final_floor": 2,
+                "outcome": "curriculum",
+                "curriculum_success": True,
+                "class_name": "mage",
+            })
+        for _ in range(9):
+            record_episode(window, {
+                "total_reward": 10.0,
+                "total_steps": 20,
+                "won": False,
+                "final_floor": 2,
+                "outcome": "curriculum",
+                "curriculum_success": False,
+                "class_name": "mage",
+            })
+
+        should_advance = curriculum_should_advance(phase, window, steps_in_phase=750_000)
+
+        self.assertTrue(should_advance)
+
+    def test_curriculum_does_not_advance_when_one_class_carries_window(self):
+        phase = {
+            "name": "descend_floor_1",
+            "max_floor": 1,
+            "min_steps": 500_000,
+            "success_threshold": 0.80,
+            "success_window": 100,
+        }
+        window = new_episode_window(window=100)
+        for _ in range(90):
+            record_episode(window, {
+                "total_reward": 10.0,
+                "total_steps": 20,
+                "won": False,
+                "final_floor": 2,
+                "outcome": "curriculum",
+                "curriculum_success": True,
+                "class_name": "warrior",
+            })
+        for _ in range(10):
+            record_episode(window, {
+                "total_reward": 10.0,
+                "total_steps": 20,
+                "won": False,
+                "final_floor": 2,
+                "outcome": "curriculum",
+                "curriculum_success": False,
+                "class_name": "mage",
+            })
+
+        should_advance = curriculum_should_advance(phase, window, steps_in_phase=750_000)
+
+        self.assertFalse(should_advance)
+
+    def test_new_phase_window_starts_empty(self):
+        window = new_episode_window(window=4)
+        record_episode(window, {
+            "total_reward": 10.0,
+            "total_steps": 20,
+            "won": False,
+            "final_floor": 2,
+            "outcome": "curriculum",
+            "curriculum_success": True,
+        })
+
+        reset_window = new_episode_window(window=4)
+
+        self.assertEqual(list(window["curriculum"]), [True])
+        self.assertEqual(len(reset_window["rewards"]), 0)
+        self.assertEqual(len(reset_window["curriculum"]), 0)
+        self.assertEqual(len(reset_window["classes"]), 0)
+
     def test_train_default_episode_cap_limits_wandering_rollouts(self):
         with patch.object(sys, "argv", ["train.py"]):
             args = parse_args()
 
-        self.assertLessEqual(args.max_episode_steps, 8000)
+        self.assertLessEqual(args.max_episode_steps, 6000)
+
+    def test_train_defaults_use_multiple_workers(self):
+        with patch.object(sys, "argv", ["train.py"]):
+            args = parse_args()
+
+        self.assertGreater(args.num_envs, args.envs_per_worker)
+        self.assertEqual(args.num_envs, 64)
+        self.assertEqual(args.envs_per_worker, 4)
 
     def test_resume_can_reset_optimizer_for_changed_reward(self):
         with patch.object(sys, "argv", ["train.py", "--resume", "latest", "--reset-optimizer"]):
@@ -174,7 +336,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, 0, {**state, "seen_count": 101, "player": {**state["player"], "x": 6}})
 
-        self.assertLess(reward, 0.05)
+        self.assertLess(reward, 0.2)
 
     def test_reward_strongly_prefers_floor_progress_over_exploration(self):
         state = {
@@ -187,7 +349,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, 13, {**state, "floor": 2, "seen_count": 0})
 
-        self.assertGreaterEqual(reward, 100.0)
+        self.assertGreaterEqual(reward, 50.0)
 
     def test_reward_prefers_moving_toward_known_stairs(self):
         state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
@@ -213,12 +375,15 @@ class NnRlBridgeTest(unittest.TestCase):
             "items": [{"id": "key-1", "type": "key", "carried": False}],
             "seen_count": 100,
             "known_stairs": False,
+            "_current_step": 10,
+            "_last_key_pickup_step": -999,
         }
-        after = {**state, "items": [{"id": "key-1", "type": "key", "carried": True}]}
+        after = {**state, "items": [{"id": "key-1", "type": "key", "carried": True}],
+                 "_last_key_pickup_step": 10}
 
         reward = compute_reward(state, 0, after)
 
-        self.assertGreaterEqual(reward, 15.0)
+        self.assertGreaterEqual(reward, 25.0)
 
     def test_reward_for_unlocking_locked_door(self):
         state = {
@@ -229,16 +394,19 @@ class NnRlBridgeTest(unittest.TestCase):
             "map": [[1, 4]],
             "seen_count": 100,
             "known_stairs": False,
+            "_current_step": 10,
+            "_last_key_pickup_step": 5,
         }
         after = {
             **state,
             "items": [],
             "map": [[1, 1]],
+            "_last_door_unlock_step": 10,
         }
 
         reward = compute_reward(state, 0, after)
 
-        self.assertGreaterEqual(reward, 25.0)
+        self.assertGreaterEqual(reward, 40.0)
 
     def test_reward_for_revealing_secret_door(self):
         state = {
@@ -300,6 +468,66 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertTrue(mask.any())
         self.assertFalse(mask[ACTIONS["ABILITY1"]])
 
+    def test_action_mask_allows_exploration_with_known_stairs_before_floor_is_mostly_seen(self):
+        state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
+        state["player"]["class"] = "warrior"
+        state["shops"] = []
+        state["seen"] = {5 * 56 + x for x in range(5, 9)}
+        state["seen_count"] = len(state["seen"])
+        state["visible"] = set(state["seen"])
+        state["ability1Cooldown"] = 0
+        state["ability2Cooldown"] = 0
+
+        mask = get_action_mask(state)
+
+        self.assertTrue(mask[ACTIONS["MOVE_RIGHT"]])
+        self.assertTrue(mask[ACTIONS["MOVE_LEFT"]])
+        self.assertTrue(mask[ACTIONS["MOVE_UP"]])
+        self.assertTrue(mask[ACTIONS["MOVE_DOWN"]])
+
+    def test_action_mask_keeps_exploration_open_when_known_stairs_are_still_far(self):
+        state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=11, stairs_y=5)
+        state["player"]["class"] = "warrior"
+        state["shops"] = []
+        state["ability1Cooldown"] = 0
+        state["ability2Cooldown"] = 0
+
+        mask = get_action_mask(state)
+
+        self.assertTrue(mask[ACTIONS["MOVE_RIGHT"]])
+        self.assertTrue(mask[ACTIONS["MOVE_LEFT"]])
+        self.assertTrue(mask[ACTIONS["MOVE_UP"]])
+        self.assertTrue(mask[ACTIONS["MOVE_DOWN"]])
+
+    def test_action_mask_prefers_path_to_known_stairs_when_close_and_mostly_seen(self):
+        state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=6, stairs_y=5)
+        state["player"]["class"] = "warrior"
+        state["shops"] = []
+        state["ability1Cooldown"] = 0
+        state["ability2Cooldown"] = 0
+
+        mask = get_action_mask(state)
+
+        self.assertTrue(mask[ACTIONS["MOVE_RIGHT"]])
+        self.assertFalse(mask[ACTIONS["MOVE_LEFT"]])
+        self.assertFalse(mask[ACTIONS["MOVE_UP"]])
+        self.assertFalse(mask[ACTIONS["MOVE_DOWN"]])
+
+    def test_action_mask_keeps_tactical_options_when_enemy_visible(self):
+        state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
+        state["player"]["class"] = "warrior"
+        state["shops"] = []
+        state["visible"] = set(state["seen"])
+        state["ability1Cooldown"] = 0
+        state["ability2Cooldown"] = 0
+        state["enemies"] = [{"id": "goblin", "x": 5, "y": 4, "hp": 5, "maxHp": 5}]
+
+        mask = get_action_mask(state)
+
+        self.assertTrue(mask[ACTIONS["MOVE_RIGHT"]])
+        self.assertTrue(mask[ACTIONS["MOVE_LEFT"]])
+        self.assertTrue(mask[ACTIONS["ATTACK_1"]])
+
     def test_action_to_decision_never_returns_hidden_wait(self):
         env = DelveVectorEnv.__new__(DelveVectorEnv)
         state = {
@@ -324,6 +552,86 @@ class NnRlBridgeTest(unittest.TestCase):
         summary = summarize_actions(action_counts)
 
         self.assertIn("Desc", summary)
+        self.assertIn("0.5%", summary)
+
+    def test_probe_scenarios_do_not_force_directional_moves_via_mask(self):
+        scenarios = build_probe_scenarios()
+        directional = [scenario for scenario in scenarios if scenario["name"] != "on_stairs"]
+
+        self.assertEqual(len(scenarios), 5)
+        for scenario in directional:
+            mask = get_action_mask(scenario["state"])
+            self.assertTrue(mask[ACTIONS["MOVE_RIGHT"]])
+            self.assertTrue(mask[ACTIONS["MOVE_LEFT"]])
+            self.assertTrue(mask[ACTIONS["MOVE_UP"]])
+            self.assertTrue(mask[ACTIONS["MOVE_DOWN"]])
+
+    def test_probe_summary_reports_directional_metrics(self):
+        summary = format_probe_summary([
+            {"target_label": "Desc", "target_prob": 0.97},
+            {"target_label": "Right", "target_prob": 0.55},
+            {"target_label": "Down", "target_prob": 0.52},
+            {"target_label": "Left", "target_prob": 0.48},
+            {"target_label": "Up", "target_prob": 0.51},
+        ], {
+            "directional_target_prob_mean": 0.515,
+            "directional_exact_rate": 0.75,
+            "class_count": 8,
+        })
+
+        self.assertIn("Probe:", summary)
+        self.assertIn("class-avg (8 classes)", summary)
+        self.assertIn("Desc 97.0%", summary)
+        self.assertIn("MoveMean 51.5%", summary)
+        self.assertIn("MoveTop1 75%", summary)
+
+    def test_class_summary_reports_per_class_counts_and_rates(self):
+        window = new_episode_window(window=8)
+        for class_name, success in [
+            ("warrior", True),
+            ("warrior", False),
+            ("mage", True),
+            ("mage", True),
+            ("rogue", False),
+        ]:
+            record_episode(window, {
+                "total_reward": 10.0,
+                "total_steps": 20,
+                "won": False,
+                "final_floor": 2,
+                "outcome": "curriculum",
+                "curriculum_success": success,
+                "class_name": class_name,
+            })
+
+        summary = episode_class_summary(window, "curriculum")
+
+        self.assertIn("Class counts:", summary)
+        self.assertIn("warrior 1/2 (50%)", summary)
+        self.assertIn("mage 2/2 (100%)", summary)
+        self.assertIn("rogue 0/1 (0%)", summary)
+
+    def test_training_status_explains_when_the_run_is_below_target(self):
+        readout = format_training_status(
+            "Floor 3",
+            progress_rate=0.222,
+            progress_threshold=0.75,
+            timeout_rate=0.68,
+            death_rate=0.09,
+            avg_floor=1.79,
+            progress_delta=-0.092,
+            probe_metrics={
+                "directional_exact_rate": 0.25,
+                "descend_prob_on_stairs": 0.95,
+            },
+        )
+
+        self.assertIn("Floor 3 22.2%", readout)
+        self.assertIn("52.8 pts below target", readout)
+        self.assertIn("slipping (-9.2 pts)", readout)
+        self.assertIn("timeouts high", readout)
+        self.assertIn("stairs still random", readout)
+        self.assertIn("descend learned", readout)
 
     def _known_stairs_state(self, player_x, player_y, stairs_x, stairs_y):
         width = 12

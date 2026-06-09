@@ -6,17 +6,16 @@ Computes which trainable actions are valid for the current game state.
 import numpy as np
 
 from config import ACTION_DIM, ACTIONS
+from pathfinding import (
+    shortest_stairs_distance as _bfs_stairs_distance,
+    known_stair_targets as _known_stair_targets,
+    MAP_W, WALL, FLOOR, STAIRS, SHOP, LOCKED_DOOR, DIRS,
+)
 
-MAP_W = 56
 MAP_H = 36
 FLOORS = 5
-WALL = 0
-FLOOR = 1
-STAIRS = 2
-SHOP = 3
-LOCKED_DOOR = 4
-
-DIRS = [(0, -1), (0, 1), (-1, 0), (1, 0)]  # Up, Down, Left, Right
+STAIR_BEELINE_EXPLORED_RATIO = 0.30
+STAIR_BEELINE_MAX_PATH_DISTANCE = 3
 
 
 def manhattan(a, b):
@@ -59,6 +58,7 @@ def get_action_mask(G):
 
     vis_enemies = _visible_enemies(G, seen)
     adj_enemies = [e for e in vis_enemies if manhattan(e, p) == 1]
+    _apply_stair_beeline_mask(G, mask, p, vis_enemies)
 
     for i, _enemy in enumerate(adj_enemies[:2]):
         mask[ACTIONS['ATTACK_1'] + i] = True
@@ -103,6 +103,8 @@ def get_action_mask(G):
 
 def _visible_enemies(G, seen):
     visible = G.get('visible', seen)
+    if isinstance(visible, list):
+        visible = set(visible)
     return [
         e for e in G.get('enemies', [])
         if not e.get('dying')
@@ -113,6 +115,65 @@ def _visible_enemies(G, seen):
 
 def _has_key(G):
     return any(i.get('type') == 'key' for i in G.get('items', []) if i.get('carried'))
+
+
+def _apply_stair_beeline_mask(G, mask, p, vis_enemies):
+    if vis_enemies or G.get('shopOpen') or not G.get('known_stairs'):
+        return
+
+    map_data = G.get('map', [])
+    if not _floor_mostly_seen(G, map_data):
+        return
+
+    px, py = p.get('x', 0), p.get('y', 0)
+    current_dist = _bfs_stairs_distance(G, map_data, px, py)
+    if (
+        current_dist is None
+        or current_dist == 0
+        or current_dist > STAIR_BEELINE_MAX_PATH_DISTANCE
+    ):
+        return
+
+    improving_moves = []
+    for action_index, (dx, dy) in enumerate(DIRS):
+        if not mask[action_index]:
+            continue
+        next_dist = _bfs_stairs_distance(G, map_data, px + dx, py + dy)
+        if next_dist is not None and next_dist < current_dist:
+            improving_moves.append(action_index)
+
+    if not improving_moves:
+        return
+
+    for action_index in range(len(DIRS)):
+        mask[action_index] = action_index in improving_moves
+
+
+def _floor_mostly_seen(G, map_data):
+    explorable = 0
+    seen_explorable = 0
+    seen = _seen_set(G)
+    for y, row in enumerate(map_data):
+        for x, tile in enumerate(row):
+            if tile not in (FLOOR, STAIRS, SHOP, LOCKED_DOOR):
+                continue
+            explorable += 1
+            if (y * MAP_W + x) in seen:
+                seen_explorable += 1
+    if explorable == 0:
+        return False
+    return (seen_explorable / explorable) >= STAIR_BEELINE_EXPLORED_RATIO
+
+
+def _has_key(G):
+    return any(i.get('type') == 'key' for i in G.get('items', []) if i.get('carried'))
+
+
+def _seen_set(G):
+    seen = G.get('seen', set())
+    if isinstance(seen, set):
+        return seen
+    return set(seen or [])
 
 
 def _ability1_valid(G, p, vis_enemies, adj_enemies):

@@ -203,12 +203,17 @@ class WorkerPool:
     def init_all(self, seeds, classes):
         """Initialize all environments across workers."""
         states = [None] * self.total_envs
+        futures = {}
         for i, worker in enumerate(self.workers):
             start = i * self.envs_per_worker
             end = min(start + self.envs_per_worker, self.total_envs)
             worker_seeds = seeds[start:end]
             worker_classes = classes[start:end]
-            worker_states = worker.init_envs(worker_seeds, worker_classes)
+            futures[self.executor.submit(worker.init_envs, worker_seeds, worker_classes)] = worker
+
+        for future in as_completed(futures):
+            worker = futures[future]
+            worker_states = future.result()
             for local_id, state in enumerate(worker_states):
                 global_id = self.local_to_global[(id(worker), local_id)]
                 states[global_id] = state
@@ -258,9 +263,14 @@ class WorkerPool:
             by_worker[id(worker)].append((local_id, seed, class_name))
 
         states = {}
-        for worker_id, batch in by_worker.items():
+        futures = {
+            self.executor.submit(self.worker_by_id[worker_id].reset_batch, batch): worker_id
+            for worker_id, batch in by_worker.items()
+        }
+        for future in as_completed(futures):
+            worker_id = futures[future]
             worker = self.worker_by_id[worker_id]
-            for local_id, state in worker.reset_batch(batch):
+            for local_id, state in future.result():
                 global_id = self.local_to_global[(id(worker), local_id)]
                 states[global_id] = state
         return states

@@ -48,6 +48,7 @@ def evaluate(model_path=None, num_games=200, device='cuda'):
     class_games = {c: 0 for c in CLASSES}
     
     states = env.get_states()
+    hidden = None
     
     while games_done < num_games:
         state_tensors = torch.stack([
@@ -55,12 +56,23 @@ def evaluate(model_path=None, num_games=200, device='cuda'):
             for s in states
         ]).to(device)
         
+        from train import extract_local_map
+        map_tensors = torch.stack([
+            torch.tensor(extract_local_map(s) if s else np.zeros((6, 8, 8), dtype=np.float32))
+            for s in states
+        ]).to(device)
+        
         masks = torch.tensor(env.get_action_masks(), dtype=torch.bool).to(device)
         
         with torch.no_grad():
-            actions, _, _ = agent.get_action(state_tensors, masks, deterministic=True)
+            actions, _, _, hidden = agent.get_action(state_tensors, map_tensors, masks, hidden, deterministic=True)
         
         new_states, rewards, dones, infos = env.step(actions.cpu().numpy())
+        
+        # Reset hidden for done environments
+        if hidden is not None and dones.any():
+            done_mask = torch.from_numpy(dones).to(device=device, dtype=torch.bool).unsqueeze(0)
+            hidden = hidden.masked_fill(done_mask.unsqueeze(-1), 0.0)
         
         for i, done in enumerate(dones):
             if done:
@@ -69,6 +81,9 @@ def evaluate(model_path=None, num_games=200, device='cuda'):
                     wins += 1
                 total_floor += states[i].get('floor', 1) if states[i] else 1
                 total_steps += infos[i].get('total_steps', 0)
+                # Reset hidden for this environment
+                if hidden is not None:
+                    hidden[:, i] = 0.0
         
         states = new_states
     
