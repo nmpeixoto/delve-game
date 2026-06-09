@@ -28,12 +28,14 @@ class DelveVectorEnv:
         timeout_penalty=-400.0,
         curriculum_max_floor=None,
         curriculum_reward=125.0,
+        curriculum_hard_mode=False,
     ):
         self.num_envs = num_envs
         self.envs_per_worker = envs_per_worker
         self.max_episode_steps = max_episode_steps
         self.timeout_penalty = timeout_penalty
         self.curriculum_max_floor = curriculum_max_floor
+        self.curriculum_hard_mode = curriculum_hard_mode
         self.curriculum_reward = curriculum_reward
         self.pool = WorkerPool(num_envs, envs_per_worker)
         self.states = [None] * num_envs
@@ -55,7 +57,8 @@ class DelveVectorEnv:
         # Randomly assign classes; with 64 envs and 8 classes every class
         # receives ~8 slots in expectation, avoiding per-id bias.
         classes = [random.choice(CLASSES) for _ in range(self.num_envs)]
-        states = self.pool.init_all(seeds, classes)
+        hard_modes = [getattr(self, 'curriculum_hard_mode', False)] * self.num_envs
+        states = self.pool.init_all(seeds, classes, hard_modes)
 
         for i in range(self.num_envs):
             self.states[i] = states[i]
@@ -76,7 +79,7 @@ class DelveVectorEnv:
             env_ids = list(range(self.num_envs))
 
         specs = {
-            eid: (random.randint(1, 10_000_000), random.choice(CLASSES))
+            eid: (random.randint(1, 10_000_000), random.choice(CLASSES), getattr(self, 'curriculum_hard_mode', False))
             for eid in env_ids
         }
         states = self.pool.reset_envs(specs)
@@ -99,6 +102,9 @@ class DelveVectorEnv:
 
     def set_curriculum_max_floor(self, max_floor):
         self.curriculum_max_floor = max_floor
+
+    def set_curriculum_hard_mode(self, hard_mode):
+        self.curriculum_hard_mode = hard_mode
 
     def action_to_decision(self, state, action):
         p = state.get('player', {}) if state else {}
@@ -481,6 +487,7 @@ def _subproc_worker(pipe, env_kwargs):
                 pipe.send((np_states, np_maps, masks, rewards, dones, infos))
             elif cmd == 'set_curriculum':
                 env.set_curriculum_max_floor(args['max_floor'])
+                env.set_curriculum_hard_mode(args.get('hard_mode', False))
                 pipe.send(True)
             elif cmd == 'close':
                 env.pool.shutdown()
@@ -547,10 +554,10 @@ class SubprocVecEnv:
             np.concatenate(dones),
             infos
         )
-        
-    def set_curriculum_max_floor(self, max_floor):
+
+    def set_curriculum(self, max_floor, hard_mode=False):
         for p in self.pipes:
-            p.send(('set_curriculum', {'max_floor': max_floor}))
+            p.send(('set_curriculum', {'max_floor': max_floor, 'hard_mode': hard_mode}))
         for p in self.pipes:
             p.recv()
         

@@ -82,7 +82,7 @@ def extract_state(G, prev_action=None):
     features.append(1.0 if _has_buff(p) else 0.0)                      # 16: any_buff
 
     # ── RESOURCES (1) ────────────────────────────────────────────────────────
-    features.append(1.0 if any(i.get('type') == 'potion' and i.get('carried')
+    features.append(1.0 if any(i.get('type') in ('potion', 'potion_buff') and i.get('carried')
                                for i in G.get('items', [])) else 0.0)   # 17: has_potion
 
     # ── PREV ACTION (4) ──────────────────────────────────────────────────────

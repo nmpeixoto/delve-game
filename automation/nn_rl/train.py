@@ -435,6 +435,7 @@ def main():
         steps_in_phase = max(int(saved_steps_in_phase or 0), 0)
     active_phase = CURRICULUM[curriculum_phase] if CURRICULUM else {'name': 'full', 'max_floor': FLOORS}
     curriculum_max_floor = active_phase.get('max_floor')
+    curriculum_hard_mode = active_phase.get('hard_mode', False)
     next_save = ((total_steps // args.save_every) + 1) * args.save_every
     phase_budget = int(active_phase.get('steps', 0))
     phase_budget_warned = False
@@ -447,6 +448,7 @@ def main():
         max_episode_steps=args.max_episode_steps,
         timeout_penalty=args.timeout_penalty,
         curriculum_max_floor=curriculum_max_floor,
+        curriculum_hard_mode=curriculum_hard_mode,
     )
     np_states, np_maps, np_masks = env.reset()
     print(f"=== Training Goal: {active_phase.get('name')} ({curriculum_phase_target(active_phase)}) ===")
@@ -462,10 +464,11 @@ def main():
                 steps_in_phase = 0
                 active_phase = CURRICULUM[curriculum_phase]
                 curriculum_max_floor = active_phase.get('max_floor')
+                curriculum_hard_mode = active_phase.get('hard_mode', False)
                 phase_budget = int(active_phase.get('steps', 0))
                 phase_budget_warned = False
                 episode_window = new_episode_window()
-                env.set_curriculum_max_floor(curriculum_max_floor)
+                env.set_curriculum(curriculum_max_floor, curriculum_hard_mode)
                 print(f"\n=== Training Goal: {active_phase.get('name')} ({curriculum_phase_target(active_phase)}) ===")
             elif (
                 curriculum_phase < len(CURRICULUM) - 1

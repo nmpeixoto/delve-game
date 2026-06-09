@@ -154,12 +154,12 @@ class HeadlessWorker:
         self._ensure_running()
         raise RuntimeError("Worker closed stdout without a response")
     
-    def init_envs(self, seeds, classes):
+    def init_envs(self, seeds, classes, hard_modes):
         """Initialize environments in this worker."""
         states = []
-        for i, (seed, class_name) in enumerate(zip(seeds, classes)):
+        for i, (seed, class_name, hard_mode) in enumerate(zip(seeds, classes, hard_modes)):
             env_id = i
-            msg = {'type': 'init', 'envId': env_id, 'seed': seed, 'className': class_name}
+            msg = {'type': 'init', 'envId': env_id, 'seed': seed, 'className': class_name, 'hardMode': hard_mode}
             self._send_line(msg)
             resp = self._recv_line()
             if resp and resp.get('type') == 'ready':
@@ -180,7 +180,7 @@ class HeadlessWorker:
             list of (local_env_id, state)
         """
         results = []
-        for env_id, seed, class_name in env_specs:
+        for env_id, seed, class_name, hard_mode in env_specs:
             # Clear cached map/seen — new episode starts a fresh floor
             self._cached_map.pop(env_id, None)
             self._cached_seen.pop(env_id, None)
@@ -189,6 +189,7 @@ class HeadlessWorker:
                 'envId': env_id,
                 'seed': seed,
                 'className': class_name,
+                'hardMode': hard_mode,
             })
             resp = self._recv_line()
             if resp and resp.get('type') == 'reset_done':
@@ -289,7 +290,7 @@ def _worker_process(worker_id, num_envs, pipe):
         while True:
             cmd, args = pipe.recv()
             if cmd == 'init_all':
-                states = worker.init_envs(args['seeds'], args['classes'])
+                states = worker.init_envs(args['seeds'], args['classes'], args['hard_modes'])
                 pipe.send([_compress_state(s) for s in states])
             elif cmd == 'step_all':
                 results = worker.step_batch(args['decisions'])
@@ -336,13 +337,13 @@ class WorkerPool:
                     self.local_to_global[(i, j)] = global_id
             time.sleep(0.1)
 
-    def init_all(self, seeds, classes):
+    def init_all(self, seeds, classes, hard_modes):
         """Initialize all environments across workers."""
         states = [None] * self.total_envs
         for i, pipe in enumerate(self.pipes):
             start = i * self.envs_per_worker
             end = min(start + self.envs_per_worker, self.total_envs)
-            pipe.send(('init_all', {'seeds': seeds[start:end], 'classes': classes[start:end]}))
+            pipe.send(('init_all', {'seeds': seeds[start:end], 'classes': classes[start:end], 'hard_modes': hard_modes[start:end]}))
             
         for i, pipe in enumerate(self.pipes):
             worker_states = pipe.recv()
@@ -372,9 +373,9 @@ class WorkerPool:
     def reset_envs(self, specs):
         """Reset selected envs."""
         by_worker = defaultdict(list)
-        for env_id, (seed, class_name) in specs.items():
+        for env_id, (seed, class_name, hard_mode) in specs.items():
             worker_idx, local_id = self.env_to_worker[env_id]
-            by_worker[worker_idx].append((local_id, seed, class_name))
+            by_worker[worker_idx].append((local_id, seed, class_name, hard_mode))
             
         for worker_idx, batch in by_worker.items():
             self.pipes[worker_idx].send(('reset_envs', {'specs': batch}))

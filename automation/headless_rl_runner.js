@@ -406,7 +406,7 @@ function runWorker() {
         const envId = Number.isInteger(msg.envId) ? msg.envId : nextEnvId++;
         nextEnvId = Math.max(nextEnvId, envId + 1);
         const runtime = createRuntime(msg.seed || envId * 10000);
-        runtime.context.initGame(msg.className || 'warrior');
+        runtime.context.initGame(msg.className || 'warrior', !!msg.hardMode);
         runtime.flushTimers();
         envs.set(envId, runtime);
         process.stdout.write(JSON.stringify({ type: 'ready', envId, state: runtime.captureSnapshot() }) + '\n');
@@ -427,7 +427,7 @@ function runWorker() {
           return;
         }
         const runtime = createRuntime(msg.seed || msg.envId * 10000 + 9999);
-        runtime.context.initGame(msg.className || 'warrior');
+        runtime.context.initGame(msg.className || 'warrior', !!msg.hardMode);
         runtime.flushTimers();
         envs.set(msg.envId, runtime);
         const state = runtime.captureSnapshot();

@@ -68,8 +68,8 @@ EVAL_EVERY = 250_000
 EVAL_GAMES = 100
 
 # ─── REWARD SHAPING ──────────────────────────────────────────────────────────
-REWARD_WIN = 100.0
-REWARD_DIE = -50.0
+REWARD_WIN = 300.0
+REWARD_DIE = -80.0
 REWARD_FLOOR_PROGRESS = 50.0    # per floor (reduced from 75 to avoid dominating)
 REWARD_KILL_BASE = 5.0
 REWARD_KILL_XP_MULT = 0.4
@@ -96,8 +96,18 @@ SELF_PLAY_SNAPSHOT_AGE = 100_000  # Play against policy from 100K steps ago
 
 CURRICULUM = [
     {
-        'name': 'full_dungeon',
+        'name': 'full_dungeon_normal',
         'max_floor': None,
+        'hard_mode': False,
+        'success_threshold': 0.8,
+        'success_window': 1000,
+        'min_steps': 5_000_000,
         'steps': 20_000_000,
+    },
+    {
+        'name': 'full_dungeon_hard',
+        'max_floor': None,
+        'hard_mode': True,
+        'steps': 80_000_000,
     },
 ]

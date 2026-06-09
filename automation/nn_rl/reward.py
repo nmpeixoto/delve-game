@@ -11,6 +11,7 @@ from config import (
     REWARD_KILL_BOSS, REWARD_KILL_ELITE, REWARD_KILL_BASE, REWARD_KILL_XP_MULT,
     REWARD_HEAL_MULT, REWARD_POTION_WASTE, REWARD_STAIR_DISCOVERY,
     REWARD_GOLD_MULT, REWARD_LEVEL_UP, REWARD_TURN_PENALTY,
+    REWARD_WIN, REWARD_DIE,
 )
 
 from pathfinding import (
@@ -44,11 +45,11 @@ def compute_reward(prev_G, action, curr_G):
     p = curr_G.get('player', {})
     pp = prev_G.get('player', {})
 
-    # ── SURVIVAL (terminal rewards) ──────────────────────────────────────────
+    # ── TERMINAL STATES ──────────────────────────────────────────────────────
     if curr_G.get('won'):
-        return 300.0
+        return REWARD_WIN
     if curr_G.get('gameOver'):
-        return -80.0
+        return REWARD_DIE
 
     # ── FLOOR PROGRESS ──────────────────────────────────────────────────────
     floor_progress = curr_G.get('floor', 1) > prev_G.get('floor', 1)
@@ -79,7 +80,7 @@ def compute_reward(prev_G, action, curr_G):
 
     revealed_traps = max(0, _revealed_trap_count(curr_G) - _revealed_trap_count(prev_G))
     if revealed_traps > 0:
-        reward -= REWARD_TRAP_PENALTY * revealed_traps  # REWARD_TRAP_PENALTY is negative
+        reward += REWARD_TRAP_PENALTY * revealed_traps  # REWARD_TRAP_PENALTY is negative
 
     # ── COMBAT (kill rewards) ───────────────────────────────────────────────
     prev_alive = {e['id'] for e in prev_G.get('enemies', []) if not e.get('dying')}
