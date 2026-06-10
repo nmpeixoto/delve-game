@@ -40,7 +40,15 @@ function createRuntime(seed) {
   let _seed = seed;
   math.random = function() {
     _seed = (_seed * 16807 + 0) % 2147483647;
-    return (_seed - 1) / 2147483646;
+    let val = (_seed - 1) / 2147483646;
+    math.rCount = (math.rCount || 0) + 1;
+    return val;
+  };
+
+  let uidCounter = 0;
+  const uid = () => {
+    uidCounter++;
+    return '1stc-' + uidCounter;
   };
 
   class SeededDate extends Date {
@@ -107,7 +115,11 @@ function createRuntime(seed) {
   };
 
   const sandbox = {
-    console: { log() {}, warn() {}, error() {} },
+    console: { 
+      log(...args) { require('fs').appendFileSync('js_rooms.log', args.join(' ') + '\n'); },
+      warn() {}, 
+      error(...args) { require('fs').appendFileSync('js_rooms.log', args.join(' ') + '\n'); } 
+    },
     document,
     navigator: { vibrate() { return false; }, serviceWorker: { register: async () => ({}) } },
     performance: { now: () => now },
@@ -166,7 +178,7 @@ function createRuntime(seed) {
   sandbox.fireTip = () => {};
   sandbox.TIPS = { firstEnemy: {shown:true}, firstPotion: {shown:true}, firstItem: {shown:true}, firstLevelUp: {shown:true}, firstShop: {shown:true}, firstStairs: {shown:true}, firstBag: {shown:true}, firstGold: {shown:true} };
   // Game functions needed by combat/shop/etc
-  sandbox.gatk = () => { const p = sandbox.G && sandbox.G.player; if (!p) return 0; let total = p.atk + (p.weapon ? p.weapon.atk : 0); if (p.class === 'barbarian') total += Math.floor((p.maxHp - p.hp) / 6); if (p.strengthTurns > 0) total += 10; return total; };
+  sandbox.gatk = () => { const p = sandbox.G && sandbox.G.player; if (!p) return 0; let w = p.weapon; let watk = w ? w.atk : 0; if (p.class === 'monk' && !w) watk += Math.ceil(p.lvl / 2); if (p.class === 'mage' && w && w.sym === '♦') watk += Math.floor(watk / 5); let total = p.atk + watk; if (p.class === 'barbarian') total += Math.floor((p.maxHp - p.hp) / 6); if (p.strengthTurns > 0) total += 10; return total; };
   sandbox.gdef = () => { const p = sandbox.G && sandbox.G.player; if (!p) return 0; return p.def + (p.armor ? p.armor.def : 0); };
   sandbox.iDesc = () => '';
   sandbox.floatText = () => {};
@@ -281,7 +293,9 @@ function createRuntime(seed) {
     return {
       ready: true,
       floor: G.floor,
+      rCount: math.rCount || 0,
       turn: G.turn,
+      rooms: (G.rooms || []).map(r => r.type),
       player: {
         hp: p.hp, maxHp: p.maxHp, atk: p.atk, def: p.def, lvl: p.lvl,
         xp: p.xp, xpNext: p.xpNext, gold: p.gold,
@@ -353,7 +367,7 @@ function createRuntime(seed) {
       if (t === 'button[onclick="sellWeakerGear()"]') { if (typeof context.sellWeakerGear === 'function') context.sellWeakerGear(); return; }
       return;
     }
-    if (decision.type === 'wait') { return; }
+    if (decision.type === 'wait') { context.advanceTurn({allowFreeMove:true}); return; }
     if (decision.type === 'attack') { context.tileAttack(decision.target); return; }
     if (decision.type === 'key') {
       const key = decision.val;

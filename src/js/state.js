@@ -3,7 +3,7 @@ let G={},_dpadTimer=null,_swipeStart=null,_lastAction=0;
 const rand=n=>Math.floor(Math.random()*n);
 const rr=(a,b)=>a+rand(b-a+1);
 let _idCounter=0;
-const uid=()=>`${Date.now().toString(36)}-${(++_idCounter).toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+const uid=()=>`${Date.now().toString(36)}-${(++_idCounter).toString(36)}`;
 const ch=p=>Math.random()<p;
 function round1(value){
   const n = Number(value);

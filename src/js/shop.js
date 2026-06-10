@@ -13,9 +13,19 @@ function generateShopStock(){
     : (!item.reqClass || item.reqClass.includes(G.player.class));
   let nearLevel = item => !item.reqLvl || G.player.lvl >= item.reqLvl - 2;
 
+  let shuffle = arr => {
+    let a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
   // 3-5 potions
-  let pots=[...POTIONS].sort(()=>Math.random()-.5);
-  for(let i=0; i<Math.min(pots.length, rr(3,5)); i++) {
+  let pots=shuffle(POTIONS);
+  let numPots = Math.min(pots.length, rr(3,5));
+  for(let i=0; i<numPots; i++) {
     addStock(pots[i]);
   }
 
@@ -27,20 +37,24 @@ function generateShopStock(){
   if(priorityGear.length) addStock(priorityGear[rr(0, priorityGear.length-1)]);
 
   // 4-6 weapons scaled to floor
-  let weps=weaponCandidates.filter(w=>!usedNames.has(w.name)).sort(()=>Math.random()-.5);
-  for(let i=0; i<Math.min(weps.length, rr(4,6)); i++) {
+  let wepsFilter = weaponCandidates.filter(w=>!usedNames.has(w.name));
+  console.error('[JS] weps len: ' + wepsFilter.length + ' arms len: ' + armorCandidates.filter(a=>!usedNames.has(a.name)).length);
+  let weps=shuffle(wepsFilter);
+  let numWeps = Math.min(weps.length, rr(4,6));
+  for(let i=0; i<numWeps; i++) {
     addStock(weps[i]);
   }
 
   // 3-4 armors
-  let arms=armorCandidates.filter(a=>!usedNames.has(a.name)).sort(()=>Math.random()-.5);
-  for(let i=0; i<Math.min(arms.length, rr(3,4)); i++) {
+  let arms=shuffle(armorCandidates.filter(a=>!usedNames.has(a.name)));
+  let numArms = Math.min(arms.length, rr(3,4));
+  for(let i=0; i<numArms; i++) {
     addStock(arms[i]);
   }
 
   // 2 upgrades (floors 2+)
   if(G.floor>=2){
-    let ups=UPGRADES.filter(u=>u.rarity!=='legendary'||G.floor>=4).sort(()=>Math.random()-.5);
+    let ups=shuffle(UPGRADES.filter(u=>u.rarity!=='legendary'||G.floor>=4));
     for(let i=0; i<Math.min(ups.length, 2); i++) {
       addStock(ups[i]);
     }
