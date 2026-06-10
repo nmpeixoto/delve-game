@@ -236,6 +236,8 @@ class DelveGame:
         self.alarmed_turns = 0
         self.pending_hit = None  # for emergency potion (auto-resolve in RL)
         self.player = {}
+        self._stair_coords = []
+        self._door_count = 0
 
         self._init_player()
         self._build_floor()
@@ -520,6 +522,8 @@ class DelveGame:
         self.current_shop = None
         self.visible = set()
         self.seen = set()
+        self._stair_coords = []
+        self._door_count = 0
         self.items = [i for i in self.items if i.get('carried')]
 
         # Boss floor
@@ -571,6 +575,7 @@ class DelveGame:
                 self.map[sr['cy']][sr['cx']] = TILE_SHOP
 
         self.map[stairs_room['cy']][stairs_room['cx']] = TILE_STAIRS
+        self._stair_coords = [(stairs_room['cx'], stairs_room['cy'])]
 
         self._compute_vision()
         start_visible = set(self.visible)
@@ -711,6 +716,7 @@ class DelveGame:
             self.items.append({'id': self._uid(), 'x': kx, 'y': ky, 'name': 'Key',
                                'type': 'key', 'rarity': 'common', 'sym': '⚷', 'carried': False})
 
+        self._door_count = sum(1 for row in self.map for t in row if t == TILE_LOCKED_DOOR)
         self._compute_vision()
 
     # ─── ITEM SPAWNING ────────────────────────────────────────────────────
@@ -1405,6 +1411,7 @@ class DelveGame:
             if key_idx is not None:
                 self.items.pop(key_idx)
                 self.map[ny][nx] = TILE_FLOOR
+                self._door_count -= 1
 
             return
 
@@ -2081,17 +2088,14 @@ class DelveGame:
             'visible': list(self.visible),
             'seen_count': len(self.seen),
             'known_stairs': self._known_stairs(),
+            '_door_count': self._door_count,
             'shopOpen': self.current_shop is not None,
             'gameOver': self.game_over,
             'won': self.won,
         }
 
     def _known_stairs(self):
-        if not self.map:
-            return False
-        for y in range(len(self.map)):
-            for x in range(len(self.map[0])):
-                if self.map[y][x] == TILE_STAIRS and (y * MAP_W + x) in self.seen:
-
-                    return True
+        for x, y in self._stair_coords:
+            if (y * MAP_W + x) in self.seen:
+                return True
         return False

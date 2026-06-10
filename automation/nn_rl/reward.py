@@ -238,13 +238,17 @@ def compute_reward(prev_G, action, curr_G):
 
 
 def _visible_enemies(G):
-    p = G.get('player', {})
+    cached = G.get('_visible_enemies')
+    if cached is not None:
+        return cached
     enemies = G.get('enemies', [])
     visible = G.get('visible', G.get('seen', set()))
     if isinstance(visible, list):
         visible = set(visible)
-    return [e for e in enemies if not e.get('dying') and not e.get('isPet') and
-            (e.get('y', 0) * MAP_W + e.get('x', 0)) in visible]
+    result = [e for e in enemies if not e.get('dying') and not e.get('isPet') and
+              (e.get('y', 0) * MAP_W + e.get('x', 0)) in visible]
+    G['_visible_enemies'] = result
+    return result
 
 
 def _nearest_seen_stairs_distance(G):

@@ -233,8 +233,8 @@ class DelveVectorEnv:
         if curr_keys_carried > prev_keys_carried:
             self.last_key_pickup_step[env_id] = self.episode_lengths[env_id]
 
-        prev_doors = sum(1 for row in prev_state.get('map', []) for t in row if t == 4)
-        curr_doors = sum(1 for row in curr_state.get('map', []) for t in row if t == 4)
+        prev_doors = prev_state.get('_door_count', 0)
+        curr_doors = curr_state.get('_door_count', 0)
         if curr_doors < prev_doors:
             self.last_door_unlock_step[env_id] = self.episode_lengths[env_id]
             self.doors_opened_this_floor[env_id] += prev_doors - curr_doors

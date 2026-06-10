@@ -112,20 +112,22 @@ def get_action_mask(G):
 
 
 def _visible_enemies(G, seen):
-    # Use the explicit visibility set; fall back to empty (safest: assume nothing
-    # is visible rather than treating all seen tiles as visible, which would
-    # expose ATTACK actions for enemies that state_extractor considers invisible).
+    cached = G.get('_visible_enemies')
+    if cached is not None:
+        return cached
     visible = G.get('visible')
     if visible is None:
         visible = set()
     elif isinstance(visible, list):
         visible = set(visible)
-    return [
+    result = [
         e for e in G.get('enemies', [])
         if not e.get('dying')
         and not e.get('isPet')
         and (e.get('y', 0) * MAP_W + e.get('x', 0)) in visible
     ]
+    G['_visible_enemies'] = result
+    return result
 
 
 def _has_key(G):
