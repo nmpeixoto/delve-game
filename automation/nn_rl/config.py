@@ -90,9 +90,13 @@ REWARD_POTION_WASTE = -3.0
 REWARD_KEY_DOOR_CHAIN = 40.0    # NEW: bonus for unlocking door within 20 steps of key pickup
 
 # ─── CURRICULUM ──────────────────────────────────────────────────────────────
-# Staged curriculum: agent earns progressively harder floor goals.
-# Advances to next phase only when success_threshold is met over success_window
-# episodes (checked per-class so no single class can carry the window).
+# The bot ALWAYS plays for a full dungeon clear (all 5 floors).
+# No floor caps: floor caps teach the wrong objective — the bot learns to reach
+# floor N, not to *win*. The two phases here progress Normal → Hard mode once
+# the agent has demonstrated real competency at clearing the full dungeon.
+#
+# Phase advances when success_threshold is met over success_window episodes,
+# checked per-class so no single class can carry the window.
 
 # ─── SELF-PLAY ───────────────────────────────────────────────────────────────
 SELF_PLAY_START = 5_000_000   # Start self-play after 5M steps
@@ -100,44 +104,17 @@ SELF_PLAY_SNAPSHOT_AGE = 100_000  # Play against policy from 100K steps ago
 
 CURRICULUM = [
     {
-        'name': 'floor_2_normal',
-        'max_floor': 2,
-        'hard_mode': False,
-        'success_threshold': 0.85,
-        'success_window': 500,
-        'min_steps': 2_000_000,
-        'steps': 10_000_000,
-    },
-    {
-        'name': 'floor_3_normal',
-        'max_floor': 3,
-        'hard_mode': False,
-        'success_threshold': 0.80,
-        'success_window': 500,
-        'min_steps': 2_000_000,
-        'steps': 10_000_000,
-    },
-    {
-        'name': 'floor_4_normal',
-        'max_floor': 4,
-        'hard_mode': False,
-        'success_threshold': 0.75,
-        'success_window': 800,
-        'min_steps': 2_000_000,
-        'steps': 10_000_000,
-    },
-    {
         'name': 'full_dungeon_normal',
-        'max_floor': None,
+        'max_floor': None,          # No floor cap — always aim for a full win
         'hard_mode': False,
-        'success_threshold': 0.80,
+        'success_threshold': 0.80,  # 80% class-avg win rate before advancing to Hard
         'success_window': 1000,
-        'min_steps': 5_000_000,
-        'steps': 30_000_000,
+        'min_steps': 10_000_000,
+        'steps': 120_000_000,       # Up to 120M steps on Normal before Hard starts
     },
     {
         'name': 'full_dungeon_hard',
-        'max_floor': None,
+        'max_floor': None,          # No floor cap — always aim for a full win
         'hard_mode': True,
         'steps': 80_000_000,
     },
