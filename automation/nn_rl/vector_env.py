@@ -73,6 +73,7 @@ class DelveVectorEnv:
             self.last_enemy_kill_step[i] = -999
             self.doors_opened_this_floor[i] = 0
             self.keys_used_this_floor[i] = 0
+            self._inject_state_metadata(i, self.states[i])
 
     def reset(self, env_ids=None):
         if env_ids is None:
@@ -98,6 +99,7 @@ class DelveVectorEnv:
             self.last_enemy_kill_step[eid] = -999
             self.doors_opened_this_floor[eid] = 0
             self.keys_used_this_floor[eid] = 0
+            self._inject_state_metadata(eid, state)
         return [self.states[eid] for eid in env_ids]
 
     def set_curriculum_max_floor(self, max_floor):
@@ -358,8 +360,6 @@ class DelveVectorEnv:
 
                 # Inject metadata for reward and features
                 self._inject_state_metadata(i, state)
-                if self.prev_states[i] is not None:
-                    self._inject_state_metadata(i, self.prev_states[i])
 
                 if state:
                     reward = compute_reward(self.prev_states[i], int(actions[i]), state)
@@ -408,56 +408,6 @@ class DelveVectorEnv:
 
     def close(self):
         self.pool.shutdown()
-
-
-import multiprocessing as mp
-import numpy as np
-
-def _subproc_worker(pipe, env_kwargs):
-    from vector_env import DelveVectorEnv
-    from state_extractor import numpyize_states, numpyize_maps
-    from action_mask import get_action_mask
-    
-    env = DelveVectorEnv(**env_kwargs)
-    try:
-        while True:
-            cmd, args = pipe.recv()
-            if cmd == 'reset':
-                states = env.reset()
-                np_states = numpyize_states(states)
-                np_maps = numpyize_maps(states)
-                masks = np.stack([get_action_mask(s) for s in states]).astype(np.float32, copy=False)
-                pipe.send((np_states, np_maps, masks))
-            elif cmd == 'step':
-                actions = args['actions']
-                states, rewards, dones, infos = env.step(actions)
-                np_states = numpyize_states(states, env.prev_actions)
-                np_maps = numpyize_maps(states)
-                masks = np.stack([get_action_mask(s) for s in states]).astype(np.float32, copy=False)
-                pipe.send((np_states, np_maps, masks, rewards, dones, infos))
-            elif cmd == 'close':
-                env.pool.shutdown()
-                break
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-
-class SubprocVecEnv:
-    def __init__(self, num_envs=128, envs_per_worker=16, **kwargs):
-        self.num_envs = num_envs
-        self.envs_per_worker = envs_per_worker
-        self.num_workers = num_envs // envs_per_worker
-        self.pipes = []
-        self.processes = []
-        
-        for i in range(self.num_workers):
-            parent_pipe, child_pipe = mp.Pipe()
-            env_kwargs = kwargs.copy()
-            env_kwargs['num_envs'] = envs_per_worker
-            env_kwargs['envs_per_worker'] = envs_per_worker
-            p = mp.Process(target=_subproc_worker, args=(child_pipe, env_kwargs))
-            p.daemon = True
-            p.start()
 
 
 import multiprocessing as mp

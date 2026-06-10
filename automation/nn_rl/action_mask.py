@@ -71,7 +71,8 @@ def get_action_mask(G):
 
     carried = [i for i in items if i.get('carried')]
     if any(i.get('type') == 'potion' for i in carried):
-        mask[ACTIONS['USE_POTION']] = True
+        if p.get('hp', 0) < p.get('maxHp', 1):
+            mask[ACTIONS['USE_POTION']] = True
     if any(i.get('type') == 'potion_buff' for i in carried):
         mask[ACTIONS['USE_BUFF']] = True
     if any(i.get('type') == 'bomb' for i in carried):

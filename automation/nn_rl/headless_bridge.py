@@ -120,6 +120,7 @@ class HeadlessWorker:
         # Remove the delta fields so downstream code never sees them
         state.pop('seen_delta', None)
         state.pop('map_delta', None)
+        state['seen_count'] = len(state.get('seen', []))
         return state
 
     

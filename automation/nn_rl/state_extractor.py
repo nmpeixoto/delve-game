@@ -2,15 +2,21 @@
 State extractor for DELVE RL bot.
 Extracts a STATE_DIM-dimensional feature vector from game state G.
 
-Feature breakdown (total = 28 non-shop + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES shop):
-  - Player core (7): hp_ratio, atk, def, lvl, has_key, floor, on_stairs
-  - Navigation (4): stair_dx, stair_dy, bfs_stair_dist, exploration_ratio
-  - Context (6): enemy_count, nearest_enemy_dist, has_weapon, ability1_ready, ability2_ready, any_buff
-  - Resources (1): has_potion
-  - Prev action (4): dx, dy, is_combat, is_item
+Feature breakdown (total = 46 non-shop + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES shop):
+  - Player core (7):      hp_ratio, atk, def, lvl, has_key, floor, on_stairs
+  - Navigation (4):       stair_dx, stair_dy, bfs_stair_dist, exploration_ratio
+  - Context (6):          enemy_count, nearest_enemy_dist, has_weapon, ability1_ready,
+                          ability2_ready, any_buff
+  - Resources (1):        has_potion
+  - Prev action (4):      dx, dy, is_combat, is_item
   - Temporal / event (6): steps_since_floor_change, steps_since_key_pickup,
                            steps_since_enemy_kill, steps_since_door_unlock,
                            doors_opened_this_floor, turns_norm
+  - Class context (8):    cluster_density, adj_enemies, enemies_in_line,
+                          closest_enemy_near_wall, enemies_within_2, is_wand,
+                          is_bow, is_melee
+  - Secondary stats (10): vampirism, regen, swiftness, critChance, dodgeBonus,
+                          freeMoves, rootedTurns, xp_ratio, gold, max_hp
   - Shop tail (MAX_SHOP_SLOTS x SHOP_ITEM_FEATURES): current shop stock encoding
       Per slot (19 features): present, type_flags(8), price, heal, atk, def,
                                amount, rarity, stat_atk, stat_def, stat_hp, stat_other
@@ -99,6 +105,31 @@ def extract_state(G, prev_action=None):
     features.append(min(G.get('_doors_opened_this_floor', 0) / 4, 1.0))      # 26
     features.append(min(G.get('turn', 0) / 2000, 1.0))                       # 27
 
+    # ── CLASS CONTEXT (8 new features) ───────────────────────────────────────
+    features.append(_max_enemy_cluster_density(G) / 4.0)                 # 28
+    features.append(_enemies_adjacent_to_player(G) / 4.0)                # 29
+    features.append(_max_enemies_in_line(G) / 4.0)                       # 30
+    features.append(1.0 if _is_closest_enemy_near_wall(G) else 0.0)      # 31
+    features.append(min(_enemies_within_dist(G, 2) / 4.0, 1.0))          # 32
+
+    weapon_name = str(p.get('weapon', '')).lower()
+    is_wand = 1.0 if 'wand' in weapon_name or 'staff' in weapon_name or 'rod' in weapon_name else 0.0
+    is_bow = 1.0 if 'bow' in weapon_name else 0.0
+    is_melee = 1.0 if p.get('weapon') and not is_wand and not is_bow else 0.0
+    features.extend([is_wand, is_bow, is_melee])                         # 33-35
+
+    # ── SECONDARY STATS (10 new features) ────────────────────────────────────
+    features.append(p.get('vampirism', 0) / 10.0)                        # 36
+    features.append(p.get('regen', 0) / 5.0)                             # 37
+    features.append(p.get('swiftness', 0) / 5.0)                         # 38
+    features.append(min(p.get('critChance', 0), 1.0))                    # 39
+    features.append(min(p.get('dodgeBonus', 0), 1.0))                    # 40
+    features.append(1.0 if p.get('freeMoves', 0) > 0 else 0.0)           # 41
+    features.append(1.0 if p.get('rootedTurns', 0) > 0 else 0.0)         # 42
+    features.append(p.get('xp', 0) / max(p.get('xpNext', 1), 1))         # 43: xp_ratio
+    features.append(min(p.get('gold', 0) / 1000.0, 1.0))                 # 44: gold
+    features.append(p.get('maxHp', 1) / 200.0)                           # 45: max_hp
+
     features.extend(_encode_current_shop(G))
 
     assert len(features) == STATE_DIM, f"Expected {STATE_DIM} features, got {len(features)}"
@@ -155,6 +186,74 @@ def _min_enemy_distance(G):
 
 def _has_buff(p):
     return any(p.get(k, 0) > 0 for k in ['shieldWallTurns', 'vanishTurns', 'strengthTurns', 'bloodlustTurns'])
+
+
+def _max_enemy_cluster_density(G):
+    vis = _visible_enemies(G)
+    if not vis:
+        return 0.0
+    coords = {(e.get('x', 0), e.get('y', 0)) for e in vis}
+    max_adj = 0
+    for e in vis:
+        ex, ey = e.get('x', 0), e.get('y', 0)
+        adj_count = sum(1 for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)] if (ex+dx, ey+dy) in coords)
+        if adj_count > max_adj:
+            max_adj = adj_count
+    return max_adj
+
+
+def _enemies_adjacent_to_player(G):
+    p = G.get('player', {})
+    px, py = p.get('x', 0), p.get('y', 0)
+    vis = _visible_enemies(G)
+    coords = {(e.get('x', 0), e.get('y', 0)) for e in vis}
+    return sum(1 for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)] if (px+dx, py+dy) in coords)
+
+
+def _max_enemies_in_line(G):
+    p = G.get('player', {})
+    px, py = p.get('x', 0), p.get('y', 0)
+    vis = _visible_enemies(G)
+    if not vis:
+        return 0.0
+    max_line = 0
+    map_data = G.get('map', [])
+    for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+        count = 0
+        cx, cy = px + dx, py + dy
+        while 0 <= cy < len(map_data) and 0 <= cx < len(map_data[0]):
+            if map_data[cy][cx] == 0:  # wall
+                break
+            if any(e.get('x') == cx and e.get('y') == cy for e in vis):
+                count += 1
+            cx += dx
+            cy += dy
+        if count > max_line:
+            max_line = count
+    return max_line
+
+
+def _is_closest_enemy_near_wall(G):
+    p = G.get('player', {})
+    vis = _visible_enemies(G)
+    if not vis:
+        return False
+    closest = min(vis, key=lambda e: abs(p.get('x',0)-e.get('x',0)) + abs(p.get('y',0)-e.get('y',0)))
+    ex, ey = closest.get('x',0), closest.get('y',0)
+    map_data = G.get('map', [])
+    for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+        nx, ny = ex+dx, ey+dy
+        if 0 <= ny < len(map_data) and 0 <= nx < len(map_data[0]):
+            if map_data[ny][nx] == 0:
+                return True
+    return False
+
+
+def _enemies_within_dist(G, max_dist):
+    p = G.get('player', {})
+    px, py = p.get('x', 0), p.get('y', 0)
+    vis = _visible_enemies(G)
+    return sum(1 for e in vis if max(abs(e.get('x',0)-px), abs(e.get('y',0)-py)) <= max_dist)
 
 
 def _encode_prev_action(action):
@@ -227,11 +326,14 @@ def extract_local_map(G):
     px, py = p.get('x', 0), p.get('y', 0)
     map_data = G.get('map', [])
     seen = _seen_set(G)
-    enemy_coords = {(e.get('x'), e.get('y')) for e in G.get('enemies', []) if not e.get('dying')}
-    item_coords = {(i.get('x'), i.get('y')) for i in G.get('items', []) if not i.get('carried')}
-    channels = np.zeros((6, 8, 8), dtype=np.float32)
+    
+    enemies_by_coord = {(e.get('x'), e.get('y')): e for e in G.get('enemies', []) if not e.get('dying')}
+    items_by_coord = {(i.get('x'), i.get('y')): i for i in G.get('items', []) if not i.get('carried')}
+    
+    channels = np.zeros((9, 8, 8), dtype=np.float32)
     if len(map_data) == 0:
         return channels
+        
     for dy in range(-4, 4):
         for dx in range(-4, 4):
             x, y = px + dx, py + dy
@@ -239,10 +341,30 @@ def extract_local_map(G):
                 tile = map_data[y][x]
                 channels[0, dy + 4, dx + 4] = 1.0 if tile in (1, 2, 3) else 0.0
                 channels[1, dy + 4, dx + 4] = 1.0 if (y * MAP_W + x) in seen else 0.0
-                channels[2, dy + 4, dx + 4] = 1.0 if (x, y) in enemy_coords else 0.0
-                channels[3, dy + 4, dx + 4] = 1.0 if (x, y) in item_coords else 0.0
-                channels[4, dy + 4, dx + 4] = 1.0 if tile == 2 else 0.0
-                channels[5, dy + 4, dx + 4] = 1.0 if tile == 4 else 0.0
+                channels[2, dy + 4, dx + 4] = 1.0 if tile == 2 else 0.0
+                channels[3, dy + 4, dx + 4] = 1.0 if tile == 4 else 0.0
+                
+                coord = (x, y)
+                if coord in enemies_by_coord:
+                    e = enemies_by_coord[coord]
+                    if e.get('boss'):
+                        channels[6, dy + 4, dx + 4] = 1.0
+                    elif e.get('isElite'):
+                        channels[5, dy + 4, dx + 4] = 1.0
+                    else:
+                        channels[4, dy + 4, dx + 4] = 1.0
+                        
+                if coord in items_by_coord:
+                    # Gate items on seen set: only show items the player has discovered.
+                    # Without this gate the CNN would have "X-ray vision" for unseen items.
+                    if (y * MAP_W + x) in seen:
+                        i = items_by_coord[coord]
+                        typ = i.get('type')
+                        if typ in ('potion', 'potion_buff', 'bomb', 'scroll_teleport', 'scroll'):
+                            channels[7, dy + 4, dx + 4] = 1.0
+                        elif typ in ('weapon', 'armor', 'upgrade'):
+                            channels[8, dy + 4, dx + 4] = 1.0
+                        
     return channels
 
 def numpyize_states(states, prev_actions=None):

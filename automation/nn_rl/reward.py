@@ -7,6 +7,7 @@ Designed to prevent reward hacking and encourage winning.
 import numpy as np
 
 from config import (
+    ACTIONS,
     REWARD_FLOOR_PROGRESS, REWARD_KEY_DOOR_CHAIN, REWARD_TRAP_PENALTY,
     REWARD_KILL_BOSS, REWARD_KILL_ELITE, REWARD_KILL_BASE, REWARD_KILL_XP_MULT,
     REWARD_HEAL_MULT, REWARD_POTION_WASTE, REWARD_STAIR_DISCOVERY,
@@ -22,6 +23,16 @@ MAP_W = 56
 FLOORS = 5
 STAIRS = 2
 ACTION_DESCEND = 13
+
+def get_class_mults(cls):
+    """Return reward multipliers based on class archetype."""
+    if cls in ('warrior', 'barbarian'):
+        return {'kill': 1.5, 'explore': 1.0, 'dmg_penalty': 0.5}
+    elif cls in ('rogue', 'mage', 'ranger'):
+        return {'kill': 0.5, 'explore': 1.5, 'dmg_penalty': 1.5}
+    else:
+        return {'kill': 1.0, 'explore': 1.0, 'dmg_penalty': 1.0}
+
 KEY_DOOR_CHAIN_WINDOW = 20  # Steps within which key pickup → door unlock counts as chain
 
 
@@ -44,6 +55,7 @@ def compute_reward(prev_G, action, curr_G):
     reward = 0.0
     p = curr_G.get('player', {})
     pp = prev_G.get('player', {})
+    mults = get_class_mults(p.get('class', ''))
 
     # ── TERMINAL STATES ──────────────────────────────────────────────────────
     if curr_G.get('won'):
@@ -62,21 +74,21 @@ def compute_reward(prev_G, action, curr_G):
     curr_key_count = _carried_count(curr_G, 'key')
     key_delta = max(0, curr_key_count - prev_key_count)
     if key_delta > 0:
-        reward += 30.0 * key_delta  # Increased from 20
+        reward += 30.0 * key_delta * mults['explore']  # Scaled: explorers benefit more from keys
 
     unlocked_doors = curr_G.get('_doors_unlocked_this_step', 0)
     if unlocked_doors > 0:
-        reward += 50.0 * unlocked_doors  # Increased from 35
+        reward += 50.0 * unlocked_doors * mults['explore']  # Scaled: progress reward per archetype
 
         # Key→door chain bonus: reward completing the key-use sequence quickly
         last_key_step = curr_G.get('_last_key_pickup_step', -999)
         curr_step = curr_G.get('_current_step', 0)
         if last_key_step >= 0 and (curr_step - last_key_step) <= KEY_DOOR_CHAIN_WINDOW:
-            reward += REWARD_KEY_DOOR_CHAIN  # Chain bonus
+            reward += REWARD_KEY_DOOR_CHAIN  # Chain bonus (not scaled — pure skill reward)
 
     revealed_secrets = curr_G.get('_secrets_revealed_this_step', 0)
     if revealed_secrets > 0:
-        reward += 25.0 * revealed_secrets
+        reward += 25.0 * revealed_secrets * mults['explore']
 
     revealed_traps = max(0, _revealed_trap_count(curr_G) - _revealed_trap_count(prev_G))
     if revealed_traps > 0:
@@ -93,11 +105,11 @@ def compute_reward(prev_G, action, curr_G):
             continue
         xp = prev_en.get('xp', 0)
         if prev_en.get('boss'):
-            reward += REWARD_KILL_BOSS
+            reward += REWARD_KILL_BOSS * mults['kill']
         elif prev_en.get('isElite'):
-            reward += REWARD_KILL_ELITE
+            reward += REWARD_KILL_ELITE * mults['kill']
         else:
-            reward += REWARD_KILL_BASE + xp * REWARD_KILL_XP_MULT
+            reward += (REWARD_KILL_BASE + xp * REWARD_KILL_XP_MULT) * mults['kill']
 
     # ── HEALTH MANAGEMENT ────────────────────────────────────────────────────
     hp_delta = (p.get('hp', 0) - pp.get('hp', 0)) / max(p.get('maxHp', 1), 1)
@@ -108,12 +120,12 @@ def compute_reward(prev_G, action, curr_G):
     vis_enemies = _visible_enemies(curr_G)
     adj_count = sum(1 for e in vis_enemies if manhattan(e, p) == 1)
     if hp_delta < -0.05 and adj_count == 0:
-        reward -= 3.0
+        reward -= 3.0 * mults['dmg_penalty']
 
     # ── EXPLORATION ──────────────────────────────────────────────────────────
     explored_delta = curr_G.get('seen_count', 0) - prev_G.get('seen_count', 0)
     if explored_delta > 0:
-        reward += 0.1 * explored_delta  # Strong incentive to explore fast
+        reward += 0.1 * explored_delta * mults['explore']  # Strong incentive to explore fast
 
     # ── FLOOR COVERAGE BONUS ───────────────────────────────────────────────────────────
     # Reward reaching exploration milestones on the CURRENT floor only.
@@ -128,12 +140,15 @@ def compute_reward(prev_G, action, curr_G):
         prev_ratio = _floor_exploration_ratio(prev_G, prev_map)
         for threshold in [0.25, 0.50, 0.75]:
             if prev_ratio < threshold <= curr_ratio:
-                reward += 15.0  # Milestone bonus
+                reward += 15.0 * mults['explore']  # Milestone bonus
 
     # ── RESOURCE MANAGEMENT ──────────────────────────────────────────────────
+    # NOTE: USE_POTION is hard-masked when hp >= maxHp, so full-HP drinking
+    # cannot occur. This penalty catches suboptimal (but legal) potion use
+    # when HP is between 50–100% and a battle is not in progress.
     if action == 8:  # USE_POTION
-        if p.get('hp', 0) > p.get('maxHp', 1) * 0.8:
-            reward += REWARD_POTION_WASTE  # REWARD_POTION_WASTE is negative
+        if p.get('hp', 0) > p.get('maxHp', 1) * 0.5 and len(_visible_enemies(curr_G)) == 0:
+            reward += REWARD_POTION_WASTE  # Penalty for drinking out of combat above 50% HP
 
     # ── STAIR DISCOVERY ──────────────────────────────────────────────────────
     stair_discovered = not prev_G.get('known_stairs') and curr_G.get('known_stairs')
@@ -171,9 +186,9 @@ def compute_reward(prev_G, action, curr_G):
             and action in (0, 1, 2, 3)  # MOVE_UP, DOWN, LEFT, RIGHT
         ):
             if curr_stair_dist < prev_stair_dist:
-                reward += 2.0   # Direct reward for correct direction
+                reward += 2.0 * mults['explore']   # Explorers rewarded more for moving to stairs
             elif curr_stair_dist > prev_stair_dist:
-                reward -= 1.0   # Penalty for wrong direction
+                reward -= 1.0 * mults['explore']   # Explorers penalized more for moving away
 
         if (
             prev_stair_dist == 0

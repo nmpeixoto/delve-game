@@ -17,7 +17,7 @@ class RolloutBuffer:
         self.rollout_steps = rollout_steps
         self.device = torch.device(device)
         self.states = torch.zeros(rollout_steps, num_envs, state_dim, device=self.device)
-        self.maps = torch.zeros(rollout_steps, num_envs, 6, 8, 8, device=self.device)
+        self.maps = torch.zeros(rollout_steps, num_envs, 9, 8, 8, device=self.device)
         self.actions = torch.zeros(rollout_steps, num_envs, dtype=torch.long, device=self.device)
         self.log_probs = torch.zeros(rollout_steps, num_envs, device=self.device)
         self.rewards = torch.zeros(rollout_steps, num_envs, device=self.device)

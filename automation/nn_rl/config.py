@@ -13,7 +13,7 @@ CLASSES = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necrom
 # ─── STATE / ACTION ──────────────────────────────────────────────────────────
 MAX_SHOP_SLOTS = 18
 SHOP_ITEM_FEATURES = 19  # +4 upgrade-stat bits: atk/def/hp/other
-STATE_DIM = 28 + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES
+STATE_DIM = 46 + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES
 ACTION_DIM = 18 + MAX_SHOP_SLOTS        # Base gameplay actions + explicit shop buy-slot actions
 
 # Action indices
@@ -24,6 +24,10 @@ ACTIONS = {
     'USE_POTION': 8, 'USE_BUFF': 9, 'USE_BOMB': 10, 'USE_TELEPORT': 11, 'USE_DETECTION': 12,
     'DESCEND': 13,
     'SHOP_OPEN': 14, 'SHOP_BUY': 15, 'SHOP_SELL': 16, 'ESCAPE': 17,
+    # NOTE: SHOP_BUY (15) is a legacy generic-buy action. It is PERMANENTLY MASKED
+    # by action_mask.py and never exposed to the policy. The per-slot SHOP_BUY_N
+    # actions (indices 18+) are used instead. Do not remove: removing it would
+    # shift all subsequent action indices and break saved checkpoints.
 }
 
 for slot in range(MAX_SHOP_SLOTS):
@@ -96,13 +100,40 @@ SELF_PLAY_SNAPSHOT_AGE = 100_000  # Play against policy from 100K steps ago
 
 CURRICULUM = [
     {
+        'name': 'floor_2_normal',
+        'max_floor': 2,
+        'hard_mode': False,
+        'success_threshold': 0.85,
+        'success_window': 500,
+        'min_steps': 2_000_000,
+        'steps': 10_000_000,
+    },
+    {
+        'name': 'floor_3_normal',
+        'max_floor': 3,
+        'hard_mode': False,
+        'success_threshold': 0.80,
+        'success_window': 500,
+        'min_steps': 2_000_000,
+        'steps': 10_000_000,
+    },
+    {
+        'name': 'floor_4_normal',
+        'max_floor': 4,
+        'hard_mode': False,
+        'success_threshold': 0.75,
+        'success_window': 800,
+        'min_steps': 2_000_000,
+        'steps': 10_000_000,
+    },
+    {
         'name': 'full_dungeon_normal',
         'max_floor': None,
         'hard_mode': False,
-        'success_threshold': 0.8,
+        'success_threshold': 0.80,
         'success_window': 1000,
         'min_steps': 5_000_000,
-        'steps': 20_000_000,
+        'steps': 30_000_000,
     },
     {
         'name': 'full_dungeon_hard',

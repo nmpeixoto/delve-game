@@ -107,6 +107,8 @@ def parse_args(argv=None):
     parser.add_argument("--no-tensorboard", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--metrics-log", default=os.path.join("runs", "delve_ppo", "metrics.jsonl"),
                         help="JSONL file for durable scalar/event logging. Pass an empty string to disable.")
+    parser.add_argument("--curriculum-max-floor", type=int, default=None,
+                        help="Maximum floor the bot is allowed to reach. If it reaches stairs on this floor, it wins early.")
     return parser.parse_args(argv)
 
 
@@ -436,6 +438,9 @@ def main():
     active_phase = CURRICULUM[curriculum_phase] if CURRICULUM else {'name': 'full', 'max_floor': FLOORS}
     curriculum_max_floor = active_phase.get('max_floor')
     curriculum_hard_mode = active_phase.get('hard_mode', False)
+    # CLI override: --curriculum-max-floor overrides the CURRICULUM config phase value.
+    if getattr(args, 'curriculum_max_floor', None) is not None:
+        curriculum_max_floor = args.curriculum_max_floor
     next_save = ((total_steps // args.save_every) + 1) * args.save_every
     phase_budget = int(active_phase.get('steps', 0))
     phase_budget_warned = False

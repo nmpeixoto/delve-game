@@ -12,7 +12,7 @@ from config import STATE_DIM, ACTION_DIM, HIDDEN_DIM
 class SpatialCNN(nn.Module):
     """CNN that processes 8x8 local map around the player."""
     
-    def __init__(self, in_channels=6, out_dim=128):
+    def __init__(self, in_channels=9, out_dim=128):
         super().__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(in_channels, 16, 3, padding=1),
@@ -36,7 +36,7 @@ class DelveNet(nn.Module):
     Actor-Critic network for DELVE.
 
     Architecture:
-        Flat features (state_dim) + CNN(8x8 local map, 6 channels) -> 128 dims
+        Flat features (state_dim) + CNN(8x8 local map, 9 channels) -> 128 dims
         Concat -> GRU(state_dim+128, hidden_dim) -> hidden state
         Policy Head: hidden_dim -> 64 -> action_dim
         Value Head:  hidden_dim -> 64 -> 1
@@ -50,7 +50,7 @@ class DelveNet(nn.Module):
         self.action_dim = action_dim
         
         # CNN for local map
-        self.cnn = SpatialCNN(in_channels=6, out_dim=128)
+        self.cnn = SpatialCNN(in_channels=9, out_dim=128)
         
         # GRU for temporal context
         self.gru = nn.GRU(input_size=state_dim + 128, hidden_size=hidden_dim, batch_first=True)
