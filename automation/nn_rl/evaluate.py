@@ -13,7 +13,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import *
 from network import DelveNet
 from ppo import PPO
-from train import tensorize_maps, tensorize_states
+from state_extractor import numpyize_states, numpyize_maps
+from action_mask import get_action_mask
 from vector_env import DelveVectorEnv
 
 
@@ -80,9 +81,14 @@ def evaluate(model_path=None, num_games=200, device='cuda', deterministic=False,
     hidden = None
     
     while games_done < num_games:
-        state_tensors = tensorize_states(states, device, prev_actions)
-        map_tensors = tensorize_maps(states, device)
-        masks = torch.tensor(env.get_action_masks(), dtype=torch.bool).to(device)
+        np_states = numpyize_states(states, prev_actions)
+        np_maps = numpyize_maps(states)
+        import numpy as np
+        np_masks = np.array([get_action_mask(s) for s in states], dtype=np.bool_)
+
+        state_tensors = torch.from_numpy(np_states).to(device)
+        map_tensors = torch.from_numpy(np_maps).to(device)
+        masks = torch.from_numpy(np_masks).to(device)
         
         with torch.no_grad():
             actions, _, _, hidden = agent.get_action(
@@ -104,12 +110,24 @@ def evaluate(model_path=None, num_games=200, device='cuda', deterministic=False,
         for i, done in enumerate(dones):
             if done:
                 games_done += 1
-                if infos[i].get('won'):
+                c_name = infos[i].get('class_name', 'unknown')
+                won = infos[i].get('won', False)
+                if won:
                     wins += 1
-                total_floor += infos[i].get('final_floor', 0)
+                final_floor = infos[i].get('final_floor', 0)
+                total_floor += final_floor
                 total_steps += infos[i].get('total_steps', 0)
                 outcome = infos[i].get('outcome', 'unknown')
                 outcomes[outcome] = outcomes.get(outcome, 0) + 1
+                
+                if 'class_stats' not in locals():
+                    class_stats = {}
+                if c_name not in class_stats:
+                    class_stats[c_name] = {'games': 0, 'wins': 0, 'floors': 0}
+                class_stats[c_name]['games'] += 1
+                if won: class_stats[c_name]['wins'] += 1
+                class_stats[c_name]['floors'] += final_floor
+                
                 # Reset hidden for this environment
                 if hidden is not None:
                     hidden[:, i] = 0.0
@@ -132,9 +150,19 @@ def evaluate(model_path=None, num_games=200, device='cuda', deterministic=False,
     print(f"  Win Rate: {results['win_rate']:.1%}")
     print(f"  Avg Floor: {results['avg_floor']:.1f}")
     print(f"  Avg Steps: {results['avg_steps']:.0f}")
+    
+    if 'class_stats' in locals():
+        print("\n  Per-Class Performance:")
+        for c, stats in sorted(class_stats.items()):
+            c_games = stats['games']
+            if c_games > 0:
+                c_win = stats['wins'] / c_games
+                c_floor = stats['floors'] / c_games
+                print(f"    {c.capitalize():<12} {c_games:>3} runs | Win: {c_win:>5.1%} | Avg Floor: {c_floor:.2f}")
+
     if outcomes:
         summary = ", ".join(f"{name} {count}" for name, count in sorted(outcomes.items()))
-        print(f"  Outcomes: {summary}")
+        print(f"\n  Outcomes: {summary}")
     
     return results
 
