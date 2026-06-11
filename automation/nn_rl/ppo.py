@@ -80,6 +80,7 @@ class RolloutBuffer:
         returns = chunk_tensor(self.returns)
         advantages = chunk_tensor(self.advantages)
         masks = chunk_tensor(self.masks)
+        dones = chunk_tensor(self.dones)
         
         # For hiddens, we only need the hidden state at the start of each chunk
         # self.hiddens shape: (rollout_steps, num_envs, hidden_dim)
@@ -107,6 +108,7 @@ class RolloutBuffer:
                 'returns': returns[batch_idx].reshape(-1),
                 'advantages': advantages[batch_idx].reshape(-1),
                 'masks': masks[batch_idx].reshape(-1, masks.shape[-1]),
+                'dones': dones[batch_idx].reshape(-1),
                 'hiddens': hiddens_starts[batch_idx],
                 'seq_len': seq_len,
             }
@@ -158,48 +160,51 @@ class PPO:
         total_entropy = 0
         num_batches = 0
         
-        for batch in buffer.get_batches(config['batch_size']):
-            states = batch['states']
-            maps = batch['maps']
-            actions = batch['actions']
-            old_log_probs = batch['old_log_probs']
-            returns = batch['returns']
-            advantages = batch['advantages']
-            masks = batch['masks']
-            # Use the hidden state recorded at the start of the chunk
-            batch_hidden = batch['hiddens'].unsqueeze(0).contiguous()  # (1, batch_chunks, hidden_dim)
-            seq_len = batch['seq_len']
+        # Globally normalize advantages
+        buffer.advantages = (buffer.advantages - buffer.advantages.mean()) / (buffer.advantages.std() + 1e-8)
+        
+        for _ in range(config.get('epochs_per_update', 3)):
+            for batch in buffer.get_batches(config['batch_size']):
+                states = batch['states']
+                maps = batch['maps']
+                actions = batch['actions']
+                old_log_probs = batch['old_log_probs']
+                returns = batch['returns']
+                advantages = batch['advantages']
+                masks = batch['masks']
+                dones = batch['dones']
+                # Use the hidden state recorded at the start of the chunk
+                batch_hidden = batch['hiddens'].unsqueeze(0).contiguous()  # (1, batch_chunks, hidden_dim)
+                seq_len = batch['seq_len']
 
-            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-
-            logits, value, _ = self.network(states, maps, action_mask=masks, hidden=batch_hidden, seq_len=seq_len)
-            dist = torch.distributions.Categorical(logits=logits)
-            
-            new_log_probs = dist.log_prob(actions)
-            entropy = dist.entropy().mean()
-            
-            ratio = torch.exp(new_log_probs - old_log_probs)
-            surr1 = ratio * advantages
-            surr2 = torch.clamp(ratio, 1 - config['clip_eps'], 1 + config['clip_eps']) * advantages
-            policy_loss = -torch.min(surr1, surr2).mean()
-            
-            value_loss = 0.5 * (returns - value.squeeze(-1)).pow(2).mean()
-            
-            loss = (policy_loss
-                    + config['value_coeff'] * value_loss
-                    - config['entropy_coeff'] * entropy)
-            
-            self.optimizer.zero_grad()
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(
-                self.network.parameters(), config['max_grad_norm']
-            )
-            self.optimizer.step()
-            
-            total_policy_loss += policy_loss.item()
-            total_value_loss += value_loss.item()
-            total_entropy += entropy.item()
-            num_batches += 1
+                logits, value, _ = self.network(states, maps, action_mask=masks, hidden=batch_hidden, seq_len=seq_len, dones=dones)
+                dist = torch.distributions.Categorical(logits=logits)
+                
+                new_log_probs = dist.log_prob(actions)
+                entropy = dist.entropy().mean()
+                
+                ratio = torch.exp(new_log_probs - old_log_probs)
+                surr1 = ratio * advantages
+                surr2 = torch.clamp(ratio, 1 - config['clip_eps'], 1 + config['clip_eps']) * advantages
+                policy_loss = -torch.min(surr1, surr2).mean()
+                
+                value_loss = 0.5 * (returns - value.squeeze(-1)).pow(2).mean()
+                
+                loss = (policy_loss
+                        + config['value_coeff'] * value_loss
+                        - config['entropy_coeff'] * entropy)
+                
+                self.optimizer.zero_grad()
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(
+                    self.network.parameters(), config['max_grad_norm']
+                )
+                self.optimizer.step()
+                
+                total_policy_loss += policy_loss.item()
+                total_value_loss += value_loss.item()
+                total_entropy += entropy.item()
+                num_batches += 1
         
         self.scheduler.step()
         

@@ -69,7 +69,7 @@ class DelveNet(nn.Module):
             nn.Linear(64, 1),
         )
     
-    def forward(self, state, map_tensor, action_mask=None, hidden=None, seq_len=1):
+    def forward(self, state, map_tensor, action_mask=None, hidden=None, seq_len=1, dones=None):
         """
         Args:
             state: (batch * seq_len, state_dim) flat features
@@ -77,6 +77,7 @@ class DelveNet(nn.Module):
             action_mask: optional (batch * seq_len, action_dim) bool
             hidden: optional (1, batch, hidden_dim) GRU hidden state
             seq_len: sequence length for BPTT unrolling
+            dones: optional (batch * seq_len) boolean tensor to mask hidden state
         
         Returns:
             logits, value, hidden
@@ -90,8 +91,24 @@ class DelveNet(nn.Module):
         combined_seq = combined.view(batch_size, seq_len, -1)
         
         if hidden is None:
-            gru_out, hidden = self.gru(combined_seq)
+            hidden = torch.zeros(1, batch_size, self.hidden_dim, device=state.device)
+            
+        if dones is not None:
+            # Step-by-step unrolling to prevent cross-episode bleed
+            dones_seq = dones.view(batch_size, seq_len)
+            outputs = []
+            h = hidden
+            for t in range(seq_len):
+                x_t = combined_seq[:, t:t+1, :]
+                out_t, h = self.gru(x_t, h)
+                # If episode ended at t, reset hidden state for t+1
+                d_t = dones_seq[:, t:t+1]  # (batch, 1)
+                h = h.masked_fill(d_t.unsqueeze(0), 0.0)
+                outputs.append(out_t)
+            gru_out = torch.cat(outputs, dim=1)
+            hidden = h
         else:
+            # Fast path for inference (seq_len=1, no dones needed)
             gru_out, hidden = self.gru(combined_seq, hidden)
             
         gru_out = gru_out.contiguous().view(batch_size * seq_len, -1)  # (batch*seq_len, hidden_dim)

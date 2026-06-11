@@ -48,6 +48,22 @@ def get_action_mask(G):
         mask[ACTIONS['ESCAPE']] = True
         return mask
 
+    if G.get('shopOpen'):
+        current_shop = G.get('currentShop') or {}
+        stock = list((current_shop.get('stock') or []))
+        gold = p.get('gold', 0)
+        for idx in range(min(MAX_SHOP_SLOTS, len(stock))):
+            item = stock[idx]
+            if not item or item.get('sold'):
+                continue
+            if item.get('price', 0) <= gold:
+                action_key = f'SHOP_BUY_{idx}'
+                if action_key in ACTIONS:
+                    mask[ACTIONS[action_key]] = True
+        mask[ACTIONS['SHOP_SELL']] = True
+        mask[ACTIONS['ESCAPE']] = True
+        return mask
+
     # Movement is still a real input while rooted: the game consumes root when
     # an arrow key is pressed.
     for i, (dx, dy) in enumerate(DIRS):
@@ -95,20 +111,6 @@ def get_action_mask(G):
     near_shop = any(chebyshev(s, p) <= 1 for s in shops)
     if near_shop:
         mask[ACTIONS['SHOP_OPEN']] = True
-    if G.get('shopOpen'):
-        current_shop = G.get('currentShop') or {}
-        stock = list((current_shop.get('stock') or []))
-        gold = p.get('gold', 0)
-        for idx in range(min(MAX_SHOP_SLOTS, len(stock))):
-            item = stock[idx]
-            if not item or item.get('sold'):
-                continue
-            if item.get('price', 0) <= gold:
-                action_key = f'SHOP_BUY_{idx}'
-                if action_key in ACTIONS:
-                    mask[ACTIONS[action_key]] = True
-        mask[ACTIONS['SHOP_SELL']] = True
-        mask[ACTIONS['ESCAPE']] = True
 
     if not mask.any():
         mask[ACTIONS['ESCAPE']] = True

@@ -246,6 +246,9 @@ def compute_reward(prev_G, action, curr_G):
         or xp_delta > 0
         or level_up
         or resource_gain_reward > 0
+        or atk_delta > 0
+        or def_delta > 0
+        or maxHp_delta > 0
         or (hp_delta > 0 and pp.get('hp', 0) < pp.get('maxHp', 1))
     )
     if not made_progress:
