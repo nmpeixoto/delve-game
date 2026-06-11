@@ -21,6 +21,9 @@ STAIR_BEELINE_MAX_PATH_DISTANCE = 3
 def manhattan(a, b):
     return abs(a['x'] - b['x']) + abs(a['y'] - b['y'])
 
+def chebyshev(a, b):
+    return max(abs(a['x'] - b['x']), abs(a['y'] - b['y']))
+
 
 def get_action_mask(G):
     """
@@ -55,7 +58,7 @@ def get_action_mask(G):
             mask[i] = True
 
     vis_enemies = _visible_enemies(G, seen)
-    adj_enemies = [e for e in vis_enemies if manhattan(e, p) == 1]
+    adj_enemies = [e for e in vis_enemies if chebyshev(e, p) <= 1]
     _apply_stair_beeline_mask(G, mask, p, vis_enemies)
 
     # ATTACK_1 and ATTACK_2 are permanently disabled.
@@ -76,7 +79,7 @@ def get_action_mask(G):
     if any(i.get('type') == 'potion_buff' for i in carried):
         mask[ACTIONS['USE_BUFF']] = True
     if any(i.get('type') == 'bomb' for i in carried):
-        if any(manhattan(e, p) <= 2 for e in vis_enemies):
+        if any(chebyshev(e, p) <= 2 for e in vis_enemies):
             mask[ACTIONS['USE_BOMB']] = True
     if any(i.get('type') == 'scroll_teleport' for i in carried):
         mask[ACTIONS['USE_TELEPORT']] = True
@@ -87,7 +90,7 @@ def get_action_mask(G):
         if map_data[py][px] == STAIRS and G.get('floor', 1) < FLOORS:
             mask[ACTIONS['DESCEND']] = True
 
-    near_shop = any(manhattan(s, p) <= 1 for s in shops)
+    near_shop = any(chebyshev(s, p) <= 1 for s in shops)
     if near_shop:
         mask[ACTIONS['SHOP_OPEN']] = True
     if G.get('shopOpen'):
@@ -198,7 +201,7 @@ def _ability1_valid(G, p, vis_enemies, adj_enemies):
     if cls == 'ranger':
         return any(_is_line_clear(G, p, e) for e in vis_enemies)
     if cls in ('warrior', 'paladin', 'necromancer'):
-        return any(manhattan(e, p) <= 2 for e in vis_enemies)
+        return any(chebyshev(e, p) <= 2 for e in vis_enemies)
     if cls in ('barbarian', 'monk'):
         return len(adj_enemies) > 0
     return False

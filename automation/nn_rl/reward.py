@@ -39,6 +39,9 @@ KEY_DOOR_CHAIN_WINDOW = 20  # Steps within which key pickup → door unlock coun
 def manhattan(a, b):
     return abs(a['x'] - b['x']) + abs(a['y'] - b['y'])
 
+def chebyshev(a, b):
+    return max(abs(a['x'] - b['x']), abs(a['y'] - b['y']))
+
 
 def compute_reward(prev_G, action, curr_G):
     """
@@ -118,9 +121,22 @@ def compute_reward(prev_G, action, curr_G):
         reward += hp_delta * REWARD_HEAL_MULT
 
     vis_enemies = _visible_enemies(curr_G)
-    adj_count = sum(1 for e in vis_enemies if manhattan(e, p) == 1)
+    adj_count = sum(1 for e in vis_enemies if chebyshev(e, p) <= 1)
     if hp_delta < -0.05 and adj_count == 0:
         reward -= 3.0 * mults['dmg_penalty']
+        
+    # ── STAT GAINS ───────────────────────────────────────────────────────────
+    atk_delta = p.get('atk', 0) - pp.get('atk', 0)
+    if atk_delta > 0:
+        reward += atk_delta * 5.0
+        
+    def_delta = p.get('def', 0) - pp.get('def', 0)
+    if def_delta > 0:
+        reward += def_delta * 5.0
+        
+    maxHp_delta = p.get('maxHp', 1) - pp.get('maxHp', 1)
+    if maxHp_delta > 0:
+        reward += maxHp_delta * 0.5
 
     # ── EXPLORATION ──────────────────────────────────────────────────────────
     explored_delta = curr_G.get('seen_count', 0) - prev_G.get('seen_count', 0)

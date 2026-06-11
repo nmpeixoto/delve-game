@@ -13,7 +13,7 @@ CLASSES = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necrom
 # ─── STATE / ACTION ──────────────────────────────────────────────────────────
 MAX_SHOP_SLOTS = 18
 SHOP_ITEM_FEATURES = 19  # +4 upgrade-stat bits: atk/def/hp/other
-STATE_DIM = 46 + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES
+STATE_DIM = 63 + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES
 ACTION_DIM = 18 + MAX_SHOP_SLOTS        # Base gameplay actions + explicit shop buy-slot actions
 
 # Action indices

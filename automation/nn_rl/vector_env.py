@@ -55,7 +55,7 @@ class DelveVectorEnv:
 
     def _make_game(self, env_id):
         seed = random.randint(1, 10_000_000)
-        cls = random.choice(CLASSES)
+        cls = CLASSES[env_id % len(CLASSES)]
         hard = getattr(self, 'curriculum_hard_mode', False)
         return DelveGame(seed=seed, player_class=cls, hard_mode=hard)
 

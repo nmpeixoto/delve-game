@@ -65490,3 +65490,63 @@
 [JS] Room 14 type=secret ne=0 guaranteedItems=2 (RNG: 579)
 [JS] Room 15 type=secret ne=0 guaranteedItems=2 (RNG: 591)
 [JS] Room 16 type=normal ne=2 guaranteedItems=1 (RNG: 603)
+[JS] RNG start buildFloor: 0
+[JS] RNG after generateMap: 367
+[JS] weps len: 8 arms len: 8
+[JS] weps len: 9 arms len: 7
+[JS] weps len: 8 arms len: 8
+[JS] RNG after shops: 446
+[JS_ROOMS] ["normal","shrine","armory","normal","crypt","shop","normal","shop","normal","normal","normal","normal","shop","treasure","secret","secret","normal"]
+[JS] Room 1 type=shrine ne=2 guaranteedItems=0 (RNG: 449)
+[JS] Room 2 type=armory ne=4 guaranteedItems=2 (RNG: 458)
+[JS] Room 3 type=normal ne=1 guaranteedItems=0 (RNG: 482)
+[JS] Room 4 type=crypt ne=6 guaranteedItems=1 (RNG: 488)
+[JS] Room 6 type=normal ne=2 guaranteedItems=1 (RNG: 513)
+[JS] Room 8 type=normal ne=2 guaranteedItems=1 (RNG: 526)
+[JS] Room 9 type=normal ne=1 guaranteedItems=1 (RNG: 539)
+[JS] Room 10 type=normal ne=1 guaranteedItems=1 (RNG: 549)
+[JS] Room 11 type=normal ne=1 guaranteedItems=0 (RNG: 559)
+[JS] Room 13 type=treasure ne=1 guaranteedItems=2 (RNG: 564)
+[JS] Room 14 type=secret ne=0 guaranteedItems=2 (RNG: 579)
+[JS] Room 15 type=secret ne=0 guaranteedItems=2 (RNG: 591)
+[JS] Room 16 type=normal ne=2 guaranteedItems=1 (RNG: 603)
+[JS] RNG start buildFloor: 0
+[JS] RNG after generateMap: 367
+[JS] weps len: 8 arms len: 8
+[JS] weps len: 9 arms len: 7
+[JS] weps len: 8 arms len: 8
+[JS] RNG after shops: 446
+[JS_ROOMS] ["normal","shrine","armory","normal","crypt","shop","normal","shop","normal","normal","normal","normal","shop","treasure","secret","secret","normal"]
+[JS] Room 1 type=shrine ne=2 guaranteedItems=0 (RNG: 449)
+[JS] Room 2 type=armory ne=4 guaranteedItems=2 (RNG: 458)
+[JS] Room 3 type=normal ne=1 guaranteedItems=0 (RNG: 482)
+[JS] Room 4 type=crypt ne=6 guaranteedItems=1 (RNG: 488)
+[JS] Room 6 type=normal ne=2 guaranteedItems=1 (RNG: 513)
+[JS] Room 8 type=normal ne=2 guaranteedItems=1 (RNG: 526)
+[JS] Room 9 type=normal ne=1 guaranteedItems=1 (RNG: 539)
+[JS] Room 10 type=normal ne=1 guaranteedItems=1 (RNG: 549)
+[JS] Room 11 type=normal ne=1 guaranteedItems=0 (RNG: 559)
+[JS] Room 13 type=treasure ne=1 guaranteedItems=2 (RNG: 564)
+[JS] Room 14 type=secret ne=0 guaranteedItems=2 (RNG: 579)
+[JS] Room 15 type=secret ne=0 guaranteedItems=2 (RNG: 591)
+[JS] Room 16 type=normal ne=2 guaranteedItems=1 (RNG: 603)
+[JS] RNG start buildFloor: 0
+[JS] RNG after generateMap: 367
+[JS] weps len: 8 arms len: 8
+[JS] weps len: 9 arms len: 7
+[JS] weps len: 8 arms len: 8
+[JS] RNG after shops: 446
+[JS_ROOMS] ["normal","shrine","armory","normal","crypt","shop","normal","shop","normal","normal","normal","normal","shop","treasure","secret","secret","normal"]
+[JS] Room 1 type=shrine ne=2 guaranteedItems=0 (RNG: 449)
+[JS] Room 2 type=armory ne=4 guaranteedItems=2 (RNG: 458)
+[JS] Room 3 type=normal ne=1 guaranteedItems=0 (RNG: 482)
+[JS] Room 4 type=crypt ne=6 guaranteedItems=1 (RNG: 488)
+[JS] Room 6 type=normal ne=2 guaranteedItems=1 (RNG: 513)
+[JS] Room 8 type=normal ne=2 guaranteedItems=1 (RNG: 526)
+[JS] Room 9 type=normal ne=1 guaranteedItems=1 (RNG: 539)
+[JS] Room 10 type=normal ne=1 guaranteedItems=1 (RNG: 549)
+[JS] Room 11 type=normal ne=1 guaranteedItems=0 (RNG: 559)
+[JS] Room 13 type=treasure ne=1 guaranteedItems=2 (RNG: 564)
+[JS] Room 14 type=secret ne=0 guaranteedItems=2 (RNG: 579)
+[JS] Room 15 type=secret ne=0 guaranteedItems=2 (RNG: 591)
+[JS] Room 16 type=normal ne=2 guaranteedItems=1 (RNG: 603)

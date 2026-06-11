@@ -85,50 +85,69 @@ def extract_state(G, prev_action=None):
     features.append(1.0 if p.get('weapon') else 0.0)                   # 13: has_weapon
     features.append(1.0 if G.get('ability1Cooldown', 0) == 0 else 0.0) # 14: ability1
     features.append(1.0 if (G.get('ability2Cooldown', 0) == 0 and p.get('lvl', 0) >= 5) else 0.0)  # 15: ability2
-    features.append(1.0 if _has_buff(p) else 0.0)                      # 16: any_buff
+    features.append(1.0 if p.get('shieldWallTurns', 0) > 0 else 0.0)   # 16: shieldWall
+    features.append(1.0 if p.get('vanishTurns', 0) > 0 else 0.0)       # 17: vanish
+    features.append(1.0 if p.get('strengthTurns', 0) > 0 else 0.0)     # 18: strength
+    features.append(1.0 if p.get('bloodlustTurns', 0) > 0 else 0.0)    # 19: bloodlust
+    features.append(1.0 if p.get('poisonedTurns', 0) > 0 else 0.0)     # 20: poisoned
 
-    # ── RESOURCES (1) ────────────────────────────────────────────────────────
-    features.append(1.0 if any(i.get('type') in ('potion', 'potion_buff') and i.get('carried')
-                               for i in G.get('items', [])) else 0.0)   # 17: has_potion
+    # ── RESOURCES (3) ────────────────────────────────────────────────────────
+    potions = sum(1.0 for i in G.get('items', []) if i.get('type') in ('potion', 'potion_buff') and i.get('carried'))
+    features.append(min(potions / 5.0, 1.0))   # 21: potion_ratio
+    
+    bombs = sum(1.0 for i in G.get('items', []) if i.get('type') == 'bomb' and i.get('carried'))
+    features.append(min(bombs / 3.0, 1.0))     # 22: bomb_ratio
+    
+    scrolls = sum(1.0 for i in G.get('items', []) if 'scroll' in str(i.get('type')) and i.get('carried'))
+    features.append(min(scrolls / 3.0, 1.0))   # 23: scroll_ratio
 
     # ── PREV ACTION (4) ──────────────────────────────────────────────────────
     if prev_action is not None:
         features.extend(_encode_prev_action(prev_action))
     else:
-        features.extend([0.0, 0.0, 0.0, 0.0])                         # 18-21: prev_action
+        features.extend([0.0, 0.0, 0.0, 0.0])                         # 24-27: prev_action
 
-    # ── TEMPORAL / EVENT TRACKING (7) ────────────────────────────────────────
-    features.append(min(G.get('_steps_since_floor_change', 0) / 500, 1.0))   # 22
-    features.append(min(G.get('_steps_since_key_pickup', 0) / 200, 1.0))     # 23
-    features.append(min(G.get('_steps_since_enemy_kill', 0) / 200, 1.0))     # 24
-    features.append(min(G.get('_steps_since_door_unlock', 0) / 200, 1.0))    # 25
-    features.append(min(G.get('_doors_opened_this_floor', 0) / 4, 1.0))      # 26
-    features.append(min(G.get('turn', 0) / 2000, 1.0))                       # 27
+    # ── TEMPORAL / EVENT TRACKING (6) ────────────────────────────────────────
+    features.append(min(G.get('_steps_since_floor_change', 0) / 500, 1.0))   # 28
+    features.append(min(G.get('_steps_since_key_pickup', 0) / 200, 1.0))     # 29
+    features.append(min(G.get('_steps_since_enemy_kill', 0) / 200, 1.0))     # 30
+    features.append(min(G.get('_steps_since_door_unlock', 0) / 200, 1.0))    # 31
+    features.append(min(G.get('_doors_opened_this_floor', 0) / 4, 1.0))      # 32
+    features.append(min(G.get('turn', 0) / 2000, 1.0))                       # 33
 
-    # ── CLASS CONTEXT (8 new features) ───────────────────────────────────────
-    features.append(_max_enemy_cluster_density(G) / 4.0)                 # 28
-    features.append(_enemies_adjacent_to_player(G) / 4.0)                # 29
-    features.append(_max_enemies_in_line(G) / 4.0)                       # 30
-    features.append(1.0 if _is_closest_enemy_near_wall(G) else 0.0)      # 31
-    features.append(min(_enemies_within_dist(G, 2) / 4.0, 1.0))          # 32
+    # ── ENEMY CONTEXT (11 features) ───────────────────────────────────────
+    features.append(_max_enemy_cluster_density(G) / 4.0)                 # 34
+    features.append(_enemies_adjacent_to_player(G) / 4.0)                # 35
+    features.append(_max_enemies_in_line(G) / 4.0)                       # 36
+    features.append(1.0 if _is_closest_enemy_near_wall(G) else 0.0)      # 37
+    features.append(min(_enemies_within_dist(G, 2) / 4.0, 1.0))          # 38
+    
+    edx, edy = _closest_enemy_direction(G)
+    features.append(edx)                                                 # 39
+    features.append(edy)                                                 # 40
+    features.append(_closest_enemy_hp_ratio(G))                          # 41
 
     weapon_name = str(p.get('weapon', '')).lower()
     is_wand = 1.0 if 'wand' in weapon_name or 'staff' in weapon_name or 'rod' in weapon_name else 0.0
     is_bow = 1.0 if 'bow' in weapon_name else 0.0
     is_melee = 1.0 if p.get('weapon') and not is_wand and not is_bow else 0.0
-    features.extend([is_wand, is_bow, is_melee])                         # 33-35
+    features.extend([is_wand, is_bow, is_melee])                         # 42-44
 
-    # ── SECONDARY STATS (10 new features) ────────────────────────────────────
-    features.append(p.get('vampirism', 0) / 10.0)                        # 36
-    features.append(p.get('regen', 0) / 5.0)                             # 37
-    features.append(p.get('swiftness', 0) / 5.0)                         # 38
-    features.append(min(p.get('critChance', 0), 1.0))                    # 39
-    features.append(min(p.get('dodgeBonus', 0), 1.0))                    # 40
-    features.append(1.0 if p.get('freeMoves', 0) > 0 else 0.0)           # 41
-    features.append(1.0 if p.get('rootedTurns', 0) > 0 else 0.0)         # 42
-    features.append(p.get('xp', 0) / max(p.get('xpNext', 1), 1))         # 43: xp_ratio
-    features.append(min(p.get('gold', 0) / 1000.0, 1.0))                 # 44: gold
-    features.append(p.get('maxHp', 1) / 200.0)                           # 45: max_hp
+    # ── SECONDARY STATS (10 features) ────────────────────────────────────
+    features.append(p.get('vampirism', 0) / 10.0)                        # 45
+    features.append(p.get('regen', 0) / 5.0)                             # 46
+    features.append(p.get('swiftness', 0) / 5.0)                         # 47
+    features.append(min(p.get('critChance', 0), 1.0))                    # 48
+    features.append(min(p.get('dodgeBonus', 0), 1.0))                    # 49
+    features.append(1.0 if p.get('freeMoves', 0) > 0 else 0.0)           # 50
+    features.append(1.0 if p.get('rootedTurns', 0) > 0 else 0.0)         # 51
+    features.append(p.get('xp', 0) / max(p.get('xpNext', 1), 1))         # 52
+    features.append(min(p.get('gold', 0) / 1000.0, 1.0))                 # 53
+    features.append(p.get('maxHp', 1) / 200.0)                           # 54
+
+    # ── CLASS ID (8 features) ────────────────────────────────────────────
+    cls_name = str(p.get('class', '')).lower()
+    features.extend([1.0 if cls_name == c else 0.0 for c in CLASS_NAMES]) # 55-62
 
     features.extend(_encode_current_shop(G))
 
@@ -180,12 +199,40 @@ def _visible_enemies(G):
     return result
 
 
+def _closest_enemy_direction(G):
+    p = G.get('player', {})
+    px, py = p.get('x', 0), p.get('y', 0)
+    vis = _visible_enemies(G)
+    if not vis:
+        return 0.0, 0.0
+    
+    closest = min(vis, key=lambda e: abs(p.get('x',0)-e.get('x',0)) + abs(p.get('y',0)-e.get('y',0)))
+    dx, dy = closest.get('x', 0) - px, closest.get('y', 0) - py
+    scale = 3.0
+    return max(-1.0, min(1.0, dx / scale)), max(-1.0, min(1.0, dy / scale))
+
+
+def _closest_enemy_hp_ratio(G):
+    p = G.get('player', {})
+    px, py = p.get('x', 0), p.get('y', 0)
+    vis = _visible_enemies(G)
+    if not vis:
+        return 1.0  # Safe default if no enemies
+    
+    closest = min(vis, key=lambda e: max(abs(p.get('x',0)-e.get('x',0)), abs(p.get('y',0)-e.get('y',0))))
+    hp = closest.get('hp', 0)
+    maxHp = closest.get('maxHp', 1)
+    if maxHp <= 0: maxHp = 1
+    return min(max(hp / maxHp, 0.0), 1.0)
+
+
 def _min_enemy_distance(G):
     p = G.get('player', {})
+    px, py = p.get('x', 0), p.get('y', 0)
     vis = _visible_enemies(G)
     if not vis:
         return 10.0
-    return min(abs(p.get('x', 0) - e.get('x', 0)) + abs(p.get('y', 0) - e.get('y', 0)) for e in vis)
+    return min(max(abs(p.get('x', 0) - e.get('x', 0)), abs(p.get('y', 0) - e.get('y', 0))) for e in vis)
 
 
 def _has_buff(p):
@@ -211,7 +258,7 @@ def _enemies_adjacent_to_player(G):
     px, py = p.get('x', 0), p.get('y', 0)
     vis = _visible_enemies(G)
     coords = {(e.get('x', 0), e.get('y', 0)) for e in vis}
-    return sum(1 for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)] if (px+dx, py+dy) in coords)
+    return sum(1 for dx in [-1,0,1] for dy in [-1,0,1] if (dx != 0 or dy != 0) and (px+dx, py+dy) in coords)
 
 
 def _max_enemies_in_line(G):
