@@ -28,6 +28,8 @@ from config import MAX_SHOP_SLOTS, SHOP_ITEM_FEATURES, STATE_DIM, MAP_W
 from pathfinding import (
     shortest_stairs_distance,
     floor_exploration_ratio,
+    nearest_unseen_direction,
+    nearest_poi_direction,
     _seen_set,
 )
 
@@ -111,23 +113,36 @@ def extract_state(G, prev_action=None):
     features.append(min(G.get('_steps_since_floor_change', 0) / 500, 1.0))   # 28
     features.append(min(G.get('_steps_since_key_pickup', 0) / 200, 1.0))     # 29
     features.append(min(G.get('_steps_since_enemy_kill', 0) / 200, 1.0))     # 30
-    features.append(min(G.get('_steps_since_door_unlock', 0) / 200, 1.0))    # 31
-    features.append(min(G.get('_doors_opened_this_floor', 0) / 4, 1.0))      # 32
-    features.append(min(G.get('turn', 0) / 2000, 1.0))                       # 33
+    
+    exp_dx, exp_dy = nearest_unseen_direction(G, map_data)
+    features.append(float(exp_dx))                                           # 31: explore_dx
+    features.append(float(exp_dy))                                           # 32: explore_dy
+    
+    shop_dx, shop_dy = nearest_poi_direction(G, map_data, 'shop')
+    features.append(float(shop_dx))                                          # 33: shop_dx
+    features.append(float(shop_dy))                                          # 34: shop_dy
+    
+    shrine_dx, shrine_dy = nearest_poi_direction(G, map_data, 'shrine')
+    features.append(float(shrine_dx))                                        # 35: shrine_dx
+    features.append(float(shrine_dy))                                        # 36: shrine_dy
+    
+    has_key = any(i.get('type') == 'key' and i.get('carried') for i in G.get('items', []))
+    if has_key:
+        ldoor_dx, ldoor_dy = nearest_poi_direction(G, map_data, 'locked_door')
+    else:
+        ldoor_dx, ldoor_dy = 0.0, 0.0
+    features.append(float(ldoor_dx))                                         # 37: locked_door_dx
+    features.append(float(ldoor_dy))                                         # 38: locked_door_dy
 
     # ── ENEMY CONTEXT (11 features) ───────────────────────────────────────
-    features.append(_max_enemy_cluster_density(G) / 4.0)                 # 34
-    features.append(_enemies_adjacent_to_player(G) / 4.0)                # 35
-    features.append(_max_enemies_in_line(G) / 4.0)                       # 36
-    features.append(1.0 if _is_closest_enemy_near_wall(G) else 0.0)      # 37
-    features.append(min(_enemies_within_dist(G, 2) / 4.0, 1.0))          # 38
     
     edx, edy = _closest_enemy_direction(G)
     features.append(edx)                                                 # 39
     features.append(edy)                                                 # 40
     features.append(_closest_enemy_hp_ratio(G))                          # 41
 
-    weapon_name = str(p.get('weapon', '')).lower()
+    weapon_dict = p.get('weapon') or {}
+    weapon_name = weapon_dict.get('name', '').lower()
     is_wand = 1.0 if 'wand' in weapon_name or 'staff' in weapon_name or 'rod' in weapon_name else 0.0
     is_bow = 1.0 if 'bow' in weapon_name else 0.0
     is_melee = 1.0 if p.get('weapon') and not is_wand and not is_bow else 0.0
@@ -168,18 +183,19 @@ def _stair_direction(G):
     p = G.get('player', {})
     px, py = p.get('x', 0), p.get('y', 0)
     seen = _seen_set(G)
+    map_data = G.get('map', [])
 
     best_dist = float('inf')
     best_dx, best_dy = 0, 0
 
-    stair_coords = G.get('_stair_coords', [])
-    for x, y in stair_coords:
-        if (y * MAP_W + x) in seen:
-            dx, dy = x - px, y - py
-            dist = abs(dx) + abs(dy)
-            if dist < best_dist:
-                best_dist = dist
-                best_dx, best_dy = dx, dy
+    for y, row in enumerate(map_data):
+        for x, tile in enumerate(row):
+            if tile == 2 and (y * MAP_W + x) in seen:
+                dx, dy = x - px, y - py
+                dist = abs(dx) + abs(dy)
+                if dist < best_dist:
+                    best_dist = dist
+                    best_dx, best_dy = dx, dy
 
     if best_dist == 0:
         return 0.0, 0.0
@@ -398,7 +414,7 @@ def extract_local_map(G):
                 coord = (x, y)
                 if coord in enemies_by_coord:
                     e = enemies_by_coord[coord]
-                    if e.get('boss'):
+                    if e.get('isBoss'):
                         channels[6, dy + 4, dx + 4] = 1.0
                     elif e.get('isElite'):
                         channels[5, dy + 4, dx + 4] = 1.0

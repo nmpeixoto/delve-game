@@ -523,6 +523,7 @@ class DelveGame:
         self.shops = []
         self.traps = []
         self.current_shop = None
+        self.current_shrine = None
         self.visible = set()
         self.seen = set()
         self._stair_coords = []
@@ -721,6 +722,7 @@ class DelveGame:
                                'type': 'key', 'rarity': 'common', 'sym': '⚷', 'carried': False})
 
         self._door_count = sum(1 for row in self.map for t in row if t == TILE_LOCKED_DOOR)
+        self._secret_count = sum(1 for row in self.map for t in row if t == TILE_SECRET_DOOR)
         self._compute_vision()
 
     # ─── ITEM SPAWNING ────────────────────────────────────────────────────
@@ -1411,9 +1413,9 @@ class DelveGame:
             return
 
         if self.map[ny][nx] == TILE_SECRET_DOOR:
-
             self.map[ny][nx] = TILE_FLOOR
-
+            self._secret_count -= 1
+            self._advance_turn()
             return
 
         if self.map[ny][nx] == TILE_LOCKED_DOOR:
@@ -1477,7 +1479,7 @@ class DelveGame:
             if it['type'] == 'key':
                 self._pickup_item(it['id'], allow_free_move=True, silent=True)
             elif it['type'] == 'shrine':
-                pass  # Shrine interaction is a no-op in headless mode (matches JS)
+                self.current_shrine = it
             else:
                 self._pickup_item(it['id'], allow_free_move=True)
         else:
@@ -1507,6 +1509,67 @@ class DelveGame:
         if it['type'] not in ('potion',):
             self._auto_equip(it)
         self._advance_turn(allow_free_move=allow_free_move)
+
+    def accept_shrine(self):
+        if not getattr(self, 'current_shrine', None):
+            return
+        stype = self.current_shrine.get('shrineType')
+        if stype == 'Blood':
+            cost = max(1, int(self.player.get('maxHp', 1) * 0.3))
+            atk_gain = max(1, cost // 12)
+            self.player['maxHp'] = max(1, self.player['maxHp'] - cost)
+            self.player['hp'] = min(self.player['hp'], self.player['maxHp'])
+            self.player['atk'] += atk_gain
+        elif stype == 'Greed':
+            self.player['gold'] = 0
+            for _ in range(2):
+                self.player['lvl'] += 1
+                self.player['xpNext'] = int(self.player['xpNext'] * 1.6)
+                if self.player['lvl'] % 2 == 0:
+                    self.player['maxHp'] += 2
+                    self.player['hp'] = min(self.player['hp'] + 2, self.player['maxHp'])
+        elif stype == 'Cursed':
+            self.player['hp'] = self.player['maxHp']
+            
+            # Floor scaling
+            enemy_idx = min(max(0, self.floor - 1), 6)  # Basic approximation of FLOOR_ENEMY_PROFILES
+            tier_min = [1, 1, 2, 3, 3, 4, 4][enemy_idx]
+            tier_max = [1, 2, 3, 4, 4, 5, 5][enemy_idx]
+            scale = [1.0, 1.2, 1.5, 1.8, 2.2, 2.8, 3.5][enemy_idx]
+            
+            # Find an enemy template that fits the tier (or default to something robust)
+            valid_enemies = [e for i, e in enumerate(ENEMIES_DATA) if i >= tier_min and i <= tier_max]
+            if not valid_enemies:
+                valid_enemies = ENEMIES_DATA
+            base_data = self.rng.choice(valid_enemies)
+            
+            spawned = 0
+            for dx, dy in [(-1,0), (1,0), (0,-1), (0,1), (-1,-1), (1,-1), (-1,1), (1,1)]:
+                nx, ny = self.player['x'] + dx, self.player['y'] + dy
+                if 0 <= ny < len(self.map) and 0 <= nx < len(self.map[0]) and self.map[ny][nx] == 1:
+                    e_hp = int(base_data.get('hp', 25) * scale * 2)  # Elite HPx2
+                    e_atk = int(base_data.get('atk', 9) * scale * 1.5) # Elite ATKx1.5
+                    self.enemies.append({
+                        **{k: v for k, v in base_data.items()}, 
+                        'hp': e_hp, 'maxHp': e_hp, 'atk': e_atk,
+                        'x': nx, 'y': ny, 'id': self._uid(), 'stunnedTurns': 0,
+                        'dying': False, 'isPet': False, 'isElite': True,
+                        'revive': base_data.get('revive', False), 'reviveTurns': 0,
+                        'enrage': base_data.get('enrage', False), 'regen': base_data.get('regen', 0), 
+                        'vampiric': base_data.get('vampiric', 0)
+                    })
+                    spawned += 1
+                    if spawned >= 3: break
+
+        self.items = [i for i in self.items if i.get('id') != self.current_shrine.get('id')]
+        self.current_shrine = None
+        self._advance_turn()
+
+    def decline_shrine(self):
+        if not getattr(self, 'current_shrine', None):
+            return
+        self.current_shrine = None
+        self._advance_turn(allow_free_move=True)
 
     def _auto_equip(self, it):
         if it['type'] == 'weapon':
@@ -1917,6 +1980,7 @@ class DelveGame:
 
     def close_shop(self):
         self.current_shop = None
+        self.current_shrine = None
 
     def buy_item(self, item_id):
         if not self.current_shop:
@@ -2104,7 +2168,10 @@ class DelveGame:
             'seen_count': len(self.seen),
             'known_stairs': self._known_stairs(),
             '_door_count': self._door_count,
+            '_secret_count': self._secret_count,
             'shopOpen': self.current_shop is not None,
+            'shrineOpen': getattr(self, 'current_shrine', None) is not None,
+            '_stair_coords': self._stair_coords,
             'gameOver': self.game_over,
             'won': self.won,
         }

@@ -11,6 +11,7 @@ FLOOR = 1
 STAIRS = 2
 SHOP = 3
 LOCKED_DOOR = 4
+SECRET_DOOR = 5
 DIRS = [(0, -1), (0, 1), (-1, 0), (1, 0)]
 
 
@@ -54,11 +55,11 @@ def shortest_stairs_distance(G, map_data, start_x, start_y):
 def known_stair_targets(G, map_data):
     """Set of (x, y) positions of stairs that have been seen or are globally known."""
     seen = _seen_set(G)
-    stair_coords = G.get('_stair_coords', [])
     targets = set()
-    for x, y in stair_coords:
-        if (y * MAP_W + x) in seen:
-            targets.add((x, y))
+    for y, row in enumerate(map_data):
+        for x, tile in enumerate(row):
+            if tile == STAIRS and (y * MAP_W + x) in seen:
+                targets.add((x, y))
     return targets
 
 
@@ -116,7 +117,7 @@ def floor_exploration_ratio(G, map_data):
 
 
 def _tile_passable(G, tile):
-    if tile == WALL:
+    if tile == WALL or tile == SECRET_DOOR:
         return False
     if tile == LOCKED_DOOR and not _has_key(G):
         return False
@@ -132,3 +133,114 @@ def _seen_set(G):
     if isinstance(seen, set):
         return seen
     return set(seen or [])
+
+
+def nearest_unseen_direction(G, map_data):
+    """Returns (dx, dy) direction toward the nearest UNSEEN FLOOR tile using BFS."""
+    p = G.get('player', {})
+    start_x, start_y = p.get('x', 0), p.get('y', 0)
+    
+    seen = _seen_set(G)
+    
+    blocked = {
+        (e.get('x'), e.get('y'))
+        for e in G.get('enemies', [])
+        if not e.get('dying') and not e.get('isPet')
+    }
+    
+    queue = deque([(start_x, start_y, 0, 0)])  # x, y, initial_dx, initial_dy
+    visited = {(start_x, start_y)}
+    
+    while queue:
+        x, y, i_dx, i_dy = queue.popleft()
+        
+        # Target: any unseen non-wall tile
+        if (y * MAP_W + x) not in seen and map_data[y][x] != WALL:
+            return i_dx, i_dy
+            
+        for dx, dy in DIRS:
+            nx, ny = x + dx, y + dy
+            if (nx, ny) in visited or (nx, ny) in blocked:
+                continue
+            if ny < 0 or ny >= len(map_data) or nx < 0 or nx >= len(map_data[ny]):
+                continue
+            if not _tile_passable(G, map_data[ny][nx]):
+                continue
+                
+            visited.add((nx, ny))
+            next_idx = dx if i_dx == 0 and i_dy == 0 else i_dx
+            next_idy = dy if i_dx == 0 and i_dy == 0 else i_dy
+            queue.append((nx, ny, next_idx, next_idy))
+            
+    return 0, 0
+
+
+def nearest_poi_direction(G, map_data, poi_type):
+    """
+    Returns (dx, dy) direction toward the nearest SEEN POI.
+    poi_type can be: 'shop' (tile), 'shrine' (item), 'locked_door' (tile).
+    """
+    p = G.get('player', {})
+    start_x, start_y = p.get('x', 0), p.get('y', 0)
+    
+    seen = _seen_set(G)
+    
+    targets = set()
+    if poi_type == 'shop':
+        shop_items = {(i.get('x'), i.get('y')) for i in G.get('items', []) if not i.get('carried') and i.get('price', 0) > 0}
+        for y, row in enumerate(map_data):
+            for x, tile in enumerate(row):
+                if tile == SHOP and (y * MAP_W + x) in seen:
+                    if (x, y) in shop_items:
+                        targets.add((x, y))
+    elif poi_type == 'locked_door':
+        for y, row in enumerate(map_data):
+            for x, tile in enumerate(row):
+                if tile == LOCKED_DOOR and (y * MAP_W + x) in seen:
+                    targets.add((x, y))
+    elif poi_type == 'shrine':
+        for item in G.get('items', []):
+            if item.get('type') == 'shrine' and not item.get('carried'):
+                x, y = item.get('x'), item.get('y')
+                if x is not None and y is not None and (y * MAP_W + x) in seen:
+                    targets.add((x, y))
+                    
+    if not targets:
+        return 0, 0
+        
+    if (start_x, start_y) in targets:
+        return 0, 0
+
+    blocked = {
+        (e.get('x'), e.get('y'))
+        for e in G.get('enemies', [])
+        if not e.get('dying') and not e.get('isPet')
+    }
+    
+    queue = deque([(start_x, start_y, 0, 0)])
+    visited = {(start_x, start_y)}
+    
+    while queue:
+        x, y, i_dx, i_dy = queue.popleft()
+        
+        if (x, y) in targets:
+            return i_dx, i_dy
+            
+        for dx, dy in DIRS:
+            nx, ny = x + dx, y + dy
+            if (nx, ny) in visited or (nx, ny) in blocked:
+                continue
+            if ny < 0 or ny >= len(map_data) or nx < 0 or nx >= len(map_data[ny]):
+                continue
+            if not _tile_passable(G, map_data[ny][nx]):
+                # If the target is a locked door and we don't have a key, it's not passable.
+                # But if it IS the target, we should still allow reaching it!
+                if not (poi_type == 'locked_door' and (nx, ny) in targets):
+                    continue
+                
+            visited.add((nx, ny))
+            next_idx = dx if i_dx == 0 and i_dy == 0 else i_dx
+            next_idy = dy if i_dx == 0 and i_dy == 0 else i_dy
+            queue.append((nx, ny, next_idx, next_idy))
+            
+    return 0, 0

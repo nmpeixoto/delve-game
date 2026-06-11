@@ -51,11 +51,13 @@ class DelveVectorEnv:
         self.last_enemy_kill_step = [-999] * num_envs
         self.doors_opened_this_floor = [0] * num_envs
         self.keys_used_this_floor = [0] * num_envs
+        self.class_indices = [i % len(CLASSES) for i in range(num_envs)]
         self._reset_all()
 
     def _make_game(self, env_id):
         seed = random.randint(1, 10_000_000)
-        cls = CLASSES[env_id % len(CLASSES)]
+        cls = CLASSES[self.class_indices[env_id]]
+        self.class_indices[env_id] = (self.class_indices[env_id] + 1) % len(CLASSES)
         hard = getattr(self, 'curriculum_hard_mode', False)
         return DelveGame(seed=seed, player_class=cls, hard_mode=hard)
 
@@ -239,6 +241,10 @@ class DelveVectorEnv:
             self.last_door_unlock_step[env_id] = self.episode_lengths[env_id]
             self.doors_opened_this_floor[env_id] += prev_doors - curr_doors
             self.keys_used_this_floor[env_id] += prev_doors - curr_doors
+            
+        prev_secrets = prev_state.get('_secret_count', 0)
+        curr_secrets = curr_state.get('_secret_count', 0)
+        curr_state['_secrets_revealed_this_step'] = max(0, prev_secrets - curr_secrets)
 
         prev_alive = {e['id'] for e in prev_state.get('enemies', []) if not e.get('dying')}
         curr_alive = {e['id'] for e in curr_state.get('enemies', []) if not e.get('dying')}
@@ -357,7 +363,12 @@ class DelveVectorEnv:
             self.prev_states[i] = prev_state
 
             atype = decision.get('type')
-            if atype == 'click':
+            if prev_state and prev_state.get('shrineOpen'):
+                if action == ACTIONS['USE_BUFF']:
+                    game.accept_shrine()
+                elif action == ACTIONS['ESCAPE']:
+                    game.decline_shrine()
+            elif atype == 'click':
                 self._resolve_click_action(game, self.states[i], decision)
             else:
                 game.step(decision)
