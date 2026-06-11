@@ -376,6 +376,20 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(env.worker_env_counts, [2, 2, 1])
         self.assertEqual([args[1]["num_envs"] for args in created], [2, 2, 1])
 
+    def test_subproc_vec_env_surfaces_worker_errors(self):
+        class FailingPipe:
+            def send(self, _msg):
+                pass
+
+            def recv(self):
+                return ("error", "worker traceback")
+
+        env = SubprocVecEnv.__new__(SubprocVecEnv)
+        env.pipes = [FailingPipe()]
+
+        with self.assertRaisesRegex(RuntimeError, "worker traceback"):
+            env.reset()
+
     def test_resume_can_reset_optimizer_for_changed_reward(self):
         with patch.object(sys, "argv", ["train.py", "--resume", "latest", "--reset-optimizer"]):
             args = parse_args()
@@ -654,6 +668,14 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertTrue(mask[ACTIONS["SHOP_BUY_1"]])
         self.assertTrue(mask[ACTIONS["SHOP_SELL"]])
         self.assertTrue(mask[ACTIONS["ESCAPE"]])
+
+    def test_action_mask_allows_final_floor_descend_to_win(self):
+        state = self._known_stairs_state(player_x=3, player_y=4, stairs_x=3, stairs_y=4)
+        state["floor"] = 5
+
+        mask = get_action_mask(state)
+
+        self.assertTrue(mask[ACTIONS["DESCEND"]])
 
     def test_action_to_decision_never_returns_hidden_wait(self):
         env = DelveVectorEnv.__new__(DelveVectorEnv)

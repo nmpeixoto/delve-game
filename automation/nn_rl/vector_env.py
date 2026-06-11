@@ -470,7 +470,12 @@ def _subproc_worker(pipe, env_kwargs):
                 break
     except Exception as e:
         import traceback
+        tb = traceback.format_exc()
         traceback.print_exc()
+        try:
+            pipe.send(('error', tb))
+        except Exception:
+            pass
 
 class SubprocVecEnv:
     def __init__(self, num_envs=128, envs_per_worker=16, **kwargs):
@@ -508,7 +513,7 @@ class SubprocVecEnv:
         
         np_states, np_maps, masks = [], [], []
         for p in self.pipes:
-            ns, nm, m = p.recv()
+            ns, nm, m = self._recv_worker(p)
             np_states.append(ns)
             np_maps.append(nm)
             masks.append(m)
@@ -524,7 +529,7 @@ class SubprocVecEnv:
             
         np_states, np_maps, masks, rewards, dones, infos = [], [], [], [], [], []
         for p in self.pipes:
-            ns, nm, m, r, d, i = p.recv()
+            ns, nm, m, r, d, i = self._recv_worker(p)
             np_states.append(ns)
             np_maps.append(nm)
             masks.append(m)
@@ -545,7 +550,13 @@ class SubprocVecEnv:
         for p in self.pipes:
             p.send(('set_curriculum', {'max_floor': max_floor, 'hard_mode': hard_mode}))
         for p in self.pipes:
-            p.recv()
+            self._recv_worker(p)
+
+    def _recv_worker(self, pipe):
+        message = pipe.recv()
+        if isinstance(message, tuple) and len(message) == 2 and message[0] == 'error':
+            raise RuntimeError(f"Subproc worker failed:\n{message[1]}")
+        return message
         
     def close(self):
         for p in self.pipes:

@@ -13,7 +13,6 @@ from pathfinding import (
 )
 
 MAP_H = 36
-FLOORS = 5
 
 
 def manhattan(a, b):
@@ -105,7 +104,7 @@ def get_action_mask(G):
         mask[ACTIONS['USE_DETECTION']] = True
 
     if 0 <= py < len(map_data) and 0 <= px < len(map_data[0]):
-        if map_data[py][px] == STAIRS and G.get('floor', 1) < FLOORS:
+        if map_data[py][px] == STAIRS:
             mask[ACTIONS['DESCEND']] = True
 
     near_shop = any(chebyshev(s, p) <= 1 for s in shops)

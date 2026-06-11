@@ -9,7 +9,7 @@ NN_RL_DIR = os.path.join(REPO_ROOT, "automation", "nn_rl")
 sys.path.insert(0, NN_RL_DIR)
 
 from config import ACTIONS
-from game_engine import DelveGame, FLOOR_ENEMY_PROFILES, TILE_FLOOR
+from game_engine import DelveGame, FLOOR_ENEMY_PROFILES, TILE_FLOOR, TILE_STAIRS
 from pathfinding import floor_exploration_ratio
 from ppo import RolloutBuffer
 from state_extractor import extract_local_map
@@ -197,6 +197,33 @@ class NnRlPretrainingBugHuntTest(unittest.TestCase):
         self.assertFalse(info["timeout"])
         self.assertEqual(info["outcome"], "running")
         self.assertEqual(reward, 3.0)
+
+    def test_final_floor_descend_action_can_end_episode_as_win(self):
+        game = DelveGame(seed=12, player_class="warrior")
+        game.floor = 5
+        game.enemies = []
+        game.player["x"] = 5
+        game.player["y"] = 5
+        game.map[5][5] = TILE_STAIRS
+        game._stair_coords = [(5, 5)]
+        game._compute_vision()
+
+        env = DelveVectorEnv(num_envs=1, envs_per_worker=1)
+        try:
+            env.games[0] = game
+            env.states[0] = game.snapshot()
+            env.prev_states[0] = env.states[0]
+            env.episode_rewards[0] = 0.0
+            env.episode_lengths[0] = 0
+
+            _states, rewards, dones, infos = env.step([ACTIONS["DESCEND"]])
+
+            self.assertTrue(dones[0])
+            self.assertTrue(infos[0]["won"])
+            self.assertEqual(infos[0]["outcome"], "won")
+            self.assertGreater(rewards[0], 250.0)
+        finally:
+            env.close()
 
     def test_rollout_buffer_stores_zero_hidden_for_first_step(self):
         buffer = RolloutBuffer(num_envs=2, rollout_steps=1, state_dim=3, action_dim=4, hidden_dim=5, device="cpu")
