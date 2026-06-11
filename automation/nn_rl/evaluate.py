@@ -27,7 +27,7 @@ def parse_args(argv=None):
     parser.add_argument('--device', choices=['auto', 'cpu', 'cuda'], default='auto')
     parser.add_argument('--deterministic', action='store_true',
                         help='Use greedy argmax actions instead of stochastic sampling.')
-    parser.add_argument('--max-episode-steps', type=int, default=10000)
+    parser.add_argument('--max-episode-steps', type=int, default=6000)
     parser.add_argument('--num-envs', type=int, default=32)
     parser.add_argument('--envs-per-worker', type=int, default=8)
     return parser.parse_args(argv)
@@ -42,7 +42,7 @@ def advance_prev_actions(prev_actions, action_list, dones):
 
 
 def evaluate(model_path=None, num_games=200, device='cuda', deterministic=False,
-             max_episode_steps=10000, num_envs=32, envs_per_worker=8):
+             max_episode_steps=6000, num_envs=32, envs_per_worker=8):
     """Evaluate a trained model."""
     # Load model
     network = DelveNet(state_dim=STATE_DIM, action_dim=ACTION_DIM, hidden_dim=HIDDEN_DIM).to(device)

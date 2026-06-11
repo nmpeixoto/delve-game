@@ -38,7 +38,10 @@ class RolloutBuffer:
         self.rewards[step] = rewards
         self.dones[step] = dones
         self.masks[step] = masks
-        self.hiddens[step] = hidden.squeeze(0)  # (num_envs, hidden_dim)
+        if hidden is None:
+            self.hiddens[step].zero_()
+        else:
+            self.hiddens[step] = hidden.squeeze(0)  # (num_envs, hidden_dim)
     
     def compute_gae(self, last_values, gamma=0.99, lam=0.95):
         """Compute Generalized Advantage Estimation."""
@@ -57,8 +60,7 @@ class RolloutBuffer:
     
     def get_batches(self, batch_size, seq_len=16):
         """Get mini-batches of sequential chunks to allow proper BPTT."""
-        # Ensure rollout_steps is divisible by seq_len
-        assert self.rollout_steps % seq_len == 0
+        seq_len = self._effective_seq_len(seq_len)
         num_chunks = self.rollout_steps // seq_len
         
         def chunk_tensor(t):
@@ -87,7 +89,7 @@ class RolloutBuffer:
 
         total_chunks = num_chunks * self.num_envs
         # Batch size is in terms of total steps, so batch_chunks = batch_size // seq_len
-        batch_chunks = batch_size // seq_len
+        batch_chunks = max(1, batch_size // seq_len)
         
         indices = torch.randperm(total_chunks, device=self.device)
         
@@ -108,6 +110,12 @@ class RolloutBuffer:
                 'hiddens': hiddens_starts[batch_idx],
                 'seq_len': seq_len,
             }
+
+    def _effective_seq_len(self, requested_seq_len):
+        seq_len = max(1, min(int(requested_seq_len), self.rollout_steps))
+        while self.rollout_steps % seq_len != 0:
+            seq_len -= 1
+        return seq_len
 
 
 class PPO:

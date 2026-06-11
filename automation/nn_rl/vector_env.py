@@ -227,6 +227,8 @@ class DelveVectorEnv:
         if prev_state is None or curr_state is None:
             return
 
+        curr_state['_doors_unlocked_this_step'] = 0
+
         prev_keys_carried = sum(1 for i in prev_state.get('items', [])
                                 if i.get('type') == 'key' and i.get('carried'))
         curr_keys_carried = sum(1 for i in curr_state.get('items', [])
@@ -238,9 +240,11 @@ class DelveVectorEnv:
         prev_doors = prev_state.get('_door_count', 0)
         curr_doors = curr_state.get('_door_count', 0)
         if curr_doors < prev_doors:
+            unlocked = prev_doors - curr_doors
+            curr_state['_doors_unlocked_this_step'] = unlocked
             self.last_door_unlock_step[env_id] = self.episode_lengths[env_id]
-            self.doors_opened_this_floor[env_id] += prev_doors - curr_doors
-            self.keys_used_this_floor[env_id] += prev_doors - curr_doors
+            self.doors_opened_this_floor[env_id] += unlocked
+            self.keys_used_this_floor[env_id] += unlocked
             
         prev_secrets = prev_state.get('_secret_count', 0)
         curr_secrets = curr_state.get('_secret_count', 0)
@@ -339,14 +343,12 @@ class DelveVectorEnv:
             item_id = m.group(1)
             if 'shop-item' in target:
                 game.buy_item(item_id)
-                game._advance_turn()
             else:
                 it = next((i for i in game.items if i['id'] == item_id), None)
                 if it and it.get('carried'):
                     game.use_item(it.get('type', ''))
         elif 'sellWeakerGear' in target:
             game.sell_weaker_gear()
-            game._advance_turn()
 
     def step(self, actions):
         new_states = []
@@ -472,17 +474,26 @@ def _subproc_worker(pipe, env_kwargs):
 
 class SubprocVecEnv:
     def __init__(self, num_envs=128, envs_per_worker=16, **kwargs):
+        if num_envs <= 0:
+            raise ValueError("num_envs must be positive")
+        if envs_per_worker <= 0:
+            raise ValueError("envs_per_worker must be positive")
+
         self.num_envs = num_envs
         self.envs_per_worker = envs_per_worker
-        self.num_workers = num_envs // envs_per_worker
+        self.num_workers = (num_envs + envs_per_worker - 1) // envs_per_worker
+        self.worker_env_counts = [
+            min(envs_per_worker, num_envs - i * envs_per_worker)
+            for i in range(self.num_workers)
+        ]
         self.pipes = []
         self.processes = []
         
-        for i in range(self.num_workers):
+        for i, worker_envs in enumerate(self.worker_env_counts):
             parent_pipe, child_pipe = mp.Pipe()
             env_kwargs = kwargs.copy()
-            env_kwargs['num_envs'] = envs_per_worker
-            env_kwargs['envs_per_worker'] = envs_per_worker
+            env_kwargs['num_envs'] = worker_envs
+            env_kwargs['envs_per_worker'] = worker_envs
             p = mp.Process(target=_subproc_worker, args=(child_pipe, env_kwargs))
             p.daemon = False
             p.start()
@@ -505,10 +516,11 @@ class SubprocVecEnv:
         return np.concatenate(np_states), np.concatenate(np_maps), np.concatenate(masks)
 
     def step(self, actions):
-        for i, p in enumerate(self.pipes):
-            start = i * self.envs_per_worker
-            end = start + self.envs_per_worker
+        start = 0
+        for p, worker_envs in zip(self.pipes, self.worker_env_counts):
+            end = start + worker_envs
             p.send(('step', {'actions': actions[start:end]}))
+            start = end
             
         np_states, np_maps, masks, rewards, dones, infos = [], [], [], [], [], []
         for p in self.pipes:

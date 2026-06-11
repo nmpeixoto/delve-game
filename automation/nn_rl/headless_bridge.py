@@ -155,8 +155,10 @@ class HeadlessWorker:
         self._ensure_running()
         raise RuntimeError("Worker closed stdout without a response")
     
-    def init_envs(self, seeds, classes, hard_modes):
+    def init_envs(self, seeds, classes, hard_modes=None):
         """Initialize environments in this worker."""
+        if hard_modes is None:
+            hard_modes = [False] * len(seeds)
         states = []
         for i, (seed, class_name, hard_mode) in enumerate(zip(seeds, classes, hard_modes)):
             env_id = i

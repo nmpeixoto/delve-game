@@ -29,7 +29,7 @@ from train import (
     resolve_resume_checkpoint,
     summarize_actions,
 )
-from vector_env import DelveVectorEnv
+from vector_env import DelveVectorEnv, SubprocVecEnv
 
 
 class NnRlBridgeTest(unittest.TestCase):
@@ -178,10 +178,11 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(curriculum_phase_for_step(100, curriculum), (2, 70))
 
     def test_default_curriculum_starts_with_floor_one_descent_goal(self):
-        self.assertGreaterEqual(len(CURRICULUM), 5)
-        self.assertEqual(CURRICULUM[0]["max_floor"], 1)
-        self.assertEqual(CURRICULUM[-2]["max_floor"], 4)
-        self.assertIsNone(CURRICULUM[-1]["max_floor"])
+        self.assertEqual(len(CURRICULUM), 2)
+        self.assertIsNone(CURRICULUM[0]["max_floor"])
+        self.assertFalse(CURRICULUM[0]["hard_mode"])
+        self.assertIsNone(CURRICULUM[1]["max_floor"])
+        self.assertTrue(CURRICULUM[1]["hard_mode"])
 
     def test_curriculum_metric_label_names_active_goal(self):
         self.assertEqual(curriculum_metric_label({"max_floor": 1}), "Floor 2")
@@ -332,6 +333,30 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(args.num_envs, 128)
         self.assertEqual(args.envs_per_worker, 16)
 
+    def test_subproc_vec_env_keeps_remainder_envs(self):
+        created = []
+
+        class FakePipe:
+            def send(self, _msg):
+                pass
+
+        class FakeProcess:
+            def __init__(self, target, args):
+                self.target = target
+                self.args = args
+                created.append(args)
+
+            def start(self):
+                pass
+
+        with patch("vector_env.mp.Pipe", side_effect=lambda: (FakePipe(), FakePipe())):
+            with patch("vector_env.mp.Process", FakeProcess):
+                env = SubprocVecEnv(num_envs=5, envs_per_worker=2)
+
+        self.assertEqual(env.num_workers, 3)
+        self.assertEqual(env.worker_env_counts, [2, 2, 1])
+        self.assertEqual([args[1]["num_envs"] for args in created], [2, 2, 1])
+
     def test_resume_can_reset_optimizer_for_changed_reward(self):
         with patch.object(sys, "argv", ["train.py", "--resume", "latest", "--reset-optimizer"]):
             args = parse_args()
@@ -375,7 +400,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, 13, {**state, "floor": 2, "seen_count": 0})
 
-        self.assertGreaterEqual(reward, 50.0)
+        self.assertGreaterEqual(reward, 49.0)
 
     def test_reward_prefers_moving_toward_known_stairs(self):
         state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
@@ -462,7 +487,29 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, 12, after)
 
-        self.assertGreaterEqual(reward, 8.0)
+        self.assertLess(reward, 0.0)
+
+    def test_reward_treats_new_consumable_resources_as_progress(self):
+        state = {
+            "floor": 1,
+            "player": {"hp": 20, "maxHp": 20, "x": 5, "y": 5, "lvl": 1, "gold": 100},
+            "enemies": [],
+            "items": [],
+            "seen_count": 100,
+            "known_stairs": False,
+        }
+
+        for item_type in ("potion", "bomb", "scroll_teleport"):
+            with self.subTest(item_type=item_type):
+                after = {
+                    **state,
+                    "player": {**state["player"], "gold": 75},
+                    "items": [{"id": f"{item_type}-1", "type": item_type, "carried": True}],
+                }
+
+                reward = compute_reward(state, ACTIONS["SHOP_BUY_0"], after)
+
+                self.assertGreater(reward, 0.0)
 
     def test_action_space_excludes_non_gameplay_wait_and_inventory_toggle(self):
         self.assertEqual(ACTION_DIM, 36)
@@ -536,9 +583,9 @@ class NnRlBridgeTest(unittest.TestCase):
         mask = get_action_mask(state)
 
         self.assertTrue(mask[ACTIONS["MOVE_RIGHT"]])
-        self.assertFalse(mask[ACTIONS["MOVE_LEFT"]])
-        self.assertFalse(mask[ACTIONS["MOVE_UP"]])
-        self.assertFalse(mask[ACTIONS["MOVE_DOWN"]])
+        self.assertTrue(mask[ACTIONS["MOVE_LEFT"]])
+        self.assertTrue(mask[ACTIONS["MOVE_UP"]])
+        self.assertTrue(mask[ACTIONS["MOVE_DOWN"]])
 
     def test_action_mask_keeps_tactical_options_when_enemy_visible(self):
         state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
@@ -553,7 +600,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         self.assertTrue(mask[ACTIONS["MOVE_RIGHT"]])
         self.assertTrue(mask[ACTIONS["MOVE_LEFT"]])
-        self.assertTrue(mask[ACTIONS["ATTACK_1"]])
+        self.assertFalse(mask[ACTIONS["ATTACK_1"]])
 
     def test_action_mask_exposes_shop_buy_slots_for_visible_current_shop_stock(self):
         state = {

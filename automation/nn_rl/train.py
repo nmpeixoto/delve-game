@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import *
 from network import DelveNet
+from policy_probe import evaluate_policy_probe, format_probe_summary
 from ppo import PPO, RolloutBuffer
 from state_extractor import CLASS_NAMES, extract_state
 from vector_env import DelveVectorEnv
@@ -90,8 +91,8 @@ def evaluate_headless(agent, num_games=100, device='cuda'):
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="Train the DELVE PPO bot against the real headless game runner.")
-    parser.add_argument("--total-timesteps", type=int, default=TOTAL_TIMESTEPS)
-    parser.add_argument("--num-envs", type=int, default=NUM_ENVS)
+    parser.add_argument("--total-timesteps", "--steps", dest="total_timesteps", type=int, default=TOTAL_TIMESTEPS)
+    parser.add_argument("--num-envs", "--envs", dest="num_envs", type=int, default=NUM_ENVS)
     parser.add_argument("--envs-per-worker", type=int, default=ENVS_PER_WORKER)
     parser.add_argument("--rollout-steps", type=int, default=ROLLOUT_STEPS)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
@@ -102,7 +103,7 @@ def parse_args(argv=None):
                         help="Resume from a checkpoint path, or use latest checkpoint when passed without a value.")
     parser.add_argument("--reset-optimizer", action="store_true",
                         help="Load model weights from --resume but start optimizer and LR schedule fresh.")
-    parser.add_argument("--max-episode-steps", type=int, default=10000)
+    parser.add_argument("--max-episode-steps", type=int, default=6000)
     parser.add_argument("--timeout-penalty", type=float, default=-400.0)
     parser.add_argument("--no-tensorboard", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--metrics-log", default=os.path.join("runs", "delve_ppo", "metrics.jsonl"),
@@ -113,7 +114,7 @@ def parse_args(argv=None):
 
 
 def should_use_tensorboard(args):
-    return bool(HAS_TB)
+    return bool(HAS_TB and not getattr(args, "no_tensorboard", False))
 
 
 
@@ -179,7 +180,7 @@ def curriculum_phase_target(phase):
 
 
 def curriculum_should_advance(phase, curriculum_results, steps_in_phase):
-    if not phase or phase.get('max_floor') is None:
+    if not phase:
         return False
 
     min_steps = int(phase.get('min_steps', 0))
@@ -188,11 +189,12 @@ def curriculum_should_advance(phase, curriculum_results, steps_in_phase):
     if threshold is None or steps_in_phase < min_steps:
         return False
 
+    progress_key = 'wins' if phase.get('max_floor') is None else 'curriculum'
     if isinstance(curriculum_results, dict):
-        recent = curriculum_results.get('curriculum', [])
+        recent = curriculum_results.get(progress_key, [])
         if len(recent) < window:
             return False
-        _, success_rate = episode_rate_stats(curriculum_results, 'curriculum')
+        _, success_rate = episode_rate_stats(curriculum_results, progress_key)
     else:
         recent = list(curriculum_results)[-window:]
         if len(recent) < window:
@@ -299,7 +301,7 @@ def build_training_metrics_row(*, total_steps, elapsed, phase_index, phase_name,
                                timeout_rate, death_rate, policy_loss, value_loss,
                                entropy, progress_delta=None, action_counts=None,
                                episode_window=None, progress_key="wins",
-                               status_text=None):
+                               status_text=None, probe_metrics=None):
     row = {
         "event": "train_report",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -328,6 +330,8 @@ def build_training_metrics_row(*, total_steps, elapsed, phase_index, phase_name,
         row["actions_summary"] = summarize_actions(action_counts)
     if status_text:
         row["status_text"] = str(status_text)
+    if probe_metrics:
+        row["probe_metrics"] = dict(probe_metrics)
     return row
 
 
@@ -342,28 +346,35 @@ def append_jsonl_record(path, record):
 
 def format_training_status(progress_label, progress_rate, progress_threshold,
                            timeout_rate, death_rate, avg_floor,
-                           progress_delta=None):
-    bits = []
+                           progress_delta=None, probe_metrics=None):
+    bits = [f"{progress_label} {float(progress_rate):.1%}"]
 
     if progress_threshold is not None:
         gap = float(progress_threshold) - float(progress_rate)
         if gap <= 0:
-            bits.append("On target")
+            bits.append("on target")
         else:
-            bits.append(f"{gap * 100:.1f}% below target")
+            bits.append(f"{gap * 100:.1f} pts below target")
 
     if progress_delta is not None and abs(progress_delta) >= 0.005:
         if progress_delta > 0:
-            bits.append(f"Improving (+{progress_delta * 100:.1f}%)")
+            bits.append(f"improving (+{progress_delta * 100:.1f} pts)")
         else:
-            bits.append(f"Slipping ({progress_delta * 100:.1f}%)")
+            bits.append(f"slipping ({progress_delta * 100:.1f} pts)")
 
     if timeout_rate >= 0.40:
-        bits.append("Timeouts high")
+        bits.append("timeouts high")
 
     if death_rate >= 0.20:
-        bits.append("Deaths high")
+        bits.append("deaths high")
 
+    if probe_metrics:
+        directional_exact = probe_metrics.get("directional_exact_rate")
+        descend_prob = probe_metrics.get("descend_prob_on_stairs")
+        if directional_exact is not None and directional_exact < 0.60:
+            bits.append("stairs still random")
+        if descend_prob is not None and descend_prob >= 0.90:
+            bits.append("descend learned")
 
 
     return "  Status: " + " | ".join(bits)
@@ -500,7 +511,8 @@ def main():
                 map_tensor = torch.from_numpy(np_maps).to(device)
                 mask_tensor = torch.from_numpy(np_masks).to(device=device, dtype=torch.bool)
                 
-                actions, log_probs, values, hidden = ppo.get_action(state_tensor, map_tensor, mask_tensor, hidden)
+                hidden_in = hidden
+                actions, log_probs, values, hidden = ppo.get_action(state_tensor, map_tensor, mask_tensor, hidden_in)
                 action_counts += np.bincount(actions.cpu().numpy(), minlength=ACTION_DIM)
 
                 next_np_states, next_np_maps, next_np_masks, rewards_np, dones_np, infos = env.step(actions.cpu().numpy())
@@ -515,7 +527,7 @@ def main():
                     rewards=torch.from_numpy(rewards_np).to(device=device, dtype=torch.float32),
                     dones=torch.from_numpy(dones_np).to(device=device, dtype=torch.bool),
                     masks=mask_tensor,
-                    hidden=hidden,
+                    hidden=hidden_in,
                 )
 
                 total_steps += args.num_envs
@@ -560,6 +572,8 @@ def main():
                 avg_floor = np.mean(recent_floors)
                 progress_label = curriculum_metric_label(active_phase)
                 progress_delta = None if last_report_snapshot is None else progress_rate - last_report_snapshot.get('progress_rate', progress_rate)
+                probe_rows, probe_metrics = evaluate_policy_probe(model, device)
+                probe_summary = format_probe_summary(probe_rows, probe_metrics)
 
                 print(f"Step {total_steps:>10,} | "
                       f"{progress_label}: {progress_rate:.1%} | "
@@ -584,9 +598,11 @@ def main():
                     death_rate,
                     avg_floor,
                     progress_delta=progress_delta,
+                    probe_metrics=probe_metrics,
                 )
                 if readout:
                     print(f"  {readout}")
+                print(f"  {probe_summary}")
                 append_jsonl_record(metrics_log_path, build_training_metrics_row(
                     total_steps=total_steps,
                     elapsed=elapsed,
@@ -609,6 +625,7 @@ def main():
                     episode_window=episode_window,
                     progress_key=progress_key,
                     status_text=readout,
+                    probe_metrics=probe_metrics,
                 ))
                 last_report_snapshot = report_snapshot
 
@@ -627,6 +644,9 @@ def main():
                     writer.add_scalar('train/death_rate', death_rate, total_steps)
                     writer.add_scalar('train/policy_loss', info['policy_loss'], total_steps)
                     writer.add_scalar('train/value_loss', info['value_loss'], total_steps)
+                    writer.add_scalar('probe/descend_prob_on_stairs', probe_metrics.get('descend_prob_on_stairs', 0.0), total_steps)
+                    writer.add_scalar('probe/directional_target_prob_mean', probe_metrics.get('directional_target_prob_mean', 0.0), total_steps)
+                    writer.add_scalar('probe/directional_exact_rate', probe_metrics.get('directional_exact_rate', 0.0), total_steps)
             else:
                 print(f"Step {total_steps:>10,} | "
                       f"Policy Loss: {info['policy_loss']:.4f} | "

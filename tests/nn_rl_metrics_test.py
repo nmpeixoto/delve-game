@@ -106,11 +106,11 @@ class NnRlMetricsTest(unittest.TestCase):
 
         self.assertEqual(updated, [1, None, 3])
 
-    def test_train_always_enables_tensorboard_even_with_legacy_flag(self):
+    def test_train_respects_no_tensorboard_flag(self):
         args = parse_train_args(["--no-tensorboard"])
 
         self.assertTrue(args.no_tensorboard)
-        self.assertTrue(should_use_tensorboard(args))
+        self.assertFalse(should_use_tensorboard(args))
 
 
 if __name__ == "__main__":

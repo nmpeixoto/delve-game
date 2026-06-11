@@ -25,6 +25,10 @@ dist/
 build/
 
 # Generated test/playtest artifacts
+__pycache__/
+*.py[cod]
+*.nbc
+*.nbi
 bot_findings.json
 screenshot_*.png
 out.json
@@ -37,6 +41,8 @@ runs/
 class_logs/
 *.err.log
 *.out.log
+js_rooms.log
+automation/loop_*.log
 *.trace.json
 *.tmp
 

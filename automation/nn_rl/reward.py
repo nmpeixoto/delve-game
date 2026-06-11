@@ -138,6 +138,10 @@ def compute_reward(prev_G, action, curr_G):
     if maxHp_delta > 0:
         reward += maxHp_delta * 0.5
 
+    resource_gain_reward = _consumable_resource_gain_reward(prev_G, curr_G)
+    if resource_gain_reward > 0:
+        reward += resource_gain_reward
+
     # ── EXPLORATION ──────────────────────────────────────────────────────────
     explored_delta = curr_G.get('seen_count', 0) - prev_G.get('seen_count', 0)
     if explored_delta > 0:
@@ -241,6 +245,7 @@ def compute_reward(prev_G, action, curr_G):
         or gold_delta > 0
         or xp_delta > 0
         or level_up
+        or resource_gain_reward > 0
         or (hp_delta > 0 and pp.get('hp', 0) < pp.get('maxHp', 1))
     )
     if not made_progress:
@@ -285,6 +290,22 @@ def _seen_set(G):
 
 def _carried_count(G, item_type):
     return sum(1 for item in G.get('items', []) if item.get('type') == item_type and item.get('carried'))
+
+
+def _consumable_resource_gain_reward(prev_G, curr_G):
+    weights = {
+        'potion': 2.5,
+        'potion_buff': 3.5,
+        'bomb': 4.0,
+        'scroll': 4.0,
+        'scroll_teleport': 5.0,
+    }
+    total = 0.0
+    for item_type, reward in weights.items():
+        gained = _carried_count(curr_G, item_type) - _carried_count(prev_G, item_type)
+        if gained > 0:
+            total += gained * reward
+    return total
 
 
 def _revealed_trap_count(G):

@@ -414,7 +414,7 @@ def extract_local_map(G):
                 coord = (x, y)
                 if coord in enemies_by_coord:
                     e = enemies_by_coord[coord]
-                    if e.get('isBoss'):
+                    if e.get('boss') or e.get('isBoss'):
                         channels[6, dy + 4, dx + 4] = 1.0
                     elif e.get('isElite'):
                         channels[5, dy + 4, dx + 4] = 1.0

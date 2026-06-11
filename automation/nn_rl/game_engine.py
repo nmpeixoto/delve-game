@@ -79,6 +79,10 @@ def round1(v):
         return 0.0
     return round(n * 10 + 1e-9) / 10  # match JS: Math.round((n + EPSILON) * 10) / 10
 
+
+def js_round(v):
+    return int(math.floor(float(v) + 0.5))
+
 _id_counter = 0
 
 # ─── DATA TABLES ─────────────────────────────────────────────────────────────
@@ -230,6 +234,8 @@ class DelveGame:
         self.rooms = []
         self.shops = []
         self._door_count = 0
+        self._secret_count = 0
+        self._walkable_total = 0
         self._death_batch = []
 
         self.visible = set()
@@ -241,6 +247,8 @@ class DelveGame:
         self.player = {}
         self._stair_coords = []
         self._door_count = 0
+        self._secret_count = 0
+        self._walkable_total = 0
 
         self._init_player()
         self._build_floor()
@@ -528,6 +536,8 @@ class DelveGame:
         self.seen = set()
         self._stair_coords = []
         self._door_count = 0
+        self._secret_count = 0
+        self._walkable_total = 0
         self.items = [i for i in self.items if i.get('carried')]
 
         # Boss floor
@@ -555,6 +565,7 @@ class DelveGame:
                     'x': rooms[0]['cx'], 'y': by + 2, 'id': self._uid(), 'stunnedTurns': 0,
                     'dying': False, 'isPet': False, 'isElite': False}
             self.enemies.append(boss)
+            self._recount_map_metadata()
             self._compute_vision()
             return
 
@@ -721,9 +732,26 @@ class DelveGame:
             self.items.append({'id': self._uid(), 'x': kx, 'y': ky, 'name': 'Key',
                                'type': 'key', 'rarity': 'common', 'sym': '⚷', 'carried': False})
 
+        self._recount_map_metadata()
+        self._compute_vision()
+
+    def _recount_map_metadata(self):
         self._door_count = sum(1 for row in self.map for t in row if t == TILE_LOCKED_DOOR)
         self._secret_count = sum(1 for row in self.map for t in row if t == TILE_SECRET_DOOR)
-        self._compute_vision()
+        self._walkable_total = sum(
+            1
+            for row in self.map
+            for t in row
+            if t in (TILE_FLOOR, TILE_STAIRS, TILE_SHOP, TILE_LOCKED_DOOR)
+        )
+
+    def _reveal_secret_tile(self, x, y):
+        if self.map[y][x] != TILE_SECRET_DOOR:
+            return False
+        self.map[y][x] = TILE_FLOOR
+        self._secret_count = max(0, self._secret_count - 1)
+        self._walkable_total += 1
+        return True
 
     # ─── ITEM SPAWNING ────────────────────────────────────────────────────
     def _spawn_item(self, r, item_filter=None, force_high=False, prefer_class=False):
@@ -888,8 +916,7 @@ class DelveGame:
                     if y * MAP_W + x not in self.visible:
                         continue
                     if self.map[y][x] == TILE_SECRET_DOOR:
-
-                        self.map[y][x] = TILE_FLOOR
+                        self._reveal_secret_tile(x, y)
 
                     for trap in self.traps:
                         if trap['x'] == x and trap['y'] == y and not trap.get('revealed'):
@@ -1413,8 +1440,7 @@ class DelveGame:
             return
 
         if self.map[ny][nx] == TILE_SECRET_DOOR:
-            self.map[ny][nx] = TILE_FLOOR
-            self._secret_count -= 1
+            self._reveal_secret_tile(nx, ny)
             self._advance_turn()
             return
 
@@ -1524,46 +1550,65 @@ class DelveGame:
             self.player['gold'] = 0
             for _ in range(2):
                 self.player['lvl'] += 1
-                self.player['xpNext'] = int(self.player['xpNext'] * 1.6)
-                if self.player['lvl'] % 2 == 0:
-                    self.player['maxHp'] += 2
-                    self.player['hp'] = min(self.player['hp'] + 2, self.player['maxHp'])
+                self.player['xpNext'] = js_round(self.player['xpNext'] * 1.6)
+                self.player['maxHp'] = round1(self.player['maxHp'] + 8)
+                self.player['hp'] = round1(min(self.player['maxHp'], self.player['hp'] + 8))
+                self.player['atk'] = round1(self.player['atk'] + 1)
+                self.player['def'] = round1(self.player['def'] + 1)
+                if self.player['class'] == 'paladin':
+                    self.player['maxHp'] = round1(self.player['maxHp'] + 2)
+                    self.player['hp'] = round1(min(self.player['maxHp'], self.player['hp'] + 2))
+            self._check_bag_upgrades()
         elif stype == 'Cursed':
             self.player['hp'] = self.player['maxHp']
-            
-            # Floor scaling
-            enemy_idx = min(max(0, self.floor - 1), 6)  # Basic approximation of FLOOR_ENEMY_PROFILES
-            tier_min = [1, 1, 2, 3, 3, 4, 4][enemy_idx]
-            tier_max = [1, 2, 3, 4, 4, 5, 5][enemy_idx]
-            scale = [1.0, 1.2, 1.5, 1.8, 2.2, 2.8, 3.5][enemy_idx]
-            
-            # Find an enemy template that fits the tier (or default to something robust)
-            valid_enemies = [e for i, e in enumerate(ENEMIES_DATA) if i >= tier_min and i <= tier_max]
-            if not valid_enemies:
-                valid_enemies = ENEMIES_DATA
-            base_data = self.rng.choice(valid_enemies)
-            
+
+            profile = FLOOR_ENEMY_PROFILES[max(0, min(self.floor - 1, len(FLOOR_ENEMY_PROFILES) - 1))]
             spawned = 0
-            for dx, dy in [(-1,0), (1,0), (0,-1), (0,1), (-1,-1), (1,-1), (-1,1), (1,1)]:
-                nx, ny = self.player['x'] + dx, self.player['y'] + dy
-                if 0 <= ny < len(self.map) and 0 <= nx < len(self.map[0]) and self.map[ny][nx] == 1:
-                    e_hp = int(base_data.get('hp', 25) * scale * 2)  # Elite HPx2
-                    e_atk = int(base_data.get('atk', 9) * scale * 1.5) # Elite ATKx1.5
-                    self.enemies.append({
-                        **{k: v for k, v in base_data.items()}, 
-                        'hp': e_hp, 'maxHp': e_hp, 'atk': e_atk,
-                        'x': nx, 'y': ny, 'id': self._uid(), 'stunnedTurns': 0,
-                        'dying': False, 'isPet': False, 'isElite': True,
-                        'revive': base_data.get('revive', False), 'reviveTurns': 0,
-                        'enrage': base_data.get('enrage', False), 'regen': base_data.get('regen', 0), 
-                        'vampiric': base_data.get('vampiric', 0)
-                    })
-                    spawned += 1
-                    if spawned >= 3: break
+            for radius in range(1, 3):
+                if spawned >= 3:
+                    break
+                for y in range(self.player['y'] - radius, self.player['y'] + radius + 1):
+                    if spawned >= 3:
+                        break
+                    for x in range(self.player['x'] - radius, self.player['x'] + radius + 1):
+                        if spawned >= 3:
+                            break
+                        if not (0 <= y < len(self.map) and 0 <= x < len(self.map[0])):
+                            continue
+                        if self.map[y][x] != TILE_FLOOR or (x == self.player['x'] and y == self.player['y']):
+                            continue
+                        if any(e['x'] == x and e['y'] == y for e in self.enemies):
+                            continue
+
+                        tier = self.rng.rr(profile['tierMin'], profile['tierMax'])
+                        base_data = ENEMIES_DATA[tier]
+                        scale = profile['scale']
+                        self.enemies.append({
+                            **{k: v for k, v in base_data.items()},
+                            'name': 'Cursed ' + base_data['name'],
+                            'hp': js_round(base_data.get('hp', 25) * scale) * 2,
+                            'maxHp': js_round(base_data.get('hp', 25) * scale) * 2,
+                            'atk': js_round(base_data.get('atk', 9) * scale) * 2,
+                            'def': js_round(base_data.get('def', 0) * scale),
+                            'xp': js_round(base_data.get('xp', 0) * scale) * 2,
+                            'gold': js_round(base_data.get('gold', 0) * scale) * 2,
+                            'x': x, 'y': y, 'id': self._uid(), 'stunnedTurns': 0,
+                            'dying': False, 'isPet': False, 'isElite': True,
+                            'revive': base_data.get('revive', False), 'reviveTurns': 0,
+                            'enrage': base_data.get('enrage', False), 'regen': base_data.get('regen', 0),
+                            'vampiric': base_data.get('vampiric', 0),
+                            'freezeChance': base_data.get('freezeChance', 0),
+                            'dodge': base_data.get('dodge', 0),
+                            'boss': False,
+                            'phase': 0, 'phaseAtkMult': 1.0, 'phaseDefMult': 1.0,
+                            'phaseSummons': 0, 'raiseCorpseTarget': False,
+                            'raiseCorpseTurns': 0, 'lifespanTurns': None, 'petSummonedTurn': None,
+                        })
+                        spawned += 1
 
         self.items = [i for i in self.items if i.get('id') != self.current_shrine.get('id')]
         self.current_shrine = None
-        self._advance_turn()
+        self._advance_turn(allow_free_move=True)
 
     def decline_shrine(self):
         if not getattr(self, 'current_shrine', None):
@@ -1650,8 +1695,7 @@ class DelveGame:
             for y in range(MAP_H):
                 for x in range(MAP_W):
                     if self.map[y][x] == TILE_SECRET_DOOR:
-
-                        self.map[y][x] = TILE_FLOOR
+                        self._reveal_secret_tile(x, y)
 
                     for trap in self.traps:
                         if trap['x'] == x and trap['y'] == y and not trap.get('revealed'):
@@ -2169,6 +2213,7 @@ class DelveGame:
             'known_stairs': self._known_stairs(),
             '_door_count': self._door_count,
             '_secret_count': self._secret_count,
+            '_walkable_total': self._walkable_total,
             'shopOpen': self.current_shop is not None,
             'shrineOpen': getattr(self, 'current_shrine', None) is not None,
             '_stair_coords': self._stair_coords,
