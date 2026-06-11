@@ -13,7 +13,7 @@ sys.path.insert(0, NN_RL_DIR)
 from headless_bridge import HeadlessWorker, RL_RUNNER
 from action_mask import get_action_mask
 from config import ACTION_DIM, ACTIONS, CURRICULUM, MAX_SHOP_SLOTS, SHOP_ITEM_FEATURES, STATE_DIM
-from policy_probe import build_probe_scenarios, format_probe_summary
+
 from reward import compute_reward
 from state_extractor import extract_state
 from train import (
@@ -733,37 +733,6 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(decision["type"], "click")
         self.assertIn("u1", decision["target"])
 
-    def test_probe_scenarios_do_not_force_directional_moves_via_mask(self):
-        scenarios = build_probe_scenarios()
-        directional = [scenario for scenario in scenarios if scenario["name"] != "on_stairs"]
-
-        self.assertEqual(len(scenarios), 5)
-        for scenario in directional:
-            mask = get_action_mask(scenario["state"])
-            self.assertTrue(mask[ACTIONS["MOVE_RIGHT"]])
-            self.assertTrue(mask[ACTIONS["MOVE_LEFT"]])
-            self.assertTrue(mask[ACTIONS["MOVE_UP"]])
-            self.assertTrue(mask[ACTIONS["MOVE_DOWN"]])
-
-    def test_probe_summary_reports_directional_metrics(self):
-        summary = format_probe_summary([
-            {"target_label": "Desc", "target_prob": 0.97},
-            {"target_label": "Right", "target_prob": 0.55},
-            {"target_label": "Down", "target_prob": 0.52},
-            {"target_label": "Left", "target_prob": 0.48},
-            {"target_label": "Up", "target_prob": 0.51},
-        ], {
-            "directional_target_prob_mean": 0.515,
-            "directional_exact_rate": 0.75,
-            "class_count": 8,
-        })
-
-        self.assertIn("Probe:", summary)
-        self.assertIn("class-avg (8 classes)", summary)
-        self.assertIn("Desc 97.0%", summary)
-        self.assertIn("MoveMean 51.5%", summary)
-        self.assertIn("MoveTop1 75%", summary)
-
     def test_class_summary_reports_per_class_counts_and_rates(self):
         window = new_episode_window(window=8)
         for class_name, success in [
@@ -799,18 +768,12 @@ class NnRlBridgeTest(unittest.TestCase):
             death_rate=0.09,
             avg_floor=1.79,
             progress_delta=-0.092,
-            probe_metrics={
-                "directional_exact_rate": 0.25,
-                "descend_prob_on_stairs": 0.95,
-            },
         )
 
         self.assertIn("Floor 3 22.2%", readout)
         self.assertIn("52.8 pts below target", readout)
         self.assertIn("slipping (-9.2 pts)", readout)
         self.assertIn("timeouts high", readout)
-        self.assertIn("stairs still random", readout)
-        self.assertIn("descend learned", readout)
 
     def _known_stairs_state(self, player_x, player_y, stairs_x, stairs_y):
         width = 12

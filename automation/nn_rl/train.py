@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import *
 from network import DelveNet
-from policy_probe import evaluate_policy_probe, format_probe_summary
+
 from ppo import PPO, RolloutBuffer
 from state_extractor import CLASS_NAMES, extract_state
 from vector_env import DelveVectorEnv
@@ -312,7 +312,7 @@ def build_training_metrics_row(*, total_steps, elapsed, phase_index, phase_name,
                                timeout_rate, death_rate, policy_loss, value_loss,
                                entropy, progress_delta=None, action_counts=None,
                                episode_window=None, progress_key="wins",
-                               status_text=None, probe_metrics=None):
+                               status_text=None):
     row = {
         "event": "train_report",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -341,8 +341,6 @@ def build_training_metrics_row(*, total_steps, elapsed, phase_index, phase_name,
         row["actions_summary"] = summarize_actions(action_counts)
     if status_text:
         row["status_text"] = str(status_text)
-    if probe_metrics:
-        row["probe_metrics"] = dict(probe_metrics)
     return row
 
 
@@ -357,7 +355,7 @@ def append_jsonl_record(path, record):
 
 def format_training_status(progress_label, progress_rate, progress_threshold,
                            timeout_rate, death_rate, avg_floor,
-                           progress_delta=None, probe_metrics=None):
+                           progress_delta=None):
     bits = [f"{progress_label} {float(progress_rate):.1%}"]
 
     if progress_threshold is not None:
@@ -378,15 +376,6 @@ def format_training_status(progress_label, progress_rate, progress_threshold,
 
     if death_rate >= 0.20:
         bits.append("deaths high")
-
-    if probe_metrics:
-        directional_exact = probe_metrics.get("directional_exact_rate")
-        descend_prob = probe_metrics.get("descend_prob_on_stairs")
-        if directional_exact is not None and directional_exact < 0.60:
-            bits.append("stairs still random")
-        if descend_prob is not None and descend_prob >= 0.90:
-            bits.append("descend learned")
-
 
     return "  Status: " + " | ".join(bits)
 
@@ -583,8 +572,7 @@ def main():
                 avg_floor = np.mean(recent_floors)
                 progress_label = curriculum_metric_label(active_phase)
                 progress_delta = None if last_report_snapshot is None else progress_rate - last_report_snapshot.get('progress_rate', progress_rate)
-                probe_rows, probe_metrics = evaluate_policy_probe(model, device)
-                probe_summary = format_probe_summary(probe_rows, probe_metrics)
+
 
                 print(f"Step {total_steps:>10,} | "
                       f"{progress_label}: {progress_rate:.1%} | "
@@ -609,11 +597,9 @@ def main():
                     death_rate,
                     avg_floor,
                     progress_delta=progress_delta,
-                    probe_metrics=probe_metrics,
                 )
                 if readout:
                     print(f"  {readout}")
-                print(f"  {probe_summary}")
                 append_jsonl_record(metrics_log_path, build_training_metrics_row(
                     total_steps=total_steps,
                     elapsed=elapsed,
@@ -636,7 +622,6 @@ def main():
                     episode_window=episode_window,
                     progress_key=progress_key,
                     status_text=readout,
-                    probe_metrics=probe_metrics,
                 ))
                 last_report_snapshot = report_snapshot
 
@@ -655,9 +640,6 @@ def main():
                     writer.add_scalar('train/death_rate', death_rate, total_steps)
                     writer.add_scalar('train/policy_loss', info['policy_loss'], total_steps)
                     writer.add_scalar('train/value_loss', info['value_loss'], total_steps)
-                    writer.add_scalar('probe/descend_prob_on_stairs', probe_metrics.get('descend_prob_on_stairs', 0.0), total_steps)
-                    writer.add_scalar('probe/directional_target_prob_mean', probe_metrics.get('directional_target_prob_mean', 0.0), total_steps)
-                    writer.add_scalar('probe/directional_exact_rate', probe_metrics.get('directional_exact_rate', 0.0), total_steps)
             else:
                 print(f"Step {total_steps:>10,} | "
                       f"Policy Loss: {info['policy_loss']:.4f} | "
