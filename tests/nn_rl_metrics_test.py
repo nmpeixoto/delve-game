@@ -91,10 +91,10 @@ class NnRlMetricsTest(unittest.TestCase):
             {"step": 2, "win_rate": 0.2},
         ])
 
-    def test_evaluate_parse_args_defaults_to_training_timeout_and_stochastic_rollout(self):
+    def test_evaluate_parse_args_defaults_to_unlimited_full_dungeon_rollout(self):
         args = evaluate.parse_args([])
 
-        self.assertEqual(args.max_episode_steps, 6000)
+        self.assertEqual(args.max_episode_steps, 0)
         self.assertFalse(args.deterministic)
 
     def test_advance_prev_actions_clears_completed_envs(self):

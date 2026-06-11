@@ -21,6 +21,7 @@ from train import (
     curriculum_metric_label,
     curriculum_phase_for_step,
     curriculum_phase_target,
+    format_episode_cap,
     format_training_status,
     curriculum_should_advance,
     new_episode_window,
@@ -319,11 +320,29 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(len(reset_window["curriculum"]), 0)
         self.assertEqual(len(reset_window["classes"]), 0)
 
-    def test_train_default_episode_cap_limits_wandering_rollouts(self):
+    def test_train_default_episode_cap_allows_unbounded_full_dungeon_rollouts(self):
         with patch.object(sys, "argv", ["train.py"]):
             args = parse_args()
 
-        self.assertLessEqual(args.max_episode_steps, 6000)
+        self.assertEqual(args.max_episode_steps, 0)
+
+    def test_train_accepts_explicit_episode_cap_for_stall_guard(self):
+        with patch.object(sys, "argv", ["train.py", "--max-episode-steps", "6000"]):
+            args = parse_args()
+
+        self.assertEqual(args.max_episode_steps, 6000)
+
+    def test_vector_env_default_has_no_hidden_episode_timeout(self):
+        env = DelveVectorEnv(num_envs=1, envs_per_worker=1)
+        try:
+            self.assertEqual(env.max_episode_steps, 0)
+        finally:
+            env.close()
+
+    def test_episode_cap_label_reports_unlimited_rollouts(self):
+        self.assertEqual(format_episode_cap(0), "unlimited")
+        self.assertEqual(format_episode_cap(-1), "unlimited")
+        self.assertEqual(format_episode_cap(6000), "6,000 steps")
 
     def test_train_defaults_use_multiple_workers(self):
         with patch.object(sys, "argv", ["train.py"]):

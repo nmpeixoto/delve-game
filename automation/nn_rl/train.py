@@ -103,7 +103,12 @@ def parse_args(argv=None):
                         help="Resume from a checkpoint path, or use latest checkpoint when passed without a value.")
     parser.add_argument("--reset-optimizer", action="store_true",
                         help="Load model weights from --resume but start optimizer and LR schedule fresh.")
-    parser.add_argument("--max-episode-steps", type=int, default=6000)
+    parser.add_argument(
+        "--max-episode-steps",
+        type=int,
+        default=0,
+        help="Max actions per episode; 0 disables the timeout so training can explore the full dungeon.",
+    )
     parser.add_argument("--timeout-penalty", type=float, default=-400.0)
     parser.add_argument("--no-tensorboard", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--metrics-log", default=os.path.join("runs", "delve_ppo", "metrics.jsonl"),
@@ -118,6 +123,12 @@ def should_use_tensorboard(args):
 
 
 
+
+
+def format_episode_cap(max_episode_steps):
+    if int(max_episode_steps) <= 0:
+        return "unlimited"
+    return f"{int(max_episode_steps):,} steps"
 
 
 CHECKPOINT_RE = re.compile(r"delve_ppo_(\d+)\.pt$")
@@ -429,7 +440,7 @@ def main():
     print(f"  Rollout:      {args.rollout_steps} steps/env")
     print(f"  Batch size:   {args.batch_size}")
     print(f"  Total steps:  {args.total_timesteps:,}")
-    print(f"  Episode cap:  {args.max_episode_steps:,} steps")
+    print(f"  Episode cap:  {format_episode_cap(args.max_episode_steps)}")
     print(f"  Resume:       {resume_path or 'No'}")
     print(f"  Optimizer:    {'Reset' if args.reset_optimizer else 'Checkpoint'}")
     print(f"  TensorBoard:  {'Yes' if writer else 'No'} (tensorboard --logdir=runs)")

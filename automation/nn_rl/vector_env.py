@@ -25,7 +25,7 @@ class DelveVectorEnv:
         self,
         num_envs=128,
         envs_per_worker=8,
-        max_episode_steps=10000,
+        max_episode_steps=0,
         timeout_penalty=-400.0,
         curriculum_max_floor=None,
         curriculum_reward=125.0,

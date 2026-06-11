@@ -172,6 +172,32 @@ class NnRlPretrainingBugHuntTest(unittest.TestCase):
         self.assertEqual(args.total_timesteps, 1234)
         self.assertEqual(args.num_envs, 4)
 
+    def test_zero_max_episode_steps_disables_timeout_terminal_rule(self):
+        env = DelveVectorEnv.__new__(DelveVectorEnv)
+        env.max_episode_steps = 0
+        env.timeout_penalty = -400.0
+        env.curriculum_max_floor = None
+        env.curriculum_reward = 125.0
+        env.episode_lengths = [999999]
+        env.episode_rewards = [10.0]
+
+        reward, done, info = env._apply_terminal_rules(
+            env_id=0,
+            state={
+                "floor": 4,
+                "won": False,
+                "gameOver": False,
+                "player": {"class": "ranger"},
+            },
+            done=False,
+            reward=3.0,
+        )
+
+        self.assertFalse(done)
+        self.assertFalse(info["timeout"])
+        self.assertEqual(info["outcome"], "running")
+        self.assertEqual(reward, 3.0)
+
     def test_rollout_buffer_stores_zero_hidden_for_first_step(self):
         buffer = RolloutBuffer(num_envs=2, rollout_steps=1, state_dim=3, action_dim=4, hidden_dim=5, device="cpu")
 
