@@ -104,6 +104,42 @@ SELF_PLAY_SNAPSHOT_AGE = 100_000  # Play against policy from 100K steps ago
 
 CURRICULUM = [
     {
+        'name': 'descend_floor_1',
+        'max_floor': 1,
+        'hard_mode': False,
+        'success_threshold': 0.80,
+        'success_window': 1000,
+        'min_steps': 500_000,
+        'steps': 20_000_000,
+    },
+    {
+        'name': 'descend_floor_2',
+        'max_floor': 2,
+        'hard_mode': False,
+        'success_threshold': 0.80,
+        'success_window': 1000,
+        'min_steps': 500_000,
+        'steps': 30_000_000,
+    },
+    {
+        'name': 'descend_floor_3',
+        'max_floor': 3,
+        'hard_mode': False,
+        'success_threshold': 0.80,
+        'success_window': 1000,
+        'min_steps': 500_000,
+        'steps': 40_000_000,
+    },
+    {
+        'name': 'descend_floor_4',
+        'max_floor': 4,
+        'hard_mode': False,
+        'success_threshold': 0.80,
+        'success_window': 1000,
+        'min_steps': 500_000,
+        'steps': 50_000_000,
+    },
+    {
         'name': 'full_dungeon_normal',
         'max_floor': None,          # No floor cap — always aim for a full win
         'hard_mode': False,

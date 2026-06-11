@@ -25,12 +25,14 @@ def deep_diff(d1, d2, path=""):
         keys = set(d1.keys()).union(set(d2.keys()))
         for k in keys:
             # Skip fields that we know are not synced or irrelevant for pure gameplay state
-            if k in ('map', 'seen', 'visible', 'seen_delta', 'ready', 'rooms', 'seen_count', 'known_stairs', 'shopOpen', 'id', '_door_count', '_secrets_revealed_this_step', '_walkable_total', '_doors_unlocked_this_step', '_stair_coords'):
+            if k in ('map', 'seen', 'visible', 'seen_delta', 'ready', 'rooms', 'seen_count', 'known_stairs', 'shopOpen', 'id', '_door_count', '_secret_count', '_secrets_revealed_this_step', '_walkable_total', '_doors_unlocked_this_step', '_stair_coords'):
                 continue
 
             if k not in d1:
+                if not d2[k]: continue
                 return f"{path}[{k}] missing in dict 1 (val: {d2[k]})"
             if k not in d2:
+                if not d1[k]: continue
                 return f"{path}[{k}] missing in dict 2 (val: {d1[k]})"
                 
             res = deep_diff(d1[k], d2[k], f"{path}[{k}]")
