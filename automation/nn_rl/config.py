@@ -64,7 +64,7 @@ TOTAL_TIMESTEPS = 200_000_000
 # ─── LR SCHEDULE ─────────────────────────────────────────────────────────────
 LR_START = 3e-4
 LR_END = 1e-5
-LR_DECAY_STEPS = 50_000_000   # Much longer decay: LR stays high to escape local minima
+LR_DECAY_STEPS = 1_000_000_000   # Much longer decay: LR stays high to escape local minima
 
 # ─── CHECKPOINTING ───────────────────────────────────────────────────────────
 SAVE_EVERY = 500_000
