@@ -94,8 +94,10 @@ def compute_reward(prev_G, action, curr_G):
         reward += 25.0 * revealed_secrets * mults['explore']
 
     revealed_traps = max(0, _revealed_trap_count(curr_G) - _revealed_trap_count(prev_G))
-    if revealed_traps > 0:
-        reward += REWARD_TRAP_PENALTY * revealed_traps  # REWARD_TRAP_PENALTY is negative
+    
+    triggered_traps = max(0, _triggered_trap_count(curr_G) - _triggered_trap_count(prev_G))
+    if triggered_traps > 0:
+        reward += REWARD_TRAP_PENALTY * triggered_traps  # REWARD_TRAP_PENALTY is negative
 
     # ── COMBAT (kill rewards) ───────────────────────────────────────────────
     prev_alive = {e['id'] for e in prev_G.get('enemies', []) if not e.get('dying')}
@@ -232,9 +234,16 @@ def compute_reward(prev_G, action, curr_G):
         reward += REWARD_LEVEL_UP
 
     # ── STAGNATION PENALTY ─────────────────────────────────────────────────
+    damage_dealt = 0
+    for e in curr_G.get('enemies', []):
+        prev_en = next((pe for pe in prev_G.get('enemies', []) if pe['id'] == e['id']), None)
+        if prev_en and e['hp'] < prev_en['hp']:
+            damage_dealt += (prev_en['hp'] - e['hp'])
+
     made_progress = (
         floor_progress
         or len(killed) > 0
+        or damage_dealt > 0
         or key_delta > 0
         or unlocked_doors > 0
         or revealed_secrets > 0
@@ -249,6 +258,7 @@ def compute_reward(prev_G, action, curr_G):
         or atk_delta > 0
         or def_delta > 0
         or maxHp_delta > 0
+        or action in (8, 9, 10, 11, 12)  # USE_POTION, USE_BUFF, USE_BOMB, USE_TELEPORT, USE_DETECTION
         or (hp_delta > 0 and pp.get('hp', 0) < pp.get('maxHp', 1))
     )
     if not made_progress:
@@ -312,8 +322,7 @@ def _consumable_resource_gain_reward(prev_G, curr_G):
 
 
 def _revealed_trap_count(G):
-    return sum(
-        1
-        for trap in G.get('traps', [])
-        if trap.get('revealed') and not trap.get('triggered')
-    )
+    return sum(1 for t in G.get('traps', []) if t.get('revealed') and not t.get('triggered'))
+
+def _triggered_trap_count(G):
+    return sum(1 for t in G.get('traps', []) if t.get('triggered'))
