@@ -681,7 +681,11 @@ function spawnItem(r, itemFilter=null, forceHighTier=false, opts={}){
   let preferredGear = opts.preferClassGear ? preferredClassGearPool() : [];
   if(ch(.3)||forceHighTier) pool.push(...weaponPool);
   if(ch(.3)||forceHighTier) pool.push(...armorPool);
-  if(!forceHighTier) pool.push(...POTIONS);
+  if(!forceHighTier) {
+    pool.push(...POTIONS);
+    // Weight healing potions higher to ensure adequate supply
+    pool.push(...POTIONS.filter(p => p.type === 'potion'));
+  }
   
   if(itemFilter) pool = pool.filter(itemFilter);
   if(opts.preferClassGear && preferredGear.length) {
@@ -771,7 +775,7 @@ let G={},_dpadTimer=null,_swipeStart=null,_lastAction=0;
 const rand=n=>Math.floor(Math.random()*n);
 const rr=(a,b)=>a+rand(b-a+1);
 let _idCounter=0;
-const uid=()=>`${Date.now().toString(36)}-${(++_idCounter).toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+const uid=()=>`${Date.now().toString(36)}-${(++_idCounter).toString(36)}`;
 const ch=p=>Math.random()<p;
 function round1(value){
   const n = Number(value);
@@ -3013,9 +3017,19 @@ function generateShopStock(){
     : (!item.reqClass || item.reqClass.includes(G.player.class));
   let nearLevel = item => !item.reqLvl || G.player.lvl >= item.reqLvl - 2;
 
+  let shuffle = arr => {
+    let a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
   // 3-5 potions
-  let pots=[...POTIONS].sort(()=>Math.random()-.5);
-  for(let i=0; i<Math.min(pots.length, rr(3,5)); i++) {
+  let pots=shuffle(POTIONS);
+  let numPots = Math.min(pots.length, rr(3,5));
+  for(let i=0; i<numPots; i++) {
     addStock(pots[i]);
   }
 
@@ -3027,20 +3041,24 @@ function generateShopStock(){
   if(priorityGear.length) addStock(priorityGear[rr(0, priorityGear.length-1)]);
 
   // 4-6 weapons scaled to floor
-  let weps=weaponCandidates.filter(w=>!usedNames.has(w.name)).sort(()=>Math.random()-.5);
-  for(let i=0; i<Math.min(weps.length, rr(4,6)); i++) {
+  let wepsFilter = weaponCandidates.filter(w=>!usedNames.has(w.name));
+  console.error('[JS] weps len: ' + wepsFilter.length + ' arms len: ' + armorCandidates.filter(a=>!usedNames.has(a.name)).length);
+  let weps=shuffle(wepsFilter);
+  let numWeps = Math.min(weps.length, rr(4,6));
+  for(let i=0; i<numWeps; i++) {
     addStock(weps[i]);
   }
 
   // 3-4 armors
-  let arms=armorCandidates.filter(a=>!usedNames.has(a.name)).sort(()=>Math.random()-.5);
-  for(let i=0; i<Math.min(arms.length, rr(3,4)); i++) {
+  let arms=shuffle(armorCandidates.filter(a=>!usedNames.has(a.name)));
+  let numArms = Math.min(arms.length, rr(3,4));
+  for(let i=0; i<numArms; i++) {
     addStock(arms[i]);
   }
 
   // 2 upgrades (floors 2+)
   if(G.floor>=2){
-    let ups=UPGRADES.filter(u=>u.rarity!=='legendary'||G.floor>=4).sort(()=>Math.random()-.5);
+    let ups=shuffle(UPGRADES.filter(u=>u.rarity!=='legendary'||G.floor>=4));
     for(let i=0; i<Math.min(ups.length, 2); i++) {
       addStock(ups[i]);
     }
@@ -3493,33 +3511,35 @@ function initGame(playerClass = 'warrior', hardMode = false){
   p.hp = cData.hp || 20; p.maxHp = cData.hp || 20; 
   p.atk = cData.atk || 1; p.def = cData.def || 0;
   if(playerClass === 'warrior') {
-    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◆', price:60};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Short Sword'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Chain Mail'), id:uid()};
+    p.bestWeapon = 'Short Sword (ATK+4)';
   } else if(playerClass === 'rogue') {
-    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'†', price:25};
-    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◆', price:35};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Rusty Dagger'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Leather Vest'), id:uid()};
     p.bestWeapon = 'Rusty Dagger (ATK+4)';
   } else if(playerClass === 'mage') {
-    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70};
-    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Bone Staff'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Apprentice Robe'), id:uid()};
     p.bestWeapon = 'Bone Staff (ATK+5)';
   } else if(playerClass === 'paladin') {
-    p.weapon = {id:uid(), name:'Iron Mace', type:'weapon', atk:5, rarity:'common', sym:'⚔', price:70};
-    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:80};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Iron Mace'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Iron Plate'), id:uid()};
     p.bestWeapon = 'Iron Mace (ATK+5)';
   } else if(playerClass === 'ranger') {
-    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:5, rarity:'common', sym:'🏹', price:50};
-    p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Shortbow'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Ranger Tunic'), id:uid()};
     p.bestWeapon = 'Shortbow (ATK+5)';
   } else if(playerClass === 'barbarian') {
-    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:70};
-    p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'◆', price:40};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Great Axe'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Furs'), id:uid()};
     p.bestWeapon = 'Great Axe (ATK+4)';
   } else if(playerClass === 'necromancer') {
-    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70};
-    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Skull Rod'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Apprentice Robe'), id:uid()};
     p.bestWeapon = 'Skull Rod (ATK+5)';
   } else if(playerClass === 'monk') {
-    p.armor = {id:uid(), name:'Gi', type:'armor', def:4, rarity:'common', sym:'◆', price:50};
+    p.armor = {...ARMORS.find(a=>a.name==='Gi'), id:uid()};
   }
 
   G={
@@ -3533,7 +3553,7 @@ function initGame(playerClass = 'warrior', hardMode = false){
     ability1Cooldown:0, ability2Cooldown:0,
     gameOver:false,won:false,
   };
-  if(!G.hardMode && ['warrior','paladin','monk'].includes(playerClass)) {
+  if(!G.hardMode) {
     let potion = POTIONS.find(item => item.name === 'Health Potion');
     if(potion) G.items.push({...potion, id:`starter-potion-${playerClass}`, carried:true, x:undefined, y:undefined});
   }
@@ -3542,7 +3562,9 @@ function initGame(playerClass = 'warrior', hardMode = false){
 }
 
 function buildFloor(){
+  console.error('[JS] RNG start buildFloor: ' + (Math.rCount||0));
   let{map,rooms}=generateMap();
+  console.error('[JS] RNG after generateMap: ' + (Math.rCount||0));
   G.map=map;G.rooms=rooms;G.enemies=[];G.shops=[];G.traps=[];G.currentShop=null;
   G.visible = new Set();
   G.seen = new Set();
@@ -3594,10 +3616,14 @@ function buildFloor(){
       map[sr.cy][sr.cx]=TILE.SHOP;
     }
   }
+  console.error('[JS] RNG after shops: ' + (Math.rCount||0));
+
   map[stairsRoom.cy][stairsRoom.cx] = TILE.STAIRS;
 
   computeVision();
   const startVisible = new Set(G.visible);
+
+  console.error('[JS_ROOMS] ' + JSON.stringify(G.rooms.map(r => r.type)));
 
   for(let i=1;i<rooms.length;i++){
     let r=rooms[i];
@@ -3627,6 +3653,7 @@ function buildFloor(){
       ne = baseEnemies;
       if(ch(.65)) guaranteedItems = 1;
     }
+    console.error('[JS] Room ' + i + ' type=' + r.type + ' ne=' + ne + ' guaranteedItems=' + guaranteedItems + ' (RNG: ' + (Math.rCount||0) + ')');
 
     let enemyProfile = getFloorEnemyProfile(G.floor);
     for(let e=0;e<ne;e++){

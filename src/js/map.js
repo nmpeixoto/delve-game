@@ -171,35 +171,35 @@ function initGame(playerClass = 'warrior', hardMode = false){
   p.hp = cData.hp || 20; p.maxHp = cData.hp || 20; 
   p.atk = cData.atk || 1; p.def = cData.def || 0;
   if(playerClass === 'warrior') {
-    p.weapon = {id:uid(), name:'Short Sword', type:'weapon', atk:4, rarity:'common', sym:'†', price:50};
-    p.armor = {id:uid(), name:'Chain Mail', type:'armor', def:4, rarity:'common', sym:'◆', price:60};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Short Sword'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Chain Mail'), id:uid()};
     p.bestWeapon = 'Short Sword (ATK+4)';
   } else if(playerClass === 'rogue') {
-    p.weapon = {id:uid(), name:'Rusty Dagger', type:'weapon', atk:4, rarity:'common', sym:'†', price:25};
-    p.armor = {id:uid(), name:'Leather Vest', type:'armor', def:2, rarity:'common', sym:'◆', price:35};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Rusty Dagger'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Leather Vest'), id:uid()};
     p.bestWeapon = 'Rusty Dagger (ATK+4)';
   } else if(playerClass === 'mage') {
-    p.weapon = {id:uid(), name:'Bone Staff', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70};
-    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Bone Staff'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Apprentice Robe'), id:uid()};
     p.bestWeapon = 'Bone Staff (ATK+5)';
   } else if(playerClass === 'paladin') {
-    p.weapon = {id:uid(), name:'Iron Mace', type:'weapon', atk:5, rarity:'common', sym:'⚔', price:70};
-    p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:80};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Iron Mace'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Iron Plate'), id:uid()};
     p.bestWeapon = 'Iron Mace (ATK+5)';
   } else if(playerClass === 'ranger') {
-    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:5, rarity:'common', sym:'🏹', price:50, perception:1};
-    p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Shortbow'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Ranger Tunic'), id:uid()};
     p.bestWeapon = 'Shortbow (ATK+5)';
   } else if(playerClass === 'barbarian') {
-    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:70, critChance:0.02};
-    p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'◆', price:40};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Great Axe'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Furs'), id:uid()};
     p.bestWeapon = 'Great Axe (ATK+4)';
   } else if(playerClass === 'necromancer') {
-    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70, vampirism:1};
-    p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
+    p.weapon = {...WEAPONS.find(w=>w.name==='Skull Rod'), id:uid()};
+    p.armor = {...ARMORS.find(a=>a.name==='Apprentice Robe'), id:uid()};
     p.bestWeapon = 'Skull Rod (ATK+5)';
   } else if(playerClass === 'monk') {
-    p.armor = {id:uid(), name:'Gi', type:'armor', def:4, rarity:'common', sym:'◆', price:50};
+    p.armor = {...ARMORS.find(a=>a.name==='Gi'), id:uid()};
   }
 
   G={

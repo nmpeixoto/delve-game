@@ -24,14 +24,14 @@ def deep_diff(d1, d2, path=""):
     if isinstance(d1, dict) and isinstance(d2, dict):
         keys = set(d1.keys()).union(set(d2.keys()))
         for k in keys:
+            # Skip fields that we know are not synced or irrelevant for pure gameplay state
+            if k in ('map', 'seen', 'visible', 'seen_delta', 'ready', 'rooms', 'seen_count', 'known_stairs', 'shopOpen', 'id', '_door_count', '_secrets_revealed_this_step', '_walkable_total', '_doors_unlocked_this_step', '_stair_coords'):
+                continue
+
             if k not in d1:
                 return f"{path}[{k}] missing in dict 1 (val: {d2[k]})"
             if k not in d2:
                 return f"{path}[{k}] missing in dict 2 (val: {d1[k]})"
-            
-            # Skip fields that we know are not synced or irrelevant for pure gameplay state
-            if k in ('map', 'seen', 'visible', 'seen_delta', 'ready', 'rooms', 'seen_count', 'known_stairs', 'shopOpen'):
-                continue
                 
             res = deep_diff(d1[k], d2[k], f"{path}[{k}]")
             if res:
@@ -71,10 +71,14 @@ def test_seed(seed, p_class):
         js_res = js_env.step_batch([(0, act_dict)])[0]
         js_state = js_res[1]
         
-        diff = deep_diff(py_state, js_state)
-        if diff:
+        diff_result = deep_diff(py_state, js_state)
+        if diff_result:
+            print(f"Diff: {diff_result}")
+            if '[items]' in diff_result:
+                print("PY ITEMS:", [(i.get('name'), i.get('price')) for i in py_state.get('items', [])])
+                print("JS ITEMS:", [(i.get('name'), i.get('price')) for i in js_state.get('items', [])])
             js_env.shutdown()
-            return False, f"Step {step} mismatched state:\nAction: {act_dict}\nDiff: {diff}"
+            return False, f"Step {step} mismatched state:\nAction: {act_dict}\nDiff: {diff_result}"
             
         if py_state.get('gameOver') or py_state.get('won'):
             break

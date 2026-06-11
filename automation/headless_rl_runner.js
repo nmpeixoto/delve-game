@@ -320,7 +320,9 @@ function createRuntime(seed) {
       })),
       items: (G.items || []).map(i => ({
         id: i.id, name: i.name, type: i.type, carried: !!i.carried,
-        x: i.x, y: i.y, heal: i.heal, price: i.price, atk: i.atk, def: i.def,
+        x: i.x === undefined ? null : i.x,
+        y: i.y === undefined ? null : i.y,
+        heal: i.heal || 0, price: i.price || 0, atk: i.atk || 0, def: i.def || 0,
         sold: !!i.sold,
       })),
       traps: (G.traps || []).map(t => ({
@@ -328,14 +330,23 @@ function createRuntime(seed) {
         revealed: !!t.revealed,
         triggered: !!t.triggered,
       })),
-      shops: (G.shops || []).map(s => ({ x: s.x, y: s.y, stock: (s.stock||[]).map(i => ({ id: i.id, type: i.type, price: i.price, heal: i.heal, atk: i.atk, def: i.def, amount: i.amount, stat: i.stat, rarity: i.rarity, sold: !!i.sold })) })),
+      shops: (G.shops || []).map(s => ({
+        x: s.x, y: s.y,
+        stock: (s.stock || []).map(i => ({
+          id: i.id, type: i.type, price: i.price, heal: i.heal || 0,
+          atk: i.atk || 0, def: i.def || 0,
+          amount: i.amount || 0, stat: i.stat || '', rarity: i.rarity || '',
+          sold: !!i.sold, name: i.name
+        }))
+      })),
       currentShop: G.currentShop ? {
         x: G.currentShop.x,
         y: G.currentShop.y,
         stock: (G.currentShop.stock || []).map(i => ({
-          id: i.id, type: i.type, price: i.price, heal: i.heal,
-          atk: i.atk, def: i.def, amount: i.amount, stat: i.stat,
-          rarity: i.rarity, sold: !!i.sold,
+          id: i.id, type: i.type, price: i.price, heal: i.heal || 0,
+          atk: i.atk || 0, def: i.def || 0,
+          amount: i.amount || 0, stat: i.stat || '', rarity: i.rarity || '',
+          sold: !!i.sold, name: i.name
         })),
       } : null,
       // map is null when unchanged (floor hasn't changed); Python caches it.

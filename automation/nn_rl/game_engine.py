@@ -682,8 +682,8 @@ class DelveGame:
                     enemy['name'] = "Elite " + enemy['name']
                 self.enemies.append(enemy)
 
-            for _ in range(guaranteed_items):
-                prefer_class = (r.get('type') == 'armory')
+            for g in range(guaranteed_items):
+                prefer_class = (r.get('type') == 'armory' and g == 0)
                 force_high = (r.get('type') in ('treasure', 'crypt', 'secret'))
                 self._spawn_item(r, item_filter, force_high, prefer_class)
 
@@ -2025,15 +2025,19 @@ class DelveGame:
             'floor': self.floor,
             'rCount': self.rng.r_count,
             'turn': self.turn,
+            'rooms': [r.get('type') for r in self.rooms],
             'player': {
                 'hp': p['hp'], 'maxHp': p['maxHp'], 'atk': p['atk'], 'def': p['def'],
                 'lvl': p['lvl'], 'xp': p['xp'], 'xpNext': p['xpNext'], 'gold': p['gold'],
                 'x': p['x'], 'y': p['y'], 'class': p['class'],
                 'weapon': {'atk': p['weapon']['atk'], 'sym': p['weapon'].get('sym',''), 'name': p['weapon']['name'], 'id': p['weapon']['id'],
-                           **{k: p['weapon'][k] for k in ('vampirism','critChance','perception','swiftness','dodgeBonus','regen') if k in p['weapon']}}
+                           'vampirism': p['weapon'].get('vampirism', 0), 'critChance': p['weapon'].get('critChance', 0),
+                           'perception': p['weapon'].get('perception', 0), 'swiftness': p['weapon'].get('swiftness', 0),
+                           'dodgeBonus': p['weapon'].get('dodgeBonus', 0), 'regen': p['weapon'].get('regen', 0)}
                     if p.get('weapon') else None,
                 'armor': {'def': p['armor']['def'], 'name': p['armor']['name'], 'id': p['armor']['id'],
-                          **{k: p['armor'][k] for k in ('dodgeBonus','perception','swiftness','critChance') if k in p['armor']}}
+                          'dodgeBonus': p['armor'].get('dodgeBonus', 0), 'perception': p['armor'].get('perception', 0),
+                          'swiftness': p['armor'].get('swiftness', 0), 'critChance': p['armor'].get('critChance', 0)}
                     if p.get('armor') else None,
                 'shieldWallTurns': p.get('shieldWallTurns', 0),
                 'vanishTurns': p.get('vanishTurns', 0),
