@@ -187,15 +187,15 @@ function initGame(playerClass = 'warrior', hardMode = false){
     p.armor = {id:uid(), name:'Iron Plate', type:'armor', def:5, rarity:'common', sym:'◆', price:80};
     p.bestWeapon = 'Iron Mace (ATK+5)';
   } else if(playerClass === 'ranger') {
-    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:5, rarity:'common', sym:'🏹', price:50};
+    p.weapon = {id:uid(), name:'Shortbow', type:'weapon', atk:5, rarity:'common', sym:'🏹', price:50, perception:1};
     p.armor = {id:uid(), name:'Ranger Tunic', type:'armor', def:3, rarity:'common', sym:'◆', price:50};
     p.bestWeapon = 'Shortbow (ATK+5)';
   } else if(playerClass === 'barbarian') {
-    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:70};
+    p.weapon = {id:uid(), name:'Great Axe', type:'weapon', atk:4, rarity:'common', sym:'⚔', price:70, critChance:0.02};
     p.armor = {id:uid(), name:'Furs', type:'armor', def:4, rarity:'common', sym:'◆', price:40};
     p.bestWeapon = 'Great Axe (ATK+4)';
   } else if(playerClass === 'necromancer') {
-    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70};
+    p.weapon = {id:uid(), name:'Skull Rod', type:'weapon', atk:5, rarity:'common', sym:'♦', price:70, vampirism:1};
     p.armor = {id:uid(), name:'Apprentice Robe', type:'armor', def:2, rarity:'common', sym:'◆', price:40};
     p.bestWeapon = 'Skull Rod (ATK+5)';
   } else if(playerClass === 'monk') {

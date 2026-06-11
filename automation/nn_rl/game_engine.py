@@ -227,8 +227,11 @@ class DelveGame:
         self.enemies = []
         self.items = []
         self.traps = []
+        self.rooms = []
         self.shops = []
-        self.current_shop = None
+        self._door_count = 0
+        self._death_batch = []
+
         self.visible = set()
         self.seen = set()
         self.ability1_cooldown = 0
@@ -681,7 +684,8 @@ class DelveGame:
 
             for _ in range(guaranteed_items):
                 prefer_class = (r.get('type') == 'armory')
-                self._spawn_item(r, item_filter, is_elite, prefer_class)
+                force_high = (r.get('type') in ('treasure', 'crypt', 'secret'))
+                self._spawn_item(r, item_filter, force_high, prefer_class)
 
         # Traps
         num_traps = rng.rr(3, 7 + self.floor)
@@ -846,8 +850,7 @@ class DelveGame:
 
     # ─── VISION ───────────────────────────────────────────────────────────
     def _compute_vision(self):
-        if not hasattr(self, 'map_np'):
-            self.map_np = np.array(self.map, dtype=np.int32)
+        self.map_np = np.array(self.map, dtype=np.int32)
             
         vis_mask = fast_compute_vision(self.player['x'], self.player['y'], MAP_W, MAP_H, self.map_np)
         keys = set(np.nonzero(vis_mask)[0].tolist())
@@ -1006,9 +1009,7 @@ class DelveGame:
     def _kill_enemy(self, en, skip_advance):
         if en.get('isPet'):
             en['dying'] = True
-            self.enemies = [e for e in self.enemies if e['id'] != en['id']]
-            if not skip_advance:
-                self._advance_turn()
+            self._death_batch.append({'en': en, 'skipAdvanceTurn': skip_advance})
             return
 
         gold_drop = en['gold'] + self.rng.rand(3) + int(self._get_stat('goldBonus'))
@@ -1024,34 +1025,51 @@ class DelveGame:
             self.player['hp'] = round1(min(self.player['maxHp'], self.player['hp'] + 2))
 
         en['dying'] = True
+        self._death_batch.append({'en': en, 'skipAdvanceTurn': skip_advance})
 
-        # Raise dead check
-        if en.get('raiseCorpseTarget') and not en.get('boss') and not en.get('isPet'):
-            en['isPet'] = True
-            en['dying'] = False
-            en['raiseCorpseTarget'] = False
-            en['revive'] = False
-            en['reviveTurns'] = 0
-            en['hp'] = math.ceil(en['maxHp'] / 2)
-            en['maxHp'] = math.ceil(en['maxHp'] / 2)
-            en['lifespanTurns'] = 25
-            en['petSummonedTurn'] = self.turn + (1 if not skip_advance else 0)
-            self._check_level_up()
-            if not skip_advance:
-                self._advance_turn()
+    def _flush_death_batch(self):
+        if not self._death_batch:
             return
 
-        self.enemies = [e for e in self.enemies if e['id'] != en['id']]
+        should_advance = any(not d['skipAdvanceTurn'] for d in self._death_batch)
 
-        if en.get('boss'):
-            self.won = True
-            self._check_level_up()
-            return
+        for d in self._death_batch:
+            en = d['en']
 
-        # Loot drops
-        if en.get('isElite'):
-            if self.rng.ch(0.5):
-                pool = WEAPONS + ARMORS + POTIONS + LEGENDARIES
+            # Raise dead check
+            if en.get('raiseCorpseTarget') and not en.get('boss') and not en.get('isPet'):
+                en['isPet'] = True
+                en['dying'] = False
+                en['raiseCorpseTarget'] = False
+                en['revive'] = False
+                en['reviveTurns'] = 0
+                en['hp'] = math.ceil(en['maxHp'] / 2)
+                en['maxHp'] = math.ceil(en['maxHp'] / 2)
+                en['lifespanTurns'] = 25
+                en['petSummonedTurn'] = self.turn + (1 if should_advance else 0)
+                continue
+
+            self.enemies = [e for e in self.enemies if e['id'] != en['id']]
+
+            if en.get('boss'):
+                self.won = True
+                self._check_level_up()
+                return
+
+            # Loot drops
+            if en.get('isElite'):
+                if self.rng.ch(0.5):
+                    pool = WEAPONS + ARMORS + POTIONS + LEGENDARIES
+                    w = []
+                    for i in pool:
+                        if i['rarity'] == 'legendary': w.append(i)
+                        elif i['rarity'] == 'rare': w.extend([i, i])
+                        else: w.extend([i] * 4)
+                    if w:
+                        drop = self.rng.choice(w)
+                        self.items.append({**drop, 'x': en['x'], 'y': en['y'], 'id': self._uid(), 'carried': False})
+            elif self.rng.ch(0.2):
+                pool = WEAPONS + ARMORS + POTIONS
                 w = []
                 for i in pool:
                     if i['rarity'] == 'legendary': w.append(i)
@@ -1060,19 +1078,10 @@ class DelveGame:
                 if w:
                     drop = self.rng.choice(w)
                     self.items.append({**drop, 'x': en['x'], 'y': en['y'], 'id': self._uid(), 'carried': False})
-        elif self.rng.ch(0.2):
-            pool = WEAPONS + ARMORS + POTIONS
-            w = []
-            for i in pool:
-                if i['rarity'] == 'legendary': w.append(i)
-                elif i['rarity'] == 'rare': w.extend([i, i])
-                else: w.extend([i] * 4)
-            if w:
-                drop = self.rng.choice(w)
-                self.items.append({**drop, 'x': en['x'], 'y': en['y'], 'id': self._uid(), 'carried': False})
 
+        self._death_batch = []
         self._check_level_up()
-        if not skip_advance:
+        if should_advance:
             self._advance_turn()
 
     def _check_level_up(self):
@@ -1280,7 +1289,7 @@ class DelveGame:
 
                         d_chance = self._player_dodge_chance()
                         if d_chance > 0 and self.rng.ch(d_chance):
-                            pass  # dodged
+                            break  # dodged, enemy turn complete
                         else:
                             self._auto_emergency_potion(e, edm)
                             self.player['hp'] = round1(max(0, self.player['hp'] - edm))
@@ -1293,6 +1302,7 @@ class DelveGame:
                             if self.player['hp'] <= 0:
                                 self.game_over = True
                                 return
+                            self._compute_vision()
                     else:
                         # Attack another enemy/pet
                         t = target
@@ -1373,8 +1383,7 @@ class DelveGame:
             return
         if atype == 'attack':
             self.tileAttack(action.get('target'))
-            return
-        if atype == 'key':
+        elif atype == 'key':
             key = action.get('val')
             if key == 'ArrowUp': self.move(0, -1)
             elif key == 'ArrowDown': self.move(0, 1)
@@ -1386,6 +1395,8 @@ class DelveGame:
             elif key in ('i', 'I'): pass # toggle inv
             elif key in ('t', 'T'): self.open_shop()
             elif key == 'Escape': self.close_shop()
+
+        self._flush_death_batch()
 
     def move(self, dx, dy):
         if self.game_over or self.won or self.map is None:
@@ -1466,8 +1477,7 @@ class DelveGame:
             if it['type'] == 'key':
                 self._pickup_item(it['id'], allow_free_move=True, silent=True)
             elif it['type'] == 'shrine':
-                pass  # Shrine interaction not needed for RL (skip)
-                self._advance_turn(allow_free_move=True)
+                pass  # Shrine interaction is a no-op in headless mode (matches JS)
             else:
                 self._pickup_item(it['id'], allow_free_move=True)
         else:
@@ -2040,12 +2050,13 @@ class DelveGame:
                 'goldBonus': p.get('goldBonus', 0),
                 'xpMult': p.get('xpMult', 0),
                 'perception': p.get('perception', 0),
+                'tilesExplored': p.get('tilesExplored', 0),
             },
             'ability1Cooldown': self.ability1_cooldown,
             'ability2Cooldown': self.ability2_cooldown,
             'enemies': [
                 {'id': e['id'], 'x': e['x'], 'y': e['y'], 'hp': e['hp'], 'maxHp': e['maxHp'],
-                 'atk': e['atk'], 'def': e['def'], 'xp': e.get('xp', 0),
+                 'atk': e['atk'], 'def': e['def'], 'xp': e.get('xp', 0), 'gold': e.get('gold', 0),
                  'boss': bool(e.get('boss')), 'isElite': bool(e.get('isElite')),
                  'dying': bool(e.get('dying')), 'isPet': bool(e.get('isPet'))}
                 for e in self.enemies

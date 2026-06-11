@@ -300,8 +300,8 @@ function createRuntime(seed) {
         hp: p.hp, maxHp: p.maxHp, atk: p.atk, def: p.def, lvl: p.lvl,
         xp: p.xp, xpNext: p.xpNext, gold: p.gold,
         x: p.x, y: p.y, class: p.class,
-        weapon: p.weapon ? { atk: p.weapon.atk, sym: p.weapon.sym, name: p.weapon.name, id: p.weapon.id } : null,
-        armor: p.armor ? { def: p.armor.def, name: p.armor.name, id: p.armor.id } : null,
+        weapon: p.weapon ? { atk: p.weapon.atk, sym: p.weapon.sym, name: p.weapon.name, id: p.weapon.id, vampirism: p.weapon.vampirism || 0, critChance: p.weapon.critChance || 0, perception: p.weapon.perception || 0, swiftness: p.weapon.swiftness || 0, dodgeBonus: p.weapon.dodgeBonus || 0, regen: p.weapon.regen || 0 } : null,
+        armor: p.armor ? { def: p.armor.def, name: p.armor.name, id: p.armor.id, dodgeBonus: p.armor.dodgeBonus || 0, perception: p.armor.perception || 0, swiftness: p.armor.swiftness || 0, critChance: p.armor.critChance || 0 } : null,
         shieldWallTurns: p.shieldWallTurns || 0, vanishTurns: p.vanishTurns || 0,
         freeMoves: p.freeMoves || 0, bloodlustTurns: p.bloodlustTurns || 0,
         rootedTurns: p.rootedTurns || 0, poisonedTurns: p.poisonedTurns || 0,
@@ -309,11 +309,12 @@ function createRuntime(seed) {
         vampirism: p.vampirism || 0, regen: p.regen || 0, swiftness: p.swiftness || 0,
         critChance: p.critChance || 0, dodgeBonus: p.dodgeBonus || 0,
         goldBonus: p.goldBonus || 0, xpMult: p.xpMult || 0, perception: p.perception || 0,
+        tilesExplored: p.tilesExplored || 0,
       },
       ability1Cooldown: G.ability1Cooldown, ability2Cooldown: G.ability2Cooldown,
       enemies: (G.enemies || []).map(e => ({
         id: e.id, x: e.x, y: e.y, hp: e.hp, maxHp: e.maxHp,
-        atk: e.atk, def: e.def, xp: e.xp || 0,
+        atk: e.atk, def: e.def, xp: e.xp || 0, gold: e.gold || 0,
         boss: !!e.boss, isElite: !!e.isElite,
         dying: !!e.dying, isPet: !!e.isPet,
       })),
@@ -400,6 +401,13 @@ function runWorker() {
     if (!env) return { envId, error: 'Unknown env', state: null, done: true, won: false };
 
     env.interpretDecision(decision);
+    
+    // Auto-resolve emergency potions (RL bot always drinks when it would die)
+    const G = env.context.G;
+    if (G && G.pendingHit) {
+      env.context.resolveEmergency(true);
+    }
+    
     env.flushTimers();
     const after = env.captureSnapshot();
     const done = after.gameOver || after.won;
