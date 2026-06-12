@@ -121,7 +121,7 @@ def compute_reward(prev_G, action, curr_G):
         )
         if readiness < READY_DESCEND_THRESHOLD:
             gap = (READY_DESCEND_THRESHOLD - readiness) / READY_DESCEND_THRESHOLD
-            reward += REWARD_UNPREPARED_DESCEND_PENALTY * gap
+            reward += REWARD_UNPREPARED_DESCEND_PENALTY * prev_floor * gap
         # reset minimum distance on new floor
         curr_G['_min_stair_dist'] = 9999 * curr_G.get('floor', 1)
 
@@ -149,7 +149,7 @@ def compute_reward(prev_G, action, curr_G):
     
     triggered_traps = max(0, _triggered_trap_count(curr_G) - _triggered_trap_count(prev_G))
     if triggered_traps > 0:
-        reward += REWARD_TRAP_PENALTY * triggered_traps  # REWARD_TRAP_PENALTY is negative
+        reward += REWARD_TRAP_PENALTY * floor * triggered_traps  # REWARD_TRAP_PENALTY is negative
 
     # ── COMBAT (kill rewards) ───────────────────────────────────────────────
     prev_alive = {e['id'] for e in prev_G.get('enemies', []) if not e.get('dying')}
@@ -177,7 +177,7 @@ def compute_reward(prev_G, action, curr_G):
     vis_enemies = _visible_enemies(curr_G)
     adj_count = sum(1 for e in vis_enemies if chebyshev(e, p) <= 1)
     if hp_delta < -0.05 and adj_count == 0:
-        reward -= 3.0 * mults['dmg_penalty']
+        reward -= 3.0 * floor * mults['dmg_penalty']
         
     # ── STAT GAINS ───────────────────────────────────────────────────────────
     atk_delta = p.get('atk', 0) - pp.get('atk', 0)
@@ -222,12 +222,12 @@ def compute_reward(prev_G, action, curr_G):
     # when HP is between 50–100% and a battle is not in progress.
     if action == 8:  # USE_POTION
         if p.get('hp', 0) > p.get('maxHp', 1) * 0.5 and len(_visible_enemies(curr_G)) == 0:
-            reward += REWARD_POTION_WASTE  # Penalty for drinking out of combat above 50% HP
+            reward += REWARD_POTION_WASTE * floor  # Penalty for drinking out of combat above 50% HP
 
     # ── STAIR DISCOVERY ──────────────────────────────────────────────────────
     stair_discovered = not prev_G.get('known_stairs') and curr_G.get('known_stairs')
     if stair_discovered:
-        reward += REWARD_STAIR_DISCOVERY
+        reward += REWARD_STAIR_DISCOVERY * floor
 
     stair_distance_improved = False
     if curr_G.get('floor', 1) == prev_G.get('floor', 1):
@@ -244,11 +244,11 @@ def compute_reward(prev_G, action, curr_G):
                 
                 # Exploit fix: Only reward if we reached a NEW minimum distance
                 if stair_delta > 0 and curr_stair_dist < min_dist_so_far:
-                    reward += min(1.0 * (min_dist_so_far - curr_stair_dist), 5.0)
+                    reward += min(1.0 * (min_dist_so_far - curr_stair_dist), 5.0) * floor
                     stair_distance_improved = True
                 # Still penalize walking away from the *current* stairs
                 elif stair_delta < 0:
-                    reward -= min(0.3 * abs(stair_delta), 1.5)
+                    reward -= min(0.3 * abs(stair_delta), 1.5) * floor
 
         # DIRECT DIRECTIONAL BONUS: brute-force gradient for movement actions
         # If the action was a movement that brought us closer to stairs, big bonus.
@@ -260,9 +260,9 @@ def compute_reward(prev_G, action, curr_G):
             and action in (0, 1, 2, 3)  # MOVE_UP, DOWN, LEFT, RIGHT
         ):
             if curr_stair_dist < prev_stair_dist:
-                reward += REWARD_STAIR_APPROACH * mults['explore']
+                reward += REWARD_STAIR_APPROACH * floor * mults['explore']
             elif curr_stair_dist > prev_stair_dist:
-                reward += REWARD_STAIR_RETREAT * mults['explore']
+                reward += REWARD_STAIR_RETREAT * floor * mults['explore']
 
         if (
             prev_stair_dist == 0
@@ -364,7 +364,7 @@ def _estimate_reward_components(prev_G, action, curr_G):
         )
         if readiness < READY_DESCEND_THRESHOLD:
             gap = (READY_DESCEND_THRESHOLD - readiness) / READY_DESCEND_THRESHOLD
-            value += REWARD_UNPREPARED_DESCEND_PENALTY * gap
+            value += REWARD_UNPREPARED_DESCEND_PENALTY * prev_floor * gap
         _add_component(components, 'floor_progress', value)
 
     prev_key_count = _carried_count(prev_G, 'key')
@@ -388,7 +388,7 @@ def _estimate_reward_components(prev_G, action, curr_G):
 
     triggered_traps = max(0, _triggered_trap_count(curr_G) - _triggered_trap_count(prev_G))
     if triggered_traps > 0:
-        _add_component(components, 'trap', REWARD_TRAP_PENALTY * triggered_traps)
+        _add_component(components, 'trap', REWARD_TRAP_PENALTY * floor * triggered_traps)
 
     prev_alive = {e['id'] for e in prev_G.get('enemies', []) if not e.get('dying')}
     curr_alive = {e['id'] for e in curr_G.get('enemies', []) if not e.get('dying')}
@@ -412,7 +412,7 @@ def _estimate_reward_components(prev_G, action, curr_G):
     vis_enemies = _visible_enemies(curr_G)
     adj_count = sum(1 for e in vis_enemies if chebyshev(e, p) <= 1)
     if hp_delta < -0.05 and adj_count == 0:
-        _add_component(components, 'health', -3.0 * mults['dmg_penalty'])
+        _add_component(components, 'health', -3.0 * floor * mults['dmg_penalty'])
 
     atk_delta = p.get('atk', 0) - pp.get('atk', 0)
     def_delta = p.get('def', 0) - pp.get('def', 0)
@@ -440,11 +440,11 @@ def _estimate_reward_components(prev_G, action, curr_G):
                 _add_component(components, 'explore', 15.0 * floor * mults['explore'])
 
     if action == 8 and p.get('hp', 0) > p.get('maxHp', 1) * 0.5 and len(_visible_enemies(curr_G)) == 0:
-        _add_component(components, 'item_waste', REWARD_POTION_WASTE)
+        _add_component(components, 'item_waste', REWARD_POTION_WASTE * floor)
 
     stair_discovered = not prev_G.get('known_stairs') and curr_G.get('known_stairs')
     if stair_discovered:
-        _add_component(components, 'stairs', REWARD_STAIR_DISCOVERY)
+        _add_component(components, 'stairs', REWARD_STAIR_DISCOVERY * floor)
 
     stair_distance_improved = False
     if curr_G.get('floor', 1) == prev_G.get('floor', 1):
@@ -454,16 +454,16 @@ def _estimate_reward_components(prev_G, action, curr_G):
         if curr_stair_dist is not None and prev_stair_dist is not None:
             stair_delta = prev_stair_dist - curr_stair_dist
             if stair_delta > 0 and curr_stair_dist < min_dist_so_far:
-                _add_component(components, 'stairs', min(1.0 * (min_dist_so_far - curr_stair_dist), 5.0))
+                _add_component(components, 'stairs', min(1.0 * (min_dist_so_far - curr_stair_dist), 5.0) * floor)
                 stair_distance_improved = True
             elif stair_delta < 0:
-                _add_component(components, 'stairs', -min(0.3 * abs(stair_delta), 1.5))
+                _add_component(components, 'stairs', -min(0.3 * abs(stair_delta), 1.5) * floor)
 
             if prev_stair_dist > 0 and action in (0, 1, 2, 3):
                 if curr_stair_dist < prev_stair_dist:
-                    _add_component(components, 'stairs', REWARD_STAIR_APPROACH * mults['explore'])
+                    _add_component(components, 'stairs', REWARD_STAIR_APPROACH * floor * mults['explore'])
                 elif curr_stair_dist > prev_stair_dist:
-                    _add_component(components, 'stairs', REWARD_STAIR_RETREAT * mults['explore'])
+                    _add_component(components, 'stairs', REWARD_STAIR_RETREAT * floor * mults['explore'])
 
         if prev_stair_dist == 0 and action != ACTION_DESCEND and prev_G.get('floor', 1) < FLOORS:
             _add_component(components, 'stairs', -0.5)
