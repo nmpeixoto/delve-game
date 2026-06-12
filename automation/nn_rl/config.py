@@ -74,17 +74,16 @@ EVAL_GAMES = 100
 
 # ─── REWARD SHAPING ──────────────────────────────────────────────────────────
 REWARD_WIN = 3500.0             # full clear must dominate all shaping
-REWARD_DIE = -1800.0            # failed partial clears must not be profitable
+REWARD_DIE = -650.0             # losing after a long shaped run must still be bad
 DEFAULT_TIMEOUT_PENALTY = -1600.0
-FAILED_EPISODE_REWARD_CAP = -500.0
 REWARD_FLOOR_PROGRESS = 180.0   # base reward for going deeper
-REWARD_DESCEND_DEPTH_MULT = 40.0
+REWARD_DESCEND_DEPTH_MULT = 150.0
 REWARD_DESCEND_PREP_BONUS = 220.0
 REWARD_UNPREPARED_DESCEND_PENALTY = -60.0
 REWARD_CURRICULUM_SUCCESS = 300.0
 REWARD_KILL_BASE = 5.0
 REWARD_KILL_XP_MULT = 0.4
-REWARD_KILL_BOSS = 40.0
+REWARD_KILL_BOSS = 200.0
 REWARD_KILL_ELITE = 15.0
 REWARD_HEAL_MULT = 8.0
 REWARD_TRAP_PENALTY = -3.0
@@ -95,7 +94,7 @@ REWARD_LEVEL_UP = 8.0
 REWARD_TURN_PENALTY = -0.075
 REWARD_POTION_WASTE = -3.0
 REWARD_KEY_DOOR_CHAIN = 40.0    # NEW: bonus for unlocking door within 20 steps of key pickup
-REWARD_STAIR_APPROACH = 0.0
+REWARD_STAIR_APPROACH = 4.0
 REWARD_STAIR_RETREAT = -2.0
 
 # ─── CURRICULUM ──────────────────────────────────────────────────────────────

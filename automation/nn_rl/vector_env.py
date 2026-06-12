@@ -14,7 +14,6 @@ from config import (
     ACTION_DIM,
     ACTIONS,
     DEFAULT_TIMEOUT_PENALTY,
-    FAILED_EPISODE_REWARD_CAP,
     MAX_SHOP_SLOTS,
     REWARD_CURRICULUM_SUCCESS,
 )
@@ -344,11 +343,8 @@ class DelveVectorEnv:
         else:
             outcome = 'running'
 
-        if outcome in ('dead', 'timeout') and self.episode_rewards[env_id] > FAILED_EPISODE_REWARD_CAP:
-            clawback = FAILED_EPISODE_REWARD_CAP - self.episode_rewards[env_id]
-            reward += clawback
-            self.episode_rewards[env_id] += clawback
-            self._add_reward_component(env_id, 'failure_clawback', clawback)
+        if outcome in ('dead', 'timeout'):
+            pass # Removed clawback logic to restore descent gradient
 
         return reward, done, {
             'won': won,

@@ -101,6 +101,7 @@ def compute_reward(prev_G, action, curr_G):
     p = curr_G.get('player', {})
     pp = prev_G.get('player', {})
     mults = get_class_mults(p.get('class', ''))
+    floor = max(int(curr_G.get('floor', 1) or 1), 1)
 
     # ── TERMINAL STATES ──────────────────────────────────────────────────────
     if curr_G.get('won'):
@@ -128,21 +129,21 @@ def compute_reward(prev_G, action, curr_G):
     curr_key_count = _carried_count(curr_G, 'key')
     key_delta = max(0, curr_key_count - prev_key_count)
     if key_delta > 0:
-        reward += 30.0 * key_delta * mults['explore']  # Scaled: explorers benefit more from keys
+        reward += 30.0 * key_delta * floor * mults['explore']  # Scaled: explorers benefit more from keys
 
     unlocked_doors = curr_G.get('_doors_unlocked_this_step', 0)
     if unlocked_doors > 0:
-        reward += 50.0 * unlocked_doors * mults['explore']  # Scaled: progress reward per archetype
+        reward += 50.0 * unlocked_doors * floor * mults['explore']  # Scaled: progress reward per archetype
 
         # Key→door chain bonus: reward completing the key-use sequence quickly
         last_key_step = curr_G.get('_last_key_pickup_step', -999)
         curr_step = curr_G.get('_current_step', 0)
         if last_key_step >= 0 and (curr_step - last_key_step) <= KEY_DOOR_CHAIN_WINDOW:
-            reward += REWARD_KEY_DOOR_CHAIN  # Chain bonus (not scaled — pure skill reward)
+            reward += REWARD_KEY_DOOR_CHAIN * floor  # Chain bonus (not scaled — pure skill reward)
 
     revealed_secrets = curr_G.get('_secrets_revealed_this_step', 0)
     if revealed_secrets > 0:
-        reward += 25.0 * revealed_secrets * mults['explore']
+        reward += 25.0 * revealed_secrets * floor * mults['explore']
 
     revealed_traps = max(0, _revealed_trap_count(curr_G) - _revealed_trap_count(prev_G))
     
@@ -161,11 +162,11 @@ def compute_reward(prev_G, action, curr_G):
             continue
         xp = prev_en.get('xp', 0)
         if prev_en.get('boss'):
-            reward += REWARD_KILL_BOSS * mults['kill']
+            reward += REWARD_KILL_BOSS * floor * mults['kill']
         elif prev_en.get('isElite'):
-            reward += REWARD_KILL_ELITE * mults['kill']
+            reward += REWARD_KILL_ELITE * floor * mults['kill']
         else:
-            reward += (REWARD_KILL_BASE + xp * REWARD_KILL_XP_MULT) * mults['kill']
+            reward += (REWARD_KILL_BASE + xp * REWARD_KILL_XP_MULT) * floor * mults['kill']
 
     # ── HEALTH MANAGEMENT ────────────────────────────────────────────────────
     hp_delta = (p.get('hp', 0) - pp.get('hp', 0)) / max(p.get('maxHp', 1), 1)
@@ -198,7 +199,7 @@ def compute_reward(prev_G, action, curr_G):
     # ── EXPLORATION ──────────────────────────────────────────────────────────
     explored_delta = curr_G.get('seen_count', 0) - prev_G.get('seen_count', 0)
     if explored_delta > 0:
-        reward += 0.1 * explored_delta * mults['explore']  # Strong incentive to explore fast
+        reward += 0.1 * explored_delta * floor * mults['explore']  # Strong incentive to explore fast
 
     # ── FLOOR COVERAGE BONUS ───────────────────────────────────────────────────────────
     # Reward reaching exploration milestones on the CURRENT floor only.
@@ -213,7 +214,7 @@ def compute_reward(prev_G, action, curr_G):
         prev_ratio = _floor_exploration_ratio(prev_G, prev_map)
         for threshold in [0.25, 0.50, 0.75]:
             if prev_ratio < threshold <= curr_ratio:
-                reward += 15.0 * mults['explore']  # Milestone bonus
+                reward += 15.0 * floor * mults['explore']  # Milestone bonus
 
     # ── RESOURCE MANAGEMENT ──────────────────────────────────────────────────
     # NOTE: USE_POTION is hard-masked when hp >= maxHp, so full-HP drinking
@@ -343,6 +344,7 @@ def _estimate_reward_components(prev_G, action, curr_G):
     p = curr_G.get('player', {})
     pp = prev_G.get('player', {})
     mults = get_class_mults(p.get('class', ''))
+    floor = max(int(curr_G.get('floor', 1) or 1), 1)
 
     if curr_G.get('won'):
         _add_component(components, 'terminal_win', REWARD_WIN)
@@ -369,20 +371,20 @@ def _estimate_reward_components(prev_G, action, curr_G):
     curr_key_count = _carried_count(curr_G, 'key')
     key_delta = max(0, curr_key_count - prev_key_count)
     if key_delta > 0:
-        _add_component(components, 'key_door_secret', 30.0 * key_delta * mults['explore'])
+        _add_component(components, 'key_door_secret', 30.0 * key_delta * floor * mults['explore'])
 
     unlocked_doors = curr_G.get('_doors_unlocked_this_step', 0)
     if unlocked_doors > 0:
-        value = 50.0 * unlocked_doors * mults['explore']
+        value = 50.0 * unlocked_doors * floor * mults['explore']
         last_key_step = curr_G.get('_last_key_pickup_step', -999)
         curr_step = curr_G.get('_current_step', 0)
         if last_key_step >= 0 and (curr_step - last_key_step) <= KEY_DOOR_CHAIN_WINDOW:
-            value += REWARD_KEY_DOOR_CHAIN
+            value += REWARD_KEY_DOOR_CHAIN * floor
         _add_component(components, 'key_door_secret', value)
 
     revealed_secrets = curr_G.get('_secrets_revealed_this_step', 0)
     if revealed_secrets > 0:
-        _add_component(components, 'key_door_secret', 25.0 * revealed_secrets * mults['explore'])
+        _add_component(components, 'key_door_secret', 25.0 * revealed_secrets * floor * mults['explore'])
 
     triggered_traps = max(0, _triggered_trap_count(curr_G) - _triggered_trap_count(prev_G))
     if triggered_traps > 0:
@@ -397,11 +399,11 @@ def _estimate_reward_components(prev_G, action, curr_G):
             continue
         xp = prev_en.get('xp', 0)
         if prev_en.get('boss'):
-            kill_reward += REWARD_KILL_BOSS * mults['kill']
+            kill_reward += REWARD_KILL_BOSS * floor * mults['kill']
         elif prev_en.get('isElite'):
-            kill_reward += REWARD_KILL_ELITE * mults['kill']
+            kill_reward += REWARD_KILL_ELITE * floor * mults['kill']
         else:
-            kill_reward += (REWARD_KILL_BASE + xp * REWARD_KILL_XP_MULT) * mults['kill']
+            kill_reward += (REWARD_KILL_BASE + xp * REWARD_KILL_XP_MULT) * floor * mults['kill']
     _add_component(components, 'kill', kill_reward)
 
     hp_delta = (p.get('hp', 0) - pp.get('hp', 0)) / max(p.get('maxHp', 1), 1)
@@ -428,14 +430,14 @@ def _estimate_reward_components(prev_G, action, curr_G):
 
     explored_delta = curr_G.get('seen_count', 0) - prev_G.get('seen_count', 0)
     if explored_delta > 0:
-        _add_component(components, 'explore', 0.1 * explored_delta * mults['explore'])
+        _add_component(components, 'explore', 0.1 * explored_delta * floor * mults['explore'])
 
     if curr_G.get('floor', 1) == prev_G.get('floor', 1):
         curr_ratio = _floor_exploration_ratio(curr_G, curr_G.get('map', []))
         prev_ratio = _floor_exploration_ratio(prev_G, prev_G.get('map', []))
         for threshold in [0.25, 0.50, 0.75]:
             if prev_ratio < threshold <= curr_ratio:
-                _add_component(components, 'explore', 15.0 * mults['explore'])
+                _add_component(components, 'explore', 15.0 * floor * mults['explore'])
 
     if action == 8 and p.get('hp', 0) > p.get('maxHp', 1) * 0.5 and len(_visible_enemies(curr_G)) == 0:
         _add_component(components, 'item_waste', REWARD_POTION_WASTE)
