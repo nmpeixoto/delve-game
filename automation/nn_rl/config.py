@@ -59,7 +59,7 @@ BATCH_SIZE = 1024         # Mini-batch size
 NUM_ENVS = 128           # Parallel environments (128 = 8 workers × 16 envs each)
 ENVS_PER_WORKER = 16     # 16 envs per Node.js worker → 8 workers total
 ROLLOUT_STEPS = 512      # Steps per env per rollout (longer = better GPU fill)
-DEFAULT_MAX_EPISODE_STEPS = 6000  # Generous full-dungeon stall guard; pass 0 to disable.
+DEFAULT_MAX_EPISODE_STEPS = 8000  # Generous full-dungeon stall guard; pass 0 to disable.
 TOTAL_TIMESTEPS = 200_000_000
 
 # ─── LR SCHEDULE ─────────────────────────────────────────────────────────────
@@ -79,7 +79,7 @@ DEFAULT_TIMEOUT_PENALTY = -1600.0
 REWARD_FLOOR_PROGRESS = 180.0   # base reward for going deeper
 REWARD_DESCEND_DEPTH_MULT = 150.0
 REWARD_DESCEND_PREP_BONUS = 220.0
-REWARD_UNPREPARED_DESCEND_PENALTY = -60.0
+REWARD_UNPREPARED_DESCEND_PENALTY = -500.0
 REWARD_CURRICULUM_SUCCESS = 300.0
 REWARD_KILL_BASE = 5.0
 REWARD_KILL_XP_MULT = 0.4
