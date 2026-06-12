@@ -10,14 +10,17 @@ from config import STATE_DIM, ACTION_DIM, HIDDEN_DIM
 
 
 class SpatialCNN(nn.Module):
-    """CNN that processes 8x8 local map around the player."""
-    
-    def __init__(self, in_channels=9, out_dim=128):
+    """
+    Processes the local map (21 channels, 16x16 grid) around the player.
+    Channels include walls, fog, enemies (HP/ATK/DEF/Dodge/Revive/Enrage/Regen/Vamp/Freeze), 
+    items, traps, etc.
+    """
+    def __init__(self, in_channels=21, out_dim=128):
         super().__init__()
         self.conv = nn.Sequential(
-            nn.Conv2d(in_channels, 16, 3, padding=1),
+            nn.Conv2d(in_channels, 32, 3, padding=1),
             nn.ReLU(),
-            nn.Conv2d(16, 32, 3, padding=1),
+            nn.Conv2d(32, 32, 3, padding=1),
             nn.ReLU(),
             nn.AdaptiveAvgPool2d(4),
         )
@@ -27,7 +30,7 @@ class SpatialCNN(nn.Module):
         )
     
     def forward(self, x):
-        """x: (batch, channels, 8, 8) -> (batch, out_dim)"""
+        """x: (batch, channels, 16, 16) -> (batch, out_dim)"""
         return self.fc(self.conv(x).flatten(1))
 
 
@@ -36,7 +39,7 @@ class DelveNet(nn.Module):
     Actor-Critic network for DELVE.
 
     Architecture:
-        Flat features (state_dim) + CNN(8x8 local map, 9 channels) -> 128 dims
+        Flat features (state_dim) + CNN(16x16 local map, 14 channels) -> 128 dims
         Concat -> GRU(state_dim+128, hidden_dim) -> hidden state
         Policy Head: hidden_dim -> 64 -> action_dim
         Value Head:  hidden_dim -> 64 -> 1
@@ -50,7 +53,7 @@ class DelveNet(nn.Module):
         self.action_dim = action_dim
         
         # CNN for local map
-        self.cnn = SpatialCNN(in_channels=9, out_dim=128)
+        self.cnn = SpatialCNN(in_channels=21, out_dim=128)
         
         # GRU for temporal context
         self.gru = nn.GRU(input_size=state_dim + 128, hidden_size=hidden_dim, batch_first=True)
@@ -73,7 +76,7 @@ class DelveNet(nn.Module):
         """
         Args:
             state: (batch * seq_len, state_dim) flat features
-            map_tensor: (batch * seq_len, 6, 8, 8) local map
+            map_tensor: (batch * seq_len, 14, 16, 16) local map
             action_mask: optional (batch * seq_len, action_dim) bool
             hidden: optional (1, batch, hidden_dim) GRU hidden state
             seq_len: sequence length for BPTT unrolling

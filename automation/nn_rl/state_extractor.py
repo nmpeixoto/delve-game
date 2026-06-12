@@ -390,37 +390,76 @@ def _encode_shop_item(item):
     ]
 
 def extract_local_map(G):
+    """
+    Extracts a 14-channel 16x16 local spatial map around the player.
+    Channels:
+        0: Walls/Obstacles
+        1: Seen tiles
+        2: Stairs
+        3: Doors
+        4: Normal enemies
+        5: Elite enemies
+        6: Boss enemies
+        7: Consumables
+        8: Gear (Weapons/Armor/Upgrades)
+        9: Revealed Traps
+        10: Enemy HP Ratio (0.0-1.0)
+        11: Enemy Threat (ATK / 30.0)
+        12: Healing/Buff Potions
+        13: Tactical Items (Bombs/Scrolls)
+    """
     p = G.get('player', {})
     px, py = p.get('x', 0), p.get('y', 0)
     map_data = G.get('map', [])
     seen = _seen_set(G)
     
-    enemies_by_coord = {(e.get('x'), e.get('y')): e for e in G.get('enemies', []) if not e.get('dying')}
+    enemies_by_coord = {(e.get('x'), e.get('y')): e for e in G.get('enemies', []) if not e.get('dying') and not e.get('isPet')}
     items_by_coord = {(i.get('x'), i.get('y')): i for i in G.get('items', []) if not i.get('carried')}
+    traps_by_coord = {(t.get('x'), t.get('y')): t for t in G.get('traps', []) if t.get('revealed') and not t.get('triggered')}
     
-    channels = np.zeros((9, 8, 8), dtype=np.float32)
+    channels = np.zeros((21, 16, 16), dtype=np.float32)
     if len(map_data) == 0:
         return channels
         
-    for dy in range(-4, 4):
-        for dx in range(-4, 4):
+    for dy in range(-8, 8):
+        for dx in range(-8, 8):
             x, y = px + dx, py + dy
             if 0 <= y < len(map_data) and 0 <= x < len(map_data[0]):
                 tile = map_data[y][x]
-                channels[0, dy + 4, dx + 4] = 1.0 if tile in (1, 2, 3) else 0.0
-                channels[1, dy + 4, dx + 4] = 1.0 if (y * MAP_W + x) in seen else 0.0
-                channels[2, dy + 4, dx + 4] = 1.0 if tile == 2 else 0.0
-                channels[3, dy + 4, dx + 4] = 1.0 if tile == 4 else 0.0
+                cy, cx = dy + 8, dx + 8
+                
+                channels[0, cy, cx] = 1.0 if tile in (1, 2, 3) else 0.0
+                channels[1, cy, cx] = 1.0 if (y * MAP_W + x) in seen else 0.0
+                channels[2, cy, cx] = 1.0 if tile == 2 else 0.0
+                channels[3, cy, cx] = 1.0 if tile == 4 else 0.0
                 
                 coord = (x, y)
                 if coord in enemies_by_coord:
                     e = enemies_by_coord[coord]
                     if e.get('boss') or e.get('isBoss'):
-                        channels[6, dy + 4, dx + 4] = 1.0
+                        channels[6, cy, cx] = 1.0
                     elif e.get('isElite'):
-                        channels[5, dy + 4, dx + 4] = 1.0
+                        channels[5, cy, cx] = 1.0
                     else:
-                        channels[4, dy + 4, dx + 4] = 1.0
+                        channels[4, cy, cx] = 1.0
+                        
+                    hp_ratio = e.get('hp', 0) / max(e.get('maxHp', 1), 1)
+                    channels[10, cy, cx] = max(0.0, min(1.0, hp_ratio))
+                    
+                    threat = e.get('atk', 0) / 30.0
+                    channels[11, cy, cx] = max(0.0, min(1.0, threat))
+
+                    # 14-20: Advanced Enemy Abilities
+                    channels[14, cy, cx] = max(0.0, min(1.0, e.get('def', 0) / 10.0))
+                    channels[15, cy, cx] = 1.0 if e.get('dodge') else 0.0
+                    channels[16, cy, cx] = 1.0 if e.get('revive') else 0.0
+                    channels[17, cy, cx] = 1.0 if e.get('enrage') else 0.0
+                    channels[18, cy, cx] = 1.0 if e.get('regen') else 0.0
+                    channels[19, cy, cx] = 1.0 if e.get('vampiric') else 0.0
+                    channels[20, cy, cx] = 1.0 if e.get('freezeChance') or e.get('freeze_chance') else 0.0
+                        
+                if coord in traps_by_coord:
+                    channels[9, cy, cx] = 1.0
                         
                 if coord in items_by_coord:
                     # Gate items on seen set: only show items the player has discovered.
@@ -428,10 +467,14 @@ def extract_local_map(G):
                     if (y * MAP_W + x) in seen:
                         i = items_by_coord[coord]
                         typ = i.get('type')
-                        if typ in ('potion', 'potion_buff', 'bomb', 'scroll_teleport', 'scroll'):
-                            channels[7, dy + 4, dx + 4] = 1.0
+                        if typ in ('potion', 'potion_buff'):
+                            channels[7, cy, cx] = 1.0
+                            channels[12, cy, cx] = 1.0
+                        elif typ in ('bomb', 'scroll_teleport', 'scroll'):
+                            channels[7, cy, cx] = 1.0
+                            channels[13, cy, cx] = 1.0
                         elif typ in ('weapon', 'armor', 'upgrade'):
-                            channels[8, dy + 4, dx + 4] = 1.0
+                            channels[8, cy, cx] = 1.0
                         
     return channels
 

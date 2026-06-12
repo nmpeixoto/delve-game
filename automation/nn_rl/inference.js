@@ -1,291 +1,571 @@
 /**
  * Neural Network inference for DELVE bot.
  * Loads trained PyTorch model and replaces botDecisionLogic.
- * Falls back to heuristic bot if NN fails.
+ * Full JavaScript port of state_extractor.py, action_mask.py, and pathfinding.py.
  */
 
-// State: loaded = false until model is ready
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
 let nnLoaded = false;
 let nnModel = null;
 
-/**
- * Load the trained neural network model.
- * Called once at startup.
- */
 function loadNNModel() {
     try {
-        // Try to load model via Node.js child_process
-        const { execSync } = require('child_process');
-        const fs = require('fs');
-        const path = require('path');
-        
         const modelPath = path.join(__dirname, 'checkpoints', 'delve_ppo_final.pt');
-        if (!fs.existsSync(modelPath)) {
-            console.log('[NN] No model found, using heuristic bot');
-            return false;
-        }
+        if (!fs.existsSync(modelPath)) return false;
         
-        // Export model weights to JSON for Node.js consumption
         const exportScript = `
 import torch
 import json
 import sys
-sys.path.insert(0, '${__dirname}')
+sys.path.insert(0, '${__dirname.replace(/\\/g, '\\\\')}')
 from network import DelveNet
-model = DelveNet(state_dim=148, action_dim=18, hidden_dim=256)
+from config import STATE_DIM, ACTION_DIM, HIDDEN_DIM
+model = DelveNet(state_dim=STATE_DIM, action_dim=ACTION_DIM, hidden_dim=HIDDEN_DIM)
 model.load_state_dict(torch.load('${modelPath.replace(/\\/g, '\\\\')}', map_location='cpu'))
 weights = {}
 for name, param in model.named_parameters():
     weights[name] = param.data.numpy().tolist()
 print(json.dumps(weights))
 `;
-        
-        const result = execSync(`python -c "${exportScript}"`, { 
-            encoding: 'utf8',
-            maxBuffer: 50 * 1024 * 1024,
-        });
-        
-        const weights = JSON.parse(result);
-        nnModel = weights;
+        const result = execSync(`python -c "${exportScript}"`, { encoding: 'utf8', maxBuffer: 50*1024*1024 });
+        nnModel = JSON.parse(result);
         nnLoaded = true;
         console.log('[NN] Model loaded successfully');
         return true;
-    } catch (err) {
+    } catch(err) {
         console.log('[NN] Failed to load model:', err.message);
-        console.log('[NN] Using heuristic bot');
         return false;
     }
 }
 
-/**
- * Extract state vector from game state G.
- * This is a JavaScript port of state_extractor.py.
- */
-function extractStateJS(G) {
-    if (!G || !G.player) return null;
-    
-    const p = G.player;
-    const MAP_W = 56;
-    const features = [];
-    
-    // PLAYER CORE (10 floats)
-    features.push(p.hp / Math.max(p.maxHp, 1));
-    features.push(p.maxHp / 100);
-    features.push(p.atk / 30);
-    features.push(p.def / 20);
-    features.push(p.lvl / 15);
-    features.push(Math.min((p.xpNext - p.xp) / 100, 1.0));
-    features.push(p.gold / 300);
-    const classNames = ['warrior','rogue','mage','paladin','ranger','barbarian','necromancer','monk'];
-    const classIdx = classNames.indexOf(p.class);
-    for (let i = 0; i < 8; i++) features.push(i === classIdx ? 1.0 : 0.0);
-    
-    // PLAYER BUFFS (9)
-    features.push(p.shieldWallTurns > 0 ? 1 : 0);
-    features.push(p.vanishTurns > 0 ? 1 : 0);
-    features.push(p.strengthTurns > 0 ? 1 : 0);
-    features.push(p.bloodlustTurns > 0 ? 1 : 0);
-    features.push(p.rootedTurns > 0 ? 1 : 0);
-    features.push(p.poisonedTurns > 0 ? 1 : 0);
-    features.push(Math.min((p.freeMoves || 0) / 5, 1.0));
-    features.push(G.ability1Cooldown === 0 ? 1 : 0);
-    features.push(G.ability2Cooldown === 0 && p.lvl >= 5 ? 1 : 0);
-    
-    // PLAYER GEAR (8)
-    features.push(p.weapon ? 1 : 0);
-    features.push((p.weapon ? p.weapon.atk : 0) / 20);
-    features.push(p.weapon && p.weapon.sym === '♦' ? 1 : 0);
-    features.push(p.weapon && p.weapon.sym === '🏹' ? 1 : 0);
-    features.push(p.armor ? 1 : 0);
-    features.push((p.armor ? p.armor.def : 0) / 15);
-    features.push((p.vampirism || 0) / 3);
-    features.push((p.regen || 0) / 3);
-    
-    // PASSIVE COMBAT STATS (6)
-    features.push((p.dodgeBonus || 0) / 0.5);
-    features.push((p.critChance || 0) / 0.3);
-    features.push((p.swiftness || 0) / 3);
-    features.push((p.perception || 0) / 3);
-    features.push((p.goldBonus || 0) / 10);
-    features.push((p.xpMult || 0) / 0.5);
-    
-    // DUNGEON CONTEXT (14)
-    features.push(G.floor / 5);
-    features.push(G.floor >= 5 ? 1 : 0);
-    features.push(Math.min(G.turn / 2000, 1.0));
-    features.push((G.seen ? G.seen.size : 0) / (56 * 36));
-    features.push(G.items.some(i => i.carried && i.type === 'key') ? 1 : 0);
-    features.push(G.map[p.y] && G.map[p.y][p.x] === 2 ? 1 : 0);
-    features.push(G.map[p.y] && G.map[p.y][p.x] === 3 ? 1 : 0);
-    features.push(0); // map_cleared placeholder
-    features.push(Math.min(G.turn / 5 / 300, 1.0));
-    features.push(G.shops && G.shops.some(s => G.seen && G.seen.has(s.y * 56 + s.x)) ? 1 : 0);
-    features.push(0.5); // shop_distance placeholder
-    features.push(0); // locked_door_count placeholder
-    features.push(G.floor * 1.0 / 5);
-    
-    // CARRIED ITEMS (8)
-    const carried = G.items.filter(i => i.carried);
-    features.push(Math.min(carried.filter(i => i.type === 'potion').length / 6, 1.0));
-    features.push(Math.min(carried.filter(i => i.type === 'potion_buff').length / 3, 1.0));
-    features.push(Math.min(carried.filter(i => i.type === 'bomb').length / 3, 1.0));
-    features.push(Math.min(carried.filter(i => i.type === 'scroll_teleport').length / 3, 1.0));
-    features.push(Math.min(carried.filter(i => i.type === 'scroll' && /detection/.test(i.name || '')).length / 2, 1.0));
-    features.push(Math.min(carried.filter(i => i.type === 'key').length / 2, 1.0));
-    features.push(Math.min(carried.length / 12, 1.0));
-    features.push(G.items.some(i => !i.carried && i.type === 'upgrade') ? 1 : 0);
-    
-    // ENEMY SUMMARY (6)
-    const visEnemies = G.enemies.filter(e => !e.dying && !e.isPet && G.visible && G.visible.has(e.y * MAP_W + e.x));
-    const adjEnemies = visEnemies.filter(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y) === 1);
-    features.push(Math.min(visEnemies.length / 6, 1.0));
-    features.push(Math.min(adjEnemies.length / 4, 1.0));
-    features.push(visEnemies.length > 0 ? Math.min(Math.min(...visEnemies.map(e => Math.abs(e.x - p.x) + Math.abs(e.y - p.y))) / 10, 1.0) : 1.0);
-    features.push(visEnemies.length > 0 ? Math.max(...visEnemies.map(e => e.hp / Math.max(e.maxHp, 1))) : 0.0);
-    features.push(Math.min(visEnemies.reduce((s, e) => s + e.atk, 0) / 100, 1.0));
-    features.push(visEnemies.some(e => e.boss) ? 1 : 0);
-    
-    // NEAREST ENEMY DETAIL (6)
-    if (visEnemies.length > 0) {
-        const nearest = visEnemies.reduce((a, b) => (Math.abs(a.x - p.x) + Math.abs(a.y - p.y)) < (Math.abs(b.x - p.x) + Math.abs(b.y - p.y)) ? a : b);
-        features.push(Math.min((Math.abs(nearest.x - p.x) + Math.abs(nearest.y - p.y)) / 10, 1.0));
-        features.push(nearest.hp / Math.max(nearest.maxHp, 1));
-        features.push(nearest.atk / 30);
-        features.push(nearest.def / 10);
-        features.push(nearest.boss ? 1 : 0);
-        features.push(nearest.isElite ? 1 : 0);
-    } else {
-        features.push(0, 0, 0, 0, 0, 0);
-    }
-    
-    // LOCAL MAP (48)
-    for (let dy = -2; dy <= 2; dy += 2) {
-        for (let dx = -6; dx <= 6; dx += 2) {
-            const x = p.x + dx, y = p.y + dy;
-            if (y >= 0 && y < 36 && x >= 0 && x < 56) {
-                features.push(G.map[y][x] !== 0 ? 1 : 0);
-                features.push(G.seen && G.seen.has(y * 56 + x) ? 1 : 0);
-                features.push(G.enemies.some(e => e.x === x && e.y === y && !e.dying) ? 1 : 0);
-                features.push(G.items.some(i => i.x === x && i.y === y && !i.carried) ? 1 : 0);
-            } else {
-                features.push(0, 0, 0, 0);
-            }
-        }
-    }
-    
-    // Pad to 148
-    while (features.length < 148) features.push(0);
-    return features.slice(0, 148);
+// --- CONSTANTS ---
+const MAP_W = 56;
+const WALL = 0, FLOOR = 1, STAIRS = 2, SHOP = 3, LOCKED_DOOR = 4, SECRET_DOOR = 5;
+const DIRS = [[0,-1], [0,1], [-1,0], [1,0]];
+const MAX_SHOP_SLOTS = 18;
+const SHOP_ITEM_FEATURES = 19;
+const STATE_DIM = 406;
+const ACTION_DIM = 36;
+const FLOORS = 5;
+
+// Actions mapping
+const ACTIONS = {
+    MOVE_UP: 0, MOVE_DOWN: 1, MOVE_LEFT: 2, MOVE_RIGHT: 3,
+    ATTACK_1: 4, ATTACK_2: 5, ABILITY1: 6, ABILITY2: 7,
+    USE_POTION: 8, USE_BUFF: 9, USE_BOMB: 10, USE_TELEPORT: 11, USE_DETECTION: 12,
+    DESCEND: 13, SHOP_OPEN: 14, SHOP_SELL: 15, ESCAPE: 16, WAIT: 17
+};
+for (let i = 0; i < MAX_SHOP_SLOTS; i++) ACTIONS[`SHOP_BUY_${i}`] = 18 + i;
+
+// --- PATHFINDING & HELPERS ---
+function _has_key(G) { return G.items && G.items.some(i => i.carried && i.type === 'key'); }
+function _tile_passable(G, tile) {
+    if (tile === WALL || tile === SECRET_DOOR) return false;
+    if (tile === LOCKED_DOOR && !_has_key(G)) return false;
+    return true;
+}
+function _seen_set(G) { return G.seen instanceof Set ? G.seen : new Set(G.seen || []); }
+function _visible_set(G) { return G.visible instanceof Set ? G.visible : new Set(G.visible || []); }
+
+function _visible_enemies(G) {
+    if (G._visible_enemies) return G._visible_enemies;
+    const vis = _visible_set(G);
+    const res = (G.enemies || []).filter(e => !e.dying && !e.isPet && vis.has(e.y * MAP_W + e.x));
+    G._visible_enemies = res;
+    return res;
 }
 
-/**
- * Get action mask from game state.
- * This is a JavaScript port of action_mask.py.
- */
-function getActionMaskJS(G) {
-    if (!G || !G.player) return new Array(18).fill(false);
-    
-    const mask = new Array(18).fill(false);
+function manhattan(a, b) { return Math.abs(a.x - b.x) + Math.abs(a.y - b.y); }
+function chebyshev(a, b) { return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)); }
+
+function shortest_stairs_distance(G) {
     const p = G.player;
-    const MAP_W = 56;
+    if (!p || !G.map || p.y < 0 || p.y >= G.map.length || p.x < 0 || p.x >= G.map[0].length) return null;
+    if (!_tile_passable(G, G.map[p.y][p.x])) return null;
+
+    const seen = _seen_set(G);
+    const targets = new Set();
+    for (let y = 0; y < G.map.length; y++) {
+        for (let x = 0; x < G.map[y].length; x++) {
+            if (G.map[y][x] === STAIRS && seen.has(y * MAP_W + x)) targets.add(`${x},${y}`);
+        }
+    }
+    if (targets.size === 0) return null;
+
+    const blocked = new Set();
+    for (const e of G.enemies || []) if (!e.dying && !e.isPet) blocked.add(`${e.x},${e.y}`);
+
+    const queue = [[p.x, p.y, 0]];
+    const visited = new Set([`${p.x},${p.y}`]);
+    let head = 0;
+    while (head < queue.length) {
+        const [x, y, dist] = queue[head++];
+        if (targets.has(`${x},${y}`)) return dist;
+        for (const [dx, dy] of DIRS) {
+            const nx = x + dx, ny = y + dy;
+            const key = `${nx},${ny}`;
+            if (visited.has(key) || blocked.has(key)) continue;
+            if (ny < 0 || ny >= G.map.length || nx < 0 || nx >= G.map[0].length) continue;
+            if (!_tile_passable(G, G.map[ny][nx])) continue;
+            visited.add(key);
+            queue.push([nx, ny, dist + 1]);
+        }
+    }
+    return null;
+}
+
+function floor_exploration_ratio(G) {
+    const walkable = G._walkable_total || 0;
+    if (walkable === 0) return 0.0;
+    return Math.min(_seen_set(G).size / walkable, 1.0);
+}
+
+function nearest_unseen_direction(G) {
+    const p = G.player;
+    if (!p) return [0, 0];
+    const seen = _seen_set(G);
+    const blocked = new Set();
+    for (const e of G.enemies || []) if (!e.dying && !e.isPet) blocked.add(`${e.x},${e.y}`);
+
+    const queue = [[p.x, p.y, 0, 0]];
+    const visited = new Set([`${p.x},${p.y}`]);
+    let head = 0;
+    while (head < queue.length) {
+        const [x, y, idx, idy] = queue[head++];
+        if (!seen.has(y * MAP_W + x) && G.map[y] && G.map[y][x] !== WALL) return [idx, idy];
+        for (const [dx, dy] of DIRS) {
+            const nx = x + dx, ny = y + dy;
+            const key = `${nx},${ny}`;
+            if (visited.has(key) || blocked.has(key)) continue;
+            if (ny < 0 || ny >= G.map.length || nx < 0 || nx >= G.map[0].length) continue;
+            if (!_tile_passable(G, G.map[ny][nx])) continue;
+            visited.add(key);
+            queue.push([nx, ny, (idx === 0 && idy === 0) ? dx : idx, (idx === 0 && idy === 0) ? dy : idy]);
+        }
+    }
+    return [0, 0];
+}
+
+function nearest_poi_direction(G, type) {
+    const p = G.player;
+    if (!p) return [0, 0];
+    const seen = _seen_set(G);
+    const targets = new Set();
     
-    if (G.gameOver || G.won) return mask;
-    
-    // Movement
-    const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
-    for (let i = 0; i < 4; i++) {
-        const nx = p.x + dirs[i][0], ny = p.y + dirs[i][1];
-        if (ny >= 0 && ny < 36 && nx >= 0 && nx < 56) {
-            const tile = G.map[ny][nx];
-            if (tile !== 0 && tile !== 4) {
-                const blocking = G.enemies.some(e => e.x === nx && e.y === ny && !e.dying);
-                if (!blocking) mask[i] = true;
+    if (type === 'shop') {
+        const shop_items = new Set((G.items || []).filter(i => !i.carried && (i.price||0) > 0).map(i => `${i.x},${i.y}`));
+        for (let y = 0; y < G.map.length; y++) {
+            for (let x = 0; x < G.map[y].length; x++) {
+                if (G.map[y][x] === SHOP && seen.has(y * MAP_W + x) && shop_items.has(`${x},${y}`)) {
+                    targets.add(`${x},${y}`);
+                }
+            }
+        }
+    } else if (type === 'locked_door') {
+        for (let y = 0; y < G.map.length; y++) {
+            for (let x = 0; x < G.map[y].length; x++) {
+                if (G.map[y][x] === LOCKED_DOOR && seen.has(y * MAP_W + x)) targets.add(`${x},${y}`);
+            }
+        }
+    } else if (type === 'shrine') {
+        for (const item of G.items || []) {
+            if (item.type === 'shrine' && !item.carried && seen.has(item.y * MAP_W + item.x)) {
+                targets.add(`${item.x},${item.y}`);
             }
         }
     }
-    
-    const visEnemies = G.enemies.filter(e => !e.dying && !e.isPet && G.visible && G.visible.has(e.y * MAP_W + e.x));
 
-    // Attack adjacent enemies
-    const adjEnemies = G.enemies.filter(e => !e.dying && !e.isPet && Math.abs(e.x - p.x) + Math.abs(e.y - p.y) === 1);
-    for (let i = 0; i < Math.min(2, adjEnemies.length); i++) mask[4 + i] = true;
+    if (targets.size === 0 || targets.has(`${p.x},${p.y}`)) return [0, 0];
+
+    const blocked = new Set();
+    for (const e of G.enemies || []) if (!e.dying && !e.isPet) blocked.add(`${e.x},${e.y}`);
+
+    const queue = [[p.x, p.y, 0, 0]];
+    const visited = new Set([`${p.x},${p.y}`]);
+    let head = 0;
+    while (head < queue.length) {
+        const [x, y, idx, idy] = queue[head++];
+        if (targets.has(`${x},${y}`)) return [idx, idy];
+        for (const [dx, dy] of DIRS) {
+            const nx = x + dx, ny = y + dy;
+            const key = `${nx},${ny}`;
+            if (visited.has(key) || blocked.has(key)) continue;
+            if (ny < 0 || ny >= G.map.length || nx < 0 || nx >= G.map[0].length) continue;
+            if (!_tile_passable(G, G.map[ny][nx])) {
+                if (!(type === 'locked_door' && targets.has(key))) continue;
+            }
+            visited.add(key);
+            queue.push([nx, ny, (idx === 0 && idy === 0) ? dx : idx, (idx === 0 && idy === 0) ? dy : idy]);
+        }
+    }
+    return [0, 0];
+}
+
+function _stair_direction(G) {
+    const p = G.player;
+    const seen = _seen_set(G);
+    let bestDist = Infinity, bestDx = 0, bestDy = 0;
+    for (let y = 0; y < G.map.length; y++) {
+        for (let x = 0; x < G.map[y].length; x++) {
+            if (G.map[y][x] === STAIRS && seen.has(y * MAP_W + x)) {
+                const dx = x - p.x, dy = y - p.y;
+                const dist = Math.abs(dx) + Math.abs(dy);
+                if (dist < bestDist) { bestDist = dist; bestDx = dx; bestDy = dy; }
+            }
+        }
+    }
+    if (bestDist === Infinity) return [0, 0];
+    return [Math.max(-1, Math.min(1, bestDx / 3.0)), Math.max(-1, Math.min(1, bestDy / 3.0))];
+}
+
+function _min_enemy_distance(G) {
+    const p = G.player;
+    const vis = _visible_enemies(G);
+    if (vis.length === 0) return 10.0;
+    return Math.min(...vis.map(e => Math.max(Math.abs(p.x - e.x), Math.abs(p.y - e.y))));
+}
+
+// --- STATE EXTRACTOR ---
+function extractStateJS(G, prev_action = null) {
+    const p = G.player;
+    if (!p || !G.map) return null;
+    const features = [];
+
+    features.push((p.hp || 0) / Math.max(p.maxHp || 1, 1));
+    features.push((p.atk || 0) / 30.0);
+    features.push((p.def || 0) / 20.0);
+    features.push((p.lvl || 1) / 15.0);
+    features.push(_has_key(G) ? 1.0 : 0.0);
+    features.push((G.floor || 1) / FLOORS);
+    features.push((G.map[p.y] && G.map[p.y][p.x] === STAIRS) ? 1.0 : 0.0);
+
+    const [stair_dx, stair_dy] = _stair_direction(G);
+    features.push(stair_dx, stair_dy);
+    const bfs_dist = shortest_stairs_distance(G);
+    features.push(bfs_dist !== null ? Math.min(bfs_dist / 30.0, 1.0) : 1.0);
+    features.push(floor_exploration_ratio(G));
+
+    const visEnemies = _visible_enemies(G);
+    features.push(Math.min(visEnemies.length / 6.0, 1.0));
+    features.push(_min_enemy_distance(G) / 10.0);
+    features.push(p.weapon ? 1.0 : 0.0);
+    features.push(1.0 - Math.min((G.ability1Cooldown || 0) / 10.0, 1.0));
+    features.push((p.lvl >= 5) ? 1.0 - Math.min((G.ability2Cooldown || 0) / 15.0, 1.0) : 0.0);
+    features.push((p.shieldWallTurns || 0) > 0 ? 1.0 : 0.0);
+    features.push((p.vanishTurns || 0) > 0 ? 1.0 : 0.0);
+    features.push((p.strengthTurns || 0) > 0 ? 1.0 : 0.0);
+    features.push((p.bloodlustTurns || 0) > 0 ? 1.0 : 0.0);
+    features.push((p.poisonedTurns || 0) > 0 ? 1.0 : 0.0);
+
+    const items = G.items || [];
+    const potions = items.filter(i => (i.type === 'potion' || i.type === 'potion_buff') && i.carried).length;
+    features.push(Math.min(potions / 5.0, 1.0));
+    const bombs = items.filter(i => i.type === 'bomb' && i.carried).length;
+    features.push(Math.min(bombs / 3.0, 1.0));
+    const scrolls = items.filter(i => (i.type||'').includes('scroll') && i.carried).length;
+    features.push(Math.min(scrolls / 3.0, 1.0));
+
+    // Prev action
+    const encPrev = [0.0, 0.0, 0.0, 0.0];
+    if (prev_action !== null) {
+        if (prev_action === ACTIONS.MOVE_UP) { encPrev[0] = 0; encPrev[1] = -1; }
+        else if (prev_action === ACTIONS.MOVE_DOWN) { encPrev[0] = 0; encPrev[1] = 1; }
+        else if (prev_action === ACTIONS.MOVE_LEFT) { encPrev[0] = -1; encPrev[1] = 0; }
+        else if (prev_action === ACTIONS.MOVE_RIGHT) { encPrev[0] = 1; encPrev[1] = 0; }
+        else if (prev_action >= ACTIONS.ATTACK_1 && prev_action <= ACTIONS.ABILITY2) { encPrev[2] = 1.0; }
+        else if (prev_action >= ACTIONS.USE_POTION && prev_action <= ACTIONS.USE_DETECTION) { encPrev[3] = 1.0; }
+    }
+    features.push(...encPrev);
+
+    features.push(Math.min((G._steps_since_floor_change || 0) / 500.0, 1.0));
+    features.push(Math.min((G._steps_since_key_pickup || 0) / 200.0, 1.0));
+    features.push(Math.min((G._steps_since_enemy_kill || 0) / 200.0, 1.0));
+
+    const [exp_dx, exp_dy] = nearest_unseen_direction(G);
+    features.push(exp_dx, exp_dy);
+    const [shop_dx, shop_dy] = nearest_poi_direction(G, 'shop');
+    features.push(shop_dx, shop_dy);
+    const [shrine_dx, shrine_dy] = nearest_poi_direction(G, 'shrine');
+    features.push(shrine_dx, shrine_dy);
     
-    // Abilities
-    if (G.ability1Cooldown === 0 && visEnemies.length > 0) mask[6] = true;
-    if (p.lvl >= 5 && G.ability2Cooldown === 0 && (visEnemies.length > 0 || p.hp / Math.max(p.maxHp, 1) <= 0.8)) mask[7] = true;
+    let ldoor_dx = 0.0, ldoor_dy = 0.0;
+    if (_has_key(G)) [ldoor_dx, ldoor_dy] = nearest_poi_direction(G, 'locked_door');
+    features.push(ldoor_dx, ldoor_dy);
+
+    let edx = 0.0, edy = 0.0, ehp = 1.0;
+    if (visEnemies.length > 0) {
+        const closest = visEnemies.reduce((a, b) => manhattan(a, p) < manhattan(b, p) ? a : b);
+        edx = Math.max(-1, Math.min(1, (closest.x - p.x) / 3.0));
+        edy = Math.max(-1, Math.min(1, (closest.y - p.y) / 3.0));
+        ehp = Math.min(Math.max((closest.hp || 0) / Math.max(closest.maxHp || 1, 1), 0.0), 1.0);
+    }
+    features.push(edx, edy, ehp);
+
+    const w = p.weapon || {};
+    const wn = (w.name || '').toLowerCase();
+    const isWand = (wn.includes('wand') || wn.includes('staff') || wn.includes('rod')) ? 1.0 : 0.0;
+    const isBow = wn.includes('bow') ? 1.0 : 0.0;
+    const isMelee = (p.weapon && !isWand && !isBow) ? 1.0 : 0.0;
+    features.push(isWand, isBow, isMelee);
+
+
+
+    features.push((p.vampirism || 0) / 10.0);
+    features.push((p.regen || 0) / 5.0);
+    features.push((p.swiftness || 0) / 5.0);
+    features.push(Math.min(p.critChance || 0, 1.0));
+    features.push(Math.min(p.dodgeBonus || 0, 1.0));
+    features.push((p.freeMoves || 0) > 0 ? 1.0 : 0.0);
+    features.push((p.rootedTurns || 0) > 0 ? 1.0 : 0.0);
+    features.push((p.xp || 0) / Math.max(p.xpNext || 1, 1));
+    features.push(Math.min((p.gold || 0) / 1000.0, 1.0));
+    features.push((p.maxHp || 1) / 200.0);
+    features.push((G.hardMode || G.hard_mode) ? 1.0 : 0.0);
+
+    const cnames = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk'];
+    for (const c of cnames) features.push(((p.class || '').toLowerCase() === c) ? 1.0 : 0.0);
+
+    // Shop items
+    const stock = (G.shopOpen && G.currentShop) ? (G.currentShop.stock || []) : [];
+    const SHOP_TYPE_ORDER = ['potion', 'potion_buff', 'bomb', 'scroll_teleport', 'scroll', 'weapon', 'armor', 'upgrade'];
+    const RARITY_SCALE = { 'common': 0.0, 'rare': 0.5, 'legendary': 1.0 };
     
-    // Items
-    const carried = G.items.filter(i => i.carried);
-    if (carried.some(i => i.type === 'potion')) mask[8] = true;
-    if (carried.some(i => i.type === 'potion_buff')) mask[9] = true;
-    if (carried.some(i => i.type === 'bomb') && adjEnemies.length > 0) mask[10] = true;
-    if (carried.some(i => i.type === 'scroll_teleport')) mask[11] = true;
-    if (carried.some(i => i.type === 'scroll' && /detection/.test(i.name || ''))) mask[12] = true;
-    
-    // Descend
-    if (G.map[p.y] && G.map[p.y][p.x] === 2 && G.floor < 5) mask[13] = true;
-    
-    // Shop
-    const nearShop = G.shops && G.shops.some(s => Math.abs(s.x - p.x) <= 1 && Math.abs(s.y - p.y) <= 1);
-    if (nearShop) mask[14] = true;
-    if (G.shopOpen) { mask[15] = true; mask[16] = true; mask[17] = true; }
-    
-    if (!mask.some(Boolean)) mask[17] = true;
-    
+    for (let slot = 0; slot < MAX_SHOP_SLOTS; slot++) {
+        const item = slot < stock.length ? stock[slot] : null;
+        if (!item || item.sold) {
+            for (let i = 0; i < SHOP_ITEM_FEATURES; i++) features.push(0.0);
+        } else {
+            features.push(1.0);
+            for (const t of SHOP_TYPE_ORDER) features.push(item.type === t ? 1.0 : 0.0);
+            features.push(Math.min(Math.max((item.price || 0) / 1000.0, 0.0), 1.0));
+            features.push(Math.min(Math.max((item.heal || 0) / 60.0, 0.0), 1.0));
+            features.push(Math.min(Math.max((item.atk || 0) / 20.0, 0.0), 1.0));
+            features.push(Math.min(Math.max((item.def || 0) / 15.0, 0.0), 1.0));
+            features.push(Math.min(Math.max((item.amount || 0) / 30.0, 0.0), 1.0));
+            features.push(RARITY_SCALE[(item.rarity || '').toLowerCase()] || 0.0);
+            const stat = item.stat || '';
+            const all = stat === 'all' || stat === 'all5';
+            features.push((all || stat === 'atk') ? 1.0 : 0.0);
+            features.push((all || stat === 'def') ? 1.0 : 0.0);
+            features.push((all || stat === 'hp') ? 1.0 : 0.0);
+            features.push((stat && !all && !['atk','def','hp'].includes(stat)) ? 1.0 : 0.0);
+        }
+    }
+
+    if (features.length !== STATE_DIM) {
+        console.error(`Expected ${STATE_DIM} features, got ${features.length}`);
+    }
+    return new Float32Array(features);
+}
+
+function extractLocalMapJS(G) {
+    const channels = new Float32Array(21 * 16 * 16); // initialized to 0
+    const p = G.player;
+    if (!p || !G.map || G.map.length === 0) return channels;
+
+    const seen = _seen_set(G);
+    const eb = new Map();
+    for (const e of G.enemies || []) if (!e.dying && !e.isPet) eb.set(`${e.x},${e.y}`, e);
+    const ib = new Map();
+    for (const i of G.items || []) if (!i.carried) ib.set(`${i.x},${i.y}`, i);
+    const tb = new Map();
+    for (const t of G.traps || []) if (t.revealed && !t.triggered) tb.set(`${t.x},${t.y}`, t);
+
+    for (let dy = -8; dy < 8; dy++) {
+        for (let dx = -8; dx < 8; dx++) {
+            const x = p.x + dx, y = p.y + dy;
+            if (y >= 0 && y < G.map.length && x >= 0 && x < G.map[y].length) {
+                const cy = dy + 8, cx = dx + 8;
+                const tile = G.map[y][x];
+                
+                if (tile === 1 || tile === 2 || tile === 3) channels[0 * 256 + cy * 16 + cx] = 1.0;
+                if (seen.has(y * MAP_W + x)) channels[1 * 256 + cy * 16 + cx] = 1.0;
+                if (tile === 2) channels[2 * 256 + cy * 16 + cx] = 1.0;
+                if (tile === 4) channels[3 * 256 + cy * 16 + cx] = 1.0;
+
+                const key = `${x},${y}`;
+                if (eb.has(key)) {
+                    const e = eb.get(key);
+                    if (e.boss || e.isBoss) channels[6 * 256 + cy * 16 + cx] = 1.0;
+                    else if (e.isElite) channels[5 * 256 + cy * 16 + cx] = 1.0;
+                    else channels[4 * 256 + cy * 16 + cx] = 1.0;
+                    
+                    channels[10 * 256 + cy * 16 + cx] = Math.max(0.0, Math.min(1.0, (e.hp || 0) / Math.max(e.maxHp || 1, 1)));
+                    channels[11 * 256 + cy * 16 + cx] = Math.max(0.0, Math.min(1.0, (e.atk || 0) / 30.0));
+
+                    // 14-20: Advanced Enemy Abilities
+                    channels[14 * 256 + cy * 16 + cx] = Math.max(0.0, Math.min(1.0, (e.def || 0) / 10.0));
+                    channels[15 * 256 + cy * 16 + cx] = e.dodge ? 1.0 : 0.0;
+                    channels[16 * 256 + cy * 16 + cx] = e.revive ? 1.0 : 0.0;
+                    channels[17 * 256 + cy * 16 + cx] = e.enrage ? 1.0 : 0.0;
+                    channels[18 * 256 + cy * 16 + cx] = e.regen ? 1.0 : 0.0;
+                    channels[19 * 256 + cy * 16 + cx] = e.vampiric ? 1.0 : 0.0;
+                    channels[20 * 256 + cy * 16 + cx] = (e.freezeChance || e.freeze_chance) ? 1.0 : 0.0;
+                }
+                if (tb.has(key)) channels[9 * 256 + cy * 16 + cx] = 1.0;
+                
+                if (ib.has(key) && seen.has(y * MAP_W + x)) {
+                    const i = ib.get(key);
+                    const typ = i.type;
+                    if (typ === 'potion' || typ === 'potion_buff') {
+                        channels[7 * 256 + cy * 16 + cx] = 1.0;
+                        channels[12 * 256 + cy * 16 + cx] = 1.0;
+                    } else if (typ === 'bomb' || typ === 'scroll_teleport' || typ === 'scroll') {
+                        channels[7 * 256 + cy * 16 + cx] = 1.0;
+                        channels[13 * 256 + cy * 16 + cx] = 1.0;
+                    } else if (typ === 'weapon' || typ === 'armor' || typ === 'upgrade') {
+                        channels[8 * 256 + cy * 16 + cx] = 1.0;
+                    }
+                }
+            }
+        }
+    }
+    return channels;
+}
+
+// --- ACTION MASKING ---
+function _weapon_power(i) { return i ? (i.atk || i.pow || i.amount || 0) : 0; }
+function _armor_power(i) { return i ? (i.def || i.armor || i.amount || 0) : 0; }
+function _has_sellable_gear(G) {
+    const p = G.player, ew = p.weapon || {}, ea = p.armor || {};
+    for (const i of G.items || []) {
+        if (!i.carried || (i.type !== 'weapon' && i.type !== 'armor')) continue;
+        if (ew.id === i.id || ea.id === i.id) continue;
+        if (i.reqClass && !i.reqClass.includes(p.class)) return true;
+        if (i.type === 'weapon') {
+            if (!ew.id || _weapon_power(i) <= _weapon_power(ew)) return true;
+        } else if (i.type === 'armor') {
+            if (!ea.id || _armor_power(i) <= _armor_power(ea)) return true;
+        }
+    }
+    return false;
+}
+function _is_line_clear(G, p, e) {
+    const dx = e.x - p.x, dy = e.y - p.y;
+    if (dx !== 0 && dy !== 0 && Math.abs(dx) !== Math.abs(dy)) return false;
+    const sx = dx === 0 ? 0 : (dx > 0 ? 1 : -1);
+    const sy = dy === 0 ? 0 : (dy > 0 ? 1 : -1);
+    let cx = p.x + sx, cy = p.y + sy;
+    while (cx !== e.x || cy !== e.y) {
+        if (cy < 0 || cy >= G.map.length || cx < 0 || cx >= G.map[0].length) return false;
+        if (G.map[cy][cx] === WALL) return false;
+        cx += sx; cy += sy;
+    }
+    return true;
+}
+function _has_useful_move(G, p) {
+    for (const [dx, dy] of DIRS) {
+        const nx = p.x + dx, ny = p.y + dy;
+        if (ny >= 0 && ny < G.map.length && nx >= 0 && nx < G.map[0].length) {
+            if (G.map[ny][nx] !== WALL) {
+                if (!(G.enemies || []).some(e => e.x === nx && e.y === ny && !e.dying && !e.isPet)) return true;
+            }
+        }
+    }
+    return false;
+}
+
+function getActionMaskJS(G) {
+    const mask = new Array(ACTION_DIM).fill(false);
+    if (!G || !G.player || G.gameOver || G.won) return mask;
+    const p = G.player;
+
+    if (G.shrineOpen) { mask[ACTIONS.USE_BUFF] = true; mask[ACTIONS.ESCAPE] = true; return mask; }
+    if (G.shopOpen) {
+        const stock = (G.currentShop && G.currentShop.stock) || [];
+        for (let idx = 0; idx < Math.min(MAX_SHOP_SLOTS, stock.length); idx++) {
+            const item = stock[idx];
+            if (!item || item.sold) continue;
+            if ((item.price || 0) <= p.gold) mask[ACTIONS[`SHOP_BUY_${idx}`]] = true;
+        }
+        if (_has_sellable_gear(G)) mask[ACTIONS.SHOP_SELL] = true;
+        mask[ACTIONS.ESCAPE] = true;
+        return mask;
+    }
+
+    for (let i = 0; i < DIRS.length; i++) {
+        const nx = p.x + DIRS[i][0], ny = p.y + DIRS[i][1];
+        if (ny >= 0 && ny < G.map.length && nx >= 0 && nx < G.map[0].length) {
+            const tile = G.map[ny][nx];
+            if (tile === WALL) continue;
+            if (tile === LOCKED_DOOR && !_has_key(G)) continue;
+            mask[i] = true;
+        }
+    }
+
+    const visEnemies = _visible_enemies(G);
+    const adjEnemies = visEnemies.filter(e => chebyshev(e, p) <= 1);
+
+    const cls = p.class || '';
+    let ab1Valid = false;
+    if (cls === 'rogue') ab1Valid = (p.freeMoves || 0) <= 0 && _has_useful_move(G, p);
+    else if (cls === 'mage') ab1Valid = visEnemies.length > 0;
+    else if (cls === 'ranger') ab1Valid = visEnemies.some(e => _is_line_clear(G, p, e));
+    else if (['warrior','paladin','necromancer'].includes(cls)) ab1Valid = visEnemies.some(e => chebyshev(e, p) <= 2);
+    else if (['barbarian','monk'].includes(cls)) ab1Valid = adjEnemies.length > 0;
+
+    if ((G.ability1Cooldown || 0) === 0 && ab1Valid) mask[ACTIONS.ABILITY1] = true;
+
+    let ab2Valid = false;
+    const hpRatio = (p.hp || 0) / Math.max(p.maxHp || 1, 1);
+    if (['warrior','mage'].includes(cls)) ab2Valid = visEnemies.length > 0 || hpRatio <= 0.5;
+    else if (cls === 'rogue') ab2Valid = visEnemies.length > 0;
+    else if (cls === 'paladin') ab2Valid = hpRatio <= 0.8;
+    else if (cls === 'ranger') ab2Valid = visEnemies.length > 0;
+    else if (['barbarian','necromancer'].includes(cls)) ab2Valid = visEnemies.length > 0;
+    else if (cls === 'monk') ab2Valid = adjEnemies.length > 0;
+
+    if (p.lvl >= 5 && (G.ability2Cooldown || 0) === 0 && ab2Valid) mask[ACTIONS.ABILITY2] = true;
+
+    const carried = (G.items || []).filter(i => i.carried);
+    if (carried.some(i => i.type === 'potion') && p.hp < p.maxHp) mask[ACTIONS.USE_POTION] = true;
+    if (carried.some(i => i.type === 'potion_buff')) mask[ACTIONS.USE_BUFF] = true;
+    if (carried.some(i => i.type === 'bomb') && visEnemies.some(e => chebyshev(e, p) <= 2)) mask[ACTIONS.USE_BOMB] = true;
+    if (carried.some(i => i.type === 'scroll_teleport')) mask[ACTIONS.USE_TELEPORT] = true;
+    if (carried.some(i => i.type === 'scroll' && (i.name||'').toLowerCase().includes('detection'))) mask[ACTIONS.USE_DETECTION] = true;
+
+    if (p.y >= 0 && p.y < G.map.length && p.x >= 0 && p.x < G.map[0].length && G.map[p.y][p.x] === STAIRS) mask[ACTIONS.DESCEND] = true;
+
+    const shops = G.shops || [];
+    if (shops.some(s => chebyshev(s, p) <= 1)) mask[ACTIONS.SHOP_OPEN] = true;
+
+    if (!mask.some(m => m)) mask[ACTIONS.ESCAPE] = true;
+
     return mask;
 }
 
-/**
- * Convert NN action index to game decision.
- */
-function nnActionToDecision(actionIdx, G) {
-    const p = G.player;
-    const MAP_W = 56;
-    
-    switch (actionIdx) {
-        case 0: return { type: 'key', val: 'ArrowUp' };
-        case 1: return { type: 'key', val: 'ArrowDown' };
-        case 2: return { type: 'key', val: 'ArrowLeft' };
-        case 3: return { type: 'key', val: 'ArrowRight' };
-        case 4: case 5:
-            // Attack first adjacent enemy
-            const adjEnemies = G.enemies.filter(e => !e.dying && !e.isPet && Math.abs(e.x - p.x) + Math.abs(e.y - p.y) === 1);
-            if (adjEnemies.length > actionIdx - 4) return { type: 'attack', target: adjEnemies[actionIdx - 4].id };
-            return { type: 'key', val: 'Escape' };
-        case 6: return { type: 'key', val: 'b' }; // ability1
-        case 7: return { type: 'key', val: 'v' }; // ability2
-        case 8: return { type: 'key', val: 'i' }; // open inventory (potion)
-        case 9: return { type: 'key', val: 'i' }; // open inventory (buff)
-        case 10: return { type: 'key', val: 'i' }; // open inventory (bomb)
-        case 11: return { type: 'key', val: 'i' }; // open inventory (teleport)
-        case 12: return { type: 'key', val: 'i' }; // open inventory (detection)
-        case 13: return { type: 'key', val: '>' }; // descend
-        case 14: return { type: 'key', val: 't' }; // open shop
-        case 15: return { type: 'key', val: 't' }; // buy
-        case 16: return { type: 'key', val: 'Escape' }; // sell
-        case 17: return { type: 'key', val: 'Escape' }; // escape/close shop
-        default: return { type: 'key', val: 'Escape' };
-    }
+function nnActionToDecision(idx) {
+    if (idx === ACTIONS.MOVE_UP) return { type: 'key', val: 'ArrowUp' };
+    if (idx === ACTIONS.MOVE_DOWN) return { type: 'key', val: 'ArrowDown' };
+    if (idx === ACTIONS.MOVE_LEFT) return { type: 'key', val: 'ArrowLeft' };
+    if (idx === ACTIONS.MOVE_RIGHT) return { type: 'key', val: 'ArrowRight' };
+    if (idx === ACTIONS.ATTACK_1) return { type: 'key', val: 'ArrowUp' }; // Not used
+    if (idx === ACTIONS.ATTACK_2) return { type: 'key', val: 'ArrowDown' }; // Not used
+    if (idx === ACTIONS.ABILITY1) return { type: 'key', val: '1' };
+    if (idx === ACTIONS.ABILITY2) return { type: 'key', val: '2' };
+    if (idx === ACTIONS.USE_POTION) return { type: 'item', itemType: 'potion' };
+    if (idx === ACTIONS.USE_BUFF) return { type: 'item', itemType: 'potion_buff' };
+    if (idx === ACTIONS.USE_BOMB) return { type: 'item', itemType: 'bomb' };
+    if (idx === ACTIONS.USE_TELEPORT) return { type: 'item', itemType: 'scroll_teleport' };
+    if (idx === ACTIONS.USE_DETECTION) return { type: 'item', itemType: 'scroll' };
+    if (idx === ACTIONS.DESCEND) return { type: 'key', val: ' ' };
+    if (idx === ACTIONS.SHOP_OPEN) return { type: 'key', val: ' ' };
+    if (idx >= ACTIONS.SHOP_BUY_0 && idx <= ACTIONS.SHOP_BUY_17) return { type: 'shop_buy', index: idx - ACTIONS.SHOP_BUY_0 };
+    if (idx === ACTIONS.SHOP_SELL) return { type: 'shop_sell' };
+    if (idx === ACTIONS.ESCAPE) return { type: 'key', val: 'Escape' };
+    return { type: 'key', val: ' ' };
 }
 
-// Try to load the model on startup
-loadNNModel();
-
-// Export for use in bot_brain.js
+// Browser / Node export
 if (typeof window !== 'undefined') {
     window.nnInference = {
-        loaded: () => nnLoaded,
-        getAction: (G) => {
-            if (!nnLoaded) return null;
-            try {
-                const state = extractStateJS(G);
-                const mask = getActionMaskJS(G);
-                // Simple greedy selection from model weights
-                // In production, this would use the actual PyTorch model
-                return null; // Placeholder - needs actual model inference
-            } catch (e) {
-                return null;
-            }
-        }
+        loadNNModel, extractStateJS, extractLocalMapJS, getActionMaskJS, nnActionToDecision
+    };
+} else {
+    module.exports = {
+        loadNNModel, extractStateJS, extractLocalMapJS, getActionMaskJS, nnActionToDecision
     };
 }
