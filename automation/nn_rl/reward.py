@@ -204,10 +204,8 @@ def compute_reward(prev_G, action, curr_G):
     if hp_delta > 0 and pp.get("hp", 0) < pp.get("maxHp", 1) * 0.6:
         reward += hp_delta * REWARD_HEAL_MULT
 
-    vis_enemies = _visible_enemies(curr_G)
-    adj_count = sum(1 for e in vis_enemies if chebyshev(e, p) <= 1)
-    if hp_delta < -0.05 and adj_count == 0:
-        reward -= 3.0 * floor * mults["dmg_penalty"]
+    if hp_delta < 0:
+        reward += hp_delta * 20.0 * floor * mults["dmg_penalty"]
 
     # ── STAT GAINS ───────────────────────────────────────────────────────────
     atk_delta = p.get("atk", 0) - pp.get("atk", 0)
@@ -353,16 +351,18 @@ def compute_reward(prev_G, action, curr_G):
         or maxHp_delta > 0
         or action
         in (
+            6,
+            7,
             8,
             9,
             10,
             11,
             12,
-        )  # USE_POTION, USE_BUFF, USE_BOMB, USE_TELEPORT, USE_DETECTION
+        )  # ABILITY1, ABILITY2, USE_POTION, USE_BUFF, USE_BOMB, USE_TELEPORT, USE_DETECTION
         or (hp_delta > 0 and pp.get("hp", 0) < pp.get("maxHp", 1))
     )
-    if not made_progress:
-        # Extra penalty to force exploration when completely stagnant
+    if not made_progress and len(_visible_enemies(curr_G)) == 0:
+        # Extra penalty to force exploration when completely stagnant out of combat
         reward += REWARD_TURN_PENALTY * floor * 0.5
 
     # ── TURN PENALTY ────────────────────────────────────────────────────────
@@ -469,10 +469,8 @@ def _estimate_reward_components(prev_G, action, curr_G):
     hp_delta = (p.get("hp", 0) - pp.get("hp", 0)) / max(p.get("maxHp", 1), 1)
     if hp_delta > 0 and pp.get("hp", 0) < pp.get("maxHp", 1) * 0.6:
         _add_component(components, "health", hp_delta * REWARD_HEAL_MULT)
-    vis_enemies = _visible_enemies(curr_G)
-    adj_count = sum(1 for e in vis_enemies if chebyshev(e, p) <= 1)
-    if hp_delta < -0.05 and adj_count == 0:
-        _add_component(components, "health", -3.0 * floor * mults["dmg_penalty"])
+    if hp_delta < 0:
+        _add_component(components, "health", hp_delta * 20.0 * floor * mults["dmg_penalty"])
 
     atk_delta = p.get("atk", 0) - pp.get("atk", 0)
     def_delta = p.get("def", 0) - pp.get("def", 0)
@@ -590,10 +588,10 @@ def _estimate_reward_components(prev_G, action, curr_G):
         or atk_delta > 0
         or def_delta > 0
         or maxHp_delta > 0
-        or action in (8, 9, 10, 11, 12)
+        or action in (6, 7, 8, 9, 10, 11, 12)
         or (hp_delta > 0 and pp.get("hp", 0) < pp.get("maxHp", 1))
     )
-    if not made_progress:
+    if not made_progress and len(_visible_enemies(curr_G)) == 0:
         _add_component(components, "turn_stagnation", REWARD_TURN_PENALTY * floor * 0.5)
     _add_component(components, "turn", REWARD_TURN_PENALTY * floor)
     return components

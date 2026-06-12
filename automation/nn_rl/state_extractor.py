@@ -85,8 +85,8 @@ def extract_state(G, prev_action=None):
     features.append(min(len(vis_enemies) / 6, 1.0))                    # 11: enemy_count
     features.append(_min_enemy_distance(G) / 10)                       # 12: enemy_dist
     features.append(1.0 if p.get('weapon') else 0.0)                   # 13: has_weapon
-    features.append(1.0 if G.get('ability1Cooldown', 0) == 0 else 0.0) # 14: ability1
-    features.append(1.0 if (G.get('ability2Cooldown', 0) == 0 and p.get('lvl', 0) >= 5) else 0.0)  # 15: ability2
+    features.append(1.0 - min(G.get('ability1Cooldown', 0) / 10.0, 1.0)) # 14: ability1
+    features.append(1.0 - min(G.get('ability2Cooldown', 0) / 15.0, 1.0) if p.get('lvl', 0) >= 5 else 0.0)  # 15: ability2
     features.append(1.0 if p.get('shieldWallTurns', 0) > 0 else 0.0)   # 16: shieldWall
     features.append(1.0 if p.get('vanishTurns', 0) > 0 else 0.0)       # 17: vanish
     features.append(1.0 if p.get('strengthTurns', 0) > 0 else 0.0)     # 18: strength
