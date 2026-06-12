@@ -72,7 +72,7 @@ def evaluate(model_path=None, num_games=200, device='cuda', deterministic=False,
         num_envs=env_count,
         envs_per_worker=envs_per_worker,
         max_episode_steps=max_episode_steps,
-        timeout_penalty=-400.0,
+        timeout_penalty=DEFAULT_TIMEOUT_PENALTY,
     )
     
     wins = 0

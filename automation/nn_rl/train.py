@@ -109,7 +109,7 @@ def parse_args(argv=None):
         default=DEFAULT_MAX_EPISODE_STEPS,
         help="Max actions per episode; 0 disables the timeout for deliberate unlimited experiments.",
     )
-    parser.add_argument("--timeout-penalty", type=float, default=-400.0)
+    parser.add_argument("--timeout-penalty", type=float, default=DEFAULT_TIMEOUT_PENALTY)
     parser.add_argument("--no-tensorboard", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--metrics-log", default=os.path.join("runs", "delve_ppo", "metrics.jsonl"),
                         help="JSONL file for durable scalar/event logging. Pass an empty string to disable.")
@@ -228,6 +228,7 @@ def new_episode_window(window=LOG_WINDOW_EPISODES):
         'outcomes': deque(maxlen=window),
         'curriculum': deque(maxlen=window),
         'classes': deque(maxlen=window),
+        'reward_components': deque(maxlen=window),
     }
 
 
@@ -243,6 +244,7 @@ def record_episode(window, info):
         terminal_state = info.get('terminal_state') or {}
         class_name = terminal_state.get('player', {}).get('class')
     window['classes'].append(class_name or 'unknown')
+    window['reward_components'].append(dict(info.get('reward_components') or {}))
 
 
 def episode_rate_stats(window, key):
@@ -292,14 +294,30 @@ def episode_class_summary(window, key):
     return "Class counts: " + ", ".join(parts) if parts else "Class counts: none"
 
 
+def action_names():
+    return [
+        "Up", "Down", "Left", "Right", "Atk1", "Atk2", "Ab1", "Ab2", "Pot", "Buff",
+        "Bomb", "Tele", "Detect", "Desc", "Shop", "Buy", "Sell", "Esc",
+    ] + [f"Buy{slot + 1}" for slot in range(MAX_SHOP_SLOTS)]
+
+
+def action_distribution(action_counts):
+    total = int(action_counts.sum())
+    names = action_names()
+    if total == 0:
+        return {}
+    return {
+        names[i] if i < len(names) else f"Action{i}": float(count) / total
+        for i, count in enumerate(action_counts)
+        if int(count) > 0
+    }
+
+
 def summarize_actions(action_counts):
     total = int(action_counts.sum())
     if total == 0:
         return "Actions: none"
-    names = [
-        "Up", "Down", "Left", "Right", "Atk1", "Atk2", "Ab1", "Ab2", "Pot", "Buff",
-        "Bomb", "Tele", "Detect", "Desc", "Shop", "Buy", "Sell", "Esc",
-    ] + [f"Buy{slot + 1}" for slot in range(MAX_SHOP_SLOTS)]
+    names = action_names()
     top = list(np.argsort(action_counts)[-3:][::-1])
     descend_idx = ACTIONS['DESCEND']
     if descend_idx not in top:
@@ -308,6 +326,69 @@ def summarize_actions(action_counts):
         f"{names[i] if i < len(names) else f'Action{i}'} {_format_action_ratio(action_counts[i], total)}"
         for i in top
     )
+
+
+def outcome_summary(window):
+    outcomes = list(window.get('outcomes', []))
+    rewards = list(window.get('rewards', []))
+    floors = list(window.get('floors', []))
+    lengths = list(window.get('lengths', []))
+    summary = {}
+    for outcome in sorted(set(outcomes)):
+        indexes = [i for i, value in enumerate(outcomes) if value == outcome]
+        if not indexes:
+            continue
+        summary[outcome] = {
+            "count": len(indexes),
+            "avg_reward": float(np.mean([rewards[i] for i in indexes])),
+            "avg_floor": float(np.mean([floors[i] for i in indexes])),
+            "avg_length": float(np.mean([lengths[i] for i in indexes])),
+        }
+    return summary
+
+
+def reward_component_summary(window):
+    components = list(window.get('reward_components', []))
+    if not components:
+        return {}
+    totals = defaultdict(float)
+    for component_row in components:
+        for name, value in component_row.items():
+            totals[name] += float(value)
+    denom = max(len(components), 1)
+    return {name: value / denom for name, value in sorted(totals.items())}
+
+
+def new_probe_accumulator():
+    return defaultdict(float)
+
+
+def update_descend_probe(accumulator, np_states, np_masks, actions, action_probs):
+    descend_idx = ACTIONS['DESCEND']
+    on_stairs = np_states[:, 6] > 0.5
+    legal_desc = np_masks[:, descend_idx].astype(bool)
+    selected_desc = actions == descend_idx
+    desc_probs = action_probs[:, descend_idx]
+
+    accumulator['legal_desc_steps'] += int(legal_desc.sum())
+    accumulator['legal_desc_actions'] += int((selected_desc & legal_desc).sum())
+    accumulator['legal_desc_prob_sum'] += float(desc_probs[legal_desc].sum()) if legal_desc.any() else 0.0
+    accumulator['on_stairs_steps'] += int(on_stairs.sum())
+    accumulator['on_stairs_desc_actions'] += int((selected_desc & on_stairs).sum())
+    accumulator['on_stairs_desc_prob_sum'] += float(desc_probs[on_stairs].sum()) if on_stairs.any() else 0.0
+
+
+def finalize_probe_metrics(accumulator):
+    legal = max(float(accumulator.get('legal_desc_steps', 0.0)), 1.0)
+    on_stairs = max(float(accumulator.get('on_stairs_steps', 0.0)), 1.0)
+    return {
+        'legal_desc_steps': int(accumulator.get('legal_desc_steps', 0)),
+        'legal_desc_action_rate': float(accumulator.get('legal_desc_actions', 0.0)) / legal,
+        'legal_desc_mean_prob': float(accumulator.get('legal_desc_prob_sum', 0.0)) / legal,
+        'on_stairs_steps': int(accumulator.get('on_stairs_steps', 0)),
+        'on_stairs_desc_action_rate': float(accumulator.get('on_stairs_desc_actions', 0.0)) / on_stairs,
+        'descend_prob_on_stairs': float(accumulator.get('on_stairs_desc_prob_sum', 0.0)) / on_stairs,
+    }
 
 
 def build_training_metrics_row(*, total_steps, elapsed, phase_index, phase_name,
@@ -343,6 +424,10 @@ def build_training_metrics_row(*, total_steps, elapsed, phase_index, phase_name,
         row["class_summary"] = episode_class_summary(episode_window, progress_key)
     if action_counts is not None:
         row["actions_summary"] = summarize_actions(action_counts)
+        row["action_distribution"] = action_distribution(action_counts)
+    if episode_window is not None:
+        row["outcome_summary"] = outcome_summary(episode_window)
+        row["reward_components"] = reward_component_summary(episode_window)
     if status_text:
         row["status_text"] = str(status_text)
     if probe_metrics:
@@ -510,6 +595,7 @@ def main():
 
             # Collect rollout from real game environments.
             action_counts = np.zeros(ACTION_DIM, dtype=np.int64)
+            probe_accumulator = new_probe_accumulator()
             prev_actions = [None] * args.num_envs
             hidden = None  # GRU hidden state, carried across steps
             for step in range(args.rollout_steps):
@@ -518,10 +604,24 @@ def main():
                 mask_tensor = torch.from_numpy(np_masks).to(device=device, dtype=torch.bool)
                 
                 hidden_in = hidden
-                actions, log_probs, values, hidden = ppo.get_action(state_tensor, map_tensor, mask_tensor, hidden_in)
-                action_counts += np.bincount(actions.cpu().numpy(), minlength=ACTION_DIM)
+                with torch.inference_mode():
+                    logits, values_raw, hidden = model(state_tensor, map_tensor, action_mask=mask_tensor, hidden=hidden_in)
+                    dist = torch.distributions.Categorical(logits=logits)
+                    actions = dist.sample()
+                    log_probs = dist.log_prob(actions)
+                    values = values_raw.squeeze(-1)
+                    action_probs = torch.softmax(logits, dim=-1)
+                action_array = actions.cpu().numpy()
+                update_descend_probe(
+                    probe_accumulator,
+                    np_states,
+                    np_masks,
+                    action_array,
+                    action_probs.cpu().numpy(),
+                )
+                action_counts += np.bincount(action_array, minlength=ACTION_DIM)
 
-                next_np_states, next_np_maps, next_np_masks, rewards_np, dones_np, infos = env.step(actions.cpu().numpy())
+                next_np_states, next_np_maps, next_np_masks, rewards_np, dones_np, infos = env.step(action_array)
 
                 buffer.store(
                     step=step,
@@ -628,6 +728,7 @@ def main():
                     episode_window=episode_window,
                     progress_key=progress_key,
                     status_text=readout,
+                    probe_metrics=finalize_probe_metrics(probe_accumulator),
                 ))
                 last_report_snapshot = report_snapshot
 

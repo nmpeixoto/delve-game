@@ -14,7 +14,8 @@ from headless_bridge import HeadlessWorker, RL_RUNNER
 from action_mask import get_action_mask
 from config import (
     ACTION_DIM, ACTIONS, CURRICULUM, DEFAULT_MAX_EPISODE_STEPS, MAX_SHOP_SLOTS,
-    REWARD_CURRICULUM_SUCCESS, SHOP_ITEM_FEATURES, STATE_DIM,
+    FAILED_EPISODE_REWARD_CAP, REWARD_CURRICULUM_SUCCESS, SHOP_ITEM_FEATURES,
+    STATE_DIM,
 )
 
 from reward import compute_reward
@@ -156,6 +157,58 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(info["outcome"], "running")
         self.assertFalse(info["curriculum_success"])
         self.assertEqual(reward, 5.0)
+
+    def test_failed_episode_claws_back_banked_positive_shaping_reward(self):
+        env = DelveVectorEnv.__new__(DelveVectorEnv)
+        env.max_episode_steps = 5000
+        env.timeout_penalty = -250.0
+        env.curriculum_max_floor = None
+        env.curriculum_reward = REWARD_CURRICULUM_SUCCESS
+        env.episode_lengths = [800]
+        env.episode_rewards = [1250.0]
+
+        reward, done, info = env._apply_terminal_rules(
+            env_id=0,
+            state={
+                "floor": 3,
+                "won": False,
+                "gameOver": True,
+                "player": {"class": "warrior"},
+            },
+            done=True,
+            reward=-650.0,
+        )
+
+        self.assertTrue(done)
+        self.assertEqual(info["outcome"], "dead")
+        self.assertLessEqual(info["total_reward"], FAILED_EPISODE_REWARD_CAP)
+        self.assertLess(reward, -650.0)
+
+    def test_timeout_claws_back_banked_positive_shaping_reward(self):
+        env = DelveVectorEnv.__new__(DelveVectorEnv)
+        env.max_episode_steps = 10
+        env.timeout_penalty = -400.0
+        env.curriculum_max_floor = None
+        env.curriculum_reward = REWARD_CURRICULUM_SUCCESS
+        env.episode_lengths = [10]
+        env.episode_rewards = [900.0]
+
+        reward, done, info = env._apply_terminal_rules(
+            env_id=0,
+            state={
+                "floor": 3,
+                "won": False,
+                "gameOver": False,
+                "player": {"class": "mage"},
+            },
+            done=False,
+            reward=2.0,
+        )
+
+        self.assertTrue(done)
+        self.assertEqual(info["outcome"], "timeout")
+        self.assertLessEqual(info["total_reward"], FAILED_EPISODE_REWARD_CAP)
+        self.assertLess(reward, -400.0)
 
     def test_resume_latest_uses_highest_step_checkpoint(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -362,6 +415,12 @@ class NnRlBridgeTest(unittest.TestCase):
 
         self.assertEqual(args.max_episode_steps, 6000)
 
+    def test_train_default_timeout_penalty_makes_timeouts_failed_episodes(self):
+        with patch.object(sys, "argv", ["train.py"]):
+            args = parse_args()
+
+        self.assertLessEqual(args.timeout_penalty, -1500.0)
+
     def test_legacy_headless_evaluator_uses_configured_episode_cap(self):
         calls = []
 
@@ -540,6 +599,15 @@ class NnRlBridgeTest(unittest.TestCase):
         reward = compute_reward(state, ACTIONS["MOVE_RIGHT"], after)
 
         self.assertGreater(reward, 2.0)
+
+    def test_repeated_stair_approach_is_not_a_positive_reward_source(self):
+        state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
+        state["_min_stair_dist"] = 2
+        after = {**state, "player": {**state["player"], "x": 6}}
+
+        reward = compute_reward(state, ACTIONS["MOVE_RIGHT"], after)
+
+        self.assertLessEqual(reward, 0.0)
 
     def test_reward_penalizes_moving_away_from_known_stairs(self):
         state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
@@ -764,8 +832,64 @@ class NnRlBridgeTest(unittest.TestCase):
 
         self.assertTrue(mask[ACTIONS["SHOP_BUY_0"]])
         self.assertTrue(mask[ACTIONS["SHOP_BUY_1"]])
-        self.assertTrue(mask[ACTIONS["SHOP_SELL"]])
+        self.assertFalse(mask[ACTIONS["SHOP_SELL"]])
         self.assertTrue(mask[ACTIONS["ESCAPE"]])
+
+    def test_action_mask_hides_shop_sell_when_no_gear_can_be_sold(self):
+        state = {
+            "floor": 2,
+            "player": {"hp": 20, "maxHp": 20, "x": 1, "y": 1, "lvl": 1, "gold": 500, "class": "warrior"},
+            "map": [
+                [0, 0, 0],
+                [0, 1, 1],
+                [0, 1, 0],
+            ],
+            "enemies": [],
+            "items": [],
+            "shops": [{"x": 1, "y": 2, "stock": []}],
+            "currentShop": {"x": 1, "y": 2, "stock": []},
+            "seen": {57},
+            "visible": {57},
+            "shopOpen": True,
+        }
+
+        mask = get_action_mask(state)
+
+        self.assertFalse(mask[ACTIONS["SHOP_SELL"]])
+
+    def test_action_mask_allows_shop_sell_when_weaker_gear_exists(self):
+        state = {
+            "floor": 2,
+            "player": {
+                "hp": 20,
+                "maxHp": 20,
+                "x": 1,
+                "y": 1,
+                "lvl": 1,
+                "gold": 500,
+                "class": "warrior",
+                "weapon": {"id": "equipped-sword", "type": "weapon", "atk": 6},
+            },
+            "map": [
+                [0, 0, 0],
+                [0, 1, 1],
+                [0, 1, 0],
+            ],
+            "enemies": [],
+            "items": [
+                {"id": "equipped-sword", "type": "weapon", "atk": 6, "carried": True},
+                {"id": "old-dagger", "type": "weapon", "atk": 2, "carried": True, "price": 20},
+            ],
+            "shops": [{"x": 1, "y": 2, "stock": []}],
+            "currentShop": {"x": 1, "y": 2, "stock": []},
+            "seen": {57},
+            "visible": {57},
+            "shopOpen": True,
+        }
+
+        mask = get_action_mask(state)
+
+        self.assertTrue(mask[ACTIONS["SHOP_SELL"]])
 
     def test_action_mask_allows_final_floor_descend_to_win(self):
         state = self._known_stairs_state(player_x=3, player_y=4, stairs_x=3, stairs_y=4)

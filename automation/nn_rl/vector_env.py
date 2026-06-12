@@ -9,8 +9,15 @@ from typing import List, Dict, Tuple, Optional
 from game_engine import DelveGame
 from state_extractor import extract_state
 from action_mask import get_action_mask
-from reward import compute_reward
-from config import ACTION_DIM, ACTIONS, MAX_SHOP_SLOTS, REWARD_CURRICULUM_SUCCESS
+from reward import compute_reward_with_components
+from config import (
+    ACTION_DIM,
+    ACTIONS,
+    DEFAULT_TIMEOUT_PENALTY,
+    FAILED_EPISODE_REWARD_CAP,
+    MAX_SHOP_SLOTS,
+    REWARD_CURRICULUM_SUCCESS,
+)
 
 CLASSES = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk']
 
@@ -26,7 +33,7 @@ class DelveVectorEnv:
         num_envs=128,
         envs_per_worker=8,
         max_episode_steps=0,
-        timeout_penalty=-400.0,
+        timeout_penalty=DEFAULT_TIMEOUT_PENALTY,
         curriculum_max_floor=None,
         curriculum_reward=REWARD_CURRICULUM_SUCCESS,
         curriculum_hard_mode=False,
@@ -42,6 +49,7 @@ class DelveVectorEnv:
         self.states = [None] * num_envs
         self.prev_states = [None] * num_envs
         self.episode_rewards = [0.0] * num_envs
+        self.episode_reward_components = [dict() for _ in range(num_envs)]
         self.episode_lengths = [0] * num_envs
         self.prev_actions = [None] * num_envs
         self.last_floor = [1] * num_envs
@@ -67,6 +75,7 @@ class DelveVectorEnv:
             self.states[i] = self.games[i].snapshot()
             self.prev_states[i] = self.states[i]
             self.episode_rewards[i] = 0.0
+            self.episode_reward_components[i] = {}
             self.episode_lengths[i] = 0
             self.prev_actions[i] = None
             self.last_floor[i] = 1
@@ -88,6 +97,7 @@ class DelveVectorEnv:
             self.states[eid] = state
             self.prev_states[eid] = state
             self.episode_rewards[eid] = 0.0
+            self.episode_reward_components[eid] = {}
             self.episode_lengths[eid] = 0
             self.prev_actions[eid] = None
             self.last_floor[eid] = 1
@@ -271,7 +281,17 @@ class DelveVectorEnv:
         state['_steps_since_enemy_kill'] = min(step - self.last_enemy_kill_step[env_id], 999) if self.last_enemy_kill_step[env_id] >= 0 else 999
         state['_steps_since_door_unlock'] = min(step - self.last_door_unlock_step[env_id], 999) if self.last_door_unlock_step[env_id] >= 0 else 999
 
+    def _add_reward_component(self, env_id, name, value):
+        if not value:
+            return
+        if not hasattr(self, 'episode_reward_components'):
+            self.episode_reward_components = [{} for _ in getattr(self, 'episode_rewards', [0.0])]
+        components = self.episode_reward_components[env_id]
+        components[name] = components.get(name, 0.0) + float(value)
+
     def _apply_terminal_rules(self, env_id, state, done, reward):
+        if not hasattr(self, 'episode_reward_components'):
+            self.episode_reward_components = [{} for _ in getattr(self, 'episode_rewards', [0.0])]
         if state is None:
             return reward, True, {
                 'won': False,
@@ -283,6 +303,7 @@ class DelveVectorEnv:
                 'total_steps': self.episode_lengths[env_id],
                 'terminal_state': None,
                 'class_name': None,
+                'reward_components': dict(self.episode_reward_components[env_id]),
             }
 
         timed_out = (
@@ -300,10 +321,12 @@ class DelveVectorEnv:
         if timed_out:
             reward += self.timeout_penalty
             self.episode_rewards[env_id] += self.timeout_penalty
+            self._add_reward_component(env_id, 'terminal_timeout', self.timeout_penalty)
             done = True
         elif curriculum_success:
             reward += self.curriculum_reward
             self.episode_rewards[env_id] += self.curriculum_reward
+            self._add_reward_component(env_id, 'terminal_curriculum', self.curriculum_reward)
             done = True
 
         won = bool(state.get('won', False))
@@ -321,6 +344,12 @@ class DelveVectorEnv:
         else:
             outcome = 'running'
 
+        if outcome in ('dead', 'timeout') and self.episode_rewards[env_id] > FAILED_EPISODE_REWARD_CAP:
+            clawback = FAILED_EPISODE_REWARD_CAP - self.episode_rewards[env_id]
+            reward += clawback
+            self.episode_rewards[env_id] += clawback
+            self._add_reward_component(env_id, 'failure_clawback', clawback)
+
         return reward, done, {
             'won': won,
             'timeout': timed_out,
@@ -331,6 +360,7 @@ class DelveVectorEnv:
             'total_steps': self.episode_lengths[env_id],
             'terminal_state': state if done else None,
             'class_name': state.get('player', {}).get('class'),
+            'reward_components': dict(self.episode_reward_components[env_id]) if done else {},
         }
 
     def _resolve_click_action(self, game, state, decision):
@@ -383,8 +413,10 @@ class DelveVectorEnv:
             self.states[i] = state
 
             if state:
-                reward = compute_reward(prev_state, action, state)
+                reward, reward_components = compute_reward_with_components(prev_state, action, state)
                 self.episode_rewards[i] += reward
+                for name, value in reward_components.items():
+                    self._add_reward_component(i, name, value)
                 self.episode_lengths[i] += 1
             else:
                 reward = 0.0
@@ -404,6 +436,7 @@ class DelveVectorEnv:
                 self.states[i] = reset_state
                 self.prev_states[i] = reset_state
                 self.episode_rewards[i] = 0.0
+                self.episode_reward_components[i] = {}
                 self.episode_lengths[i] = 0
                 self.prev_actions[i] = None
                 self.last_floor[i] = 1

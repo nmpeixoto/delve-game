@@ -19,6 +19,7 @@ from train import (
     parse_args as parse_train_args,
     should_use_tensorboard,
 )
+from config import ACTION_DIM, ACTIONS
 
 
 class NnRlMetricsTest(unittest.TestCase):
@@ -32,6 +33,7 @@ class NnRlMetricsTest(unittest.TestCase):
             "outcome": "won",
             "curriculum_success": False,
             "class_name": "warrior",
+            "reward_components": {"terminal_win": 3500.0, "floor_progress": 500.0},
         })
         record_episode(window, {
             "total_reward": -8.0,
@@ -41,7 +43,11 @@ class NnRlMetricsTest(unittest.TestCase):
             "outcome": "timeout",
             "curriculum_success": False,
             "class_name": "mage",
+            "reward_components": {"terminal_timeout": -1500.0, "floor_progress": 300.0},
         })
+        action_counts = np.zeros(ACTION_DIM, dtype=np.int64)
+        action_counts[ACTIONS["MOVE_UP"]] = 10
+        action_counts[ACTIONS["DESCEND"]] = 2
 
         row = build_training_metrics_row(
             total_steps=123456,
@@ -61,10 +67,13 @@ class NnRlMetricsTest(unittest.TestCase):
             policy_loss=-0.01,
             value_loss=1.25,
             entropy=0.75,
-            action_counts=np.array([1, 2, 3] + [0] * 15, dtype=np.int64),
+            action_counts=action_counts,
             episode_window=window,
             progress_key="wins",
-            probe_metrics={"descend_prob_on_stairs": 0.95},
+            probe_metrics={
+                "descend_prob_on_stairs": 0.95,
+                "on_stairs_desc_action_rate": 0.9,
+            },
         )
 
         self.assertEqual(row["total_steps"], 123456)
@@ -76,6 +85,12 @@ class NnRlMetricsTest(unittest.TestCase):
         self.assertIn("warrior", row["class_summary"])
         self.assertIn("Desc", row["actions_summary"])
         self.assertEqual(row["probe_metrics"]["descend_prob_on_stairs"], 0.95)
+        self.assertAlmostEqual(row["action_distribution"]["Up"], 10 / 12)
+        self.assertAlmostEqual(row["action_distribution"]["Desc"], 2 / 12)
+        self.assertEqual(row["outcome_summary"]["won"]["count"], 1)
+        self.assertEqual(row["outcome_summary"]["timeout"]["count"], 1)
+        self.assertAlmostEqual(row["reward_components"]["floor_progress"], 400.0)
+        self.assertAlmostEqual(row["reward_components"]["terminal_timeout"], -750.0)
 
     def test_append_jsonl_record_writes_one_json_object_per_line(self):
         with tempfile.TemporaryDirectory() as tmp:

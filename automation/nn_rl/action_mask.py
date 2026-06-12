@@ -59,7 +59,8 @@ def get_action_mask(G):
                 action_key = f'SHOP_BUY_{idx}'
                 if action_key in ACTIONS:
                     mask[ACTIONS[action_key]] = True
-        mask[ACTIONS['SHOP_SELL']] = True
+        if _has_sellable_gear(G):
+            mask[ACTIONS['SHOP_SELL']] = True
         mask[ACTIONS['ESCAPE']] = True
         return mask
 
@@ -138,6 +139,41 @@ def _visible_enemies(G, seen):
 
 def _has_key(G):
     return any(i.get('type') == 'key' for i in G.get('items', []) if i.get('carried'))
+
+
+def _has_sellable_gear(G):
+    p = G.get('player', {})
+    equipped_weapon = p.get('weapon') or {}
+    equipped_armor = p.get('armor') or {}
+    for item in G.get('items', []):
+        if not item.get('carried') or item.get('type') not in ('weapon', 'armor'):
+            continue
+        if equipped_weapon and equipped_weapon.get('id') == item.get('id'):
+            continue
+        if equipped_armor and equipped_armor.get('id') == item.get('id'):
+            continue
+        req = item.get('reqClass')
+        if req and p.get('class') not in req:
+            return True
+        if item.get('type') == 'weapon':
+            if not equipped_weapon or _weapon_power(item) <= _weapon_power(equipped_weapon):
+                return True
+        elif item.get('type') == 'armor':
+            if not equipped_armor or _armor_power(item) <= _armor_power(equipped_armor):
+                return True
+    return False
+
+
+def _weapon_power(item):
+    if not item:
+        return 0
+    return item.get('atk', item.get('pow', item.get('amount', 0))) or 0
+
+
+def _armor_power(item):
+    if not item:
+        return 0
+    return item.get('def', item.get('armor', item.get('amount', 0))) or 0
 
 
 

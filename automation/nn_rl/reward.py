@@ -322,6 +322,194 @@ def compute_reward(prev_G, action, curr_G):
     return reward
 
 
+def compute_reward_with_components(prev_G, action, curr_G):
+    """Return the existing reward plus coarse component attribution for logging."""
+    total = compute_reward(prev_G, action, curr_G)
+    components = _estimate_reward_components(prev_G, action, curr_G)
+    attributed = sum(components.values())
+    remainder = total - attributed
+    if abs(remainder) > 1e-9:
+        components['unattributed'] = remainder
+    return total, components
+
+
+def _add_component(components, name, value):
+    if value:
+        components[name] = components.get(name, 0.0) + float(value)
+
+
+def _estimate_reward_components(prev_G, action, curr_G):
+    components = {}
+    p = curr_G.get('player', {})
+    pp = prev_G.get('player', {})
+    mults = get_class_mults(p.get('class', ''))
+
+    if curr_G.get('won'):
+        _add_component(components, 'terminal_win', REWARD_WIN)
+        return components
+    if curr_G.get('gameOver'):
+        _add_component(components, 'terminal_death', REWARD_DIE)
+        return components
+
+    floor_progress = curr_G.get('floor', 1) > prev_G.get('floor', 1)
+    if floor_progress:
+        prev_floor = max(int(prev_G.get('floor', 1) or 1), 1)
+        readiness = floor_readiness_score(prev_G)
+        value = (
+            REWARD_FLOOR_PROGRESS
+            + REWARD_DESCEND_DEPTH_MULT * prev_floor
+            + REWARD_DESCEND_PREP_BONUS * readiness
+        )
+        if readiness < READY_DESCEND_THRESHOLD:
+            gap = (READY_DESCEND_THRESHOLD - readiness) / READY_DESCEND_THRESHOLD
+            value += REWARD_UNPREPARED_DESCEND_PENALTY * gap
+        _add_component(components, 'floor_progress', value)
+
+    prev_key_count = _carried_count(prev_G, 'key')
+    curr_key_count = _carried_count(curr_G, 'key')
+    key_delta = max(0, curr_key_count - prev_key_count)
+    if key_delta > 0:
+        _add_component(components, 'key_door_secret', 30.0 * key_delta * mults['explore'])
+
+    unlocked_doors = curr_G.get('_doors_unlocked_this_step', 0)
+    if unlocked_doors > 0:
+        value = 50.0 * unlocked_doors * mults['explore']
+        last_key_step = curr_G.get('_last_key_pickup_step', -999)
+        curr_step = curr_G.get('_current_step', 0)
+        if last_key_step >= 0 and (curr_step - last_key_step) <= KEY_DOOR_CHAIN_WINDOW:
+            value += REWARD_KEY_DOOR_CHAIN
+        _add_component(components, 'key_door_secret', value)
+
+    revealed_secrets = curr_G.get('_secrets_revealed_this_step', 0)
+    if revealed_secrets > 0:
+        _add_component(components, 'key_door_secret', 25.0 * revealed_secrets * mults['explore'])
+
+    triggered_traps = max(0, _triggered_trap_count(curr_G) - _triggered_trap_count(prev_G))
+    if triggered_traps > 0:
+        _add_component(components, 'trap', REWARD_TRAP_PENALTY * triggered_traps)
+
+    prev_alive = {e['id'] for e in prev_G.get('enemies', []) if not e.get('dying')}
+    curr_alive = {e['id'] for e in curr_G.get('enemies', []) if not e.get('dying')}
+    kill_reward = 0.0
+    for eid in prev_alive - curr_alive:
+        prev_en = next((e for e in prev_G.get('enemies', []) if e['id'] == eid), None)
+        if prev_en is None:
+            continue
+        xp = prev_en.get('xp', 0)
+        if prev_en.get('boss'):
+            kill_reward += REWARD_KILL_BOSS * mults['kill']
+        elif prev_en.get('isElite'):
+            kill_reward += REWARD_KILL_ELITE * mults['kill']
+        else:
+            kill_reward += (REWARD_KILL_BASE + xp * REWARD_KILL_XP_MULT) * mults['kill']
+    _add_component(components, 'kill', kill_reward)
+
+    hp_delta = (p.get('hp', 0) - pp.get('hp', 0)) / max(p.get('maxHp', 1), 1)
+    if hp_delta > 0 and pp.get('hp', 0) < pp.get('maxHp', 1) * 0.6:
+        _add_component(components, 'health', hp_delta * REWARD_HEAL_MULT)
+    vis_enemies = _visible_enemies(curr_G)
+    adj_count = sum(1 for e in vis_enemies if chebyshev(e, p) <= 1)
+    if hp_delta < -0.05 and adj_count == 0:
+        _add_component(components, 'health', -3.0 * mults['dmg_penalty'])
+
+    atk_delta = p.get('atk', 0) - pp.get('atk', 0)
+    def_delta = p.get('def', 0) - pp.get('def', 0)
+    maxHp_delta = p.get('maxHp', 1) - pp.get('maxHp', 1)
+    if atk_delta > 0:
+        _add_component(components, 'stats', atk_delta * 5.0)
+    if def_delta > 0:
+        _add_component(components, 'stats', def_delta * 5.0)
+    if maxHp_delta > 0:
+        _add_component(components, 'stats', maxHp_delta * 0.5)
+
+    resource_gain_reward = _consumable_resource_gain_reward(prev_G, curr_G)
+    if resource_gain_reward > 0:
+        _add_component(components, 'resources', resource_gain_reward)
+
+    explored_delta = curr_G.get('seen_count', 0) - prev_G.get('seen_count', 0)
+    if explored_delta > 0:
+        _add_component(components, 'explore', 0.1 * explored_delta * mults['explore'])
+
+    if curr_G.get('floor', 1) == prev_G.get('floor', 1):
+        curr_ratio = _floor_exploration_ratio(curr_G, curr_G.get('map', []))
+        prev_ratio = _floor_exploration_ratio(prev_G, prev_G.get('map', []))
+        for threshold in [0.25, 0.50, 0.75]:
+            if prev_ratio < threshold <= curr_ratio:
+                _add_component(components, 'explore', 15.0 * mults['explore'])
+
+    if action == 8 and p.get('hp', 0) > p.get('maxHp', 1) * 0.5 and len(_visible_enemies(curr_G)) == 0:
+        _add_component(components, 'item_waste', REWARD_POTION_WASTE)
+
+    stair_discovered = not prev_G.get('known_stairs') and curr_G.get('known_stairs')
+    if stair_discovered:
+        _add_component(components, 'stairs', REWARD_STAIR_DISCOVERY)
+
+    stair_distance_improved = False
+    if curr_G.get('floor', 1) == prev_G.get('floor', 1):
+        prev_stair_dist = _nearest_seen_stairs_distance(prev_G)
+        curr_stair_dist = _nearest_seen_stairs_distance(curr_G)
+        min_dist_so_far = prev_G.get('_min_stair_dist', 9999)
+        if curr_stair_dist is not None and prev_stair_dist is not None:
+            stair_delta = prev_stair_dist - curr_stair_dist
+            if stair_delta > 0 and curr_stair_dist < min_dist_so_far:
+                _add_component(components, 'stairs', min(1.0 * (min_dist_so_far - curr_stair_dist), 5.0))
+                stair_distance_improved = True
+            elif stair_delta < 0:
+                _add_component(components, 'stairs', -min(0.3 * abs(stair_delta), 1.5))
+
+            if prev_stair_dist > 0 and action in (0, 1, 2, 3):
+                if curr_stair_dist < prev_stair_dist:
+                    _add_component(components, 'stairs', REWARD_STAIR_APPROACH * mults['explore'])
+                elif curr_stair_dist > prev_stair_dist:
+                    _add_component(components, 'stairs', REWARD_STAIR_RETREAT * mults['explore'])
+
+        if prev_stair_dist == 0 and action != ACTION_DESCEND and prev_G.get('floor', 1) < FLOORS:
+            _add_component(components, 'stairs', -0.5)
+
+    gold_delta = p.get('gold', 0) - pp.get('gold', 0)
+    if gold_delta > 0:
+        _add_component(components, 'gold_xp_level', gold_delta * REWARD_GOLD_MULT)
+    xp_delta = p.get('xp', 0) - pp.get('xp', 0)
+    if xp_delta > 0:
+        _add_component(components, 'gold_xp_level', min(xp_delta * 0.25, 10.0))
+    level_up = p.get('lvl', 0) > pp.get('lvl', 0)
+    if level_up:
+        _add_component(components, 'gold_xp_level', REWARD_LEVEL_UP)
+
+    damage_dealt = 0
+    for enemy in curr_G.get('enemies', []):
+        prev_enemy = next((prev for prev in prev_G.get('enemies', []) if prev['id'] == enemy['id']), None)
+        if prev_enemy and enemy['hp'] < prev_enemy['hp']:
+            damage_dealt += prev_enemy['hp'] - enemy['hp']
+
+    revealed_traps = max(0, _revealed_trap_count(curr_G) - _revealed_trap_count(prev_G))
+    made_progress = (
+        floor_progress
+        or len(prev_alive - curr_alive) > 0
+        or damage_dealt > 0
+        or key_delta > 0
+        or unlocked_doors > 0
+        or revealed_secrets > 0
+        or revealed_traps > 0
+        or explored_delta > 0
+        or stair_discovered
+        or stair_distance_improved
+        or gold_delta > 0
+        or xp_delta > 0
+        or level_up
+        or resource_gain_reward > 0
+        or atk_delta > 0
+        or def_delta > 0
+        or maxHp_delta > 0
+        or action in (8, 9, 10, 11, 12)
+        or (hp_delta > 0 and pp.get('hp', 0) < pp.get('maxHp', 1))
+    )
+    if not made_progress:
+        _add_component(components, 'turn_stagnation', REWARD_TURN_PENALTY * 0.5)
+    _add_component(components, 'turn', REWARD_TURN_PENALTY)
+    return components
+
+
 def _visible_enemies(G):
     cached = G.get('_visible_enemies')
     if cached is not None:
