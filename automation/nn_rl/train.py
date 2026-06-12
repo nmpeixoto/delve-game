@@ -61,7 +61,7 @@ def evaluate_headless(agent, num_games=100, device='cuda'):
         '--classes', ','.join(CLASSES),
         '--per-class', str(num_games // 8),
         '--seed-base', '1',
-        '--max-turns', '5000',
+        '--max-turns', str(DEFAULT_MAX_EPISODE_STEPS),
         '--output', tmp_path,
     ]
     
@@ -106,8 +106,8 @@ def parse_args(argv=None):
     parser.add_argument(
         "--max-episode-steps",
         type=int,
-        default=0,
-        help="Max actions per episode; 0 disables the timeout so training can explore the full dungeon.",
+        default=DEFAULT_MAX_EPISODE_STEPS,
+        help="Max actions per episode; 0 disables the timeout for deliberate unlimited experiments.",
     )
     parser.add_argument("--timeout-penalty", type=float, default=-400.0)
     parser.add_argument("--no-tensorboard", action="store_true", help=argparse.SUPPRESS)

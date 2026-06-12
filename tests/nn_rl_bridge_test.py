@@ -13,8 +13,8 @@ sys.path.insert(0, NN_RL_DIR)
 from headless_bridge import HeadlessWorker, RL_RUNNER
 from action_mask import get_action_mask
 from config import (
-    ACTION_DIM, ACTIONS, CURRICULUM, MAX_SHOP_SLOTS, REWARD_CURRICULUM_SUCCESS,
-    SHOP_ITEM_FEATURES, STATE_DIM,
+    ACTION_DIM, ACTIONS, CURRICULUM, DEFAULT_MAX_EPISODE_STEPS, MAX_SHOP_SLOTS,
+    REWARD_CURRICULUM_SUCCESS, SHOP_ITEM_FEATURES, STATE_DIM,
 )
 
 from reward import compute_reward
@@ -22,6 +22,7 @@ from state_extractor import extract_state
 from train import (
     episode_class_summary,
     curriculum_metric_label,
+    evaluate_headless,
     curriculum_phase_for_step,
     curriculum_phase_target,
     format_episode_cap,
@@ -349,17 +350,35 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(len(reset_window["curriculum"]), 0)
         self.assertEqual(len(reset_window["classes"]), 0)
 
-    def test_train_default_episode_cap_allows_unbounded_full_dungeon_rollouts(self):
+    def test_train_default_episode_cap_uses_generous_stall_guard(self):
         with patch.object(sys, "argv", ["train.py"]):
             args = parse_args()
 
-        self.assertEqual(args.max_episode_steps, 0)
+        self.assertEqual(args.max_episode_steps, 6000)
 
     def test_train_accepts_explicit_episode_cap_for_stall_guard(self):
         with patch.object(sys, "argv", ["train.py", "--max-episode-steps", "6000"]):
             args = parse_args()
 
         self.assertEqual(args.max_episode_steps, 6000)
+
+    def test_legacy_headless_evaluator_uses_configured_episode_cap(self):
+        calls = []
+
+        def fake_run(args, **_kwargs):
+            calls.append(args)
+            output_path = args[args.index("--output") + 1]
+            with open(output_path, "w", encoding="utf-8") as handle:
+                handle.write('{"overall":{"winRate":0,"avgFloor":0,"runs":0},"byClass":{}}')
+
+        with patch("subprocess.run", side_effect=fake_run):
+            evaluate_headless(agent=None, num_games=8, device="cpu")
+
+        headless_args = calls[0]
+        self.assertEqual(
+            headless_args[headless_args.index("--max-turns") + 1],
+            str(DEFAULT_MAX_EPISODE_STEPS),
+        )
 
     def test_vector_env_default_has_no_hidden_episode_timeout(self):
         env = DelveVectorEnv(num_envs=1, envs_per_worker=1)

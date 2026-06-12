@@ -59,6 +59,7 @@ BATCH_SIZE = 1024         # Mini-batch size
 NUM_ENVS = 128           # Parallel environments (128 = 8 workers × 16 envs each)
 ENVS_PER_WORKER = 16     # 16 envs per Node.js worker → 8 workers total
 ROLLOUT_STEPS = 512      # Steps per env per rollout (longer = better GPU fill)
+DEFAULT_MAX_EPISODE_STEPS = 6000  # Generous full-dungeon stall guard; pass 0 to disable.
 TOTAL_TIMESTEPS = 200_000_000
 
 # ─── LR SCHEDULE ─────────────────────────────────────────────────────────────

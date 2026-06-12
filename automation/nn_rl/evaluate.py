@@ -30,8 +30,8 @@ def parse_args(argv=None):
     parser.add_argument(
         '--max-episode-steps',
         type=int,
-        default=0,
-        help='Max actions per episode; 0 disables the timeout so evaluation can explore the full dungeon.',
+        default=DEFAULT_MAX_EPISODE_STEPS,
+        help='Max actions per episode; 0 disables the timeout for deliberate unlimited experiments.',
     )
     parser.add_argument('--num-envs', type=int, default=32)
     parser.add_argument('--envs-per-worker', type=int, default=8)
@@ -47,7 +47,7 @@ def advance_prev_actions(prev_actions, action_list, dones):
 
 
 def evaluate(model_path=None, num_games=200, device='cuda', deterministic=False,
-             max_episode_steps=0, num_envs=32, envs_per_worker=8):
+             max_episode_steps=DEFAULT_MAX_EPISODE_STEPS, num_envs=32, envs_per_worker=8):
     """Evaluate a trained model."""
     # Load model
     network = DelveNet(state_dim=STATE_DIM, action_dim=ACTION_DIM, hidden_dim=HIDDEN_DIM).to(device)
