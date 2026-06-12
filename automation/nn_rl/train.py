@@ -312,7 +312,7 @@ def build_training_metrics_row(*, total_steps, elapsed, phase_index, phase_name,
                                timeout_rate, death_rate, policy_loss, value_loss,
                                entropy, progress_delta=None, action_counts=None,
                                episode_window=None, progress_key="wins",
-                               status_text=None):
+                               status_text=None, probe_metrics=None):
     row = {
         "event": "train_report",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -341,6 +341,8 @@ def build_training_metrics_row(*, total_steps, elapsed, phase_index, phase_name,
         row["actions_summary"] = summarize_actions(action_counts)
     if status_text:
         row["status_text"] = str(status_text)
+    if probe_metrics:
+        row["probe_metrics"] = dict(probe_metrics)
     return row
 
 

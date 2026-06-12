@@ -8,7 +8,10 @@ import numpy as np
 
 from config import (
     ACTIONS,
-    REWARD_FLOOR_PROGRESS, REWARD_KEY_DOOR_CHAIN, REWARD_TRAP_PENALTY,
+    REWARD_DESCEND_DEPTH_MULT, REWARD_DESCEND_PREP_BONUS,
+    REWARD_FLOOR_PROGRESS, REWARD_KEY_DOOR_CHAIN, REWARD_STAIR_APPROACH,
+    REWARD_STAIR_RETREAT, REWARD_TRAP_PENALTY,
+    REWARD_UNPREPARED_DESCEND_PENALTY,
     REWARD_KILL_BOSS, REWARD_KILL_ELITE, REWARD_KILL_BASE, REWARD_KILL_XP_MULT,
     REWARD_HEAL_MULT, REWARD_POTION_WASTE, REWARD_STAIR_DISCOVERY,
     REWARD_GOLD_MULT, REWARD_LEVEL_UP, REWARD_TURN_PENALTY,
@@ -23,6 +26,7 @@ MAP_W = 56
 FLOORS = 5
 STAIRS = 2
 ACTION_DESCEND = 13
+READY_DESCEND_THRESHOLD = 0.35
 
 def get_class_mults(cls):
     """Return reward multipliers based on class archetype."""
@@ -34,6 +38,44 @@ def get_class_mults(cls):
         return {'kill': 1.0, 'explore': 1.0, 'dmg_penalty': 1.0}
 
 KEY_DOOR_CHAIN_WINDOW = 20  # Steps within which key pickup → door unlock counts as chain
+
+
+def floor_readiness_score(G):
+    """Estimate how prepared the player is to leave the current floor."""
+    p = G.get('player', {})
+    floor = max(int(G.get('floor', 1) or 1), 1)
+    map_data = G.get('map', [])
+
+    exploration = _floor_exploration_ratio(G, map_data)
+    target_level = 1 + (floor - 1) * 2
+    level_score = _clamp01(p.get('lvl', 1) / max(target_level, 1))
+
+    atk_target = 4 + floor * 3
+    def_target = 1 + floor * 2
+    hp_target = 24 + floor * 12
+    combat_score = (
+        _clamp01(p.get('atk', 0) / max(atk_target, 1))
+        + _clamp01(p.get('def', 0) / max(def_target, 1))
+        + _clamp01(p.get('maxHp', 1) / max(hp_target, 1))
+    ) / 3
+
+    hp_score = _clamp01(p.get('hp', 0) / max(p.get('maxHp', 1), 1))
+    resource_count = sum(
+        1
+        for item in G.get('items', [])
+        if item.get('carried') and item.get('type') in (
+            'potion', 'potion_buff', 'bomb', 'scroll_teleport', 'scroll'
+        )
+    )
+    resource_score = _clamp01(resource_count / 2)
+
+    return _clamp01(
+        exploration * 0.45
+        + combat_score * 0.20
+        + level_score * 0.15
+        + hp_score * 0.15
+        + resource_score * 0.05
+    )
 
 
 def manhattan(a, b):
@@ -69,9 +111,18 @@ def compute_reward(prev_G, action, curr_G):
     # ── FLOOR PROGRESS ──────────────────────────────────────────────────────
     floor_progress = curr_G.get('floor', 1) > prev_G.get('floor', 1)
     if floor_progress:
-        reward += REWARD_FLOOR_PROGRESS
+        prev_floor = max(int(prev_G.get('floor', 1) or 1), 1)
+        readiness = floor_readiness_score(prev_G)
+        reward += (
+            REWARD_FLOOR_PROGRESS
+            + REWARD_DESCEND_DEPTH_MULT * prev_floor
+            + REWARD_DESCEND_PREP_BONUS * readiness
+        )
+        if readiness < READY_DESCEND_THRESHOLD:
+            gap = (READY_DESCEND_THRESHOLD - readiness) / READY_DESCEND_THRESHOLD
+            reward += REWARD_UNPREPARED_DESCEND_PENALTY * gap
         # reset minimum distance on new floor
-        curr_G['_min_stair_dist'] = 9999 * curr_G.get('floor', 1)  # Reduced from 75 to avoid dominating
+        curr_G['_min_stair_dist'] = 9999 * curr_G.get('floor', 1)
 
     prev_key_count = _carried_count(prev_G, 'key')
     curr_key_count = _carried_count(curr_G, 'key')
@@ -208,9 +259,9 @@ def compute_reward(prev_G, action, curr_G):
             and action in (0, 1, 2, 3)  # MOVE_UP, DOWN, LEFT, RIGHT
         ):
             if curr_stair_dist < prev_stair_dist:
-                reward += 2.0 * mults['explore']   # Explorers rewarded more for moving to stairs
+                reward += REWARD_STAIR_APPROACH * mults['explore']
             elif curr_stair_dist > prev_stair_dist:
-                reward -= 1.0 * mults['explore']   # Explorers penalized more for moving away
+                reward += REWARD_STAIR_RETREAT * mults['explore']
 
         if (
             prev_stair_dist == 0
@@ -299,6 +350,10 @@ def _seen_set(G):
     if isinstance(seen, set):
         return seen
     return set(seen or [])
+
+
+def _clamp01(value):
+    return max(0.0, min(1.0, float(value)))
 
 
 def _carried_count(G, item_type):

@@ -12,7 +12,10 @@ sys.path.insert(0, NN_RL_DIR)
 
 from headless_bridge import HeadlessWorker, RL_RUNNER
 from action_mask import get_action_mask
-from config import ACTION_DIM, ACTIONS, CURRICULUM, MAX_SHOP_SLOTS, SHOP_ITEM_FEATURES, STATE_DIM
+from config import (
+    ACTION_DIM, ACTIONS, CURRICULUM, MAX_SHOP_SLOTS, REWARD_CURRICULUM_SUCCESS,
+    SHOP_ITEM_FEATURES, STATE_DIM,
+)
 
 from reward import compute_reward
 from state_extractor import extract_state
@@ -115,7 +118,7 @@ class NnRlBridgeTest(unittest.TestCase):
         env.max_episode_steps = 5000
         env.timeout_penalty = -250.0
         env.curriculum_max_floor = 2
-        env.curriculum_reward = 125.0
+        env.curriculum_reward = REWARD_CURRICULUM_SUCCESS
         env.episode_lengths = [42]
         env.episode_rewards = [10.0]
 
@@ -130,14 +133,14 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(info["outcome"], "curriculum")
         self.assertTrue(info["curriculum_success"])
         self.assertEqual(info["final_floor"], 3)
-        self.assertEqual(reward, 130.0)
+        self.assertGreaterEqual(reward, 300.0)
 
     def test_curriculum_does_not_end_before_target_floor_is_cleared(self):
         env = DelveVectorEnv.__new__(DelveVectorEnv)
         env.max_episode_steps = 5000
         env.timeout_penalty = -250.0
         env.curriculum_max_floor = 2
-        env.curriculum_reward = 125.0
+        env.curriculum_reward = REWARD_CURRICULUM_SUCCESS
         env.episode_lengths = [42]
         env.episode_rewards = [10.0]
 
@@ -179,11 +182,12 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(curriculum_phase_for_step(100, curriculum), (2, 70))
 
     def test_default_curriculum_starts_with_floor_one_descent_goal(self):
-        self.assertEqual(len(CURRICULUM), 2)
-        self.assertIsNone(CURRICULUM[0]["max_floor"])
-        self.assertFalse(CURRICULUM[0]["hard_mode"])
-        self.assertIsNone(CURRICULUM[1]["max_floor"])
-        self.assertTrue(CURRICULUM[1]["hard_mode"])
+        self.assertEqual(len(CURRICULUM), 6)
+        self.assertEqual([phase["max_floor"] for phase in CURRICULUM[:4]], [1, 2, 3, 4])
+        self.assertTrue(all(not phase["hard_mode"] for phase in CURRICULUM[:5]))
+        self.assertIsNone(CURRICULUM[4]["max_floor"])
+        self.assertIsNone(CURRICULUM[5]["max_floor"])
+        self.assertTrue(CURRICULUM[5]["hard_mode"])
 
     def test_curriculum_metric_label_names_active_goal(self):
         self.assertEqual(curriculum_metric_label({"max_floor": 1}), "Floor 2")
@@ -435,13 +439,63 @@ class NnRlBridgeTest(unittest.TestCase):
 
         self.assertGreaterEqual(reward, 49.0)
 
+    def test_full_win_reward_dominates_shaped_progress(self):
+        state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=5, stairs_y=5)
+        state["floor"] = 5
+        state["player"].update({"lvl": 12, "atk": 24, "def": 12, "maxHp": 120, "hp": 115})
+
+        reward = compute_reward(state, ACTIONS["DESCEND"], {**state, "won": True})
+
+        self.assertGreaterEqual(reward, 3000.0)
+
+    def test_death_reward_is_strongly_negative_even_after_progress(self):
+        state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
+        state["floor"] = 3
+
+        reward = compute_reward(state, ACTIONS["MOVE_RIGHT"], {**state, "gameOver": True})
+
+        self.assertLessEqual(reward, -500.0)
+
+    def test_prepared_descend_is_better_than_underprepared_rush(self):
+        prepared = self._known_stairs_state(player_x=5, player_y=5, stairs_x=5, stairs_y=5)
+        prepared["floor"] = 3
+        prepared["player"].update({
+            "lvl": 7,
+            "atk": 16,
+            "def": 8,
+            "maxHp": 90,
+            "hp": 85,
+        })
+        prepared["items"] = [
+            {"id": "p1", "type": "potion", "carried": True},
+            {"id": "b1", "type": "bomb", "carried": True},
+        ]
+
+        rushed = self._known_stairs_state(player_x=5, player_y=5, stairs_x=5, stairs_y=5)
+        rushed["floor"] = 3
+        rushed["seen"] = {5 * 56 + 5}
+        rushed["seen_count"] = 1
+        rushed["player"].update({
+            "lvl": 2,
+            "atk": 5,
+            "def": 1,
+            "maxHp": 30,
+            "hp": 14,
+        })
+
+        prepared_reward = compute_reward(prepared, ACTIONS["DESCEND"], {**prepared, "floor": 4})
+        rushed_reward = compute_reward(rushed, ACTIONS["DESCEND"], {**rushed, "floor": 4})
+
+        self.assertGreater(prepared_reward, rushed_reward + 100.0)
+        self.assertGreater(rushed_reward, 0.0)
+
     def test_reward_prefers_moving_toward_known_stairs(self):
         state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
         after = {**state, "player": {**state["player"], "x": 6}}
 
         reward = compute_reward(state, ACTIONS["MOVE_RIGHT"], after)
 
-        self.assertGreater(reward, 0.1)
+        self.assertGreater(reward, 2.0)
 
     def test_reward_penalizes_moving_away_from_known_stairs(self):
         state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)

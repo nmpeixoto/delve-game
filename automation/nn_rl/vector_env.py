@@ -10,7 +10,7 @@ from game_engine import DelveGame
 from state_extractor import extract_state
 from action_mask import get_action_mask
 from reward import compute_reward
-from config import ACTION_DIM, ACTIONS, MAX_SHOP_SLOTS
+from config import ACTION_DIM, ACTIONS, MAX_SHOP_SLOTS, REWARD_CURRICULUM_SUCCESS
 
 CLASSES = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk']
 
@@ -28,7 +28,7 @@ class DelveVectorEnv:
         max_episode_steps=0,
         timeout_penalty=-400.0,
         curriculum_max_floor=None,
-        curriculum_reward=125.0,
+        curriculum_reward=REWARD_CURRICULUM_SUCCESS,
         curriculum_hard_mode=False,
     ):
         self.num_envs = num_envs

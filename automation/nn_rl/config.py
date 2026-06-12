@@ -72,9 +72,13 @@ EVAL_EVERY = 250_000
 EVAL_GAMES = 100
 
 # ─── REWARD SHAPING ──────────────────────────────────────────────────────────
-REWARD_WIN = 300.0
-REWARD_DIE = -80.0
-REWARD_FLOOR_PROGRESS = 50.0    # per floor (reduced from 75 to avoid dominating)
+REWARD_WIN = 3500.0             # full clear must dominate all shaping
+REWARD_DIE = -650.0             # losing after a long shaped run must still be bad
+REWARD_FLOOR_PROGRESS = 180.0   # base reward for going deeper
+REWARD_DESCEND_DEPTH_MULT = 40.0
+REWARD_DESCEND_PREP_BONUS = 220.0
+REWARD_UNPREPARED_DESCEND_PENALTY = -60.0
+REWARD_CURRICULUM_SUCCESS = 300.0
 REWARD_KILL_BASE = 5.0
 REWARD_KILL_XP_MULT = 0.4
 REWARD_KILL_BOSS = 40.0
@@ -88,15 +92,14 @@ REWARD_LEVEL_UP = 8.0
 REWARD_TURN_PENALTY = -0.075
 REWARD_POTION_WASTE = -3.0
 REWARD_KEY_DOOR_CHAIN = 40.0    # NEW: bonus for unlocking door within 20 steps of key pickup
+REWARD_STAIR_APPROACH = 4.0
+REWARD_STAIR_RETREAT = -2.0
 
 # ─── CURRICULUM ──────────────────────────────────────────────────────────────
-# The bot ALWAYS plays for a full dungeon clear (all 5 floors).
-# No floor caps: floor caps teach the wrong objective — the bot learns to reach
-# floor N, not to *win*. The two phases here progress Normal → Hard mode once
-# the agent has demonstrated real competency at clearing the full dungeon.
-#
-# Phase advances when success_threshold is met over success_window episodes,
-# checked per-class so no single class can carry the window.
+# The bot starts with explicit descent milestones, then graduates to full clears.
+# Early floor caps teach "find stairs and go deeper" without relying on sparse
+# full-win samples at the start. The final phases still require full dungeon
+# clears before hard mode, checked per-class so no single class can carry mastery.
 
 # ─── SELF-PLAY ───────────────────────────────────────────────────────────────
 SELF_PLAY_START = 5_000_000   # Start self-play after 5M steps

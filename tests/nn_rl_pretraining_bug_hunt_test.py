@@ -8,7 +8,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NN_RL_DIR = os.path.join(REPO_ROOT, "automation", "nn_rl")
 sys.path.insert(0, NN_RL_DIR)
 
-from config import ACTIONS
+from config import ACTIONS, REWARD_CURRICULUM_SUCCESS
 from game_engine import DelveGame, FLOOR_ENEMY_PROFILES, TILE_FLOOR, TILE_STAIRS
 from pathfinding import floor_exploration_ratio
 from ppo import RolloutBuffer
@@ -177,7 +177,7 @@ class NnRlPretrainingBugHuntTest(unittest.TestCase):
         env.max_episode_steps = 0
         env.timeout_penalty = -400.0
         env.curriculum_max_floor = None
-        env.curriculum_reward = 125.0
+        env.curriculum_reward = REWARD_CURRICULUM_SUCCESS
         env.episode_lengths = [999999]
         env.episode_rewards = [10.0]
 
