@@ -2,7 +2,7 @@
 State extractor for DELVE RL bot.
 Extracts a STATE_DIM-dimensional feature vector from game state G.
 
-Feature breakdown (total = 46 non-shop + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES shop):
+Feature breakdown (total = 64 non-shop + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES shop):
   - Player core (7):      hp_ratio, atk, def, lvl, has_key, floor, on_stairs
   - Navigation (4):       stair_dx, stair_dy, bfs_stair_dist, exploration_ratio
   - Context (6):          enemy_count, nearest_enemy_dist, has_weapon, ability1_ready,
@@ -159,10 +159,11 @@ def extract_state(G, prev_action=None):
     features.append(p.get('xp', 0) / max(p.get('xpNext', 1), 1))         # 52
     features.append(min(p.get('gold', 0) / 1000.0, 1.0))                 # 53
     features.append(p.get('maxHp', 1) / 200.0)                           # 54
+    features.append(1.0 if (G.get('hardMode') or G.get('hard_mode')) else 0.0)  # 55: hard_mode
 
     # ── CLASS ID (8 features) ────────────────────────────────────────────
     cls_name = str(p.get('class', '')).lower()
-    features.extend([1.0 if cls_name == c else 0.0 for c in CLASS_NAMES]) # 55-62
+    features.extend([1.0 if cls_name == c else 0.0 for c in CLASS_NAMES]) # 56-63
 
     features.extend(_encode_current_shop(G))
 

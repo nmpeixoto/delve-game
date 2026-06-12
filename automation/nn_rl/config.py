@@ -13,7 +13,7 @@ CLASSES = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necrom
 # ─── STATE / ACTION ──────────────────────────────────────────────────────────
 MAX_SHOP_SLOTS = 18
 SHOP_ITEM_FEATURES = 19  # +4 upgrade-stat bits: atk/def/hp/other
-STATE_DIM = 63 + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES
+STATE_DIM = 64 + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES
 ACTION_DIM = 18 + MAX_SHOP_SLOTS        # Base gameplay actions + explicit shop buy-slot actions
 
 # Action indices
@@ -96,52 +96,15 @@ REWARD_STAIR_APPROACH = 4.0
 REWARD_STAIR_RETREAT = -2.0
 
 # ─── CURRICULUM ──────────────────────────────────────────────────────────────
-# The bot starts with explicit descent milestones, then graduates to full clears.
-# Early floor caps teach "find stairs and go deeper" without relying on sparse
-# full-win samples at the start. The final phases still require full dungeon
-# clears before hard mode, checked per-class so no single class can carry mastery.
+# The bot must master full Normal dungeon clears before advancing to Hard mode.
+# Reward shaping still teaches exploration, gearing, strength, and descent,
+# but phase mastery is always based on complete dungeon wins.
 
 # ─── SELF-PLAY ───────────────────────────────────────────────────────────────
 SELF_PLAY_START = 5_000_000   # Start self-play after 5M steps
 SELF_PLAY_SNAPSHOT_AGE = 100_000  # Play against policy from 100K steps ago
 
 CURRICULUM = [
-    {
-        'name': 'descend_floor_1',
-        'max_floor': 1,
-        'hard_mode': False,
-        'success_threshold': 0.80,
-        'success_window': 1000,
-        'min_steps': 500_000,
-        'steps': 20_000_000,
-    },
-    {
-        'name': 'descend_floor_2',
-        'max_floor': 2,
-        'hard_mode': False,
-        'success_threshold': 0.80,
-        'success_window': 1000,
-        'min_steps': 500_000,
-        'steps': 30_000_000,
-    },
-    {
-        'name': 'descend_floor_3',
-        'max_floor': 3,
-        'hard_mode': False,
-        'success_threshold': 0.80,
-        'success_window': 1000,
-        'min_steps': 500_000,
-        'steps': 40_000_000,
-    },
-    {
-        'name': 'descend_floor_4',
-        'max_floor': 4,
-        'hard_mode': False,
-        'success_threshold': 0.80,
-        'success_window': 1000,
-        'min_steps': 500_000,
-        'steps': 50_000_000,
-    },
     {
         'name': 'full_dungeon_normal',
         'max_floor': None,          # No floor cap — always aim for a full win

@@ -181,13 +181,29 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(curriculum_phase_for_step(30, curriculum), (2, 0))
         self.assertEqual(curriculum_phase_for_step(100, curriculum), (2, 70))
 
-    def test_default_curriculum_starts_with_floor_one_descent_goal(self):
-        self.assertEqual(len(CURRICULUM), 6)
-        self.assertEqual([phase["max_floor"] for phase in CURRICULUM[:4]], [1, 2, 3, 4])
-        self.assertTrue(all(not phase["hard_mode"] for phase in CURRICULUM[:5]))
-        self.assertIsNone(CURRICULUM[4]["max_floor"])
-        self.assertIsNone(CURRICULUM[5]["max_floor"])
-        self.assertTrue(CURRICULUM[5]["hard_mode"])
+    def test_default_curriculum_requires_full_normal_clear_before_hard_mode(self):
+        self.assertEqual(len(CURRICULUM), 2)
+        self.assertEqual(CURRICULUM[0]["name"], "full_dungeon_normal")
+        self.assertIsNone(CURRICULUM[0]["max_floor"])
+        self.assertFalse(CURRICULUM[0]["hard_mode"])
+        self.assertEqual(CURRICULUM[0]["success_threshold"], 0.80)
+        self.assertEqual(CURRICULUM[1]["name"], "full_dungeon_hard")
+        self.assertIsNone(CURRICULUM[1]["max_floor"])
+        self.assertTrue(CURRICULUM[1]["hard_mode"])
+
+    def test_extract_state_exposes_hard_mode(self):
+        normal = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
+        hard = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
+        normal["hardMode"] = False
+        hard["hardMode"] = True
+
+        normal_obs = extract_state(normal)
+        hard_obs = extract_state(hard)
+        changed = np.flatnonzero(normal_obs != hard_obs)
+
+        self.assertEqual(len(changed), 1)
+        self.assertEqual(normal_obs[changed[0]], 0.0)
+        self.assertEqual(hard_obs[changed[0]], 1.0)
 
     def test_curriculum_metric_label_names_active_goal(self):
         self.assertEqual(curriculum_metric_label({"max_floor": 1}), "Floor 2")
@@ -202,6 +218,15 @@ class NnRlBridgeTest(unittest.TestCase):
         })
 
         self.assertEqual(target, "reach Floor 2 at 80% over 100 episodes")
+
+    def test_curriculum_phase_target_describes_full_clear_mastery_goal(self):
+        target = curriculum_phase_target({
+            "max_floor": None,
+            "success_threshold": 0.8,
+            "success_window": 1000,
+        })
+
+        self.assertEqual(target, "clear full dungeon at 80% over 1000 episodes")
 
     def test_curriculum_does_not_advance_on_timer_without_mastery(self):
         phase = {

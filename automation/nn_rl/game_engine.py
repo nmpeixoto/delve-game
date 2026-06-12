@@ -2131,6 +2131,7 @@ class DelveGame:
         return {
             'ready': True,
             'floor': self.floor,
+            'hardMode': bool(self.hard_mode),
             'rCount': self.rng.r_count,
             'turn': self.turn,
             'rooms': [r.get('type') for r in self.rooms],

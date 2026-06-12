@@ -48,6 +48,13 @@ class NnRlPretrainingBugHuntTest(unittest.TestCase):
         self.assertGreater(state["_walkable_total"], 0)
         self.assertGreater(floor_exploration_ratio(state, state["map"]), 0.0)
 
+    def test_python_snapshot_exports_hard_mode(self):
+        normal = DelveGame(seed=42, player_class="ranger", hard_mode=False).snapshot()
+        hard = DelveGame(seed=42, player_class="ranger", hard_mode=True).snapshot()
+
+        self.assertFalse(normal["hardMode"])
+        self.assertTrue(hard["hardMode"])
+
     def test_detection_scroll_updates_secret_count_when_revealing_secret_doors(self):
         game = DelveGame(seed=42, player_class="ranger")
         initial_secret_count = game._secret_count

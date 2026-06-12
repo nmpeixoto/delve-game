@@ -185,7 +185,11 @@ def curriculum_phase_target(phase):
     label = curriculum_metric_label(phase)
     threshold = phase.get('success_threshold')
     window = int(phase.get('success_window', LOG_WINDOW_EPISODES))
-    if phase.get('max_floor') is None or threshold is None:
+    if phase.get('max_floor') is None:
+        if threshold is None:
+            return "full dungeon clear"
+        return f"clear full dungeon at {float(threshold):.0%} over {window} episodes"
+    if threshold is None:
         return "full dungeon clear"
     return f"reach {label} at {float(threshold):.0%} over {window} episodes"
 
