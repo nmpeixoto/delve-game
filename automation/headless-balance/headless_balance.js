@@ -45,7 +45,7 @@ function parseArgs(argv) {
     classes: DEFAULT_CLASSES.join(','),
     perClass: 20,
     seedBase: 1,
-    maxTurns: 5000,
+    maxTurns: 8000,
     workers: 0,
     output: '',
     trace: false,

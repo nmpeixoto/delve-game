@@ -15,7 +15,7 @@ function loadLessons() { return fs.existsSync(LESSONS_PATH) ? JSON.parse(fs.read
 function saveLessons(l) { fs.writeFileSync(LESSONS_PATH, JSON.stringify(l, null, 2)); }
 
 function runTests(config, perClass, seedBase) {
-  return runAuditBatch({ classes: CLASSES.join(','), classList: CLASSES, perClass, seedBases: [seedBase], maxTurns: 5000, trace: false, verbose: false });
+  return runAuditBatch({ classes: CLASSES.join(','), classList: CLASSES, perClass, seedBases: [seedBase], maxTurns: 8000, trace: false, verbose: false });
 }
 
 function analyzeReport(report) {

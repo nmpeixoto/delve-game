@@ -30,7 +30,7 @@ function runOnce(config) {
     classList: CLASSES,
     perClass: config.perClass || 10,
     seedBases: [1000],
-    maxTurns: 5000,
+    maxTurns: 8000,
     trace: false,
     verbose: false,
   });

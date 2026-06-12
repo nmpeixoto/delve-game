@@ -56,7 +56,7 @@ function parseArgs(argv) {
     classes: DEFAULT_CLASSES.join(','),
     perClass: 10,
     seedBases: [1000],
-    maxTurns: 5000,
+    maxTurns: 8000,
     output: '',
     verbose: false,
     trace: false,
@@ -128,7 +128,7 @@ function parseArgs(argv) {
   if (!out.classList.length) out.classList = [...DEFAULT_CLASSES];
   if (!out.seedBases.length) out.seedBases = [1000];
   if (!Number.isFinite(out.perClass) || out.perClass < 1) out.perClass = 10;
-  if (!Number.isFinite(out.maxTurns) || out.maxTurns < 1) out.maxTurns = 5000;
+  if (!Number.isFinite(out.maxTurns) || out.maxTurns < 1) out.maxTurns = 8000;
 
   return out;
 }
@@ -394,7 +394,7 @@ function terminalResourceCounts(snapshot) {
   };
 }
 
-function runAuditSingle({ className, seed, maxTurns = 5000, trace = false, verbose = false }) {
+function runAuditSingle({ className, seed, maxTurns = 8000, trace = false, verbose = false }) {
   const runtime = createRuntime(seed, { verbose });
   const { context, flushTimers, captureSnapshot, snapshotKey, interpretDecision } = runtime;
   const runTrace = [];
