@@ -190,7 +190,7 @@ def compute_reward(prev_G, action, curr_G):
     # ── COMBAT (kill rewards) ───────────────────────────────────────────────
     prev_alive = {e["id"] for e in prev_G.get("enemies", []) if not e.get("dying")}
     curr_alive = {e["id"] for e in curr_G.get("enemies", []) if not e.get("dying")}
-    killed = prev_alive - curr_alive
+    killed = set() if floor_progress else prev_alive - curr_alive
 
     for eid in killed:
         prev_en = next((e for e in prev_G.get("enemies", []) if e["id"] == eid), None)
@@ -459,7 +459,8 @@ def _estimate_reward_components(prev_G, action, curr_G):
     prev_alive = {e["id"] for e in prev_G.get("enemies", []) if not e.get("dying")}
     curr_alive = {e["id"] for e in curr_G.get("enemies", []) if not e.get("dying")}
     kill_reward = 0.0
-    for eid in prev_alive - curr_alive:
+    killed = set() if floor_progress else prev_alive - curr_alive
+    for eid in killed:
         prev_en = next((e for e in prev_G.get("enemies", []) if e["id"] == eid), None)
         if prev_en is None:
             continue
