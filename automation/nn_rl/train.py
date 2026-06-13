@@ -490,7 +490,7 @@ def main():
         'max_grad_norm': MAX_GRAD_NORM, 'epochs_per_update': EPOCHS_PER_UPDATE,
         'batch_size': args.batch_size, 'num_envs': args.num_envs,
         'rollout_steps': args.rollout_steps, 'lr_start': LR_START, 'lr_end': LR_END,
-        'lr_decay_steps': LR_DECAY_STEPS,
+        'lr_decay_steps': LR_DECAY_STEPS, 'clip_v_loss': CLIP_V_LOSS,
     }
     ppo = PPO(model, config, device)
     buffer = RolloutBuffer(args.num_envs, args.rollout_steps, STATE_DIM, ACTION_DIM, model.GRU_HIDDEN, device=device)

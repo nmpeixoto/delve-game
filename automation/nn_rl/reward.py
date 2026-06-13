@@ -28,6 +28,7 @@ from config import (
     REWARD_TURN_PENALTY,
     REWARD_WIN,
     REWARD_DIE,
+    DEFAULT_TIMEOUT_PENALTY,
 )
 
 from pathfinding import (

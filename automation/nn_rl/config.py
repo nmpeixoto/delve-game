@@ -37,10 +37,11 @@ for slot in range(MAX_SHOP_SLOTS):
 HIDDEN_DIM = 256
 
 # ─── PPO HYPERPARAMETERS ─────────────────────────────────────────────────────
-LR = 3e-4
-GAMMA = 0.99              # Discount factor (long episodes)
+LR = 1e-4
+GAMMA = 0.999             # Discount factor (long episodes)
 LAM = 0.95                # GAE lambda
 CLIP_EPS = 0.2            # PPO clip range
+CLIP_V_LOSS = False       # MUST BE FALSE: Returns are unnormalized, clamping to 0.2 locks gradients
 ENTROPY_COEFF = 0.02      # Entropy bonus (exploration)
 VALUE_COEFF = 0.5         # Value loss coefficient
 MAX_GRAD_NORM = 0.5       # Gradient clipping
@@ -63,7 +64,7 @@ DEFAULT_MAX_EPISODE_STEPS = 8000  # Generous full-dungeon stall guard; pass 0 to
 TOTAL_TIMESTEPS = 200_000_000
 
 # ─── LR SCHEDULE ─────────────────────────────────────────────────────────────
-LR_START = 3e-4
+LR_START = 1e-4
 LR_END = 1e-5
 LR_DECAY_STEPS = 1_000_000_000   # Much longer decay: LR stays high to escape local minima
 
@@ -73,29 +74,29 @@ EVAL_EVERY = 250_000
 EVAL_GAMES = 100
 
 # ─── REWARD SHAPING ──────────────────────────────────────────────────────────
-REWARD_WIN = 3500.0             # full clear must dominate all shaping
-REWARD_DIE = -650.0             # losing after a long shaped run must still be bad
-DEFAULT_TIMEOUT_PENALTY = -1600.0
-REWARD_FLOOR_PROGRESS = 180.0   # base reward for going deeper
-REWARD_DESCEND_DEPTH_MULT = 150.0
-REWARD_DESCEND_PREP_BONUS = 220.0
-REWARD_UNPREPARED_DESCEND_PENALTY = -500.0
-REWARD_CURRICULUM_SUCCESS = 300.0
-REWARD_KILL_BASE = 5.0
-REWARD_KILL_XP_MULT = 0.4
-REWARD_KILL_BOSS = 200.0
-REWARD_KILL_ELITE = 15.0
-REWARD_HEAL_MULT = 8.0
-REWARD_TRAP_PENALTY = -3.0
-REWARD_EXPLORE_MULT = 0.1
-REWARD_STAIR_DISCOVERY = 50.0   # increased from 30
-REWARD_GOLD_MULT = 0.01
-REWARD_LEVEL_UP = 8.0
-REWARD_TURN_PENALTY = -0.075
-REWARD_POTION_WASTE = -3.0
-REWARD_KEY_DOOR_CHAIN = 40.0    # NEW: bonus for unlocking door within 20 steps of key pickup
-REWARD_STAIR_APPROACH = 4.0
-REWARD_STAIR_RETREAT = -2.0
+REWARD_WIN = 35.0               # full clear must dominate all shaping
+REWARD_DIE = -6.5               # losing after a long shaped run must still be bad
+DEFAULT_TIMEOUT_PENALTY = -16.0
+REWARD_FLOOR_PROGRESS = 1.8     # base reward for going deeper
+REWARD_DESCEND_DEPTH_MULT = 1.5
+REWARD_DESCEND_PREP_BONUS = 2.2
+REWARD_UNPREPARED_DESCEND_PENALTY = -5.0
+REWARD_CURRICULUM_SUCCESS = 3.0
+REWARD_KILL_BASE = 0.05
+REWARD_KILL_XP_MULT = 0.004
+REWARD_KILL_BOSS = 2.0
+REWARD_KILL_ELITE = 0.15
+REWARD_HEAL_MULT = 0.08
+REWARD_TRAP_PENALTY = -0.03
+REWARD_EXPLORE_MULT = 0.001
+REWARD_STAIR_DISCOVERY = 0.5    # increased from 0.3
+REWARD_GOLD_MULT = 0.0001
+REWARD_LEVEL_UP = 0.08
+REWARD_TURN_PENALTY = -0.00075
+REWARD_POTION_WASTE = -0.03
+REWARD_KEY_DOOR_CHAIN = 0.4     # NEW: bonus for unlocking door within 20 steps of key pickup
+REWARD_STAIR_APPROACH = 0.04
+REWARD_STAIR_RETREAT = -0.02
 
 # ─── CURRICULUM ──────────────────────────────────────────────────────────────
 # The bot must master full Normal dungeon clears before advancing to Hard mode.

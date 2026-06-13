@@ -79,6 +79,7 @@ class RolloutBuffer:
         old_log_probs = chunk_tensor(self.log_probs)
         returns = chunk_tensor(self.returns)
         advantages = chunk_tensor(self.advantages)
+        values = chunk_tensor(self.values)
         masks = chunk_tensor(self.masks)
         dones = chunk_tensor(self.dones)
         
@@ -107,6 +108,7 @@ class RolloutBuffer:
                 'old_log_probs': old_log_probs[batch_idx].reshape(-1),
                 'returns': returns[batch_idx].reshape(-1),
                 'advantages': advantages[batch_idx].reshape(-1),
+                'old_values': values[batch_idx].reshape(-1),
                 'masks': masks[batch_idx].reshape(-1, masks.shape[-1]),
                 'dones': dones[batch_idx].reshape(-1),
                 'hiddens': hiddens_starts[batch_idx],
@@ -171,6 +173,7 @@ class PPO:
                 old_log_probs = batch['old_log_probs']
                 returns = batch['returns']
                 advantages = batch['advantages']
+                old_values = batch['old_values']
                 masks = batch['masks']
                 dones = batch['dones']
                 # Use the hidden state recorded at the start of the chunk
@@ -188,11 +191,18 @@ class PPO:
                 surr2 = torch.clamp(ratio, 1 - config['clip_eps'], 1 + config['clip_eps']) * advantages
                 policy_loss = -torch.min(surr1, surr2).mean()
                 
-                value_loss = 0.5 * (returns - value.squeeze(-1)).pow(2).mean()
+                # Calculate value loss with optional clipping
+                if config.get('clip_v_loss', True):
+                    v_clipped = old_values + torch.clamp(value.squeeze(-1) - old_values, -config['clip_eps'], config['clip_eps'])
+                    v_loss1 = (returns - value.squeeze(-1)).pow(2)
+                    v_loss2 = (returns - v_clipped).pow(2)
+                    value_loss = 0.5 * torch.max(v_loss1, v_loss2).mean()
+                else:
+                    value_loss = 0.5 * (returns - value.squeeze(-1)).pow(2).mean()
                 
                 loss = (policy_loss
-                        + config['value_coeff'] * value_loss
-                        - config['entropy_coeff'] * entropy)
+                        + config.get('value_coeff', 0.5) * value_loss
+                        - config.get('entropy_coeff', 0.02) * entropy)
                 
                 self.optimizer.zero_grad()
                 loss.backward()
