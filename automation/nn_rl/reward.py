@@ -33,6 +33,7 @@ from config import (
     REWARD_GOLD_MULT,
     REWARD_LEVEL_UP,
     REWARD_TURN_PENALTY,
+    REWARD_MENU_PENALTY,
     REWARD_WIN,
     REWARD_DIE,
     DEFAULT_TIMEOUT_PENALTY,
@@ -371,6 +372,11 @@ def compute_reward(prev_G, action, curr_G):
         # Extra penalty to force exploration when completely stagnant out of combat
         reward += REWARD_TURN_PENALTY * floor * 0.5
 
+    turn_delta = curr_G.get("turn", 0) - prev_G.get("turn", 0)
+    if turn_delta == 0 and not made_progress:
+        # Extra penalty if the agent took an RL step (like opening/closing a menu) but the game engine turn didn't advance
+        reward += REWARD_MENU_PENALTY * floor
+
     # ── TURN PENALTY ────────────────────────────────────────────────────────
     reward += REWARD_TURN_PENALTY * floor
 
@@ -588,6 +594,11 @@ def _estimate_reward_components(prev_G, action, curr_G):
     )
     if not made_progress and len(_visible_enemies(curr_G)) == 0:
         _add_component(components, "turn_stagnation", REWARD_TURN_PENALTY * floor * 0.5)
+
+    turn_delta = curr_G.get("turn", 0) - prev_G.get("turn", 0)
+    if turn_delta == 0 and not made_progress:
+        _add_component(components, "menu_stagnation", REWARD_MENU_PENALTY * floor)
+
     _add_component(components, "turn", REWARD_TURN_PENALTY * floor)
     return components
 

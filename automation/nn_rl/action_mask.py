@@ -9,17 +9,24 @@ from config import ACTION_DIM, ACTIONS, MAX_SHOP_SLOTS
 from pathfinding import (
     shortest_stairs_distance as _bfs_stairs_distance,
     known_stair_targets as _known_stair_targets,
-    MAP_W, WALL, FLOOR, STAIRS, SHOP, LOCKED_DOOR, DIRS,
+    MAP_W,
+    WALL,
+    FLOOR,
+    STAIRS,
+    SHOP,
+    LOCKED_DOOR,
+    DIRS,
 )
 
 MAP_H = 36
 
 
 def manhattan(a, b):
-    return abs(a['x'] - b['x']) + abs(a['y'] - b['y'])
+    return abs(a["x"] - b["x"]) + abs(a["y"] - b["y"])
+
 
 def chebyshev(a, b):
-    return max(abs(a['x'] - b['x']), abs(a['y'] - b['y']))
+    return max(abs(a["x"] - b["x"]), abs(a["y"] - b["y"]))
 
 
 def get_action_mask(G):
@@ -30,38 +37,38 @@ def get_action_mask(G):
     Item actions are represented as direct high-level use actions.
     """
     mask = np.zeros(ACTION_DIM, dtype=bool)
-    p = G.get('player', {})
-    map_data = G.get('map', [])
-    enemies = G.get('enemies', [])
-    items = G.get('items', [])
-    shops = G.get('shops', [])
-    seen = G.get('seen', set())
+    p = G.get("player", {})
+    map_data = G.get("map", [])
+    enemies = G.get("enemies", [])
+    items = G.get("items", [])
+    shops = G.get("shops", [])
+    seen = G.get("seen", set())
 
-    px, py = p.get('x', 0), p.get('y', 0)
+    px, py = p.get("x", 0), p.get("y", 0)
 
-    if G.get('gameOver') or G.get('won'):
+    if G.get("gameOver") or G.get("won"):
         return mask
 
-    if G.get('shrineOpen'):
-        mask[ACTIONS['USE_BUFF']] = True
-        mask[ACTIONS['ESCAPE']] = True
+    if G.get("shrineOpen"):
+        mask[ACTIONS["USE_BUFF"]] = True
+        mask[ACTIONS["ESCAPE"]] = True
         return mask
 
-    if G.get('shopOpen'):
-        current_shop = G.get('currentShop') or {}
-        stock = list((current_shop.get('stock') or []))
-        gold = p.get('gold', 0)
+    if G.get("shopOpen"):
+        current_shop = G.get("currentShop") or {}
+        stock = list((current_shop.get("stock") or []))
+        gold = p.get("gold", 0)
         for idx in range(min(MAX_SHOP_SLOTS, len(stock))):
             item = stock[idx]
-            if not item or item.get('sold'):
+            if not item or item.get("sold"):
                 continue
-            if item.get('price', 0) <= gold:
-                action_key = f'SHOP_BUY_{idx}'
+            if item.get("price", 0) <= gold:
+                action_key = f"SHOP_BUY_{idx}"
                 if action_key in ACTIONS:
                     mask[ACTIONS[action_key]] = True
         if _has_sellable_gear(G):
-            mask[ACTIONS['SHOP_SELL']] = True
-        mask[ACTIONS['ESCAPE']] = True
+            mask[ACTIONS["SHOP_SELL"]] = True
+        mask[ACTIONS["ESCAPE"]] = True
         return mask
 
     # Movement is still a real input while rooted: the game consumes root when
@@ -83,82 +90,92 @@ def get_action_mask(G):
     # The agent must learn to bump-attack using the directional MOVE actions.
     # This prevents the agent from being trapped when surrounded, while preserving ACTION_DIM shape.
 
-    if G.get('ability1Cooldown', 0) == 0 and _ability1_valid(G, p, vis_enemies, adj_enemies):
-        mask[ACTIONS['ABILITY1']] = True
-    if (p.get('lvl', 0) >= 5
-            and G.get('ability2Cooldown', 0) == 0
-            and _ability2_valid(G, p, vis_enemies, adj_enemies)):
-        mask[ACTIONS['ABILITY2']] = True
+    if G.get("ability1Cooldown", 0) == 0 and _ability1_valid(
+        G, p, vis_enemies, adj_enemies
+    ):
+        mask[ACTIONS["ABILITY1"]] = True
+    if (
+        p.get("lvl", 0) >= 5
+        and G.get("ability2Cooldown", 0) == 0
+        and _ability2_valid(G, p, vis_enemies, adj_enemies)
+    ):
+        mask[ACTIONS["ABILITY2"]] = True
 
-    carried = [i for i in items if i.get('carried')]
-    if any(i.get('type') == 'potion' for i in carried):
-        if p.get('hp', 0) < p.get('maxHp', 1):
-            mask[ACTIONS['USE_POTION']] = True
-    if any(i.get('type') == 'potion_buff' for i in carried):
-        mask[ACTIONS['USE_BUFF']] = True
-    if any(i.get('type') == 'bomb' for i in carried):
+    carried = [i for i in items if i.get("carried")]
+    if any(i.get("type") == "potion" for i in carried):
+        if p.get("hp", 0) < p.get("maxHp", 1):
+            mask[ACTIONS["USE_POTION"]] = True
+    if any(i.get("type") == "potion_buff" for i in carried):
+        mask[ACTIONS["USE_BUFF"]] = True
+    if any(i.get("type") == "bomb" for i in carried):
         if any(chebyshev(e, p) <= 2 for e in vis_enemies):
-            mask[ACTIONS['USE_BOMB']] = True
-    if any(i.get('type') == 'scroll_teleport' for i in carried):
-        mask[ACTIONS['USE_TELEPORT']] = True
-    if any(i.get('type') == 'scroll' and 'detection' in i.get('name', '').lower() for i in carried):
-        mask[ACTIONS['USE_DETECTION']] = True
+            mask[ACTIONS["USE_BOMB"]] = True
+    if any(i.get("type") == "scroll_teleport" for i in carried):
+        mask[ACTIONS["USE_TELEPORT"]] = True
+    if any(
+        i.get("type") == "scroll" and "detection" in i.get("name", "").lower()
+        for i in carried
+    ):
+        mask[ACTIONS["USE_DETECTION"]] = True
 
     if 0 <= py < len(map_data) and 0 <= px < len(map_data[0]):
         if map_data[py][px] == STAIRS:
-            mask[ACTIONS['DESCEND']] = True
+            mask[ACTIONS["DESCEND"]] = True
 
     near_shop = any(chebyshev(s, p) <= 1 for s in shops)
     if near_shop:
-        mask[ACTIONS['SHOP_OPEN']] = True
+        mask[ACTIONS["SHOP_OPEN"]] = True
 
     if not mask.any():
-        mask[ACTIONS['ESCAPE']] = True
+        mask[ACTIONS["ESCAPE"]] = True
 
     return mask
 
 
 def _visible_enemies(G, seen):
-    cached = G.get('_visible_enemies')
+    cached = G.get("_visible_enemies")
     if cached is not None:
         return cached
-    visible = G.get('visible')
+    visible = G.get("visible")
     if visible is None:
         visible = set()
     elif isinstance(visible, list):
         visible = set(visible)
     result = [
-        e for e in G.get('enemies', [])
-        if not e.get('dying')
-        and not e.get('isPet')
-        and (e.get('y', 0) * MAP_W + e.get('x', 0)) in visible
+        e
+        for e in G.get("enemies", [])
+        if not e.get("dying")
+        and not e.get("isPet")
+        and (e.get("y", 0) * MAP_W + e.get("x", 0)) in visible
     ]
-    G['_visible_enemies'] = result
+    G["_visible_enemies"] = result
     return result
 
 
 def _has_key(G):
-    return any(i.get('type') == 'key' for i in G.get('items', []) if i.get('carried'))
+    return any(i.get("type") == "key" for i in G.get("items", []) if i.get("carried"))
 
 
 def _has_sellable_gear(G):
-    p = G.get('player', {})
-    equipped_weapon = p.get('weapon') or {}
-    equipped_armor = p.get('armor') or {}
-    for item in G.get('items', []):
-        if not item.get('carried') or item.get('type') not in ('weapon', 'armor'):
+    p = G.get("player", {})
+    equipped_weapon = p.get("weapon") or {}
+    equipped_armor = p.get("armor") or {}
+    for item in G.get("items", []):
+        if not item.get("carried") or item.get("type") not in ("weapon", "armor"):
             continue
-        if equipped_weapon and equipped_weapon.get('id') == item.get('id'):
+        if equipped_weapon and equipped_weapon.get("id") == item.get("id"):
             continue
-        if equipped_armor and equipped_armor.get('id') == item.get('id'):
+        if equipped_armor and equipped_armor.get("id") == item.get("id"):
             continue
-        req = item.get('reqClass')
-        if req and p.get('class') not in req:
+        req = item.get("reqClass")
+        if req and p.get("class") not in req:
             return True
-        if item.get('type') == 'weapon':
-            if not equipped_weapon or _weapon_power(item) <= _weapon_power(equipped_weapon):
+        if item.get("type") == "weapon":
+            if not equipped_weapon or _weapon_power(item) <= _weapon_power(
+                equipped_weapon
+            ):
                 return True
-        elif item.get('type') == 'armor':
+        elif item.get("type") == "armor":
             if not equipped_armor or _armor_power(item) <= _armor_power(equipped_armor):
                 return True
     return False
@@ -167,68 +184,67 @@ def _has_sellable_gear(G):
 def _weapon_power(item):
     if not item:
         return 0
-    return item.get('atk', item.get('pow', item.get('amount', 0))) or 0
+    return item.get("atk", item.get("pow", item.get("amount", 0))) or 0
 
 
 def _armor_power(item):
     if not item:
         return 0
-    return item.get('def', item.get('armor', item.get('amount', 0))) or 0
-
+    return item.get("def", item.get("armor", item.get("amount", 0))) or 0
 
 
 def _seen_set(G):
-    seen = G.get('seen', set())
+    seen = G.get("seen", set())
     if isinstance(seen, set):
         return seen
     return set(seen or [])
 
 
 def _ability1_valid(G, p, vis_enemies, adj_enemies):
-    cls = p.get('class', '')
-    if cls == 'rogue':
-        return p.get('freeMoves', 0) <= 0 and _has_useful_move(G, p)
-    if cls == 'mage':
+    cls = p.get("class", "")
+    if cls == "rogue":
+        return p.get("freeMoves", 0) <= 0 and _has_useful_move(G, p)
+    if cls == "mage":
         return len(vis_enemies) > 0
-    if cls == 'ranger':
+    if cls == "ranger":
         return any(_is_line_clear(G, p, e) for e in vis_enemies)
-    if cls in ('warrior', 'paladin', 'necromancer'):
+    if cls in ("warrior", "paladin", "necromancer"):
         return any(chebyshev(e, p) <= 2 for e in vis_enemies)
-    if cls in ('barbarian', 'monk'):
+    if cls in ("barbarian", "monk"):
         return len(adj_enemies) > 0
     return False
 
 
 def _ability2_valid(_G, p, vis_enemies, adj_enemies):
-    cls = p.get('class', '')
-    hp_ratio = p.get('hp', 0) / max(p.get('maxHp', 1), 1)
-    if cls in ('warrior', 'mage'):
+    cls = p.get("class", "")
+    hp_ratio = p.get("hp", 0) / max(p.get("maxHp", 1), 1)
+    if cls in ("warrior", "mage"):
         return len(vis_enemies) > 0 or hp_ratio <= 0.5
-    if cls == 'rogue':
+    if cls == "rogue":
         return len(vis_enemies) > 0
-    if cls == 'paladin':
+    if cls == "paladin":
         return hp_ratio <= 0.8
-    if cls == 'ranger':
+    if cls == "ranger":
         return len(vis_enemies) > 0
-    if cls in ('barbarian', 'necromancer'):
+    if cls in ("barbarian", "necromancer"):
         return len(vis_enemies) > 0
-    if cls == 'monk':
+    if cls == "monk":
         return len(adj_enemies) > 0
     return False
 
 
 def _is_line_clear(G, p, e):
-    dx = e.get('x', 0) - p.get('x', 0)
-    dy = e.get('y', 0) - p.get('y', 0)
+    dx = e.get("x", 0) - p.get("x", 0)
+    dy = e.get("y", 0) - p.get("y", 0)
     if not (dx == 0 or dy == 0 or abs(dx) == abs(dy)):
         return False
 
     sx = 0 if dx == 0 else (1 if dx > 0 else -1)
     sy = 0 if dy == 0 else (1 if dy > 0 else -1)
-    map_data = G.get('map', [])
-    cx, cy = p.get('x', 0) + sx, p.get('y', 0) + sy
+    map_data = G.get("map", [])
+    cx, cy = p.get("x", 0) + sx, p.get("y", 0) + sy
 
-    while cx != e.get('x', 0) or cy != e.get('y', 0):
+    while cx != e.get("x", 0) or cy != e.get("y", 0):
         if cy < 0 or cy >= len(map_data) or cx < 0 or cx >= len(map_data[0]):
             return False
         if map_data[cy][cx] == WALL:
@@ -240,16 +256,19 @@ def _is_line_clear(G, p, e):
 
 
 def _has_useful_move(G, p):
-    map_data = G.get('map', [])
-    enemies = G.get('enemies', [])
-    px, py = p.get('x', 0), p.get('y', 0)
+    map_data = G.get("map", [])
+    enemies = G.get("enemies", [])
+    px, py = p.get("x", 0), p.get("y", 0)
 
     for dx, dy in DIRS:
         nx, ny = px + dx, py + dy
         if 0 <= ny < len(map_data) and 0 <= nx < len(map_data[0]):
             if map_data[ny][nx] == WALL:
                 continue
-            if any(e.get('x') == nx and e.get('y') == ny and not e.get('dying') for e in enemies):
+            if any(
+                e.get("x") == nx and e.get("y") == ny and not e.get("dying")
+                for e in enemies
+            ):
                 continue
             return True
 
