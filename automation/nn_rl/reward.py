@@ -375,7 +375,7 @@ def compute_reward(prev_G, action, curr_G):
     turn_delta = curr_G.get("turn", 0) - prev_G.get("turn", 0)
     if turn_delta == 0 and not made_progress:
         # Extra penalty if the agent took an RL step (like opening/closing a menu) but the game engine turn didn't advance
-        reward += REWARD_MENU_PENALTY * floor
+        reward += REWARD_MENU_PENALTY
 
     # ── TURN PENALTY ────────────────────────────────────────────────────────
     reward += REWARD_TURN_PENALTY * floor
@@ -597,7 +597,7 @@ def _estimate_reward_components(prev_G, action, curr_G):
 
     turn_delta = curr_G.get("turn", 0) - prev_G.get("turn", 0)
     if turn_delta == 0 and not made_progress:
-        _add_component(components, "menu_stagnation", REWARD_MENU_PENALTY * floor)
+        _add_component(components, "menu_stagnation", REWARD_MENU_PENALTY)
 
     _add_component(components, "turn", REWARD_TURN_PENALTY * floor)
     return components
