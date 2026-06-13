@@ -29,6 +29,13 @@ from config import (
     REWARD_WIN,
     REWARD_DIE,
     DEFAULT_TIMEOUT_PENALTY,
+    REWARD_KEY_PICKUP,
+    REWARD_DOOR_UNLOCK,
+    REWARD_SECRET_REVEAL,
+    REWARD_EXPLORE_MILESTONE,
+    REWARD_STAT_ATK_DEF,
+    REWARD_STAT_MAX_HP,
+    REWARD_DAMAGE_PENALTY_MULT,
 )
 
 from pathfinding import (
@@ -149,13 +156,13 @@ def compute_reward(prev_G, action, curr_G):
     key_delta = max(0, curr_key_count - prev_key_count)
     if key_delta > 0:
         reward += (
-            30.0 * key_delta * floor * mults["explore"]
+            REWARD_KEY_PICKUP * key_delta * floor * mults["explore"]
         )  # Scaled: explorers benefit more from keys
 
     unlocked_doors = curr_G.get("_doors_unlocked_this_step", 0)
     if unlocked_doors > 0:
         reward += (
-            50.0 * unlocked_doors * floor * mults["explore"]
+            REWARD_DOOR_UNLOCK * unlocked_doors * floor * mults["explore"]
         )  # Scaled: progress reward per archetype
 
         # Key→door chain bonus: reward completing the key-use sequence quickly
@@ -168,7 +175,7 @@ def compute_reward(prev_G, action, curr_G):
 
     revealed_secrets = curr_G.get("_secrets_revealed_this_step", 0)
     if revealed_secrets > 0:
-        reward += 25.0 * revealed_secrets * floor * mults["explore"]
+        reward += REWARD_SECRET_REVEAL * revealed_secrets * floor * mults["explore"]
 
     revealed_traps = max(0, _revealed_trap_count(curr_G) - _revealed_trap_count(prev_G))
 
@@ -206,20 +213,20 @@ def compute_reward(prev_G, action, curr_G):
         reward += hp_delta * REWARD_HEAL_MULT
 
     if hp_delta < 0:
-        reward += hp_delta * 20.0 * floor * mults["dmg_penalty"]
+        reward += hp_delta * REWARD_DAMAGE_PENALTY_MULT * floor * mults["dmg_penalty"]
 
     # ── STAT GAINS ───────────────────────────────────────────────────────────
     atk_delta = p.get("atk", 0) - pp.get("atk", 0)
     if atk_delta > 0:
-        reward += atk_delta * 5.0
+        reward += atk_delta * REWARD_STAT_ATK_DEF
 
     def_delta = p.get("def", 0) - pp.get("def", 0)
     if def_delta > 0:
-        reward += def_delta * 5.0
+        reward += def_delta * REWARD_STAT_ATK_DEF
 
     maxHp_delta = p.get("maxHp", 1) - pp.get("maxHp", 1)
     if maxHp_delta > 0:
-        reward += maxHp_delta * 0.5
+        reward += maxHp_delta * REWARD_STAT_MAX_HP
 
     resource_gain_reward = _consumable_resource_gain_reward(prev_G, curr_G)
     if resource_gain_reward > 0:
@@ -245,7 +252,7 @@ def compute_reward(prev_G, action, curr_G):
         prev_ratio = _floor_exploration_ratio(prev_G, prev_map)
         for threshold in [0.25, 0.50, 0.75]:
             if prev_ratio < threshold <= curr_ratio:
-                reward += 15.0 * floor * mults["explore"]  # Milestone bonus
+                reward += REWARD_EXPLORE_MILESTONE * floor * mults["explore"]  # Milestone bonus
 
     # ── RESOURCE MANAGEMENT ──────────────────────────────────────────────────
     # NOTE: USE_POTION is hard-masked when hp >= maxHp, so full-HP drinking
@@ -421,12 +428,12 @@ def _estimate_reward_components(prev_G, action, curr_G):
     key_delta = max(0, curr_key_count - prev_key_count)
     if key_delta > 0:
         _add_component(
-            components, "key_door_secret", 30.0 * key_delta * floor * mults["explore"]
+            components, "key_door_secret", REWARD_KEY_PICKUP * key_delta * floor * mults["explore"]
         )
 
     unlocked_doors = curr_G.get("_doors_unlocked_this_step", 0)
     if unlocked_doors > 0:
-        value = 50.0 * unlocked_doors * floor * mults["explore"]
+        value = REWARD_DOOR_UNLOCK * unlocked_doors * floor * mults["explore"]
         last_key_step = curr_G.get("_last_key_pickup_step", -999)
         curr_step = curr_G.get("_current_step", 0)
         if last_key_step >= 0 and (curr_step - last_key_step) <= KEY_DOOR_CHAIN_WINDOW:
@@ -438,7 +445,7 @@ def _estimate_reward_components(prev_G, action, curr_G):
         _add_component(
             components,
             "key_door_secret",
-            25.0 * revealed_secrets * floor * mults["explore"],
+            REWARD_SECRET_REVEAL * revealed_secrets * floor * mults["explore"],
         )
 
     triggered_traps = max(
@@ -471,17 +478,17 @@ def _estimate_reward_components(prev_G, action, curr_G):
     if hp_delta > 0 and pp.get("hp", 0) < pp.get("maxHp", 1) * 0.6:
         _add_component(components, "health", hp_delta * REWARD_HEAL_MULT)
     if hp_delta < 0:
-        _add_component(components, "health", hp_delta * 20.0 * floor * mults["dmg_penalty"])
+        _add_component(components, "health", hp_delta * REWARD_DAMAGE_PENALTY_MULT * floor * mults["dmg_penalty"])
 
     atk_delta = p.get("atk", 0) - pp.get("atk", 0)
     def_delta = p.get("def", 0) - pp.get("def", 0)
     maxHp_delta = p.get("maxHp", 1) - pp.get("maxHp", 1)
     if atk_delta > 0:
-        _add_component(components, "stats", atk_delta * 5.0)
+        _add_component(components, "stats", atk_delta * REWARD_STAT_ATK_DEF)
     if def_delta > 0:
-        _add_component(components, "stats", def_delta * 5.0)
+        _add_component(components, "stats", def_delta * REWARD_STAT_ATK_DEF)
     if maxHp_delta > 0:
-        _add_component(components, "stats", maxHp_delta * 0.5)
+        _add_component(components, "stats", maxHp_delta * REWARD_STAT_MAX_HP)
 
     resource_gain_reward = _consumable_resource_gain_reward(prev_G, curr_G)
     if resource_gain_reward > 0:
@@ -498,7 +505,7 @@ def _estimate_reward_components(prev_G, action, curr_G):
         prev_ratio = _floor_exploration_ratio(prev_G, prev_G.get("map", []))
         for threshold in [0.25, 0.50, 0.75]:
             if prev_ratio < threshold <= curr_ratio:
-                _add_component(components, "explore", 15.0 * floor * mults["explore"])
+                _add_component(components, "explore", REWARD_EXPLORE_MILESTONE * floor * mults["explore"])
 
     if (
         action == 8

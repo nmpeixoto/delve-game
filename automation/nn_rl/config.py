@@ -97,6 +97,13 @@ REWARD_POTION_WASTE = -0.03
 REWARD_KEY_DOOR_CHAIN = 0.4     # NEW: bonus for unlocking door within 20 steps of key pickup
 REWARD_STAIR_APPROACH = 0.04
 REWARD_STAIR_RETREAT = -0.02
+REWARD_KEY_PICKUP = 0.2
+REWARD_DOOR_UNLOCK = 0.3
+REWARD_SECRET_REVEAL = 0.2
+REWARD_EXPLORE_MILESTONE = 0.4
+REWARD_STAT_ATK_DEF = 0.1
+REWARD_STAT_MAX_HP = 0.05
+REWARD_DAMAGE_PENALTY_MULT = 1.0
 
 # ─── CURRICULUM ──────────────────────────────────────────────────────────────
 # The bot must master full Normal dungeon clears before advancing to Hard mode.
