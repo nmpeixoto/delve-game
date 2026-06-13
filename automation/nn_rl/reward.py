@@ -14,14 +14,21 @@ from config import (
     REWARD_KEY_DOOR_CHAIN,
     REWARD_STAIR_APPROACH,
     REWARD_STAIR_RETREAT,
+    REWARD_STAIR_STAND_PENALTY,
     REWARD_TRAP_PENALTY,
     REWARD_UNPREPARED_DESCEND_PENALTY,
+    REWARD_EXPLORE_MULT,
     REWARD_KILL_BOSS,
     REWARD_KILL_ELITE,
     REWARD_KILL_BASE,
     REWARD_KILL_XP_MULT,
     REWARD_HEAL_MULT,
     REWARD_POTION_WASTE,
+    REWARD_ITEM_POTION,
+    REWARD_ITEM_BUFF,
+    REWARD_ITEM_BOMB,
+    REWARD_ITEM_SCROLL,
+    REWARD_ITEM_TELEPORT,
     REWARD_STAIR_DISCOVERY,
     REWARD_GOLD_MULT,
     REWARD_LEVEL_UP,
@@ -236,7 +243,7 @@ def compute_reward(prev_G, action, curr_G):
     explored_delta = curr_G.get("seen_count", 0) - prev_G.get("seen_count", 0)
     if explored_delta > 0:
         reward += (
-            0.1 * explored_delta * floor * mults["explore"]
+            REWARD_EXPLORE_MULT * explored_delta * floor * mults["explore"]
         )  # Strong incentive to explore fast
 
     # ── FLOOR COVERAGE BONUS ───────────────────────────────────────────────────────────
@@ -287,13 +294,7 @@ def compute_reward(prev_G, action, curr_G):
 
                 # Exploit fix: Only reward if we reached a NEW minimum distance
                 if stair_delta > 0 and curr_stair_dist < min_dist_so_far:
-                    reward += (
-                        min(1.0 * (min_dist_so_far - curr_stair_dist), 5.0) * floor
-                    )
                     stair_distance_improved = True
-                # Still penalize walking away from the *current* stairs
-                elif stair_delta < 0:
-                    reward -= min(0.3 * abs(stair_delta), 1.5) * floor
 
         # DIRECT DIRECTIONAL BONUS: brute-force gradient for movement actions
         # If the action was a movement that brought us closer to stairs, big bonus.
@@ -314,16 +315,14 @@ def compute_reward(prev_G, action, curr_G):
             and action != ACTION_DESCEND
             and prev_G.get('floor', 1) < FLOORS
         ):
-            reward -= 0.5 * floor
+            reward += REWARD_STAIR_STAND_PENALTY * floor
 
     # ── GOLD ─────────────────────────────────────────────────────────────────
     gold_delta = p.get("gold", 0) - pp.get("gold", 0)
     if gold_delta > 0:
         reward += gold_delta * REWARD_GOLD_MULT
 
-    xp_delta = p.get("xp", 0) - pp.get("xp", 0)
-    if xp_delta > 0:
-        reward += min(xp_delta * 0.25, 10.0)
+    # xp_delta double dipping removed (already rewarded by kills)
 
     # ── LEVEL UP ─────────────────────────────────────────────────────────────
     level_up = p.get("lvl", 0) > pp.get("lvl", 0)
@@ -351,7 +350,6 @@ def compute_reward(prev_G, action, curr_G):
         or stair_discovered
         or stair_distance_improved
         or gold_delta > 0
-        or xp_delta > 0
         or level_up
         or resource_gain_reward > 0
         or atk_delta > 0
@@ -498,7 +496,7 @@ def _estimate_reward_components(prev_G, action, curr_G):
     explored_delta = curr_G.get("seen_count", 0) - prev_G.get("seen_count", 0)
     if explored_delta > 0:
         _add_component(
-            components, "explore", 0.1 * explored_delta * floor * mults["explore"]
+            components, "explore", REWARD_EXPLORE_MULT * explored_delta * floor * mults["explore"]
         )
 
     if curr_G.get("floor", 1) == prev_G.get("floor", 1):
@@ -527,16 +525,7 @@ def _estimate_reward_components(prev_G, action, curr_G):
         if curr_stair_dist is not None and prev_stair_dist is not None:
             stair_delta = prev_stair_dist - curr_stair_dist
             if stair_delta > 0 and curr_stair_dist < min_dist_so_far:
-                _add_component(
-                    components,
-                    "stairs",
-                    min(1.0 * (min_dist_so_far - curr_stair_dist), 5.0) * floor,
-                )
                 stair_distance_improved = True
-            elif stair_delta < 0:
-                _add_component(
-                    components, "stairs", -min(0.3 * abs(stair_delta), 1.5) * floor
-                )
 
             if prev_stair_dist > 0 and action in (0, 1, 2, 3):
                 if curr_stair_dist < prev_stair_dist:
@@ -557,14 +546,12 @@ def _estimate_reward_components(prev_G, action, curr_G):
             and action != ACTION_DESCEND
             and prev_G.get("floor", 1) < FLOORS
         ):
-            _add_component(components, "stairs", -0.5 * floor)
+            _add_component(components, "stairs", REWARD_STAIR_STAND_PENALTY * floor)
 
     gold_delta = p.get("gold", 0) - pp.get("gold", 0)
     if gold_delta > 0:
         _add_component(components, "gold_xp_level", gold_delta * REWARD_GOLD_MULT)
-    xp_delta = p.get("xp", 0) - pp.get("xp", 0)
-    if xp_delta > 0:
-        _add_component(components, "gold_xp_level", min(xp_delta * 0.25, 10.0))
+    # xp_delta double dipping removed
     level_up = p.get("lvl", 0) > pp.get("lvl", 0)
     if level_up:
         _add_component(components, "gold_xp_level", REWARD_LEVEL_UP)
@@ -591,7 +578,6 @@ def _estimate_reward_components(prev_G, action, curr_G):
         or stair_discovered
         or stair_distance_improved
         or gold_delta > 0
-        or xp_delta > 0
         or level_up
         or resource_gain_reward > 0
         or atk_delta > 0
@@ -655,11 +641,11 @@ def _carried_count(G, item_type):
 
 def _consumable_resource_gain_reward(prev_G, curr_G):
     weights = {
-        "potion": 2.5,
-        "potion_buff": 3.5,
-        "bomb": 4.0,
-        "scroll": 4.0,
-        "scroll_teleport": 5.0,
+        "potion": REWARD_ITEM_POTION,
+        "potion_buff": REWARD_ITEM_BUFF,
+        "bomb": REWARD_ITEM_BOMB,
+        "scroll": REWARD_ITEM_SCROLL,
+        "scroll_teleport": REWARD_ITEM_TELEPORT,
     }
     total = 0.0
     for item_type, reward in weights.items():
