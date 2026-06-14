@@ -594,7 +594,7 @@ def _estimate_reward_components(prev_G, action, curr_G):
     turn_delta = curr_G.get("turn", 0) - prev_G.get("turn", 0)
     stagnant_actions = curr_G.get("_consecutive_stagnant_actions", 0)
     if turn_delta == 0 and not made_progress:
-        if stagnant_actions >= 3:
+        if stagnant_actions >= 6:
             _add_component(components, "menu_stagnation", REWARD_MENU_PENALTY)
 
     _add_component(components, "turn", REWARD_TURN_PENALTY * floor)
