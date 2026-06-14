@@ -255,7 +255,9 @@ def compute_reward(prev_G, action, curr_G):
         prev_ratio = _floor_exploration_ratio(prev_G, prev_map)
         for threshold in [0.25, 0.50, 0.75]:
             if prev_ratio < threshold <= curr_ratio:
-                reward += REWARD_EXPLORE_MILESTONE * floor * mults["explore"]  # Milestone bonus
+                reward += (
+                    REWARD_EXPLORE_MILESTONE * floor * mults["explore"]
+                )  # Milestone bonus
 
     # ── RESOURCE MANAGEMENT ──────────────────────────────────────────────────
     # NOTE: USE_POTION is hard-masked when hp >= maxHp, so full-HP drinking
@@ -309,7 +311,7 @@ def compute_reward(prev_G, action, curr_G):
         if (
             prev_stair_dist == 0
             and action != ACTION_DESCEND
-            and prev_G.get('floor', 1) < FLOORS
+            and prev_G.get("floor", 1) < FLOORS
         ):
             reward += REWARD_STAIR_STAND_PENALTY * floor
 
@@ -428,7 +430,9 @@ def _estimate_reward_components(prev_G, action, curr_G):
     key_delta = max(0, curr_key_count - prev_key_count)
     if key_delta > 0:
         _add_component(
-            components, "key_door_secret", REWARD_KEY_PICKUP * key_delta * floor * mults["explore"]
+            components,
+            "key_door_secret",
+            REWARD_KEY_PICKUP * key_delta * floor * mults["explore"],
         )
 
     unlocked_doors = curr_G.get("_doors_unlocked_this_step", 0)
@@ -479,7 +483,11 @@ def _estimate_reward_components(prev_G, action, curr_G):
     if hp_delta > 0 and pp.get("hp", 0) < pp.get("maxHp", 1) * 0.6:
         _add_component(components, "health", hp_delta * REWARD_HEAL_MULT)
     if hp_delta < 0:
-        _add_component(components, "health", hp_delta * REWARD_DAMAGE_PENALTY_MULT * floor * mults["dmg_penalty"])
+        _add_component(
+            components,
+            "health",
+            hp_delta * REWARD_DAMAGE_PENALTY_MULT * floor * mults["dmg_penalty"],
+        )
 
     atk_delta = p.get("atk", 0) - pp.get("atk", 0)
     def_delta = p.get("def", 0) - pp.get("def", 0)
@@ -498,7 +506,9 @@ def _estimate_reward_components(prev_G, action, curr_G):
     explored_delta = curr_G.get("seen_count", 0) - prev_G.get("seen_count", 0)
     if explored_delta > 0:
         _add_component(
-            components, "explore", REWARD_EXPLORE_MULT * explored_delta * floor * mults["explore"]
+            components,
+            "explore",
+            REWARD_EXPLORE_MULT * explored_delta * floor * mults["explore"],
         )
 
     if curr_G.get("floor", 1) == prev_G.get("floor", 1):
@@ -506,7 +516,11 @@ def _estimate_reward_components(prev_G, action, curr_G):
         prev_ratio = _floor_exploration_ratio(prev_G, prev_G.get("map", []))
         for threshold in [0.25, 0.50, 0.75]:
             if prev_ratio < threshold <= curr_ratio:
-                _add_component(components, "explore", REWARD_EXPLORE_MILESTONE * floor * mults["explore"])
+                _add_component(
+                    components,
+                    "explore",
+                    REWARD_EXPLORE_MILESTONE * floor * mults["explore"],
+                )
 
     if (
         action == 8
@@ -594,7 +608,7 @@ def _estimate_reward_components(prev_G, action, curr_G):
     turn_delta = curr_G.get("turn", 0) - prev_G.get("turn", 0)
     stagnant_actions = curr_G.get("_consecutive_stagnant_actions", 0)
     if turn_delta == 0 and not made_progress:
-        if stagnant_actions >= 6:
+        if stagnant_actions >= 15:
             _add_component(components, "menu_stagnation", REWARD_MENU_PENALTY)
 
     _add_component(components, "turn", REWARD_TURN_PENALTY * floor)
@@ -651,6 +665,7 @@ def _carried_count(G, item_type):
 def _consumable_resource_gain_reward(prev_G, curr_G):
     # Removed explicit item-buying rewards to encourage organic learning based on actual utility
     return 0.0
+
 
 def _revealed_trap_count(G):
     return sum(
