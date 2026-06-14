@@ -10,6 +10,18 @@ FLOORS = 5
 NUM_CLASSES = 8
 CLASSES = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk']
 
+# Optional weights for class selection. Higher number = picked more often.
+CLASS_WEIGHTS = {
+    'warrior': 2.0,
+    'rogue': 1.5,
+    'mage': 3.0,
+    'paladin': 0.5,
+    'ranger': 2.0,
+    'barbarian': 0.2,
+    'necromancer': 0.5,
+    'monk': 3.0
+}
+
 # ─── STATE / ACTION ──────────────────────────────────────────────────────────
 MAX_SHOP_SLOTS = 18
 SHOP_ITEM_FEATURES = 19  # +4 upgrade-stat bits: atk/def/hp/other

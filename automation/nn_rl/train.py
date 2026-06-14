@@ -257,6 +257,18 @@ def episode_rate_stats(window, key):
     for class_name, value in zip(window.get('classes', []), values):
         if not class_name or class_name == 'unknown':
             continue
+
+
+def episode_rate_stats(window, key):
+    values = list(window.get(key, []))
+    if not values:
+        return 0.0, 0.0
+
+    raw_rate = sum(1 for value in values if value) / len(values)
+    class_values = defaultdict(list)
+    for class_name, value in zip(window.get('classes', []), values):
+        if not class_name or class_name == 'unknown':
+            continue
         class_values[class_name].append(bool(value))
 
     if not class_values:
@@ -264,6 +276,24 @@ def episode_rate_stats(window, key):
 
     class_rates = [sum(values_for_class) / len(values_for_class) for values_for_class in class_values.values()]
     return raw_rate, sum(class_rates) / len(class_rates)
+
+
+def calculate_dynamic_weights(window, key):
+    values = list(window.get(key, []))
+    class_values = defaultdict(list)
+    for class_name, value in zip(window.get('classes', []), values):
+        if not class_name or class_name == 'unknown':
+            continue
+        class_values[class_name].append(bool(value))
+        
+    new_weights = {}
+    for c in CLASSES:
+        if c in class_values and class_values[c]:
+            rate = sum(class_values[c]) / len(class_values[c])
+            new_weights[c] = max(0.2, (1.0 - rate) * 2.0)
+        else:
+            new_weights[c] = 3.0
+    return new_weights
 
 
 def episode_class_summary(window, key):
@@ -670,6 +700,11 @@ def main():
                 win_rate = sum(1 for won in recent_wins if won) / len(recent_wins)
                 progress_key = 'wins' if active_phase.get('max_floor') is None else 'curriculum'
                 progress_raw_rate, progress_class_avg_rate = episode_rate_stats(episode_window, progress_key)
+                
+                # Push dynamic class weights to environments
+                dyn_weights = calculate_dynamic_weights(episode_window, progress_key)
+                env.set_class_weights(dyn_weights)
+                
                 progress_rate = progress_class_avg_rate
                 timeout_rate = sum(1 for outcome in recent_outcomes if outcome == 'timeout') / len(recent_outcomes)
                 death_rate = sum(1 for outcome in recent_outcomes if outcome == 'dead') / len(recent_outcomes)

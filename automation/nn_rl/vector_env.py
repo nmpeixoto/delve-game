@@ -16,6 +16,7 @@ from config import (
     DEFAULT_TIMEOUT_PENALTY,
     MAX_SHOP_SLOTS,
     REWARD_CURRICULUM_SUCCESS,
+    CLASS_WEIGHTS,
 )
 
 CLASSES = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk']
@@ -59,13 +60,14 @@ class DelveVectorEnv:
         self.doors_opened_this_floor = [0] * self.num_envs
         self.keys_used_this_floor = [0] * self.num_envs
         self.consecutive_stagnant_actions = [0] * self.num_envs
-        self.class_indices = [i % len(CLASSES) for i in range(num_envs)]
         self._reset_all()
 
     def _make_game(self, env_id):
         seed = random.randint(1, 10_000_000)
-        cls = CLASSES[self.class_indices[env_id]]
-        self.class_indices[env_id] = (self.class_indices[env_id] + 1) % len(CLASSES)
+        
+        weights = [CLASS_WEIGHTS.get(c, 1.0) for c in CLASSES]
+        cls = random.choices(CLASSES, weights=weights, k=1)[0]
+        
         hard = getattr(self, 'curriculum_hard_mode', False)
         return DelveGame(seed=seed, player_class=cls, hard_mode=hard)
 
@@ -505,6 +507,10 @@ def _subproc_worker(pipe, env_kwargs):
                 env.set_curriculum_max_floor(args['max_floor'])
                 env.set_curriculum_hard_mode(args.get('hard_mode', False))
                 pipe.send(True)
+            elif cmd == 'set_class_weights':
+                global CLASS_WEIGHTS
+                CLASS_WEIGHTS.update(args['weights'])
+                pipe.send(True)
             elif cmd == 'close':
                 break
     except Exception as e:
@@ -588,6 +594,12 @@ class SubprocVecEnv:
     def set_curriculum(self, max_floor, hard_mode=False):
         for p in self.pipes:
             p.send(('set_curriculum', {'max_floor': max_floor, 'hard_mode': hard_mode}))
+        for p in self.pipes:
+            self._recv_worker(p)
+
+    def set_class_weights(self, weights):
+        for p in self.pipes:
+            p.send(('set_class_weights', {'weights': weights}))
         for p in self.pipes:
             self._recv_worker(p)
 
