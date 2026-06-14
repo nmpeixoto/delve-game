@@ -55,9 +55,10 @@ class DelveVectorEnv:
         self.last_floor_change_step = [0] * num_envs
         self.last_key_pickup_step = [-999] * num_envs
         self.last_door_unlock_step = [-999] * num_envs
-        self.last_enemy_kill_step = [-999] * num_envs
-        self.doors_opened_this_floor = [0] * num_envs
-        self.keys_used_this_floor = [0] * num_envs
+        self.last_enemy_kill_step = [-999] * self.num_envs
+        self.doors_opened_this_floor = [0] * self.num_envs
+        self.keys_used_this_floor = [0] * self.num_envs
+        self.consecutive_stagnant_actions = [0] * self.num_envs
         self.class_indices = [i % len(CLASSES) for i in range(num_envs)]
         self._reset_all()
 
@@ -84,6 +85,7 @@ class DelveVectorEnv:
             self.last_enemy_kill_step[i] = -999
             self.doors_opened_this_floor[i] = 0
             self.keys_used_this_floor[i] = 0
+            self.consecutive_stagnant_actions[i] = 0
             self._inject_state_metadata(i, self.states[i])
 
     def reset(self, env_ids=None):
@@ -106,6 +108,7 @@ class DelveVectorEnv:
             self.last_enemy_kill_step[eid] = -999
             self.doors_opened_this_floor[eid] = 0
             self.keys_used_this_floor[eid] = 0
+            self.consecutive_stagnant_actions[eid] = 0
             self._inject_state_metadata(eid, state)
         return [self.states[eid] for eid in env_ids]
 
@@ -273,6 +276,7 @@ class DelveVectorEnv:
         state['_last_enemy_kill_step'] = self.last_enemy_kill_step[env_id]
         state['_doors_opened_this_floor'] = self.doors_opened_this_floor[env_id]
         state['_keys_used_this_floor'] = self.keys_used_this_floor[env_id]
+        state['_consecutive_stagnant_actions'] = getattr(self, 'consecutive_stagnant_actions', [0] * self.num_envs)[env_id]
 
         step = self.episode_lengths[env_id]
         state['_steps_since_floor_change'] = min(step - self.last_floor_change_step[env_id], 999)
@@ -402,6 +406,11 @@ class DelveVectorEnv:
                 game.step(decision)
 
             state = game.snapshot()
+            if prev_state and prev_state.get('turn') == state.get('turn'):
+                self.consecutive_stagnant_actions[i] += 1
+            else:
+                self.consecutive_stagnant_actions[i] = 0
+
             done = bool(state.get('gameOver', False)) or bool(state.get('won', False))
 
             self._detect_events(i, prev_state, state, action)
@@ -442,6 +451,7 @@ class DelveVectorEnv:
                 self.last_enemy_kill_step[i] = -999
                 self.doors_opened_this_floor[i] = 0
                 self.keys_used_this_floor[i] = 0
+                self.consecutive_stagnant_actions[i] = 0
                 self._inject_state_metadata(i, reset_state)
                 new_states[i] = reset_state
 

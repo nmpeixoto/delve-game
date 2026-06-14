@@ -373,9 +373,10 @@ def compute_reward(prev_G, action, curr_G):
         reward += REWARD_TURN_PENALTY * floor * 0.5
 
     turn_delta = curr_G.get("turn", 0) - prev_G.get("turn", 0)
+    stagnant_actions = curr_G.get("_consecutive_stagnant_actions", 0)
     if turn_delta == 0 and not made_progress:
-        # Extra penalty if the agent took an RL step (like opening/closing a menu) but the game engine turn didn't advance
-        reward += REWARD_MENU_PENALTY
+        if stagnant_actions >= 3:
+            reward += REWARD_MENU_PENALTY
 
     # ── TURN PENALTY ────────────────────────────────────────────────────────
     reward += REWARD_TURN_PENALTY * floor
@@ -596,8 +597,10 @@ def _estimate_reward_components(prev_G, action, curr_G):
         _add_component(components, "turn_stagnation", REWARD_TURN_PENALTY * floor * 0.5)
 
     turn_delta = curr_G.get("turn", 0) - prev_G.get("turn", 0)
+    stagnant_actions = curr_G.get("_consecutive_stagnant_actions", 0)
     if turn_delta == 0 and not made_progress:
-        _add_component(components, "menu_stagnation", REWARD_MENU_PENALTY)
+        if stagnant_actions >= 3:
+            _add_component(components, "menu_stagnation", REWARD_MENU_PENALTY)
 
     _add_component(components, "turn", REWARD_TURN_PENALTY * floor)
     return components
@@ -651,20 +654,8 @@ def _carried_count(G, item_type):
 
 
 def _consumable_resource_gain_reward(prev_G, curr_G):
-    weights = {
-        "potion": REWARD_ITEM_POTION,
-        "potion_buff": REWARD_ITEM_BUFF,
-        "bomb": REWARD_ITEM_BOMB,
-        "scroll": REWARD_ITEM_SCROLL,
-        "scroll_teleport": REWARD_ITEM_TELEPORT,
-    }
-    total = 0.0
-    for item_type, reward in weights.items():
-        gained = _carried_count(curr_G, item_type) - _carried_count(prev_G, item_type)
-        if gained > 0:
-            total += gained * reward
-    return total
-
+    # Removed explicit item-buying rewards to encourage organic learning based on actual utility
+    return 0.0
 
 def _revealed_trap_count(G):
     return sum(
