@@ -28,11 +28,61 @@ def shortest_stairs_distance(G, map_data, start_x, start_y):
     if not targets:
         return None
 
-    blocked = {
-        (e.get('x'), e.get('y'))
-        for e in G.get('enemies', [])
-        if not e.get('dying') and not e.get('isPet')
+    blocked = _blocked_positions(G)
+    return _bfs_distance_to_targets(G, map_data, start_x, start_y, targets, blocked)
+
+
+def compute_navigation_features(G, map_data, start_x, start_y):
+    """Compute the navigation feature bundle used by the RL state extractor."""
+    seen = _seen_set(G)
+    blocked = _blocked_positions(G)
+    targets = _navigation_targets(G, map_data, seen)
+
+    stairs_distance = None
+    if (
+        len(map_data) > 0
+        and 0 <= start_y < len(map_data)
+        and 0 <= start_x < len(map_data[start_y])
+        and _tile_passable(G, map_data[start_y][start_x])
+        and targets["stairs"]
+    ):
+        stairs_distance = _bfs_distance_to_targets(
+            G, map_data, start_x, start_y, targets["stairs"], blocked
+        )
+
+    unseen_dx, unseen_dy = _bfs_direction_to_unseen(
+        G, map_data, start_x, start_y, seen, blocked
+    )
+    shop_dx, shop_dy = _bfs_direction_to_targets(
+        G, map_data, start_x, start_y, targets["shop"], blocked
+    )
+    shrine_dx, shrine_dy = _bfs_direction_to_targets(
+        G, map_data, start_x, start_y, targets["shrine"], blocked
+    )
+    locked_door_dx, locked_door_dy = _bfs_direction_to_targets(
+        G,
+        map_data,
+        start_x,
+        start_y,
+        targets["locked_door"],
+        blocked,
+        allow_locked_target=True,
+    )
+
+    return {
+        "stairs_distance": stairs_distance,
+        "unseen_dx": unseen_dx,
+        "unseen_dy": unseen_dy,
+        "shop_dx": shop_dx,
+        "shop_dy": shop_dy,
+        "shrine_dx": shrine_dx,
+        "shrine_dy": shrine_dy,
+        "locked_door_dx": locked_door_dx,
+        "locked_door_dy": locked_door_dy,
     }
+
+
+def _bfs_distance_to_targets(G, map_data, start_x, start_y, targets, blocked):
     queue = deque([(start_x, start_y, 0)])
     visited = {(start_x, start_y)}
     while queue:
@@ -139,25 +189,22 @@ def nearest_unseen_direction(G, map_data):
     """Returns (dx, dy) direction toward the nearest UNSEEN FLOOR tile using BFS."""
     p = G.get('player', {})
     start_x, start_y = p.get('x', 0), p.get('y', 0)
-    
     seen = _seen_set(G)
-    
-    blocked = {
-        (e.get('x'), e.get('y'))
-        for e in G.get('enemies', [])
-        if not e.get('dying') and not e.get('isPet')
-    }
-    
+    blocked = _blocked_positions(G)
+    return _bfs_direction_to_unseen(G, map_data, start_x, start_y, seen, blocked)
+
+
+def _bfs_direction_to_unseen(G, map_data, start_x, start_y, seen, blocked):
     queue = deque([(start_x, start_y, 0, 0)])  # x, y, initial_dx, initial_dy
     visited = {(start_x, start_y)}
-    
+
     while queue:
         x, y, i_dx, i_dy = queue.popleft()
-        
+
         # Target: any unseen non-wall tile
         if (y * MAP_W + x) not in seen and map_data[y][x] != WALL:
             return i_dx, i_dy
-            
+
         for dx, dy in DIRS:
             nx, ny = x + dx, y + dy
             if (nx, ny) in visited or (nx, ny) in blocked:
@@ -166,12 +213,12 @@ def nearest_unseen_direction(G, map_data):
                 continue
             if not _tile_passable(G, map_data[ny][nx]):
                 continue
-                
+
             visited.add((nx, ny))
             next_idx = dx if i_dx == 0 and i_dy == 0 else i_dx
             next_idy = dy if i_dx == 0 and i_dy == 0 else i_dy
             queue.append((nx, ny, next_idx, next_idy))
-            
+
     return 0, 0
 
 
@@ -182,50 +229,44 @@ def nearest_poi_direction(G, map_data, poi_type):
     """
     p = G.get('player', {})
     start_x, start_y = p.get('x', 0), p.get('y', 0)
-    
     seen = _seen_set(G)
-    
-    targets = set()
-    if poi_type == 'shop':
-        shop_items = {(i.get('x'), i.get('y')) for i in G.get('items', []) if not i.get('carried') and i.get('price', 0) > 0}
-        for y, row in enumerate(map_data):
-            for x, tile in enumerate(row):
-                if tile == SHOP and (y * MAP_W + x) in seen:
-                    if (x, y) in shop_items:
-                        targets.add((x, y))
-    elif poi_type == 'locked_door':
-        for y, row in enumerate(map_data):
-            for x, tile in enumerate(row):
-                if tile == LOCKED_DOOR and (y * MAP_W + x) in seen:
-                    targets.add((x, y))
-    elif poi_type == 'shrine':
-        for item in G.get('items', []):
-            if item.get('type') == 'shrine' and not item.get('carried'):
-                x, y = item.get('x'), item.get('y')
-                if x is not None and y is not None and (y * MAP_W + x) in seen:
-                    targets.add((x, y))
-                    
+    targets = _navigation_targets(G, map_data, seen).get(poi_type, set())
+    blocked = _blocked_positions(G)
+    return _bfs_direction_to_targets(
+        G,
+        map_data,
+        start_x,
+        start_y,
+        targets,
+        blocked,
+        allow_locked_target=(poi_type == 'locked_door'),
+    )
+
+
+def _bfs_direction_to_targets(
+    G,
+    map_data,
+    start_x,
+    start_y,
+    targets,
+    blocked,
+    allow_locked_target=False,
+):
     if not targets:
         return 0, 0
-        
+
     if (start_x, start_y) in targets:
         return 0, 0
 
-    blocked = {
-        (e.get('x'), e.get('y'))
-        for e in G.get('enemies', [])
-        if not e.get('dying') and not e.get('isPet')
-    }
-    
     queue = deque([(start_x, start_y, 0, 0)])
     visited = {(start_x, start_y)}
-    
+
     while queue:
         x, y, i_dx, i_dy = queue.popleft()
-        
+
         if (x, y) in targets:
             return i_dx, i_dy
-            
+
         for dx, dy in DIRS:
             nx, ny = x + dx, y + dy
             if (nx, ny) in visited or (nx, ny) in blocked:
@@ -235,12 +276,51 @@ def nearest_poi_direction(G, map_data, poi_type):
             if not _tile_passable(G, map_data[ny][nx]):
                 # If the target is a locked door and we don't have a key, it's not passable.
                 # But if it IS the target, we should still allow reaching it!
-                if not (poi_type == 'locked_door' and (nx, ny) in targets):
+                if not (allow_locked_target and (nx, ny) in targets):
                     continue
-                
+
             visited.add((nx, ny))
             next_idx = dx if i_dx == 0 and i_dy == 0 else i_dx
             next_idy = dy if i_dx == 0 and i_dy == 0 else i_dy
             queue.append((nx, ny, next_idx, next_idy))
-            
+
     return 0, 0
+
+
+def _navigation_targets(G, map_data, seen):
+    shop_items = {
+        (i.get('x'), i.get('y'))
+        for i in G.get('items', [])
+        if not i.get('carried') and i.get('price', 0) > 0
+    }
+    targets = {
+        "stairs": set(),
+        "shop": set(),
+        "locked_door": set(),
+        "shrine": set(),
+    }
+    for y, row in enumerate(map_data):
+        for x, tile in enumerate(row):
+            cell_seen = (y * MAP_W + x) in seen
+            if not cell_seen:
+                continue
+            if tile == STAIRS:
+                targets["stairs"].add((x, y))
+            elif tile == SHOP and (x, y) in shop_items:
+                targets["shop"].add((x, y))
+            elif tile == LOCKED_DOOR:
+                targets["locked_door"].add((x, y))
+    for item in G.get('items', []):
+        if item.get('type') == 'shrine' and not item.get('carried'):
+            x, y = item.get('x'), item.get('y')
+            if x is not None and y is not None and (y * MAP_W + x) in seen:
+                targets["shrine"].add((x, y))
+    return targets
+
+
+def _blocked_positions(G):
+    return {
+        (e.get('x'), e.get('y'))
+        for e in G.get('enemies', [])
+        if not e.get('dying') and not e.get('isPet')
+    }

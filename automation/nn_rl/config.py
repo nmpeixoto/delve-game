@@ -26,7 +26,8 @@ CLASS_WEIGHTS = {
 MAX_SHOP_SLOTS = 18
 SHOP_ITEM_FEATURES = 19  # +4 upgrade-stat bits: atk/def/hp/other
 STATE_DIM = 64 + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES
-ACTION_DIM = 18 + MAX_SHOP_SLOTS        # Base gameplay actions + explicit shop buy-slot actions
+LEGACY_ACTION_DIM = 18 + MAX_SHOP_SLOTS  # Base gameplay actions + explicit shop buy-slot actions
+ACTION_SPACE_VERSION = 2
 
 # Action indices
 ACTIONS = {
@@ -45,8 +46,34 @@ ACTIONS = {
 for slot in range(MAX_SHOP_SLOTS):
     ACTIONS[f'SHOP_BUY_{slot}'] = 18 + slot
 
+TACTICAL_ACTIONS = {
+    'RANGED_ATTACK_WEAK': LEGACY_ACTION_DIM,
+    'RANGED_ATTACK_NEAREST': LEGACY_ACTION_DIM + 1,
+    'KITE_SAFE_MOVE': LEGACY_ACTION_DIM + 2,
+}
+ACTIONS.update(TACTICAL_ACTIONS)
+ACTION_DIM = LEGACY_ACTION_DIM + len(TACTICAL_ACTIONS)
+
 # ─── NETWORK ─────────────────────────────────────────────────────────────────
 HIDDEN_DIM = 256
+MODEL_VARIANTS = {
+    'base': {
+        'hidden_dim': HIDDEN_DIM,
+        'cnn_out_dim': 128,
+        'cnn_channels': (32, 32),
+        'cnn_pool_size': 4,
+        'cnn_pool_kind': 'avg',
+        'head_hidden_dim': 64,
+    },
+    'large_tactical': {
+        'hidden_dim': 384,
+        'cnn_out_dim': 256,
+        'cnn_channels': (32, 64, 96),
+        'cnn_pool_size': 8,
+        'cnn_pool_kind': 'avg',
+        'head_hidden_dim': 256,
+    },
+}
 
 # ─── PPO HYPERPARAMETERS ─────────────────────────────────────────────────────
 LR = 1e-4

@@ -37,6 +37,8 @@ class DelveVectorEnv:
         curriculum_max_floor=None,
         curriculum_reward=REWARD_CURRICULUM_SUCCESS,
         curriculum_hard_mode=False,
+        class_schedule=None,
+        seed_base=None,
     ):
         self.num_envs = num_envs
         self.envs_per_worker = envs_per_worker
@@ -45,6 +47,9 @@ class DelveVectorEnv:
         self.curriculum_max_floor = curriculum_max_floor
         self.curriculum_hard_mode = curriculum_hard_mode
         self.curriculum_reward = curriculum_reward
+        self.class_schedule = list(class_schedule or [])
+        self.seed_base = seed_base
+        self._scheduled_game_index = 0
         self.games = [None] * num_envs
         self.states = [None] * num_envs
         self.prev_states = [None] * num_envs
@@ -63,6 +68,23 @@ class DelveVectorEnv:
         self._reset_all()
 
     def _make_game(self, env_id):
+        if self.class_schedule:
+            schedule_index = self._scheduled_game_index
+            self._scheduled_game_index += 1
+            entry = self.class_schedule[schedule_index % len(self.class_schedule)]
+            if isinstance(entry, dict):
+                cls = entry.get('class_name') or entry.get('class') or entry.get('player_class')
+                seed = entry.get('seed')
+                hard = entry.get('hard_mode', getattr(self, 'curriculum_hard_mode', False))
+            else:
+                cls = str(entry)
+                seed = None
+                hard = getattr(self, 'curriculum_hard_mode', False)
+            if seed is None:
+                base = self.seed_base if self.seed_base is not None else 1
+                seed = int(base) + schedule_index
+            return DelveGame(seed=int(seed), player_class=cls, hard_mode=hard)
+
         seed = random.randint(1, 10_000_000)
         
         weights = [CLASS_WEIGHTS.get(c, 1.0) for c in CLASSES]
@@ -170,6 +192,20 @@ class DelveVectorEnv:
             return {'type': 'click', 'target': 'button[onclick="sellWeakerGear()"]'}
         if action == 17:
             return {'type': 'key', 'val': 'Escape'}
+        if action == ACTIONS.get('RANGED_ATTACK_WEAK'):
+            from tactical_actions import choose_line_clear_enemy
+
+            target = choose_line_clear_enemy(state)
+            return {'type': 'attack', 'target': target['id']} if target else self._escape_decision()
+        if action == ACTIONS.get('RANGED_ATTACK_NEAREST'):
+            from tactical_actions import choose_line_clear_enemy
+
+            target = choose_line_clear_enemy(state, prefer='nearest')
+            return {'type': 'attack', 'target': target['id']} if target else self._escape_decision()
+        if action == ACTIONS.get('KITE_SAFE_MOVE'):
+            from tactical_actions import safest_adjacent_move
+
+            return safest_adjacent_move(state) or self._escape_decision()
         shop_buy_start = ACTIONS.get('SHOP_BUY_0', 18)
         if shop_buy_start <= action < shop_buy_start + MAX_SHOP_SLOTS:
             item = self._choose_shop_item_at_slot(state, action - shop_buy_start)
@@ -272,19 +308,39 @@ class DelveVectorEnv:
     def _inject_state_metadata(self, env_id, state):
         if state is None:
             return
-        state['_current_step'] = self.episode_lengths[env_id]
-        state['_last_key_pickup_step'] = self.last_key_pickup_step[env_id]
-        state['_last_door_unlock_step'] = self.last_door_unlock_step[env_id]
-        state['_last_enemy_kill_step'] = self.last_enemy_kill_step[env_id]
-        state['_doors_opened_this_floor'] = self.doors_opened_this_floor[env_id]
-        state['_keys_used_this_floor'] = self.keys_used_this_floor[env_id]
-        state['_consecutive_stagnant_actions'] = getattr(self, 'consecutive_stagnant_actions', [0] * self.num_envs)[env_id]
+        state.update(self._state_metadata(env_id))
 
+    def _state_metadata(self, env_id):
         step = self.episode_lengths[env_id]
-        state['_steps_since_floor_change'] = min(step - self.last_floor_change_step[env_id], 999)
-        state['_steps_since_key_pickup'] = min(step - self.last_key_pickup_step[env_id], 999) if self.last_key_pickup_step[env_id] >= 0 else 999
-        state['_steps_since_enemy_kill'] = min(step - self.last_enemy_kill_step[env_id], 999) if self.last_enemy_kill_step[env_id] >= 0 else 999
-        state['_steps_since_door_unlock'] = min(step - self.last_door_unlock_step[env_id], 999) if self.last_door_unlock_step[env_id] >= 0 else 999
+        return {
+            '_current_step': self.episode_lengths[env_id],
+            '_last_key_pickup_step': self.last_key_pickup_step[env_id],
+            '_last_door_unlock_step': self.last_door_unlock_step[env_id],
+            '_last_enemy_kill_step': self.last_enemy_kill_step[env_id],
+            '_doors_opened_this_floor': self.doors_opened_this_floor[env_id],
+            '_keys_used_this_floor': self.keys_used_this_floor[env_id],
+            '_consecutive_stagnant_actions': getattr(self, 'consecutive_stagnant_actions', [0] * self.num_envs)[env_id],
+            '_steps_since_floor_change': min(step - self.last_floor_change_step[env_id], 999),
+            '_steps_since_key_pickup': min(step - self.last_key_pickup_step[env_id], 999) if self.last_key_pickup_step[env_id] >= 0 else 999,
+            '_steps_since_enemy_kill': min(step - self.last_enemy_kill_step[env_id], 999) if self.last_enemy_kill_step[env_id] >= 0 else 999,
+            '_steps_since_door_unlock': min(step - self.last_door_unlock_step[env_id], 999) if self.last_door_unlock_step[env_id] >= 0 else 999,
+        }
+
+    def observe_arrays(self):
+        from observation import allocate_observation_arrays, observe_game_into
+
+        arrays = allocate_observation_arrays(self.num_envs)
+        for env_id, game in enumerate(self.games):
+            if game is None:
+                continue
+            observe_game_into(
+                game,
+                arrays,
+                env_id,
+                prev_action=self.prev_actions[env_id],
+                metadata=self._state_metadata(env_id),
+            )
+        return arrays.states, arrays.maps, arrays.masks
 
     def _add_reward_component(self, env_id, name, value):
         if not value:
@@ -485,24 +541,68 @@ def _subproc_worker(pipe, env_kwargs):
     from vector_env import DelveVectorEnv
     from state_extractor import numpyize_states, numpyize_maps
     from action_mask import get_action_mask
-    
-    env = DelveVectorEnv(**env_kwargs)
+
+    observation_mode = env_kwargs.pop('observation_mode', 'legacy')
+    transport_mode = env_kwargs.pop('transport_mode', 'pipe')
+    shared_config = env_kwargs.pop('shared_observation_buffer', None)
+    shared_buffer = None
+    env = None
+
+    def collect_observations(states):
+        if observation_mode == 'direct':
+            return env.observe_arrays()
+        np_states = numpyize_states(states, env.prev_actions)
+        np_maps = numpyize_maps(states)
+        masks = np.stack([get_action_mask(s) for s in states]).astype(np.float32, copy=False)
+        return np_states, np_maps, masks
+
+    def send_observations(np_states, np_maps, masks, rewards=None, dones=None, infos=None):
+        if transport_mode == 'shared':
+            shared_buffer.states[...] = np_states
+            shared_buffer.maps[...] = np_maps
+            shared_buffer.masks[...] = masks
+            message = {'ok': True}
+            if rewards is not None:
+                message.update({'rewards': rewards, 'dones': dones, 'infos': infos})
+            pipe.send(message)
+        else:
+            if rewards is None:
+                pipe.send((np_states, np_maps, masks))
+            else:
+                pipe.send((np_states, np_maps, masks, rewards, dones, infos))
+
     try:
+        if transport_mode == 'shared':
+            from shared_rollout import SharedObservationBuffer
+
+            if not shared_config:
+                raise ValueError("shared transport requires shared_observation_buffer")
+            shared_buffer = SharedObservationBuffer.attach(
+                shared_config['state_name'],
+                shared_config['map_name'],
+                shared_config['mask_name'],
+                shared_config['num_envs'],
+            )
+
+        env = DelveVectorEnv(**env_kwargs)
         while True:
             cmd, args = pipe.recv()
             if cmd == 'reset':
                 states = env.reset()
-                np_states = numpyize_states(states)
-                np_maps = numpyize_maps(states)
-                masks = np.stack([get_action_mask(s) for s in states]).astype(np.float32, copy=False)
-                pipe.send((np_states, np_maps, masks))
+                np_states, np_maps, masks = collect_observations(states)
+                send_observations(np_states, np_maps, masks)
             elif cmd == 'step':
                 actions = args['actions']
                 states, rewards, dones, infos = env.step(actions)
-                np_states = numpyize_states(states, env.prev_actions)
-                np_maps = numpyize_maps(states)
-                masks = np.stack([get_action_mask(s) for s in states]).astype(np.float32, copy=False)
-                pipe.send((np_states, np_maps, masks, rewards, dones, infos))
+                np_states, np_maps, masks = collect_observations(states)
+                send_observations(
+                    np_states,
+                    np_maps,
+                    masks,
+                    rewards=rewards,
+                    dones=dones,
+                    infos=infos,
+                )
             elif cmd == 'set_curriculum':
                 env.set_curriculum_max_floor(args['max_floor'])
                 env.set_curriculum_hard_mode(args.get('hard_mode', False))
@@ -521,6 +621,15 @@ def _subproc_worker(pipe, env_kwargs):
             pipe.send(('error', tb))
         except Exception:
             pass
+    finally:
+        if env is not None:
+            env.close()
+        if shared_buffer is not None:
+            shared_buffer.close()
+        try:
+            pipe.close()
+        except Exception:
+            pass
 
 class SubprocVecEnv:
     def __init__(self, num_envs=128, envs_per_worker=16, **kwargs):
@@ -531,6 +640,12 @@ class SubprocVecEnv:
 
         self.num_envs = num_envs
         self.envs_per_worker = envs_per_worker
+        self.observation_mode = kwargs.pop('observation_mode', 'legacy')
+        if self.observation_mode not in ('legacy', 'direct'):
+            raise ValueError("observation_mode must be 'legacy' or 'direct'")
+        self.transport_mode = kwargs.pop('transport_mode', 'pipe')
+        if self.transport_mode not in ('pipe', 'shared'):
+            raise ValueError("transport_mode must be 'pipe' or 'shared'")
         self.num_workers = (num_envs + envs_per_worker - 1) // envs_per_worker
         self.worker_env_counts = [
             min(envs_per_worker, num_envs - i * envs_per_worker)
@@ -538,17 +653,34 @@ class SubprocVecEnv:
         ]
         self.pipes = []
         self.processes = []
+        self.shared_buffers = []
         
         for i, worker_envs in enumerate(self.worker_env_counts):
             parent_pipe, child_pipe = mp.Pipe()
             env_kwargs = kwargs.copy()
+            shared_buffer = None
             env_kwargs['num_envs'] = worker_envs
             env_kwargs['envs_per_worker'] = worker_envs
+            env_kwargs['observation_mode'] = self.observation_mode
+            env_kwargs['transport_mode'] = self.transport_mode
+            if self.transport_mode == 'shared':
+                from shared_rollout import SharedObservationBuffer
+
+                shared_buffer = SharedObservationBuffer.create(worker_envs)
+                env_kwargs['shared_observation_buffer'] = {
+                    'state_name': shared_buffer.state_shm.name,
+                    'map_name': shared_buffer.map_shm.name,
+                    'mask_name': shared_buffer.mask_shm.name,
+                    'num_envs': worker_envs,
+                }
             p = mp.Process(target=_subproc_worker, args=(child_pipe, env_kwargs))
             p.daemon = False
             p.start()
+            if hasattr(child_pipe, 'close'):
+                child_pipe.close()
             self.pipes.append(parent_pipe)
             self.processes.append(p)
+            self.shared_buffers.append(shared_buffer)
             
     def reset(self, env_ids=None):
         if env_ids is not None:
@@ -557,11 +689,20 @@ class SubprocVecEnv:
             p.send(('reset', {}))
         
         np_states, np_maps, masks = [], [], []
-        for p in self.pipes:
-            ns, nm, m = self._recv_worker(p)
-            np_states.append(ns)
-            np_maps.append(nm)
-            masks.append(m)
+        transport_mode = getattr(self, 'transport_mode', 'pipe')
+        shared_buffers = getattr(self, 'shared_buffers', [None] * len(self.pipes))
+        for p, shared_buffer in zip(self.pipes, shared_buffers):
+            message = self._recv_worker(p)
+            if transport_mode == 'shared':
+                self._validate_shared_worker_message(message)
+                np_states.append(shared_buffer.states.copy())
+                np_maps.append(shared_buffer.maps.copy())
+                masks.append(shared_buffer.masks.copy())
+            else:
+                ns, nm, m = message
+                np_states.append(ns)
+                np_maps.append(nm)
+                masks.append(m)
             
         return np.concatenate(np_states), np.concatenate(np_maps), np.concatenate(masks)
 
@@ -573,14 +714,26 @@ class SubprocVecEnv:
             start = end
             
         np_states, np_maps, masks, rewards, dones, infos = [], [], [], [], [], []
-        for p in self.pipes:
-            ns, nm, m, r, d, i = self._recv_worker(p)
-            np_states.append(ns)
-            np_maps.append(nm)
-            masks.append(m)
-            rewards.append(r)
-            dones.append(d)
-            infos.extend(i)
+        transport_mode = getattr(self, 'transport_mode', 'pipe')
+        shared_buffers = getattr(self, 'shared_buffers', [None] * len(self.pipes))
+        for p, shared_buffer in zip(self.pipes, shared_buffers):
+            message = self._recv_worker(p)
+            if transport_mode == 'shared':
+                self._validate_shared_worker_message(message)
+                np_states.append(shared_buffer.states.copy())
+                np_maps.append(shared_buffer.maps.copy())
+                masks.append(shared_buffer.masks.copy())
+                rewards.append(message['rewards'])
+                dones.append(message['dones'])
+                infos.extend(message['infos'])
+            else:
+                ns, nm, m, r, d, i = message
+                np_states.append(ns)
+                np_maps.append(nm)
+                masks.append(m)
+                rewards.append(r)
+                dones.append(d)
+                infos.extend(i)
             
         return (
             np.concatenate(np_states),
@@ -608,6 +761,10 @@ class SubprocVecEnv:
         if isinstance(message, tuple) and len(message) == 2 and message[0] == 'error':
             raise RuntimeError(f"Subproc worker failed:\n{message[1]}")
         return message
+
+    def _validate_shared_worker_message(self, message):
+        if not isinstance(message, dict) or not message.get('ok'):
+            raise RuntimeError(f"Subproc worker returned invalid shared transport message: {message!r}")
         
     def close(self):
         for p in self.pipes:
@@ -619,3 +776,20 @@ class SubprocVecEnv:
             p.join(timeout=2)
             if p.is_alive():
                 p.terminate()
+                p.join(timeout=2)
+        for p in self.pipes:
+            try:
+                p.close()
+            except Exception:
+                pass
+        for shared_buffer in self.shared_buffers:
+            if shared_buffer is None:
+                continue
+            try:
+                shared_buffer.close()
+            except Exception:
+                pass
+            try:
+                shared_buffer.unlink()
+            except FileNotFoundError:
+                pass

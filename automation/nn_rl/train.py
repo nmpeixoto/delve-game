@@ -135,6 +135,12 @@ def parse_args(argv=None):
     parser.add_argument("--envs-per-worker", type=int, default=ENVS_PER_WORKER)
     parser.add_argument("--rollout-steps", type=int, default=ROLLOUT_STEPS)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    parser.add_argument("--hidden-dim", type=int, default=None)
+    parser.add_argument(
+        "--model-variant",
+        choices=sorted(MODEL_VARIANTS),
+        default="base",
+    )
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--checkpoint-dir", default="checkpoints")
     parser.add_argument("--save-every", type=int, default=SAVE_EVERY)
@@ -164,6 +170,24 @@ def parse_args(argv=None):
         "--metrics-log",
         default=os.path.join("runs", "delve_ppo", "metrics.jsonl"),
         help="JSONL file for durable scalar/event logging. Pass an empty string to disable.",
+    )
+    parser.add_argument(
+        "--observation-mode",
+        choices=["legacy", "direct"],
+        default="legacy",
+        help="Observation builder used by rollout workers.",
+    )
+    parser.add_argument(
+        "--transport-mode",
+        choices=["pipe", "shared"],
+        default="pipe",
+        help="Rollout transport used by worker processes.",
+    )
+    parser.add_argument(
+        "--trainer-mode",
+        choices=["sync", "async-double-buffer"],
+        default="sync",
+        help="Synchronous PPO or one-rollout-stale actor/learner overlap.",
     )
     parser.add_argument(
         "--curriculum-max-floor",
@@ -424,7 +448,11 @@ def action_names():
         "Buy",
         "Sell",
         "Esc",
-    ] + [f"Buy{slot + 1}" for slot in range(MAX_SHOP_SLOTS)]
+    ] + [f"Buy{slot + 1}" for slot in range(MAX_SHOP_SLOTS)] + [
+        "RngWeak",
+        "RngNear",
+        "Kite",
+    ]
 
 
 def action_distribution(action_counts):
@@ -551,6 +579,7 @@ def build_training_metrics_row(
     progress_key="wins",
     status_text=None,
     probe_metrics=None,
+    stage_seconds=None,
 ):
     row = {
         "event": "train_report",
@@ -586,6 +615,14 @@ def build_training_metrics_row(
         row["status_text"] = str(status_text)
     if probe_metrics:
         row["probe_metrics"] = dict(probe_metrics)
+    if stage_seconds is not None:
+        row["perf"] = {
+            "steps_per_second": int(total_steps) / max(float(elapsed), 1e-9),
+            "stage_seconds": {
+                str(name): float(seconds)
+                for name, seconds in sorted(dict(stage_seconds).items())
+            },
+        }
     return row
 
 
@@ -638,13 +675,23 @@ def _format_action_ratio(count, total):
 
 def main():
     args = parse_args()
+    if args.trainer_mode == "async-double-buffer":
+        raise RuntimeError(
+            "async-double-buffer is not enabled yet. The direct/shared transport "
+            "path is correct, but local benchmarks did not show a collection "
+            "speedup; keep --trainer-mode sync until a frozen-actor async path "
+            "is implemented and benchmarked."
+        )
     if args.device == "auto":
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
         device = torch.device(args.device)
 
+    model_kwargs = dict(MODEL_VARIANTS[args.model_variant])
+    if args.hidden_dim is not None:
+        model_kwargs["hidden_dim"] = args.hidden_dim
     model = DelveNet(
-        state_dim=STATE_DIM, action_dim=ACTION_DIM, hidden_dim=HIDDEN_DIM
+        state_dim=STATE_DIM, action_dim=ACTION_DIM, **model_kwargs
     ).to(device)
     config = {
         "lr": LR,
@@ -669,7 +716,7 @@ def main():
         args.rollout_steps,
         STATE_DIM,
         ACTION_DIM,
-        model.GRU_HIDDEN,
+        model.hidden_dim,
         device=device,
     )
 
@@ -696,6 +743,7 @@ def main():
     print("=" * 60)
     print(f"  Device:       {device}")
     print(f"  Network:      {model.count_parameters():,} params")
+    print(f"  Model:        {args.model_variant} (hidden={model.hidden_dim})")
     print(
         f"  Envs:         {args.num_envs} ({args.envs_per_worker}/worker, {(args.num_envs + args.envs_per_worker - 1) // args.envs_per_worker} workers)"
     )
@@ -703,6 +751,9 @@ def main():
     print(f"  Batch size:   {args.batch_size}")
     print(f"  Total steps:  {args.total_timesteps:,}")
     print(f"  Episode cap:  {format_episode_cap(args.max_episode_steps)}")
+    print(f"  Observations: {args.observation_mode}")
+    print(f"  Transport:    {args.transport_mode}")
+    print(f"  Trainer:      {args.trainer_mode}")
     print(f"  Resume:       {resume_path or 'No'}")
     print(f"  Optimizer:    {'Reset' if args.reset_optimizer else 'Checkpoint'}")
     print(f"  TensorBoard:  {'Yes' if writer else 'No'} (tensorboard --logdir=runs)")
@@ -711,6 +762,7 @@ def main():
     print()
 
     start_time = time.time()
+    stage_seconds = defaultdict(float)
 
     saved_phase = None if checkpoint is None else checkpoint.get("curriculum_phase")
     saved_steps_in_phase = (
@@ -747,6 +799,8 @@ def main():
         timeout_penalty=args.timeout_penalty,
         curriculum_max_floor=curriculum_max_floor,
         curriculum_hard_mode=curriculum_hard_mode,
+        observation_mode=args.observation_mode,
+        transport_mode=args.transport_mode,
     )
     np_states, np_maps, np_masks = env.reset()
     print(
@@ -790,6 +844,7 @@ def main():
                 phase_budget_warned = True
 
             # Collect rollout from real game environments.
+            stage_t0 = time.perf_counter()
             action_counts = np.zeros(ACTION_DIM, dtype=np.int64)
             probe_accumulator = new_probe_accumulator()
             prev_actions = [None] * args.num_envs
@@ -870,12 +925,15 @@ def main():
                 for i, done in enumerate(dones_np.tolist()):
                     if done:
                         record_episode(episode_window, infos[i])
+            stage_seconds["collect"] += time.perf_counter() - stage_t0
 
             # Update policy.
             last_states = torch.from_numpy(np_states).to(device)
             last_maps = torch.from_numpy(np_maps).to(device)
             last_masks = torch.from_numpy(np_masks).to(device=device, dtype=torch.bool)
+            stage_t0 = time.perf_counter()
             info = ppo.update(buffer, last_states, last_maps, last_masks, hidden)
+            stage_seconds["learner"] += time.perf_counter() - stage_t0
 
             # Logging.
             elapsed = time.time() - start_time
@@ -968,6 +1026,7 @@ def main():
                         progress_key=progress_key,
                         status_text=readout,
                         probe_metrics=finalize_probe_metrics(probe_accumulator),
+                        stage_seconds=stage_seconds,
                     ),
                 )
                 last_report_snapshot = report_snapshot

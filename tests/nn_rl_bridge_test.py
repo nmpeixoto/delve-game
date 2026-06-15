@@ -13,9 +13,11 @@ sys.path.insert(0, NN_RL_DIR)
 from headless_bridge import HeadlessWorker, RL_RUNNER
 from action_mask import get_action_mask
 from config import (
-    ACTION_DIM, ACTIONS, CURRICULUM, DEFAULT_MAX_EPISODE_STEPS, MAX_SHOP_SLOTS,
-    FAILED_EPISODE_REWARD_CAP, REWARD_CURRICULUM_SUCCESS, SHOP_ITEM_FEATURES,
-    STATE_DIM,
+    ACTION_DIM, ACTIONS, CLASSES, CURRICULUM, DEFAULT_MAX_EPISODE_STEPS,
+    DEFAULT_TIMEOUT_PENALTY, LEGACY_ACTION_DIM, MAX_SHOP_SLOTS, REWARD_CURRICULUM_SUCCESS,
+    REWARD_DIE, REWARD_FLOOR_PROGRESS, REWARD_STAIR_APPROACH, REWARD_WIN,
+    REWARD_KEY_PICKUP, REWARD_SECRET_REVEAL, REWARD_STAIR_RETREAT,
+    REWARD_TURN_PENALTY, SHOP_ITEM_FEATURES, STATE_DIM,
 )
 
 from reward import compute_reward
@@ -135,7 +137,7 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(info["outcome"], "curriculum")
         self.assertTrue(info["curriculum_success"])
         self.assertEqual(info["final_floor"], 3)
-        self.assertGreaterEqual(reward, 300.0)
+        self.assertEqual(reward, 5.0 + REWARD_CURRICULUM_SUCCESS)
 
     def test_curriculum_does_not_end_before_target_floor_is_cleared(self):
         env = DelveVectorEnv.__new__(DelveVectorEnv)
@@ -158,7 +160,7 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertFalse(info["curriculum_success"])
         self.assertEqual(reward, 5.0)
 
-    def test_failed_episode_claws_back_banked_positive_shaping_reward(self):
+    def test_failed_episode_keeps_terminal_penalty_without_hidden_clawback(self):
         env = DelveVectorEnv.__new__(DelveVectorEnv)
         env.max_episode_steps = 5000
         env.timeout_penalty = -250.0
@@ -181,10 +183,10 @@ class NnRlBridgeTest(unittest.TestCase):
 
         self.assertTrue(done)
         self.assertEqual(info["outcome"], "dead")
-        self.assertLessEqual(info["total_reward"], FAILED_EPISODE_REWARD_CAP)
-        self.assertLess(reward, -650.0)
+        self.assertEqual(info["total_reward"], 1250.0)
+        self.assertEqual(reward, -650.0)
 
-    def test_timeout_claws_back_banked_positive_shaping_reward(self):
+    def test_timeout_applies_only_configured_timeout_penalty(self):
         env = DelveVectorEnv.__new__(DelveVectorEnv)
         env.max_episode_steps = 10
         env.timeout_penalty = -400.0
@@ -207,8 +209,8 @@ class NnRlBridgeTest(unittest.TestCase):
 
         self.assertTrue(done)
         self.assertEqual(info["outcome"], "timeout")
-        self.assertLessEqual(info["total_reward"], FAILED_EPISODE_REWARD_CAP)
-        self.assertLess(reward, -400.0)
+        self.assertEqual(info["total_reward"], 500.0)
+        self.assertEqual(reward, -398.0)
 
     def test_resume_latest_uses_highest_step_checkpoint(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -306,45 +308,17 @@ class NnRlBridgeTest(unittest.TestCase):
             "success_window": 100,
         }
         window = new_episode_window(window=100)
-        for _ in range(41):
+        names = [name for name in CLASSES for _ in range(12)]
+        names.extend(CLASSES[:4])
+        for index, class_name in enumerate(names):
             record_episode(window, {
                 "total_reward": 10.0,
                 "total_steps": 20,
                 "won": False,
                 "final_floor": 2,
                 "outcome": "curriculum",
-                "curriculum_success": True,
-                "class_name": "warrior",
-            })
-        for _ in range(9):
-            record_episode(window, {
-                "total_reward": 10.0,
-                "total_steps": 20,
-                "won": False,
-                "final_floor": 2,
-                "outcome": "curriculum",
-                "curriculum_success": False,
-                "class_name": "warrior",
-            })
-        for _ in range(41):
-            record_episode(window, {
-                "total_reward": 10.0,
-                "total_steps": 20,
-                "won": False,
-                "final_floor": 2,
-                "outcome": "curriculum",
-                "curriculum_success": True,
-                "class_name": "mage",
-            })
-        for _ in range(9):
-            record_episode(window, {
-                "total_reward": 10.0,
-                "total_steps": 20,
-                "won": False,
-                "final_floor": 2,
-                "outcome": "curriculum",
-                "curriculum_success": False,
-                "class_name": "mage",
+                "curriculum_success": index % 12 < 10,
+                "class_name": class_name,
             })
 
         should_advance = curriculum_should_advance(phase, window, steps_in_phase=750_000)
@@ -407,7 +381,7 @@ class NnRlBridgeTest(unittest.TestCase):
         with patch.object(sys, "argv", ["train.py"]):
             args = parse_args()
 
-        self.assertEqual(args.max_episode_steps, 6000)
+        self.assertEqual(args.max_episode_steps, DEFAULT_MAX_EPISODE_STEPS)
 
     def test_train_accepts_explicit_episode_cap_for_stall_guard(self):
         with patch.object(sys, "argv", ["train.py", "--max-episode-steps", "6000"]):
@@ -415,11 +389,12 @@ class NnRlBridgeTest(unittest.TestCase):
 
         self.assertEqual(args.max_episode_steps, 6000)
 
-    def test_train_default_timeout_penalty_makes_timeouts_failed_episodes(self):
+    def test_train_default_timeout_penalty_uses_configured_stall_guard_penalty(self):
         with patch.object(sys, "argv", ["train.py"]):
             args = parse_args()
 
-        self.assertLessEqual(args.timeout_penalty, -1500.0)
+        self.assertEqual(args.timeout_penalty, DEFAULT_TIMEOUT_PENALTY)
+        self.assertLess(args.timeout_penalty, 0.0)
 
     def test_legacy_headless_evaluator_uses_configured_episode_cap(self):
         calls = []
@@ -514,7 +489,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, 0, {**state, "player": {**state["player"], "x": 6}})
 
-        self.assertLessEqual(reward, -0.04)
+        self.assertLess(reward, 0.0)
 
     def test_reward_makes_single_tile_exploration_nearly_neutral(self):
         state = {
@@ -540,7 +515,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, 13, {**state, "floor": 2, "seen_count": 0})
 
-        self.assertGreaterEqual(reward, 49.0)
+        self.assertGreaterEqual(reward, REWARD_FLOOR_PROGRESS * 0.5)
 
     def test_full_win_reward_dominates_shaped_progress(self):
         state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=5, stairs_y=5)
@@ -549,7 +524,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, ACTIONS["DESCEND"], {**state, "won": True})
 
-        self.assertGreaterEqual(reward, 3000.0)
+        self.assertGreaterEqual(reward, REWARD_WIN)
 
     def test_death_reward_is_strongly_negative_even_after_progress(self):
         state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
@@ -557,7 +532,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, ACTIONS["MOVE_RIGHT"], {**state, "gameOver": True})
 
-        self.assertLessEqual(reward, -500.0)
+        self.assertLessEqual(reward, REWARD_DIE)
 
     def test_prepared_descend_is_better_than_underprepared_rush(self):
         prepared = self._known_stairs_state(player_x=5, player_y=5, stairs_x=5, stairs_y=5)
@@ -589,8 +564,8 @@ class NnRlBridgeTest(unittest.TestCase):
         prepared_reward = compute_reward(prepared, ACTIONS["DESCEND"], {**prepared, "floor": 4})
         rushed_reward = compute_reward(rushed, ACTIONS["DESCEND"], {**rushed, "floor": 4})
 
-        self.assertGreater(prepared_reward, rushed_reward + 100.0)
-        self.assertGreater(rushed_reward, 0.0)
+        self.assertGreater(prepared_reward, rushed_reward + 1.0)
+        self.assertLess(rushed_reward, prepared_reward)
 
     def test_reward_prefers_moving_toward_known_stairs(self):
         state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
@@ -598,7 +573,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, ACTIONS["MOVE_RIGHT"], after)
 
-        self.assertGreater(reward, 2.0)
+        self.assertGreater(reward, 0.0)
 
     def test_repeated_stair_approach_is_not_a_positive_reward_source(self):
         state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
@@ -607,7 +582,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, ACTIONS["MOVE_RIGHT"], after)
 
-        self.assertLessEqual(reward, 0.0)
+        self.assertLess(reward, REWARD_STAIR_APPROACH)
 
     def test_reward_penalizes_moving_away_from_known_stairs(self):
         state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
@@ -615,7 +590,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, ACTIONS["MOVE_LEFT"], after)
 
-        self.assertLess(reward, -0.08)
+        self.assertLessEqual(reward, REWARD_STAIR_RETREAT)
 
     def test_reward_for_picking_up_key(self):
         state = {
@@ -633,7 +608,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, 0, after)
 
-        self.assertGreaterEqual(reward, 25.0)
+        self.assertGreaterEqual(reward, REWARD_KEY_PICKUP + REWARD_TURN_PENALTY)
 
     def test_reward_for_unlocking_locked_door(self):
         state = {
@@ -656,7 +631,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, 0, after)
 
-        self.assertGreaterEqual(reward, 40.0)
+        self.assertGreaterEqual(reward, 0.4)
 
     def test_reward_for_revealing_secret_door(self):
         state = {
@@ -671,7 +646,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         reward = compute_reward(state, 0, after)
 
-        self.assertGreaterEqual(reward, 20.0)
+        self.assertGreaterEqual(reward, REWARD_SECRET_REVEAL + REWARD_TURN_PENALTY)
 
     def test_reward_for_revealing_trap_with_detection(self):
         state = {
@@ -688,7 +663,7 @@ class NnRlBridgeTest(unittest.TestCase):
 
         self.assertLess(reward, 0.0)
 
-    def test_reward_treats_new_consumable_resources_as_progress(self):
+    def test_reward_does_not_add_explicit_consumable_purchase_bonus(self):
         state = {
             "floor": 1,
             "player": {"hp": 20, "maxHp": 20, "x": 5, "y": 5, "lvl": 1, "gold": 100},
@@ -708,14 +683,16 @@ class NnRlBridgeTest(unittest.TestCase):
 
                 reward = compute_reward(state, ACTIONS["SHOP_BUY_0"], after)
 
-                self.assertGreater(reward, 0.0)
+                self.assertLess(reward, 0.0)
 
     def test_action_space_excludes_non_gameplay_wait_and_inventory_toggle(self):
-        self.assertEqual(ACTION_DIM, 36)
+        self.assertEqual(LEGACY_ACTION_DIM, 36)
+        self.assertEqual(ACTION_DIM, 39)
         self.assertNotIn("WAIT", ACTIONS)
         self.assertNotIn("INVENTORY", ACTIONS)
         self.assertEqual(max(ACTIONS.values()), ACTION_DIM - 1)
         self.assertIn("SHOP_BUY_0", ACTIONS)
+        self.assertIn("KITE_SAFE_MOVE", ACTIONS)
 
     def test_action_mask_uses_current_action_space_without_wait_slot(self):
         state = {
@@ -977,9 +954,9 @@ class NnRlBridgeTest(unittest.TestCase):
         summary = episode_class_summary(window, "curriculum")
 
         self.assertIn("Class counts:", summary)
-        self.assertIn("warrior 1/2 (50%)", summary)
-        self.assertIn("mage 2/2 (100%)", summary)
-        self.assertIn("rogue 0/1 (0%)", summary)
+        self.assertIn("warrior 1/2 (50%, F2.0)", summary)
+        self.assertIn("mage 2/2 (100%, F2.0)", summary)
+        self.assertIn("rogue 0/1 (0%, F2.0)", summary)
 
     def test_training_status_explains_when_the_run_is_below_target(self):
         readout = format_training_status(

@@ -6,6 +6,7 @@ Computes which trainable actions are valid for the current game state.
 import numpy as np
 
 from config import ACTION_DIM, ACTIONS, MAX_SHOP_SLOTS
+from tactical_actions import choose_line_clear_enemy, safest_adjacent_move
 from pathfinding import (
     shortest_stairs_distance as _bfs_stairs_distance,
     known_stair_targets as _known_stair_targets,
@@ -101,6 +102,13 @@ def get_action_mask(G):
     ):
         mask[ACTIONS["ABILITY2"]] = True
 
+    if _tactical_actions_allowed(p):
+        if choose_line_clear_enemy(G) is not None:
+            mask[ACTIONS["RANGED_ATTACK_WEAK"]] = True
+            mask[ACTIONS["RANGED_ATTACK_NEAREST"]] = True
+        if safest_adjacent_move(G) is not None:
+            mask[ACTIONS["KITE_SAFE_MOVE"]] = True
+
     carried = [i for i in items if i.get("carried")]
     if any(i.get("type") == "potion" for i in carried):
         if p.get("hp", 0) < p.get("maxHp", 1):
@@ -154,6 +162,10 @@ def _visible_enemies(G, seen):
 
 def _has_key(G):
     return any(i.get("type") == "key" for i in G.get("items", []) if i.get("carried"))
+
+
+def _tactical_actions_allowed(player):
+    return str(player.get("class", "")).lower() in {"rogue", "mage", "ranger"}
 
 
 def _has_sellable_gear(G):

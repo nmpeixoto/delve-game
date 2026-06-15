@@ -2125,6 +2125,10 @@ class DelveGame:
             self.move(sdx, sdy)
 
     # ─── SNAPSHOT (matches JS captureSnapshot for RL compatibility) ───────
+    def observe_into(self, arrays, index: int, prev_action=None):
+        from observation import observe_game_into
+        return observe_game_into(self, arrays, index, prev_action)
+
     def snapshot(self):
         """Return a state dict compatible with the existing RL pipeline."""
         p = self.player

@@ -236,7 +236,7 @@ class PPO:
     def load(self, path, load_optimizer=True):
         checkpoint = torch.load(path, map_location=self.device)
         self.network.load_state_dict(checkpoint['network'])
-        if load_optimizer:
+        if load_optimizer and 'optimizer' in checkpoint and 'scheduler' in checkpoint:
             self.optimizer.load_state_dict(checkpoint['optimizer'])
             self.scheduler.load_state_dict(checkpoint['scheduler'])
         return checkpoint
