@@ -264,14 +264,24 @@ def curriculum_should_advance(phase, curriculum_results, steps_in_phase):
         recent = curriculum_results.get(progress_key, [])
         if len(recent) < window:
             return False
-        _, success_rate = episode_rate_stats(curriculum_results, progress_key)
+            
+        class_values = defaultdict(list)
+        for class_name, value in zip(curriculum_results.get("classes", []), recent):
+            if not class_name or class_name == "unknown":
+                continue
+            class_values[class_name].append(bool(value))
+            
+        if len(class_values) < len(CLASS_NAMES):
+            return False
+            
+        class_rates = [sum(vals) / len(vals) for vals in class_values.values()]
+        return all(rate >= float(threshold) for rate in class_rates)
     else:
         recent = list(curriculum_results)[-window:]
         if len(recent) < window:
             return False
         success_rate = sum(1 for success in recent if success) / len(recent)
-
-    return success_rate >= float(threshold)
+        return success_rate >= float(threshold)
 
 
 def new_episode_window(window=LOG_WINDOW_EPISODES):
