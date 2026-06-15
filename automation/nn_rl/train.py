@@ -348,6 +348,9 @@ def episode_rate_stats(window, key):
 
 def calculate_dynamic_weights(window, key):
     values = list(window.get(key, []))
+    if not values:
+        return {c: 1.0 for c in CLASSES}
+
     class_values = defaultdict(list)
     for class_name, value in zip(window.get("classes", []), values):
         if not class_name or class_name == "unknown":
@@ -358,9 +361,9 @@ def calculate_dynamic_weights(window, key):
     for c in CLASSES:
         if c in class_values and class_values[c]:
             rate = sum(class_values[c]) / len(class_values[c])
-            new_weights[c] = max(0.2, (1.0 - rate) * 2.0)
+            new_weights[c] = max(1.0, min(2.0, 1.0 + (1.0 - rate)))
         else:
-            new_weights[c] = 3.0
+            new_weights[c] = 2.0
     return new_weights
 
 
