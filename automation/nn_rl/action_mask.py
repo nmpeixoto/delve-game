@@ -106,7 +106,10 @@ def get_action_mask(G):
         if choose_line_clear_enemy(G) is not None:
             mask[ACTIONS["RANGED_ATTACK_WEAK"]] = True
             mask[ACTIONS["RANGED_ATTACK_NEAREST"]] = True
-        if safest_adjacent_move(G) is not None:
+        kite_enemies = _kite_pressure_enemies(p, vis_enemies)
+        if kite_enemies and safest_adjacent_move(
+            G, threat_enemies=kite_enemies, require_increase=True
+        ) is not None:
             mask[ACTIONS["KITE_SAFE_MOVE"]] = True
 
     carried = [i for i in items if i.get("carried")]
@@ -166,6 +169,15 @@ def _has_key(G):
 
 def _tactical_actions_allowed(player):
     return str(player.get("class", "")).lower() in {"rogue", "mage", "ranger"}
+
+
+def _kite_pressure_enemies(player, visible_enemies):
+    px, py = player.get("x", 0), player.get("y", 0)
+    return [
+        enemy
+        for enemy in visible_enemies
+        if abs(enemy.get("x", 0) - px) + abs(enemy.get("y", 0) - py) <= 4
+    ]
 
 
 def _has_sellable_gear(G):

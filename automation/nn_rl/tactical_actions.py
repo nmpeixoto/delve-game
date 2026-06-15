@@ -74,17 +74,30 @@ def choose_line_clear_enemy(state, prefer="weak"):
     )
 
 
-def safest_adjacent_move(state):
+def safest_adjacent_move(state, threat_enemies=None, require_increase=False):
     player = state.get("player", {})
     map_data = state.get("map", [])
-    enemies = [
+    all_enemies = [
         enemy
         for enemy in state.get("enemies", [])
         if not enemy.get("dying") and not enemy.get("isPet")
     ]
-    occupied = {(enemy.get("x"), enemy.get("y")) for enemy in enemies}
+    enemies = threat_enemies if threat_enemies is not None else all_enemies
+    enemies = [
+        enemy
+        for enemy in enemies
+        if not enemy.get("dying") and not enemy.get("isPet")
+    ]
+    if not enemies:
+        return None
+
+    occupied = {(enemy.get("x"), enemy.get("y")) for enemy in all_enemies}
     px, py = player.get("x", 0), player.get("y", 0)
     nearest = _nearest_enemy(player, enemies)
+    current_min_dist = min(
+        abs(enemy.get("x", 0) - px) + abs(enemy.get("y", 0) - py)
+        for enemy in enemies
+    )
     best = None
 
     for dx, dy in DIR_TO_KEY:
@@ -102,6 +115,8 @@ def safest_adjacent_move(state):
             (abs(enemy.get("x", 0) - x) + abs(enemy.get("y", 0) - y) for enemy in enemies),
             default=99,
         )
+        if require_increase and min_dist <= current_min_dist:
+            continue
         away_score = _away_score(nearest, dx, dy, px, py)
         candidate = (min_dist, away_score, -abs(dx), -abs(dy), -dy, -dx)
         if best is None or candidate > best[0]:

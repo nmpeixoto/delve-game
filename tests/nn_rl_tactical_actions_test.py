@@ -30,10 +30,38 @@ class NnRlTacticalActionsTest(unittest.TestCase):
         state = {
             "player": {"x": 5, "y": 5, "class": "mage"},
             "map": [[1 for _ in range(12)] for _ in range(12)],
+            "visible": {5 * 56 + 6},
             "enemies": [{"id": "e", "x": 6, "y": 5, "hp": 10, "dying": False}],
         }
 
         self.assertEqual(safest_adjacent_move(state), {"type": "key", "val": "ArrowLeft"})
+
+    def test_safest_adjacent_move_can_require_distance_gain(self):
+        state = {
+            "player": {"x": 5, "y": 5, "class": "mage"},
+            "map": [[1 for _ in range(12)] for _ in range(12)],
+            "visible": {3 * 56 + 5},
+            "enemies": [{"id": "e", "x": 5, "y": 3, "hp": 10, "dying": False}],
+        }
+
+        self.assertEqual(
+            safest_adjacent_move(state, threat_enemies=state["enemies"], require_increase=True),
+            {"type": "key", "val": "ArrowDown"},
+        )
+
+    def test_safest_adjacent_move_rejects_non_improving_moves_when_required(self):
+        state = {
+            "player": {"x": 5, "y": 5, "class": "mage"},
+            "map": [[0 for _ in range(12)] for _ in range(12)],
+            "visible": {6 * 56 + 6},
+            "enemies": [{"id": "e", "x": 6, "y": 6, "hp": 10, "dying": False}],
+        }
+        state["map"][5][5] = 1
+        state["map"][5][6] = 1
+
+        self.assertIsNone(
+            safest_adjacent_move(state, threat_enemies=state["enemies"], require_increase=True)
+        )
 
     def test_tactical_actions_are_appended_after_legacy_action_space(self):
         self.assertEqual(LEGACY_ACTION_DIM, 36)
@@ -60,6 +88,40 @@ class NnRlTacticalActionsTest(unittest.TestCase):
         self.assertTrue(mask[ACTIONS["RANGED_ATTACK_WEAK"]])
         self.assertTrue(mask[ACTIONS["RANGED_ATTACK_NEAREST"]])
         self.assertTrue(mask[ACTIONS["KITE_SAFE_MOVE"]])
+
+    def test_action_mask_hides_kite_without_visible_pressure(self):
+        state = {
+            "player": {"x": 5, "y": 5, "class": "mage", "hp": 10, "maxHp": 20},
+            "map": [[1 for _ in range(12)] for _ in range(12)],
+            "visible": set(),
+            "enemies": [
+                {"id": "far", "x": 10, "y": 5, "hp": 10, "maxHp": 10, "dying": False},
+            ],
+            "items": [],
+            "shops": [],
+        }
+
+        mask = get_action_mask(state)
+
+        self.assertFalse(mask[ACTIONS["KITE_SAFE_MOVE"]])
+
+    def test_action_mask_hides_kite_when_safe_move_does_not_increase_distance(self):
+        state = {
+            "player": {"x": 5, "y": 5, "class": "mage", "hp": 10, "maxHp": 20},
+            "map": [[0 for _ in range(12)] for _ in range(12)],
+            "visible": {6 * 56 + 6},
+            "enemies": [
+                {"id": "e", "x": 6, "y": 6, "hp": 10, "maxHp": 10, "dying": False},
+            ],
+            "items": [],
+            "shops": [],
+        }
+        state["map"][5][5] = 1
+        state["map"][5][6] = 1
+
+        mask = get_action_mask(state)
+
+        self.assertFalse(mask[ACTIONS["KITE_SAFE_MOVE"]])
 
     def test_vector_env_translates_tactical_actions(self):
         state = {

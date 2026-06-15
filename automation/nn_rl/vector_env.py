@@ -203,9 +203,23 @@ class DelveVectorEnv:
             target = choose_line_clear_enemy(state, prefer='nearest')
             return {'type': 'attack', 'target': target['id']} if target else self._escape_decision()
         if action == ACTIONS.get('KITE_SAFE_MOVE'):
-            from tactical_actions import safest_adjacent_move
+            from tactical_actions import safest_adjacent_move, visible_enemies
 
-            return safest_adjacent_move(state) or self._escape_decision()
+            player = state.get('player', {})
+            px, py = player.get('x', 0), player.get('y', 0)
+            pressure_enemies = [
+                enemy
+                for enemy in visible_enemies(state)
+                if abs(enemy.get('x', 0) - px) + abs(enemy.get('y', 0) - py) <= 4
+            ]
+            return (
+                safest_adjacent_move(
+                    state,
+                    threat_enemies=pressure_enemies,
+                    require_increase=True,
+                )
+                or self._escape_decision()
+            )
         shop_buy_start = ACTIONS.get('SHOP_BUY_0', 18)
         if shop_buy_start <= action < shop_buy_start + MAX_SHOP_SLOTS:
             item = self._choose_shop_item_at_slot(state, action - shop_buy_start)
