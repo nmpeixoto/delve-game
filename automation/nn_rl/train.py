@@ -186,6 +186,11 @@ def parse_args(argv=None):
         help="JSONL file for durable scalar/event logging. Pass an empty string to disable.",
     )
     parser.add_argument(
+        "--tensorboard-logdir",
+        default=os.path.join("runs", "delve_ppo"),
+        help="TensorBoard event directory.",
+    )
+    parser.add_argument(
         "--observation-mode",
         choices=["legacy", "direct"],
         default="legacy",
@@ -757,7 +762,7 @@ def main():
     # TensorBoard
     writer = None
     if should_use_tensorboard(args):
-        writer = SummaryWriter("runs/delve_ppo")
+        writer = SummaryWriter(args.tensorboard_logdir)
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     metrics_log_path = (args.metrics_log or "").strip()
@@ -782,7 +787,10 @@ def main():
     print(f"  Trainer:      {args.trainer_mode}")
     print(f"  Resume:       {resume_path or 'No'}")
     print(f"  Optimizer:    {'Reset' if args.reset_optimizer else 'Checkpoint'}")
-    print(f"  TensorBoard:  {'Yes' if writer else 'No'} (tensorboard --logdir=runs)")
+    tensorboard_hint = (
+        f"tensorboard --logdir={args.tensorboard_logdir}" if writer else "disabled"
+    )
+    print(f"  TensorBoard:  {'Yes' if writer else 'No'} ({tensorboard_hint})")
     print(f"  Checkpoints:  {args.checkpoint_dir}/delve_ppo_<step>.pt")
     print("=" * 60)
     print()

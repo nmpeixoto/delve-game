@@ -174,6 +174,11 @@ class NnRlMetricsTest(unittest.TestCase):
         self.assertTrue(args.no_tensorboard)
         self.assertFalse(should_use_tensorboard(args))
 
+    def test_train_accepts_tensorboard_logdir_override(self):
+        args = parse_train_args(["--tensorboard-logdir", "runs/stable_restart"])
+
+        self.assertEqual(args.tensorboard_logdir, "runs/stable_restart")
+
     def test_train_accepts_direct_observation_mode(self):
         args = parse_train_args(["--observation-mode", "direct"])
 
