@@ -137,6 +137,20 @@ def parse_args(argv=None):
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     parser.add_argument("--hidden-dim", type=int, default=None)
     parser.add_argument(
+        "--learning-rate",
+        "--lr",
+        dest="learning_rate",
+        type=float,
+        default=None,
+        help="Override PPO Adam learning rate; useful for conservative resumed training.",
+    )
+    parser.add_argument(
+        "--entropy-coeff",
+        type=float,
+        default=None,
+        help="Override PPO entropy bonus coefficient.",
+    )
+    parser.add_argument(
         "--model-variant",
         choices=sorted(MODEL_VARIANTS),
         default="base",
@@ -196,6 +210,33 @@ def parse_args(argv=None):
         help="Maximum floor the bot is allowed to reach. If it reaches stairs on this floor, it wins early.",
     )
     return parser.parse_args(argv)
+
+
+def build_ppo_config(args):
+    lr_start = float(args.learning_rate) if args.learning_rate is not None else LR_START
+    lr_end = min(LR_END, lr_start)
+    entropy_coeff = (
+        float(args.entropy_coeff)
+        if args.entropy_coeff is not None
+        else ENTROPY_COEFF
+    )
+    return {
+        "lr": lr_start,
+        "gamma": GAMMA,
+        "lam": LAM,
+        "clip_eps": CLIP_EPS,
+        "entropy_coeff": entropy_coeff,
+        "value_coeff": VALUE_COEFF,
+        "max_grad_norm": MAX_GRAD_NORM,
+        "epochs_per_update": EPOCHS_PER_UPDATE,
+        "batch_size": args.batch_size,
+        "num_envs": args.num_envs,
+        "rollout_steps": args.rollout_steps,
+        "lr_start": lr_start,
+        "lr_end": lr_end,
+        "lr_decay_steps": LR_DECAY_STEPS,
+        "clip_v_loss": CLIP_V_LOSS,
+    }
 
 
 def should_use_tensorboard(args):
@@ -693,23 +734,7 @@ def main():
     model = DelveNet(
         state_dim=STATE_DIM, action_dim=ACTION_DIM, **model_kwargs
     ).to(device)
-    config = {
-        "lr": LR,
-        "gamma": GAMMA,
-        "lam": LAM,
-        "clip_eps": CLIP_EPS,
-        "entropy_coeff": ENTROPY_COEFF,
-        "value_coeff": VALUE_COEFF,
-        "max_grad_norm": MAX_GRAD_NORM,
-        "epochs_per_update": EPOCHS_PER_UPDATE,
-        "batch_size": args.batch_size,
-        "num_envs": args.num_envs,
-        "rollout_steps": args.rollout_steps,
-        "lr_start": LR_START,
-        "lr_end": LR_END,
-        "lr_decay_steps": LR_DECAY_STEPS,
-        "clip_v_loss": CLIP_V_LOSS,
-    }
+    config = build_ppo_config(args)
     ppo = PPO(model, config, device)
     buffer = RolloutBuffer(
         args.num_envs,
@@ -749,6 +774,7 @@ def main():
     )
     print(f"  Rollout:      {args.rollout_steps} steps/env")
     print(f"  Batch size:   {args.batch_size}")
+    print(f"  LR/Entropy:   {config['lr']:.2g} / {config['entropy_coeff']:.3g}")
     print(f"  Total steps:  {args.total_timesteps:,}")
     print(f"  Episode cap:  {format_episode_cap(args.max_episode_steps)}")
     print(f"  Observations: {args.observation_mode}")

@@ -15,6 +15,7 @@ import evaluate
 from network import DelveNet
 from train import (
     append_jsonl_record,
+    build_ppo_config,
     build_training_metrics_row,
     new_episode_window,
     record_episode,
@@ -197,6 +198,21 @@ class NnRlMetricsTest(unittest.TestCase):
         args = parse_train_args(["--hidden-dim", "384"])
 
         self.assertEqual(args.hidden_dim, 384)
+
+    def test_train_accepts_optimizer_stability_overrides(self):
+        args = parse_train_args([
+            "--learning-rate",
+            "0.00003",
+            "--entropy-coeff",
+            "0.01",
+        ])
+        config = build_ppo_config(args)
+
+        self.assertEqual(args.learning_rate, 0.00003)
+        self.assertEqual(args.entropy_coeff, 0.01)
+        self.assertEqual(config["lr"], 0.00003)
+        self.assertEqual(config["lr_start"], 0.00003)
+        self.assertEqual(config["entropy_coeff"], 0.01)
 
     def test_train_accepts_large_tactical_model_variant(self):
         args = parse_train_args(["--model-variant", "large_tactical"])
