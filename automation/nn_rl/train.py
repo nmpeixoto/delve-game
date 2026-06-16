@@ -1048,6 +1048,7 @@ def main():
     async_future = None
     learner_version = 0
     next_async_buffer_index = 1
+    hidden = None
     if trainer_mode == "async-one-stale":
         actor_model = DelveNet(
             state_dim=STATE_DIM,
@@ -1138,7 +1139,7 @@ def main():
                     np_states=np_states,
                     np_maps=np_maps,
                     np_masks=np_masks,
-                    hidden=None,
+                    hidden=hidden,
                     args=args,
                     device=device,
                     policy_version=learner_version,
@@ -1180,7 +1181,7 @@ def main():
                     np_states=np_states,
                     np_maps=np_maps,
                     np_masks=np_masks,
-                    hidden=None,
+                    hidden=hidden,
                     args=args,
                     device=device,
                     policy_version=actor_version,
