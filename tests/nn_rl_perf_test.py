@@ -97,6 +97,66 @@ class NnRlSharedRolloutTest(unittest.TestCase):
             buf.close()
             buf.unlink()
 
+    def test_shared_observation_buffer_can_attach_worker_slice(self):
+        from shared_rollout import SharedObservationBuffer
+
+        owner = SharedObservationBuffer.create(num_envs=5)
+        worker = SharedObservationBuffer.attach(
+            owner.state_shm.name,
+            owner.map_shm.name,
+            owner.mask_shm.name,
+            total_envs=5,
+            start=2,
+            count=2,
+        )
+        try:
+            worker.states[:, 0] = np.array([0.25, 0.75], dtype=np.float32)
+
+            self.assertAlmostEqual(float(owner.states[2, 0]), 0.25)
+            self.assertAlmostEqual(float(owner.states[3, 0]), 0.75)
+            self.assertEqual(worker.states.shape, (2, STATE_DIM))
+            self.assertEqual(worker.maps.shape, (2, 21, 16, 16))
+            self.assertEqual(worker.masks.shape, (2, ACTION_DIM))
+        finally:
+            worker.close()
+            owner.close()
+            owner.unlink()
+
+
+class NnRlTensorTransferTest(unittest.TestCase):
+    def test_copy_numpy_observation_into_existing_tensors_reuses_targets(self):
+        import torch
+        from train import copy_numpy_observation_into_tensors
+
+        states_np = np.ones((2, STATE_DIM), dtype=np.float32)
+        maps_np = np.ones((2, 21, 16, 16), dtype=np.float32)
+        masks_np = np.ones((2, ACTION_DIM), dtype=bool)
+        state_t = torch.empty((2, STATE_DIM), dtype=torch.float32)
+        map_t = torch.empty((2, 21, 16, 16), dtype=torch.float32)
+        mask_t = torch.empty((2, ACTION_DIM), dtype=torch.bool)
+
+        state_id = id(state_t)
+        map_id = id(map_t)
+        mask_id = id(mask_t)
+        result = copy_numpy_observation_into_tensors(
+            states_np,
+            maps_np,
+            masks_np,
+            state_t,
+            map_t,
+            mask_t,
+        )
+
+        self.assertIs(result[0], state_t)
+        self.assertIs(result[1], map_t)
+        self.assertIs(result[2], mask_t)
+        self.assertEqual(id(state_t), state_id)
+        self.assertEqual(id(map_t), map_id)
+        self.assertEqual(id(mask_t), mask_id)
+        self.assertTrue(torch.all(state_t == 1.0))
+        self.assertTrue(torch.all(map_t == 1.0))
+        self.assertTrue(torch.all(mask_t))
+
 
 class NnRlObservationParityTest(unittest.TestCase):
     def test_observe_game_into_matches_existing_extractors(self):
@@ -183,6 +243,31 @@ class NnRlObservationParityTest(unittest.TestCase):
             self.assertEqual(rewards.shape, (2,))
             self.assertEqual(dones.shape, (2,))
             self.assertEqual(len(infos), 2)
+        finally:
+            env.close()
+
+    def test_subproc_vec_env_supports_shared_contiguous_transport_mode(self):
+        env = SubprocVecEnv(
+            num_envs=4,
+            envs_per_worker=2,
+            observation_mode="direct",
+            transport_mode="shared-contiguous",
+        )
+        try:
+            states, maps, masks = env.reset()
+            self.assertEqual(states.shape, (4, STATE_DIM))
+            self.assertEqual(maps.shape, (4, 21, 16, 16))
+            self.assertEqual(masks.shape, (4, ACTION_DIM))
+
+            states, maps, masks, rewards, dones, infos = env.step(
+                np.zeros(4, dtype=np.int64)
+            )
+            self.assertEqual(states.shape, (4, STATE_DIM))
+            self.assertEqual(maps.shape, (4, 21, 16, 16))
+            self.assertEqual(masks.shape, (4, ACTION_DIM))
+            self.assertEqual(rewards.shape, (4,))
+            self.assertEqual(dones.shape, (4,))
+            self.assertEqual(len(infos), 4)
         finally:
             env.close()
 

@@ -198,7 +198,7 @@ def parse_args(argv=None):
     )
     parser.add_argument(
         "--transport-mode",
-        choices=["pipe", "shared"],
+        choices=["pipe", "shared", "shared-contiguous"],
         default="pipe",
         help="Rollout transport used by worker processes.",
     )
@@ -511,6 +511,24 @@ def action_distribution(action_counts):
         for i, count in enumerate(action_counts)
         if int(count) > 0
     }
+
+
+def copy_numpy_observation_into_tensors(
+    np_states,
+    np_maps,
+    np_masks,
+    state_tensor,
+    map_tensor,
+    mask_tensor,
+):
+    """Copy observation arrays into reusable tensors without replacing targets."""
+    state_tensor.copy_(torch.from_numpy(np_states), non_blocking=True)
+    map_tensor.copy_(torch.from_numpy(np_maps), non_blocking=True)
+    mask_tensor.copy_(
+        torch.from_numpy(np_masks.astype(np.bool_, copy=False)),
+        non_blocking=True,
+    )
+    return state_tensor, map_tensor, mask_tensor
 
 
 def summarize_actions(action_counts):
@@ -837,6 +855,12 @@ def main():
         transport_mode=args.transport_mode,
     )
     np_states, np_maps, np_masks = env.reset()
+    rollout_state_tensor = torch.empty(np_states.shape, device=device, dtype=torch.float32)
+    rollout_map_tensor = torch.empty(np_maps.shape, device=device, dtype=torch.float32)
+    rollout_mask_tensor = torch.empty(np_masks.shape, device=device, dtype=torch.bool)
+    bootstrap_state_tensor = torch.empty_like(rollout_state_tensor)
+    bootstrap_map_tensor = torch.empty_like(rollout_map_tensor)
+    bootstrap_mask_tensor = torch.empty_like(rollout_mask_tensor)
     print(
         f"=== Training Goal: {active_phase.get('name')} ({curriculum_phase_target(active_phase)}) ==="
     )
@@ -884,10 +908,13 @@ def main():
             prev_actions = [None] * args.num_envs
             hidden = None  # GRU hidden state, carried across steps
             for step in range(args.rollout_steps):
-                state_tensor = torch.from_numpy(np_states).to(device)
-                map_tensor = torch.from_numpy(np_maps).to(device)
-                mask_tensor = torch.from_numpy(np_masks).to(
-                    device=device, dtype=torch.bool
+                state_tensor, map_tensor, mask_tensor = copy_numpy_observation_into_tensors(
+                    np_states,
+                    np_maps,
+                    np_masks,
+                    rollout_state_tensor,
+                    rollout_map_tensor,
+                    rollout_mask_tensor,
                 )
 
                 hidden_in = hidden
@@ -962,9 +989,14 @@ def main():
             stage_seconds["collect"] += time.perf_counter() - stage_t0
 
             # Update policy.
-            last_states = torch.from_numpy(np_states).to(device)
-            last_maps = torch.from_numpy(np_maps).to(device)
-            last_masks = torch.from_numpy(np_masks).to(device=device, dtype=torch.bool)
+            last_states, last_maps, last_masks = copy_numpy_observation_into_tensors(
+                np_states,
+                np_maps,
+                np_masks,
+                bootstrap_state_tensor,
+                bootstrap_map_tensor,
+                bootstrap_mask_tensor,
+            )
             stage_t0 = time.perf_counter()
             info = ppo.update(buffer, last_states, last_maps, last_masks, hidden)
             stage_seconds["learner"] += time.perf_counter() - stage_t0

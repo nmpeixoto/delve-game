@@ -189,6 +189,11 @@ class NnRlMetricsTest(unittest.TestCase):
 
         self.assertEqual(args.transport_mode, "shared")
 
+    def test_train_accepts_shared_contiguous_transport_mode(self):
+        args = parse_train_args(["--transport-mode", "shared-contiguous"])
+
+        self.assertEqual(args.transport_mode, "shared-contiguous")
+
     def test_train_defaults_to_sync_trainer_mode(self):
         args = parse_train_args([])
 

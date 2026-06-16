@@ -591,7 +591,7 @@ def _subproc_worker(pipe, env_kwargs):
         return np_states, np_maps, masks
 
     def send_observations(np_states, np_maps, masks, rewards=None, dones=None, infos=None):
-        if transport_mode == 'shared':
+        if transport_mode in ('shared', 'shared-contiguous'):
             shared_buffer.states[...] = np_states
             shared_buffer.maps[...] = np_maps
             shared_buffer.masks[...] = masks
@@ -606,7 +606,7 @@ def _subproc_worker(pipe, env_kwargs):
                 pipe.send((np_states, np_maps, masks, rewards, dones, infos))
 
     try:
-        if transport_mode == 'shared':
+        if transport_mode in ('shared', 'shared-contiguous'):
             from shared_rollout import SharedObservationBuffer
 
             if not shared_config:
@@ -615,7 +615,10 @@ def _subproc_worker(pipe, env_kwargs):
                 shared_config['state_name'],
                 shared_config['map_name'],
                 shared_config['mask_name'],
-                shared_config['num_envs'],
+                num_envs=shared_config.get('num_envs'),
+                total_envs=shared_config.get('total_envs'),
+                start=shared_config.get('start', 0),
+                count=shared_config.get('count'),
             )
 
         env = DelveVectorEnv(**env_kwargs)
@@ -678,8 +681,10 @@ class SubprocVecEnv:
         if self.observation_mode not in ('legacy', 'direct'):
             raise ValueError("observation_mode must be 'legacy' or 'direct'")
         self.transport_mode = kwargs.pop('transport_mode', 'pipe')
-        if self.transport_mode not in ('pipe', 'shared'):
-            raise ValueError("transport_mode must be 'pipe' or 'shared'")
+        if self.transport_mode not in ('pipe', 'shared', 'shared-contiguous'):
+            raise ValueError(
+                "transport_mode must be 'pipe', 'shared', or 'shared-contiguous'"
+            )
         self.num_workers = (num_envs + envs_per_worker - 1) // envs_per_worker
         self.worker_env_counts = [
             min(envs_per_worker, num_envs - i * envs_per_worker)
@@ -688,6 +693,11 @@ class SubprocVecEnv:
         self.pipes = []
         self.processes = []
         self.shared_buffers = []
+        self.contiguous_shared_buffer = None
+        if self.transport_mode == 'shared-contiguous':
+            from shared_rollout import SharedObservationBuffer
+
+            self.contiguous_shared_buffer = SharedObservationBuffer.create(num_envs)
         
         for i, worker_envs in enumerate(self.worker_env_counts):
             parent_pipe, child_pipe = mp.Pipe()
@@ -707,6 +717,16 @@ class SubprocVecEnv:
                     'mask_name': shared_buffer.mask_shm.name,
                     'num_envs': worker_envs,
                 }
+            elif self.transport_mode == 'shared-contiguous':
+                shared_buffer = self.contiguous_shared_buffer
+                env_kwargs['shared_observation_buffer'] = {
+                    'state_name': shared_buffer.state_shm.name,
+                    'map_name': shared_buffer.map_shm.name,
+                    'mask_name': shared_buffer.mask_shm.name,
+                    'total_envs': num_envs,
+                    'start': i * envs_per_worker,
+                    'count': worker_envs,
+                }
             p = mp.Process(target=_subproc_worker, args=(child_pipe, env_kwargs))
             p.daemon = False
             p.start()
@@ -724,6 +744,12 @@ class SubprocVecEnv:
         
         np_states, np_maps, masks = [], [], []
         transport_mode = getattr(self, 'transport_mode', 'pipe')
+        if transport_mode == 'shared-contiguous':
+            for p in self.pipes:
+                self._validate_shared_worker_message(self._recv_worker(p))
+            buf = self.contiguous_shared_buffer
+            return buf.states, buf.maps, buf.masks
+
         shared_buffers = getattr(self, 'shared_buffers', [None] * len(self.pipes))
         for p, shared_buffer in zip(self.pipes, shared_buffers):
             message = self._recv_worker(p)
@@ -749,6 +775,23 @@ class SubprocVecEnv:
             
         np_states, np_maps, masks, rewards, dones, infos = [], [], [], [], [], []
         transport_mode = getattr(self, 'transport_mode', 'pipe')
+        if transport_mode == 'shared-contiguous':
+            for p in self.pipes:
+                message = self._recv_worker(p)
+                self._validate_shared_worker_message(message)
+                rewards.append(message['rewards'])
+                dones.append(message['dones'])
+                infos.extend(message['infos'])
+            buf = self.contiguous_shared_buffer
+            return (
+                buf.states,
+                buf.maps,
+                buf.masks,
+                np.concatenate(rewards),
+                np.concatenate(dones),
+                infos,
+            )
+
         shared_buffers = getattr(self, 'shared_buffers', [None] * len(self.pipes))
         for p, shared_buffer in zip(self.pipes, shared_buffers):
             message = self._recv_worker(p)
@@ -816,9 +859,14 @@ class SubprocVecEnv:
                 p.close()
             except Exception:
                 pass
+        seen_buffers = set()
         for shared_buffer in self.shared_buffers:
             if shared_buffer is None:
                 continue
+            marker = id(shared_buffer)
+            if marker in seen_buffers:
+                continue
+            seen_buffers.add(marker)
             try:
                 shared_buffer.close()
             except Exception:

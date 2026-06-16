@@ -47,19 +47,42 @@ class SharedObservationBuffer:
         )
 
     @classmethod
-    def attach(cls, state_name, map_name, mask_name, num_envs: int, owner=False, existing=None):
+    def attach(
+        cls,
+        state_name,
+        map_name,
+        mask_name,
+        num_envs: int | None = None,
+        owner=False,
+        existing=None,
+        total_envs: int | None = None,
+        start: int = 0,
+        count: int | None = None,
+    ):
+        total = int(total_envs if total_envs is not None else num_envs)
+        if total <= 0:
+            raise ValueError("total env count must be positive")
+        start = int(start)
+        count = int(count if count is not None else total - start)
+        if start < 0 or count <= 0 or start + count > total:
+            raise ValueError(
+                f"invalid shared buffer slice start={start} count={count} total={total}"
+            )
         state_shm, map_shm, mask_shm = existing or (
             shared_memory.SharedMemory(name=state_name),
             shared_memory.SharedMemory(name=map_name),
             shared_memory.SharedMemory(name=mask_name),
         )
+        all_states = np.ndarray((total, STATE_DIM), dtype=np.float32, buffer=state_shm.buf)
+        all_maps = np.ndarray((total, 21, 16, 16), dtype=np.float32, buffer=map_shm.buf)
+        all_masks = np.ndarray((total, ACTION_DIM), dtype=bool, buffer=mask_shm.buf)
         return cls(
             state_shm=state_shm,
             map_shm=map_shm,
             mask_shm=mask_shm,
-            states=np.ndarray((num_envs, STATE_DIM), dtype=np.float32, buffer=state_shm.buf),
-            maps=np.ndarray((num_envs, 21, 16, 16), dtype=np.float32, buffer=map_shm.buf),
-            masks=np.ndarray((num_envs, ACTION_DIM), dtype=bool, buffer=mask_shm.buf),
+            states=all_states[start:start + count],
+            maps=all_maps[start:start + count],
+            masks=all_masks[start:start + count],
             owner=owner,
         )
 
