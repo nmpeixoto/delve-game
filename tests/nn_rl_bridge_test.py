@@ -20,7 +20,7 @@ from config import (
     REWARD_TURN_PENALTY, SHOP_ITEM_FEATURES, STATE_DIM,
 )
 
-from reward import compute_reward
+from reward import compute_reward, compute_reward_with_components
 from state_extractor import extract_state
 from train import (
     episode_class_summary,
@@ -160,7 +160,7 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertFalse(info["curriculum_success"])
         self.assertEqual(reward, 5.0)
 
-    def test_failed_episode_keeps_terminal_penalty_without_hidden_clawback(self):
+    def test_failed_episode_clamps_accumulated_shaping_below_win_reward(self):
         env = DelveVectorEnv.__new__(DelveVectorEnv)
         env.max_episode_steps = 5000
         env.timeout_penalty = -250.0
@@ -168,6 +168,7 @@ class NnRlBridgeTest(unittest.TestCase):
         env.curriculum_reward = REWARD_CURRICULUM_SUCCESS
         env.episode_lengths = [800]
         env.episode_rewards = [1250.0]
+        env.episode_reward_components = [{"stairs": 300.0}]
 
         reward, done, info = env._apply_terminal_rules(
             env_id=0,
@@ -183,17 +184,19 @@ class NnRlBridgeTest(unittest.TestCase):
 
         self.assertTrue(done)
         self.assertEqual(info["outcome"], "dead")
-        self.assertEqual(info["total_reward"], 1250.0)
-        self.assertEqual(reward, -650.0)
+        self.assertLessEqual(info["total_reward"], REWARD_WIN)
+        self.assertLess(reward, -1000.0)
+        self.assertLess(info["reward_components"]["terminal_failure_clamp"], -1000.0)
 
-    def test_timeout_applies_only_configured_timeout_penalty(self):
+    def test_timeout_clamps_accumulated_shaping_below_win_reward(self):
         env = DelveVectorEnv.__new__(DelveVectorEnv)
         env.max_episode_steps = 10
-        env.timeout_penalty = -400.0
+        env.timeout_penalty = DEFAULT_TIMEOUT_PENALTY
         env.curriculum_max_floor = None
         env.curriculum_reward = REWARD_CURRICULUM_SUCCESS
         env.episode_lengths = [10]
         env.episode_rewards = [900.0]
+        env.episode_reward_components = [{"stairs": 500.0}]
 
         reward, done, info = env._apply_terminal_rules(
             env_id=0,
@@ -209,8 +212,9 @@ class NnRlBridgeTest(unittest.TestCase):
 
         self.assertTrue(done)
         self.assertEqual(info["outcome"], "timeout")
-        self.assertEqual(info["total_reward"], 500.0)
-        self.assertEqual(reward, -398.0)
+        self.assertLessEqual(info["total_reward"], REWARD_WIN)
+        self.assertLess(reward, -800.0)
+        self.assertLess(info["reward_components"]["terminal_failure_clamp"], -800.0)
 
     def test_resume_latest_uses_highest_step_checkpoint(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -580,9 +584,12 @@ class NnRlBridgeTest(unittest.TestCase):
         state["_min_stair_dist"] = 2
         after = {**state, "player": {**state["player"], "x": 6}}
 
-        reward = compute_reward(state, ACTIONS["MOVE_RIGHT"], after)
+        reward, components = compute_reward_with_components(
+            state, ACTIONS["MOVE_RIGHT"], after
+        )
 
-        self.assertLess(reward, REWARD_STAIR_APPROACH)
+        self.assertLessEqual(reward, 0.0)
+        self.assertLessEqual(components.get("stairs", 0.0), 0.0)
 
     def test_reward_penalizes_moving_away_from_known_stairs(self):
         state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)

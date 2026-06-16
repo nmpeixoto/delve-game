@@ -14,8 +14,10 @@ from config import (
     ACTION_DIM,
     ACTIONS,
     DEFAULT_TIMEOUT_PENALTY,
+    FLOORS,
     MAX_SHOP_SLOTS,
     REWARD_CURRICULUM_SUCCESS,
+    REWARD_WIN,
     CLASS_WEIGHTS,
 )
 
@@ -364,6 +366,24 @@ class DelveVectorEnv:
         components = self.episode_reward_components[env_id]
         components[name] = components.get(name, 0.0) + float(value)
 
+    def _failed_episode_reward_cap(self, state):
+        floor = max(int(state.get('floor', 1) or 1), 1)
+        if FLOORS <= 1:
+            return 0.0
+        depth_ratio = (min(floor, FLOORS) - 1) / (FLOORS - 1)
+        return REWARD_WIN * depth_ratio
+
+    def _clamp_failed_episode_reward(self, env_id, state, reward):
+        cap = self._failed_episode_reward_cap(state)
+        total_reward = self.episode_rewards[env_id]
+        if total_reward <= cap:
+            return reward
+
+        adjustment = cap - total_reward
+        self.episode_rewards[env_id] = cap
+        self._add_reward_component(env_id, 'terminal_failure_clamp', adjustment)
+        return reward + adjustment
+
     def _apply_terminal_rules(self, env_id, state, done, reward):
         if not hasattr(self, 'episode_reward_components'):
             self.episode_reward_components = [{} for _ in getattr(self, 'episode_rewards', [0.0])]
@@ -420,7 +440,7 @@ class DelveVectorEnv:
             outcome = 'running'
 
         if outcome in ('dead', 'timeout'):
-            pass # Removed clawback logic to restore descent gradient
+            reward = self._clamp_failed_episode_reward(env_id, state, reward)
 
         return reward, done, {
             'won': won,
