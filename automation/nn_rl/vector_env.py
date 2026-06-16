@@ -342,10 +342,22 @@ class DelveVectorEnv:
             '_steps_since_door_unlock': min(step - self.last_door_unlock_step[env_id], 999) if self.last_door_unlock_step[env_id] >= 0 else 999,
         }
 
-    def observe_arrays(self):
-        from observation import allocate_observation_arrays, observe_game_into
+    def _observation_arrays(self):
+        from observation import allocate_observation_arrays
 
-        arrays = allocate_observation_arrays(self.num_envs)
+        arrays = getattr(self, '_direct_observation_arrays', None)
+        if arrays is None or arrays.states.shape[0] != self.num_envs:
+            arrays = allocate_observation_arrays(self.num_envs)
+            self._direct_observation_arrays = arrays
+        return arrays
+
+    def observe_arrays(self):
+        from observation import observe_game_into
+
+        arrays = self._observation_arrays()
+        arrays.states.fill(0.0)
+        arrays.maps.fill(0.0)
+        arrays.masks.fill(False)
         for env_id, game in enumerate(self.games):
             if game is None:
                 continue

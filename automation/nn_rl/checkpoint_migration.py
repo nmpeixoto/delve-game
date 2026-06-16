@@ -24,6 +24,14 @@ def copy_overlapping_tensor(old_tensor, new_tensor):
         for old_size, new_size in zip(old_tensor.shape, new_tensor.shape)
     )
     result[slices] = old_tensor[slices]
+    if old_tensor.ndim >= 2:
+        existing_outputs = slice(0, min(old_tensor.shape[0], new_tensor.shape[0]))
+        for dim in range(1, old_tensor.ndim):
+            if new_tensor.shape[dim] > old_tensor.shape[dim]:
+                zero_slices = [slice(None)] * old_tensor.ndim
+                zero_slices[0] = existing_outputs
+                zero_slices[dim] = slice(old_tensor.shape[dim], new_tensor.shape[dim])
+                result[tuple(zero_slices)] = 0
     return result
 
 

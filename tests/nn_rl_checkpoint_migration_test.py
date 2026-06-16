@@ -25,6 +25,16 @@ class NnRlCheckpointMigrationTest(unittest.TestCase):
         torch.testing.assert_close(migrated[2:, :], torch.zeros(2, 5))
         torch.testing.assert_close(migrated[:, 3:], torch.zeros(4, 2))
 
+    def test_copy_overlapping_tensor_zeros_new_inputs_for_existing_outputs(self):
+        old = torch.ones(2, 3)
+        new = torch.arange(20, dtype=torch.float32).reshape(4, 5)
+
+        migrated = copy_overlapping_tensor(old, new)
+
+        torch.testing.assert_close(migrated[:2, :3], old)
+        torch.testing.assert_close(migrated[:2, 3:], torch.zeros(2, 2))
+        torch.testing.assert_close(migrated[2:, :], new[2:, :])
+
     def test_migrate_state_dict_reports_partial_and_exact_copies(self):
         old_state = {
             "same": torch.ones(2, 2),

@@ -276,6 +276,18 @@ class NnRlObservationParityTest(unittest.TestCase):
         finally:
             env.close()
 
+    def test_vector_env_direct_observations_reuse_arrays(self):
+        env = DelveVectorEnv(num_envs=2, envs_per_worker=2)
+        try:
+            states1, maps1, masks1 = env.observe_arrays()
+            states2, maps2, masks2 = env.observe_arrays()
+
+            self.assertIs(states1, states2)
+            self.assertIs(maps1, maps2)
+            self.assertIs(masks1, masks2)
+        finally:
+            env.close()
+
     def test_subproc_vec_env_supports_direct_observation_mode(self):
         env = SubprocVecEnv(num_envs=2, envs_per_worker=2, observation_mode="direct")
         try:
