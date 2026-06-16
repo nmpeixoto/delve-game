@@ -119,6 +119,32 @@ class NnRlMetricsTest(unittest.TestCase):
         self.assertEqual(row["perf"]["steps_per_second"], 50.0)
         self.assertEqual(row["perf"]["stage_seconds"], {"collect": 3.0, "learner": 1.0})
 
+    def test_build_training_metrics_row_uses_run_delta_for_resumed_perf(self):
+        row = build_training_metrics_row(
+            total_steps=1000,
+            run_start_steps=900,
+            elapsed=10.0,
+            phase_index=0,
+            phase_name="full_dungeon",
+            progress_label="Full Win",
+            progress_rate=0.0,
+            progress_raw_rate=0.0,
+            win_rate=0.0,
+            avg_reward=0.0,
+            avg_length=0.0,
+            avg_floor=0.0,
+            timeout_rate=0.0,
+            death_rate=0.0,
+            policy_loss=0.0,
+            value_loss=0.0,
+            entropy=0.0,
+            stage_seconds={"collect": 3.0},
+        )
+
+        self.assertEqual(row["perf"]["steps_per_second"], 10.0)
+        self.assertEqual(row["perf"]["run_start_steps"], 900)
+        self.assertEqual(row["perf"]["steps_this_run"], 100)
+
     def test_append_jsonl_record_writes_one_json_object_per_line(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "metrics.jsonl")
@@ -203,6 +229,11 @@ class NnRlMetricsTest(unittest.TestCase):
         args = parse_train_args(["--trainer-mode", "async-double-buffer"])
 
         self.assertEqual(args.trainer_mode, "async-double-buffer")
+
+    def test_train_accepts_async_one_stale_trainer_mode(self):
+        args = parse_train_args(["--trainer-mode", "async-one-stale"])
+
+        self.assertEqual(args.trainer_mode, "async-one-stale")
 
     def test_train_accepts_hidden_dim_override(self):
         args = parse_train_args(["--hidden-dim", "384"])

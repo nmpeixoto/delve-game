@@ -81,6 +81,30 @@ class NnRlAsyncTrainerTest(unittest.TestCase):
         self.assertEqual(packet.total_steps, 64)
         self.assertEqual(packet.payload["value"], 12)
 
+    def test_assert_rollout_staleness_allows_one_version(self):
+        from async_trainer import assert_rollout_staleness
+
+        assert_rollout_staleness(actor_version=9, learner_version=10, max_staleness=1)
+
+    def test_assert_rollout_staleness_rejects_two_versions(self):
+        from async_trainer import assert_rollout_staleness
+
+        with self.assertRaisesRegex(RuntimeError, "rollout policy is too stale"):
+            assert_rollout_staleness(
+                actor_version=8,
+                learner_version=10,
+                max_staleness=1,
+            )
+
+    def test_normalize_trainer_mode_maps_double_buffer_alias(self):
+        from async_trainer import normalize_trainer_mode
+
+        self.assertEqual(
+            normalize_trainer_mode("async-double-buffer"),
+            "async-one-stale",
+        )
+        self.assertEqual(normalize_trainer_mode("sync"), "sync")
+
 
 class NnRlSharedRolloutTest(unittest.TestCase):
     def test_shared_observation_buffer_shapes(self):
@@ -156,6 +180,46 @@ class NnRlTensorTransferTest(unittest.TestCase):
         self.assertTrue(torch.all(state_t == 1.0))
         self.assertTrue(torch.all(map_t == 1.0))
         self.assertTrue(torch.all(mask_t))
+
+    def test_prepare_bootstrap_tensors_copies_from_rollout_result(self):
+        import torch
+        from train import (
+            RolloutResult,
+            allocate_rollout_transfer_tensors,
+            prepare_bootstrap_tensors,
+        )
+
+        states_np = np.full((2, STATE_DIM), 2.0, dtype=np.float32)
+        maps_np = np.full((2, 21, 16, 16), 3.0, dtype=np.float32)
+        masks_np = np.ones((2, ACTION_DIM), dtype=bool)
+        transfer = allocate_rollout_transfer_tensors(
+            states_np,
+            maps_np,
+            masks_np,
+            torch.device("cpu"),
+        )
+        result = RolloutResult(
+            buffer=None,
+            transfer=transfer,
+            np_states=states_np,
+            np_maps=maps_np,
+            np_masks=masks_np,
+            hidden=None,
+            action_counts=np.zeros(ACTION_DIM, dtype=np.int64),
+            probe_accumulator={},
+            episode_infos=[],
+            steps_collected=0,
+            policy_version=0,
+        )
+
+        last_states, last_maps, last_masks = prepare_bootstrap_tensors(result)
+        states_np.fill(9.0)
+        maps_np.fill(9.0)
+        masks_np.fill(False)
+
+        self.assertTrue(torch.all(last_states == 2.0))
+        self.assertTrue(torch.all(last_maps == 3.0))
+        self.assertTrue(torch.all(last_masks))
 
 
 class NnRlObservationParityTest(unittest.TestCase):
