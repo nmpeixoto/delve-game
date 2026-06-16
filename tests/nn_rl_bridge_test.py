@@ -435,8 +435,9 @@ class NnRlBridgeTest(unittest.TestCase):
             args = parse_args()
 
         self.assertGreater(args.num_envs, args.envs_per_worker)
-        self.assertEqual(args.num_envs, 128)
-        self.assertEqual(args.envs_per_worker, 16)
+        self.assertEqual(args.num_envs, 192)
+        self.assertEqual(args.envs_per_worker, 12)
+        self.assertEqual(args.batch_size, 2048)
 
     def test_subproc_vec_env_keeps_remainder_envs(self):
         created = []

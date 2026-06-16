@@ -85,20 +85,18 @@ ENTROPY_COEFF = 0.02      # Entropy bonus (exploration)
 VALUE_COEFF = 0.5         # Value loss coefficient
 MAX_GRAD_NORM = 0.5       # Gradient clipping
 EPOCHS_PER_UPDATE = 3     # Mini-batch epochs per rollout
-BATCH_SIZE = 1024         # Mini-batch size
+BATCH_SIZE = 2048         # Mini-batch size; tuned for large_tactical throughput
 
 # ─── ROLLOUT ─────────────────────────────────────────────────────────────────
 # Throughput notes:
-#   The env step bottleneck is JSON IPC over stdin/stdout between Python and
-#   Node.js workers.  Each step sends a full game snapshot (~15-20KB) across a
-#   pipe.  To amortize the per-message overhead:
-#     - Use fewer, larger workers (ENVS_PER_WORKER=16 → only 8 Node processes)
-#     - Use longer rollouts (ROLLOUT_STEPS=512) so we spend less % of time in
-#       the PPO update and more time collecting experience in parallel.
-#     - Keep NUM_ENVS high so Node processes stay busy.
-NUM_ENVS = 128           # Parallel environments (128 = 8 workers × 16 envs each)
-ENVS_PER_WORKER = 16     # 16 envs per Node.js worker → 8 workers total
-ROLLOUT_STEPS = 512      # Steps per env per rollout (longer = better GPU fill)
+#   The env step bottleneck is Python simulation plus feature/action-mask
+#   extraction. On the Ryzen 7 9800X3D test machine, 16 worker processes with
+#   12 envs each outperformed the old 8-worker default by roughly 25-35%.
+#   Use direct observations + shared-contiguous transport + async-one-stale
+#   trainer for the measured fast path.
+NUM_ENVS = 192           # Parallel environments (192 = 16 workers x 12 envs each)
+ENVS_PER_WORKER = 12     # Tuned to fill 16 logical CPU threads without 32-worker overhead
+ROLLOUT_STEPS = 512      # Steps per env per rollout (longer = better learner amortization)
 DEFAULT_MAX_EPISODE_STEPS = 8000  # Generous full-dungeon stall guard; pass 0 to disable.
 TOTAL_TIMESTEPS = 200_000_000
 

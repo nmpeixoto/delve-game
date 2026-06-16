@@ -10,7 +10,7 @@ NN_RL_DIR = os.path.join(REPO_ROOT, "automation", "nn_rl")
 sys.path.insert(0, NN_RL_DIR)
 
 from checkpoint_migration import copy_overlapping_tensor, migrate_checkpoint, migrate_state_dict
-from config import ACTION_DIM
+from config import ACTION_DIM, MODEL_VARIANTS, STATE_DIM
 from network import DelveNet
 
 
@@ -71,6 +71,39 @@ class NnRlCheckpointMigrationTest(unittest.TestCase):
         torch.testing.assert_close(migrated_policy[:36], old_policy)
         self.assertEqual(migrated["total_steps"], 123)
         self.assertIn("partial", migrated["migration_report"]["policy.2.weight"])
+
+    def test_large_tactical_migration_preserves_base_forward_outputs(self):
+        torch.manual_seed(123)
+        base_model = DelveNet(
+            state_dim=STATE_DIM,
+            action_dim=ACTION_DIM,
+            **MODEL_VARIANTS["base"],
+        )
+        target_model = DelveNet(
+            state_dim=STATE_DIM,
+            action_dim=ACTION_DIM,
+            **MODEL_VARIANTS["large_tactical"],
+        )
+        migrated_state, _ = migrate_state_dict(
+            base_model.state_dict(),
+            target_model.state_dict(),
+        )
+        target_model.load_state_dict(migrated_state)
+
+        state = torch.randn(4, STATE_DIM)
+        maps = torch.randn(4, 21, 16, 16)
+        mask = torch.ones(4, ACTION_DIM, dtype=torch.bool)
+
+        with torch.inference_mode():
+            base_logits, base_value, _ = base_model(state, maps, action_mask=mask)
+            migrated_logits, migrated_value, _ = target_model(
+                state,
+                maps,
+                action_mask=mask,
+            )
+
+        torch.testing.assert_close(migrated_logits, base_logits, rtol=1e-5, atol=1e-5)
+        torch.testing.assert_close(migrated_value, base_value, rtol=1e-5, atol=1e-5)
 
 
 if __name__ == "__main__":

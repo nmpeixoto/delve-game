@@ -623,14 +623,15 @@ def collect_rollout_batch(
             actions = dist.sample()
             log_probs = dist.log_prob(actions)
             values = values_raw.squeeze(-1)
-            action_probs = torch.softmax(logits, dim=-1)
+            descend_logits = logits[:, ACTIONS["DESCEND"]]
+            descend_probs = torch.exp(descend_logits - torch.logsumexp(logits, dim=-1))
         action_array = actions.cpu().numpy()
         update_descend_probe(
             probe_accumulator,
             np_states,
             np_masks,
             action_array,
-            action_probs.cpu().numpy(),
+            descend_probs.cpu().numpy(),
         )
         action_counts += np.bincount(action_array, minlength=ACTION_DIM)
 
@@ -743,21 +744,32 @@ def new_probe_accumulator():
     return defaultdict(float)
 
 
-def update_descend_probe(accumulator, np_states, np_masks, actions, action_probs):
+def update_descend_probe(accumulator, np_states, np_masks, actions, desc_probs):
     descend_idx = ACTIONS["DESCEND"]
     on_stairs = np_states[:, 6] > 0.5
     legal_desc = np_masks[:, descend_idx].astype(bool)
     selected_desc = actions == descend_idx
-    desc_probs = action_probs[:, descend_idx]
 
-    accumulator["legal_desc_steps"] += int(legal_desc.sum())
-    accumulator["legal_desc_actions"] += int((selected_desc & legal_desc).sum())
-    accumulator["legal_desc_prob_sum"] += (
+    accumulator["legal_desc_steps"] = accumulator.get("legal_desc_steps", 0) + int(
+        legal_desc.sum()
+    )
+    accumulator["legal_desc_actions"] = accumulator.get("legal_desc_actions", 0) + int(
+        (selected_desc & legal_desc).sum()
+    )
+    accumulator["legal_desc_prob_sum"] = accumulator.get(
+        "legal_desc_prob_sum", 0.0
+    ) + (
         float(desc_probs[legal_desc].sum()) if legal_desc.any() else 0.0
     )
-    accumulator["on_stairs_steps"] += int(on_stairs.sum())
-    accumulator["on_stairs_desc_actions"] += int((selected_desc & on_stairs).sum())
-    accumulator["on_stairs_desc_prob_sum"] += (
+    accumulator["on_stairs_steps"] = accumulator.get("on_stairs_steps", 0) + int(
+        on_stairs.sum()
+    )
+    accumulator["on_stairs_desc_actions"] = accumulator.get(
+        "on_stairs_desc_actions", 0
+    ) + int((selected_desc & on_stairs).sum())
+    accumulator["on_stairs_desc_prob_sum"] = accumulator.get(
+        "on_stairs_desc_prob_sum", 0.0
+    ) + (
         float(desc_probs[on_stairs].sum()) if on_stairs.any() else 0.0
     )
 

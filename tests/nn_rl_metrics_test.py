@@ -17,10 +17,12 @@ from train import (
     append_jsonl_record,
     build_ppo_config,
     build_training_metrics_row,
+    finalize_probe_metrics,
     new_episode_window,
     record_episode,
     parse_args as parse_train_args,
     should_use_tensorboard,
+    update_descend_probe,
 )
 from config import ACTION_DIM, ACTIONS, DEFAULT_MAX_EPISODE_STEPS, STATE_DIM
 
@@ -144,6 +146,24 @@ class NnRlMetricsTest(unittest.TestCase):
         self.assertEqual(row["perf"]["steps_per_second"], 10.0)
         self.assertEqual(row["perf"]["run_start_steps"], 900)
         self.assertEqual(row["perf"]["steps_this_run"], 100)
+
+    def test_update_descend_probe_accepts_descend_probability_vector(self):
+        np_states = np.zeros((3, STATE_DIM), dtype=np.float32)
+        np_states[0, 6] = 1.0
+        np_states[2, 6] = 1.0
+        np_masks = np.zeros((3, ACTION_DIM), dtype=bool)
+        np_masks[:, ACTIONS["DESCEND"]] = True
+        actions = np.array([ACTIONS["DESCEND"], ACTIONS["MOVE_UP"], ACTIONS["MOVE_UP"]])
+        desc_probs = np.array([0.8, 0.2, 0.4], dtype=np.float32)
+        accumulator = {}
+
+        update_descend_probe(accumulator, np_states, np_masks, actions, desc_probs)
+        metrics = finalize_probe_metrics(accumulator)
+
+        self.assertEqual(metrics["legal_desc_steps"], 3)
+        self.assertAlmostEqual(metrics["legal_desc_mean_prob"], (0.8 + 0.2 + 0.4) / 3)
+        self.assertEqual(metrics["on_stairs_steps"], 2)
+        self.assertAlmostEqual(metrics["descend_prob_on_stairs"], (0.8 + 0.4) / 2)
 
     def test_append_jsonl_record_writes_one_json_object_per_line(self):
         with tempfile.TemporaryDirectory() as tmp:
