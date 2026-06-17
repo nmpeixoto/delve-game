@@ -948,7 +948,11 @@ def main():
     total_steps = 0
     checkpoint = None
     if resume_path:
-        checkpoint = ppo.load(resume_path, load_optimizer=not args.reset_optimizer)
+        checkpoint = ppo.load(
+            resume_path,
+            load_optimizer=not args.reset_optimizer,
+            override_lr=config['lr'] if args.learning_rate is not None else None
+        )
         total_steps = int(checkpoint.get("total_steps") or resume_step or 0)
     run_start_steps = total_steps
 

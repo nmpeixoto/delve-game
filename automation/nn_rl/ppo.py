@@ -233,10 +233,19 @@ class PPO:
         checkpoint.update(metadata)
         torch.save(checkpoint, path)
     
-    def load(self, path, load_optimizer=True):
+    def load(self, path, load_optimizer=True, override_lr=None):
         checkpoint = torch.load(path, map_location=self.device)
         self.network.load_state_dict(checkpoint['network'])
         if load_optimizer and 'optimizer' in checkpoint and 'scheduler' in checkpoint:
             self.optimizer.load_state_dict(checkpoint['optimizer'])
             self.scheduler.load_state_dict(checkpoint['scheduler'])
+            if override_lr is not None:
+                # Override the learning rate of the loaded optimizer
+                for param_group in self.optimizer.param_groups:
+                    param_group['lr'] = override_lr
+                # Update scheduler's base learning rates
+                self.scheduler.base_lrs = [override_lr]
+                # Re-calculate end_factor based on new initial learning rate
+                if hasattr(self.scheduler, 'end_factor'):
+                    self.scheduler.end_factor = self.config['lr_end'] / override_lr
         return checkpoint
