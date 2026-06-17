@@ -41,6 +41,7 @@ checkpoints_*/
 checkpoints_stable_lr/
 checkpoints_stable_lr_async/
 checkpoints_large_tactical_async/
+*.pt
 runs/
 class_logs/
 *.err.log
