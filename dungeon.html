@@ -1822,11 +1822,15 @@ function canEquip(it) {
 }
 
 function weaponDamage(it) {
+  let unarmed = G.player.class === 'monk' ? Math.ceil(G.player.lvl / 2) : 0;
   if (!it) {
-    return G.player.class === 'monk' ? Math.ceil(G.player.lvl / 2) : 0;
+    return unarmed;
   }
   let power = it.atk || 0;
   if (G.player.class === 'mage' && it.sym === '\u2666') power += Math.floor(power / 5);
+  if (G.player.class === 'monk') {
+    return Math.max(power, unarmed);
+  }
   return power;
 }
 
