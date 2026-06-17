@@ -37,6 +37,7 @@ balance_*.json
 balance_logs_*/
 balance_reports/
 checkpoints/
+checkpoints_*/
 runs/
 class_logs/
 *.err.log
