@@ -6,6 +6,7 @@ Tests trained model against the game.
 
 import os
 import sys
+import json
 import torch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -16,14 +17,21 @@ from ppo import PPO
 from state_extractor import numpyize_states, numpyize_maps
 from action_mask import get_action_mask
 from vector_env import DelveVectorEnv
+from eval_gate import summarize_class_eval
 
 
 def parse_args(argv=None):
     import argparse
 
     parser = argparse.ArgumentParser(description="Evaluate a DELVE PPO checkpoint with the training rollout settings.")
-    parser.add_argument('--model', type=str, default='checkpoints/delve_ppo_final.pt')
+    parser.add_argument('--model', '--checkpoint', dest='model', type=str, default='checkpoints/delve_ppo_final.pt')
     parser.add_argument('--games', type=int, default=200)
+    parser.add_argument('--seed-base', type=int, default=1)
+    parser.add_argument('--per-class', type=int, default=0)
+    parser.add_argument('--classes', default=",".join(CLASSES))
+    parser.add_argument('--summary-json', default="")
+    parser.add_argument('--model-variant', choices=sorted(MODEL_VARIANTS), default='base')
+    parser.add_argument('--hidden-dim', type=int, default=None)
     parser.add_argument('--device', choices=['auto', 'cpu', 'cuda'], default='auto')
     parser.add_argument('--deterministic', action='store_true',
                         help='Use greedy argmax actions instead of stochastic sampling.')
@@ -47,10 +55,15 @@ def advance_prev_actions(prev_actions, action_list, dones):
 
 
 def evaluate(model_path=None, num_games=200, device='cuda', deterministic=False,
-             max_episode_steps=DEFAULT_MAX_EPISODE_STEPS, num_envs=32, envs_per_worker=8):
+             max_episode_steps=DEFAULT_MAX_EPISODE_STEPS, num_envs=32, envs_per_worker=8,
+             classes=None, per_class=0, seed_base=1, summary_json="",
+             model_variant="base", hidden_dim=None):
     """Evaluate a trained model."""
     # Load model
-    network = DelveNet(state_dim=STATE_DIM, action_dim=ACTION_DIM, hidden_dim=HIDDEN_DIM).to(device)
+    model_kwargs = dict(MODEL_VARIANTS[model_variant])
+    if hidden_dim is not None:
+        model_kwargs["hidden_dim"] = int(hidden_dim)
+    network = DelveNet(state_dim=STATE_DIM, action_dim=ACTION_DIM, **model_kwargs).to(device)
     agent = PPO(network, {
         'lr': LR, 'gamma': GAMMA, 'lam': LAM, 'clip_eps': CLIP_EPS,
         'entropy_coeff': ENTROPY_COEFF, 'value_coeff': VALUE_COEFF,
@@ -66,6 +79,18 @@ def evaluate(model_path=None, num_games=200, device='cuda', deterministic=False,
     else:
         print("No model found, using random policy")
     
+    class_list = _parse_class_list(classes)
+    class_schedule = None
+    if per_class and per_class > 0:
+        class_schedule = []
+        for class_index, class_name in enumerate(class_list):
+            for run_index in range(per_class):
+                class_schedule.append({
+                    "class_name": class_name,
+                    "seed": int(seed_base) + class_index * per_class + run_index,
+                })
+        num_games = len(class_schedule)
+
     # Run evaluation
     env_count = min(num_games, num_envs)
     env = DelveVectorEnv(
@@ -73,6 +98,8 @@ def evaluate(model_path=None, num_games=200, device='cuda', deterministic=False,
         envs_per_worker=envs_per_worker,
         max_episode_steps=max_episode_steps,
         timeout_penalty=DEFAULT_TIMEOUT_PENALTY,
+        class_schedule=class_schedule,
+        seed_base=seed_base,
     )
     
     wins = 0
@@ -80,6 +107,7 @@ def evaluate(model_path=None, num_games=200, device='cuda', deterministic=False,
     total_steps = 0
     games_done = 0
     outcomes = {}
+    eval_rows = []
     
     states = env.get_states()
     prev_actions = [None] * env_count
@@ -124,6 +152,13 @@ def evaluate(model_path=None, num_games=200, device='cuda', deterministic=False,
                 total_steps += infos[i].get('total_steps', 0)
                 outcome = infos[i].get('outcome', 'unknown')
                 outcomes[outcome] = outcomes.get(outcome, 0) + 1
+                eval_rows.append({
+                    "class_name": c_name,
+                    "won": bool(won),
+                    "final_floor": final_floor,
+                    "total_steps": infos[i].get('total_steps', 0),
+                    "outcome": outcome,
+                })
                 
                 if 'class_stats' not in locals():
                     class_stats = {}
@@ -168,8 +203,31 @@ def evaluate(model_path=None, num_games=200, device='cuda', deterministic=False,
     if outcomes:
         summary = ", ".join(f"{name} {count}" for name, count in sorted(outcomes.items()))
         print(f"\n  Outcomes: {summary}")
+
+    if summary_json:
+        summary = summarize_class_eval(eval_rows)
+        summary.update({
+            "overall": results,
+            "model": model_path,
+            "classes": class_list,
+            "per_class": per_class,
+            "seed_base": seed_base,
+        })
+        os.makedirs(os.path.dirname(summary_json) or ".", exist_ok=True)
+        with open(summary_json, "w", encoding="utf-8") as handle:
+            json.dump(summary, handle, indent=2, sort_keys=True)
+        print(f"\n  Wrote summary: {summary_json}")
     
     return results
+
+
+def _parse_class_list(classes):
+    if classes is None:
+        return list(CLASSES)
+    if isinstance(classes, str):
+        parsed = [part.strip() for part in classes.split(",") if part.strip()]
+        return parsed or list(CLASSES)
+    return list(classes)
 
 
 if __name__ == '__main__':
@@ -186,4 +244,10 @@ if __name__ == '__main__':
         max_episode_steps=args.max_episode_steps,
         num_envs=args.num_envs,
         envs_per_worker=args.envs_per_worker,
+        classes=args.classes,
+        per_class=args.per_class,
+        seed_base=args.seed_base,
+        summary_json=args.summary_json,
+        model_variant=args.model_variant,
+        hidden_dim=args.hidden_dim,
     )

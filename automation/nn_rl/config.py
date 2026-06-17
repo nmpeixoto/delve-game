@@ -23,9 +23,14 @@ CLASSES = [
 MAX_SHOP_SLOTS = 18
 SHOP_ITEM_FEATURES = 19  # +4 upgrade-stat bits: atk/def/hp/other
 STATE_DIM = 64 + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES
+<<<<<<< HEAD
+LEGACY_ACTION_DIM = 18 + MAX_SHOP_SLOTS  # Base gameplay actions + explicit shop buy-slot actions
+ACTION_SPACE_VERSION = 2
+=======
 ACTION_DIM = (
     18 + MAX_SHOP_SLOTS
 )  # Base gameplay actions + explicit shop buy-slot actions
+>>>>>>> main
 
 # Action indices
 ACTIONS = {
@@ -56,11 +61,60 @@ ACTIONS = {
 for slot in range(MAX_SHOP_SLOTS):
     ACTIONS[f"SHOP_BUY_{slot}"] = 18 + slot
 
+TACTICAL_ACTIONS = {
+    'RANGED_ATTACK_WEAK': LEGACY_ACTION_DIM,
+    'RANGED_ATTACK_NEAREST': LEGACY_ACTION_DIM + 1,
+    'KITE_SAFE_MOVE': LEGACY_ACTION_DIM + 2,
+}
+ACTIONS.update(TACTICAL_ACTIONS)
+ACTION_DIM = LEGACY_ACTION_DIM + len(TACTICAL_ACTIONS)
+
 # ─── NETWORK ─────────────────────────────────────────────────────────────────
 HIDDEN_DIM = 256
+MODEL_VARIANTS = {
+    'base': {
+        'hidden_dim': HIDDEN_DIM,
+        'cnn_out_dim': 128,
+        'cnn_channels': (32, 32),
+        'cnn_pool_size': 4,
+        'cnn_pool_kind': 'avg',
+        'head_hidden_dim': 64,
+    },
+    'large_tactical': {
+        'hidden_dim': 384,
+        'cnn_out_dim': 256,
+        'cnn_channels': (32, 64, 96),
+        'cnn_pool_size': 8,
+        'cnn_pool_kind': 'avg',
+        'head_hidden_dim': 256,
+    },
+}
 
 # ─── PPO HYPERPARAMETERS ─────────────────────────────────────────────────────
 LR = 1e-4
+<<<<<<< HEAD
+GAMMA = 0.999             # Discount factor (long episodes)
+LAM = 0.95                # GAE lambda
+CLIP_EPS = 0.2            # PPO clip range
+CLIP_V_LOSS = False       # MUST BE FALSE: Returns are unnormalized, clamping to 0.2 locks gradients
+ENTROPY_COEFF = 0.02      # Entropy bonus (exploration)
+VALUE_COEFF = 0.5         # Value loss coefficient
+MAX_GRAD_NORM = 0.5       # Gradient clipping
+EPOCHS_PER_UPDATE = 3     # Mini-batch epochs per rollout
+BATCH_SIZE = 2048         # Mini-batch size; tuned for large_tactical throughput
+
+# ─── ROLLOUT ─────────────────────────────────────────────────────────────────
+# Throughput notes:
+#   The env step bottleneck is Python simulation plus feature/action-mask
+#   extraction. On the Ryzen 7 9800X3D test machine, 16 worker processes with
+#   12 envs each outperformed the old 8-worker default by roughly 25-35%.
+#   Use direct observations + shared-contiguous transport + async-one-stale
+#   trainer for the measured fast path.
+NUM_ENVS = 192           # Parallel environments (192 = 16 workers x 12 envs each)
+ENVS_PER_WORKER = 12     # Tuned to fill 16 logical CPU threads without 32-worker overhead
+ROLLOUT_STEPS = 512      # Steps per env per rollout (longer = better learner amortization)
+DEFAULT_MAX_EPISODE_STEPS = 8000  # Generous full-dungeon stall guard; pass 0 to disable.
+=======
 GAMMA = 0.999  # Discount factor (long episodes)
 LAM = 0.95  # GAE lambda
 CLIP_EPS = 0.2  # PPO clip range
@@ -88,6 +142,7 @@ ROLLOUT_STEPS = 512  # Steps per env per rollout (longer = better GPU fill)
 DEFAULT_MAX_EPISODE_STEPS = (
     8000  # Generous full-dungeon stall guard; pass 0 to disable.
 )
+>>>>>>> main
 TOTAL_TIMESTEPS = 200_000_000
 
 # ─── LR SCHEDULE ─────────────────────────────────────────────────────────────

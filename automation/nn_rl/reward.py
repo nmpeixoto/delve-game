@@ -294,16 +294,13 @@ def compute_reward(prev_G, action, curr_G):
                 if stair_delta > 0 and curr_stair_dist < min_dist_so_far:
                     stair_distance_improved = True
 
-        # DIRECT DIRECTIONAL BONUS: brute-force gradient for movement actions
-        # If the action was a movement that brought us closer to stairs, big bonus.
-        # This bypasses feature dilution — the network learns "move toward stairs = good".
         if (
             prev_stair_dist is not None
             and prev_stair_dist > 0
             and curr_stair_dist is not None
             and action in (0, 1, 2, 3)  # MOVE_UP, DOWN, LEFT, RIGHT
         ):
-            if curr_stair_dist < prev_stair_dist:
+            if stair_distance_improved:
                 reward += REWARD_STAIR_APPROACH * floor * mults["explore"]
             elif curr_stair_dist > prev_stair_dist:
                 reward += REWARD_STAIR_RETREAT * floor * mults["explore"]
@@ -544,7 +541,7 @@ def _estimate_reward_components(prev_G, action, curr_G):
                 stair_distance_improved = True
 
             if prev_stair_dist > 0 and action in (0, 1, 2, 3):
-                if curr_stair_dist < prev_stair_dist:
+                if stair_distance_improved:
                     _add_component(
                         components,
                         "stairs",

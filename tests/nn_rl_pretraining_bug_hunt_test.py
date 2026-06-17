@@ -8,7 +8,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NN_RL_DIR = os.path.join(REPO_ROOT, "automation", "nn_rl")
 sys.path.insert(0, NN_RL_DIR)
 
-from config import ACTIONS, REWARD_CURRICULUM_SUCCESS
+from config import ACTIONS, CLASSES, REWARD_CURRICULUM_SUCCESS, REWARD_WIN
 from game_engine import DelveGame, FLOOR_ENEMY_PROFILES, TILE_FLOOR, TILE_STAIRS
 from pathfinding import floor_exploration_ratio
 from ppo import RolloutBuffer
@@ -83,8 +83,8 @@ class NnRlPretrainingBugHuntTest(unittest.TestCase):
 
         local_map = extract_local_map(state)
 
-        self.assertEqual(local_map[6, 4, 5], 1.0)
-        self.assertEqual(local_map[4, 4, 5], 0.0)
+        self.assertEqual(local_map[6, 8, 9], 1.0)
+        self.assertEqual(local_map[4, 8, 9], 0.0)
 
     def test_greed_shrine_applies_two_full_js_level_ups(self):
         game = DelveGame(seed=1, player_class="warrior")
@@ -153,21 +153,16 @@ class NnRlPretrainingBugHuntTest(unittest.TestCase):
             "name": "full_dungeon_normal",
             "max_floor": None,
             "success_threshold": 0.80,
-            "success_window": 4,
+            "success_window": len(CLASSES),
             "min_steps": 10,
         }
-        window = new_episode_window(window=4)
-        for class_name, won in [
-            ("warrior", True),
-            ("warrior", True),
-            ("mage", True),
-            ("mage", True),
-        ]:
+        window = new_episode_window(window=len(CLASSES))
+        for class_name in CLASSES:
             record_episode(window, {
-                "won": won,
+                "won": True,
                 "curriculum_success": False,
-                "final_floor": 5 if won else 3,
-                "outcome": "won" if won else "dead",
+                "final_floor": 5,
+                "outcome": "won",
                 "class_name": class_name,
             })
 
@@ -228,7 +223,7 @@ class NnRlPretrainingBugHuntTest(unittest.TestCase):
             self.assertTrue(dones[0])
             self.assertTrue(infos[0]["won"])
             self.assertEqual(infos[0]["outcome"], "won")
-            self.assertGreater(rewards[0], 250.0)
+            self.assertGreaterEqual(rewards[0], REWARD_WIN)
         finally:
             env.close()
 
@@ -238,7 +233,7 @@ class NnRlPretrainingBugHuntTest(unittest.TestCase):
         buffer.store(
             step=0,
             states=torch.zeros(2, 3),
-            maps=torch.zeros(2, 9, 8, 8),
+            maps=torch.zeros(2, 21, 16, 16),
             actions=torch.zeros(2, dtype=torch.long),
             log_probs=torch.zeros(2),
             values=torch.zeros(2),
