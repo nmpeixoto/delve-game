@@ -106,12 +106,12 @@ def get_action_mask(G):
         if choose_line_clear_enemy(G) is not None:
             mask[ACTIONS["RANGED_ATTACK_WEAK"]] = True
             mask[ACTIONS["RANGED_ATTACK_NEAREST"]] = True
-    
-    kite_enemies = _kite_pressure_enemies(p, vis_enemies)
-    if kite_enemies and safest_adjacent_move(
-        G, threat_enemies=kite_enemies, require_increase=True
-    ) is not None:
-        mask[ACTIONS["KITE_SAFE_MOVE"]] = True
+        
+        kite_enemies = _kite_pressure_enemies(p, vis_enemies)
+        if kite_enemies and safest_adjacent_move(
+            G, threat_enemies=kite_enemies, require_increase=True
+        ) is not None:
+            mask[ACTIONS["KITE_SAFE_MOVE"]] = True
 
     carried = [i for i in items if i.get("carried")]
     if any(i.get("type") == "potion" for i in carried):
@@ -169,7 +169,7 @@ def _has_key(G):
 
 
 def _tactical_actions_allowed(player):
-    return str(player.get("class", "")).lower() in {"rogue", "mage", "ranger", "necromancer"}
+    return str(player.get("class", "")).lower() in {"rogue", "mage", "ranger"}
 
 
 def _kite_pressure_enemies(player, visible_enemies):

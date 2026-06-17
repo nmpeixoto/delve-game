@@ -233,19 +233,31 @@ class PPO:
         checkpoint.update(metadata)
         torch.save(checkpoint, path)
     
-    def load(self, path, load_optimizer=True, override_lr=None):
-        checkpoint = torch.load(path, map_location=self.device)
+    def load(self, path_or_ckpt, load_optimizer=True, override_lr=None, remaining_updates=None):
+        if isinstance(path_or_ckpt, str):
+            checkpoint = torch.load(path_or_ckpt, map_location=self.device)
+        else:
+            checkpoint = path_or_ckpt
         self.network.load_state_dict(checkpoint['network'])
         if load_optimizer and 'optimizer' in checkpoint and 'scheduler' in checkpoint:
             self.optimizer.load_state_dict(checkpoint['optimizer'])
-            self.scheduler.load_state_dict(checkpoint['scheduler'])
             if override_lr is not None:
                 # Override the learning rate of the loaded optimizer
                 for param_group in self.optimizer.param_groups:
                     param_group['lr'] = override_lr
-                # Update scheduler's base learning rates
-                self.scheduler.base_lrs = [override_lr]
-                # Re-calculate end_factor based on new initial learning rate
-                if hasattr(self.scheduler, 'end_factor'):
-                    self.scheduler.end_factor = self.config['lr_end'] / override_lr
+                # Re-initialize the scheduler to decay over the remaining training updates
+                if remaining_updates is not None:
+                    self.scheduler = torch.optim.lr_scheduler.LinearLR(
+                        self.optimizer,
+                        start_factor=1.0,
+                        end_factor=self.config['lr_end'] / override_lr,
+                        total_iters=max(remaining_updates, 1)
+                    )
+                else:
+                    self.scheduler.load_state_dict(checkpoint['scheduler'])
+                    self.scheduler.base_lrs = [override_lr]
+                    if hasattr(self.scheduler, 'end_factor'):
+                        self.scheduler.end_factor = self.config['lr_end'] / override_lr
+            else:
+                self.scheduler.load_state_dict(checkpoint['scheduler'])
         return checkpoint

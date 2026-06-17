@@ -948,12 +948,19 @@ def main():
     total_steps = 0
     checkpoint = None
     if resume_path:
-        checkpoint = ppo.load(
-            resume_path,
-            load_optimizer=not args.reset_optimizer,
-            override_lr=config['lr'] if args.learning_rate is not None else None
-        )
+        checkpoint = torch.load(resume_path, map_location=device)
         total_steps = int(checkpoint.get("total_steps") or resume_step or 0)
+        
+        remaining_steps = max(0, args.total_timesteps - total_steps)
+        steps_per_update = args.num_envs * args.rollout_steps
+        remaining_updates = max(1, remaining_steps // steps_per_update)
+        
+        checkpoint = ppo.load(
+            checkpoint,
+            load_optimizer=not args.reset_optimizer,
+            override_lr=config['lr'] if args.learning_rate is not None else None,
+            remaining_updates=remaining_updates
+        )
     run_start_steps = total_steps
 
     # TensorBoard
