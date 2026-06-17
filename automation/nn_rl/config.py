@@ -19,13 +19,24 @@ CLASSES = [
     "monk",
 ]
 
+# Optional weights for class selection. Higher number = picked more often.
+CLASS_WEIGHTS = {
+    "warrior": 2.0,
+    "rogue": 1.5,
+    "mage": 3.0,
+    "paladin": 0.5,
+    "ranger": 2.0,
+    "barbarian": 0.2,
+    "necromancer": 0.5,
+    "monk": 3.0,
+}
+
 # ─── STATE / ACTION ──────────────────────────────────────────────────────────
 MAX_SHOP_SLOTS = 18
 SHOP_ITEM_FEATURES = 19  # +4 upgrade-stat bits: atk/def/hp/other
 STATE_DIM = 64 + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES
-ACTION_DIM = (
-    18 + MAX_SHOP_SLOTS
-)  # Base gameplay actions + explicit shop buy-slot actions
+LEGACY_ACTION_DIM = 18 + MAX_SHOP_SLOTS  # Base gameplay actions + explicit shop buy-slot actions
+ACTION_SPACE_VERSION = 2
 
 # Action indices
 ACTIONS = {
@@ -56,38 +67,58 @@ ACTIONS = {
 for slot in range(MAX_SHOP_SLOTS):
     ACTIONS[f"SHOP_BUY_{slot}"] = 18 + slot
 
+TACTICAL_ACTIONS = {
+    'RANGED_ATTACK_WEAK': LEGACY_ACTION_DIM,
+    'RANGED_ATTACK_NEAREST': LEGACY_ACTION_DIM + 1,
+    'KITE_SAFE_MOVE': LEGACY_ACTION_DIM + 2,
+}
+ACTIONS.update(TACTICAL_ACTIONS)
+ACTION_DIM = LEGACY_ACTION_DIM + len(TACTICAL_ACTIONS)
+
 # ─── NETWORK ─────────────────────────────────────────────────────────────────
 HIDDEN_DIM = 256
+MODEL_VARIANTS = {
+    'base': {
+        'hidden_dim': HIDDEN_DIM,
+        'cnn_out_dim': 128,
+        'cnn_channels': (32, 32),
+        'cnn_pool_size': 4,
+        'cnn_pool_kind': 'avg',
+        'head_hidden_dim': 64,
+    },
+    'large_tactical': {
+        'hidden_dim': 384,
+        'cnn_out_dim': 256,
+        'cnn_channels': (32, 64, 96),
+        'cnn_pool_size': 8,
+        'cnn_pool_kind': 'avg',
+        'head_hidden_dim': 256,
+    },
+}
 
 # ─── PPO HYPERPARAMETERS ─────────────────────────────────────────────────────
 LR = 1e-4
-GAMMA = 0.999  # Discount factor (long episodes)
-LAM = 0.95  # GAE lambda
-CLIP_EPS = 0.2  # PPO clip range
-CLIP_V_LOSS = (
-    False  # MUST BE FALSE: Returns are unnormalized, clamping to 0.2 locks gradients
-)
-ENTROPY_COEFF = 0.02  # Entropy bonus (exploration)
-VALUE_COEFF = 0.5  # Value loss coefficient
-MAX_GRAD_NORM = 0.5  # Gradient clipping
-EPOCHS_PER_UPDATE = 3  # Mini-batch epochs per rollout
-BATCH_SIZE = 1024  # Mini-batch size
+GAMMA = 0.999             # Discount factor (long episodes)
+LAM = 0.95                # GAE lambda
+CLIP_EPS = 0.2            # PPO clip range
+CLIP_V_LOSS = False       # MUST BE FALSE: Returns are unnormalized, clamping to 0.2 locks gradients
+ENTROPY_COEFF = 0.02      # Entropy bonus (exploration)
+VALUE_COEFF = 0.5         # Value loss coefficient
+MAX_GRAD_NORM = 0.5       # Gradient clipping
+EPOCHS_PER_UPDATE = 3     # Mini-batch epochs per rollout
+BATCH_SIZE = 2048         # Mini-batch size; tuned for large_tactical throughput
 
 # ─── ROLLOUT ─────────────────────────────────────────────────────────────────
 # Throughput notes:
-#   The env step bottleneck is JSON IPC over stdin/stdout between Python and
-#   Node.js workers.  Each step sends a full game snapshot (~15-20KB) across a
-#   pipe.  To amortize the per-message overhead:
-#     - Use fewer, larger workers (ENVS_PER_WORKER=16 → only 8 Node processes)
-#     - Use longer rollouts (ROLLOUT_STEPS=512) so we spend less % of time in
-#       the PPO update and more time collecting experience in parallel.
-#     - Keep NUM_ENVS high so Node processes stay busy.
-NUM_ENVS = 128  # Parallel environments (128 = 8 workers × 16 envs each)
-ENVS_PER_WORKER = 16  # 16 envs per Node.js worker → 8 workers total
-ROLLOUT_STEPS = 512  # Steps per env per rollout (longer = better GPU fill)
-DEFAULT_MAX_EPISODE_STEPS = (
-    8000  # Generous full-dungeon stall guard; pass 0 to disable.
-)
+#   The env step bottleneck is Python simulation plus feature/action-mask
+#   extraction. On the Ryzen 7 9800X3D test machine, 16 worker processes with
+#   12 envs each outperformed the old 8-worker default by roughly 25-35%.
+#   Use direct observations + shared-contiguous transport + async-one-stale
+#   trainer for the measured fast path.
+NUM_ENVS = 192           # Parallel environments (192 = 16 workers x 12 envs each)
+ENVS_PER_WORKER = 12     # Tuned to fill 16 logical CPU threads without 32-worker overhead
+ROLLOUT_STEPS = 512      # Steps per env per rollout (longer = better learner amortization)
+DEFAULT_MAX_EPISODE_STEPS = 8000  # Generous full-dungeon stall guard; pass 0 to disable.
 TOTAL_TIMESTEPS = 200_000_000
 
 # ─── LR SCHEDULE ─────────────────────────────────────────────────────────────
@@ -118,16 +149,25 @@ REWARD_KILL_ELITE = 0.15
 REWARD_HEAL_MULT = 0.08
 REWARD_TRAP_PENALTY = -0.03
 REWARD_EXPLORE_MULT = 0.001
+REWARD_KEY_PICKUP = 0.2
+REWARD_DOOR_UNLOCK = 0.3
+REWARD_SECRET_REVEAL = 0.2
+REWARD_EXPLORE_MILESTONE = 0.4
+REWARD_STAT_ATK_DEF = 0.1
+REWARD_STAT_MAX_HP = 0.05
+REWARD_DAMAGE_PENALTY_MULT = 1.0
 REWARD_STAIR_DISCOVERY = 0.5  # increased from 0.3
 REWARD_GOLD_MULT = 0.0001
 REWARD_LEVEL_UP = 0.08
 REWARD_TURN_PENALTY = -0.00075
+REWARD_MENU_PENALTY = -0.05
 REWARD_POTION_WASTE = -0.03
 REWARD_KEY_DOOR_CHAIN = (
     0.4  # NEW: bonus for unlocking door within 20 steps of key pickup
 )
 REWARD_STAIR_APPROACH = 0.04
 REWARD_STAIR_RETREAT = -0.02
+REWARD_STAIR_STAND_PENALTY = -0.5
 
 # ─── CURRICULUM ──────────────────────────────────────────────────────────────
 # The bot must master full Normal dungeon clears before advancing to Hard mode.

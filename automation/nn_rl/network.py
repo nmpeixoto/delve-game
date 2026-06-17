@@ -15,17 +15,34 @@ class SpatialCNN(nn.Module):
     Channels include walls, fog, enemies (HP/ATK/DEF/Dodge/Revive/Enrage/Regen/Vamp/Freeze), 
     items, traps, etc.
     """
-    def __init__(self, in_channels=21, out_dim=128):
+    def __init__(
+        self,
+        in_channels=21,
+        out_dim=128,
+        channels=(32, 32),
+        pool_size=4,
+        pool_kind="avg",
+    ):
         super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_channels, 32, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(32, 32, 3, padding=1),
-            nn.ReLU(),
-            nn.AdaptiveAvgPool2d(4),
+        if pool_kind not in ("avg", "max"):
+            raise ValueError("pool_kind must be 'avg' or 'max'")
+        conv_layers = []
+        prev_channels = in_channels
+        for channel_count in channels:
+            conv_layers.extend([
+                nn.Conv2d(prev_channels, channel_count, 3, padding=1),
+                nn.ReLU(),
+            ])
+            prev_channels = channel_count
+        pool = (
+            nn.AdaptiveAvgPool2d(pool_size)
+            if pool_kind == "avg"
+            else nn.AdaptiveMaxPool2d(pool_size)
         )
+        conv_layers.append(pool)
+        self.conv = nn.Sequential(*conv_layers)
         self.fc = nn.Sequential(
-            nn.Linear(32 * 4 * 4, out_dim),
+            nn.Linear(prev_channels * pool_size * pool_size, out_dim),
             nn.ReLU(),
         )
     
@@ -45,31 +62,47 @@ class DelveNet(nn.Module):
         Value Head:  hidden_dim -> 64 -> 1
     """
 
-    GRU_HIDDEN = 256
-
-    def __init__(self, state_dim=STATE_DIM, action_dim=ACTION_DIM, hidden_dim=HIDDEN_DIM):
+    def __init__(
+        self,
+        state_dim=STATE_DIM,
+        action_dim=ACTION_DIM,
+        hidden_dim=HIDDEN_DIM,
+        cnn_out_dim=128,
+        cnn_channels=(32, 32),
+        cnn_pool_size=4,
+        cnn_pool_kind="avg",
+        head_hidden_dim=64,
+    ):
         super().__init__()
         self.hidden_dim = hidden_dim
         self.action_dim = action_dim
+        self.cnn_out_dim = cnn_out_dim
+        self.head_hidden_dim = head_hidden_dim
         
         # CNN for local map
-        self.cnn = SpatialCNN(in_channels=21, out_dim=128)
+        self.cnn = SpatialCNN(
+            in_channels=21,
+            out_dim=cnn_out_dim,
+            channels=cnn_channels,
+            pool_size=cnn_pool_size,
+            pool_kind=cnn_pool_kind,
+        )
         
         # GRU for temporal context
-        self.gru = nn.GRU(input_size=state_dim + 128, hidden_size=hidden_dim, batch_first=True)
+        self.gru = nn.GRU(input_size=state_dim + cnn_out_dim, hidden_size=hidden_dim, batch_first=True)
         
         # Policy head
         self.policy = nn.Sequential(
-            nn.Linear(hidden_dim, 64),
+            nn.Linear(hidden_dim, head_hidden_dim),
             nn.ReLU(),
-            nn.Linear(64, action_dim),
+            nn.Linear(head_hidden_dim, action_dim),
         )
         
         # Value head
         self.value = nn.Sequential(
-            nn.Linear(hidden_dim, 64),
+            nn.Linear(hidden_dim, head_hidden_dim),
             nn.ReLU(),
-            nn.Linear(64, 1),
+            nn.Linear(head_hidden_dim, 1),
         )
     
     def forward(self, state, map_tensor, action_mask=None, hidden=None, seq_len=1, dones=None):

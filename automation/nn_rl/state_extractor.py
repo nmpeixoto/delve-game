@@ -26,10 +26,8 @@ import numpy as np
 
 from config import MAX_SHOP_SLOTS, SHOP_ITEM_FEATURES, STATE_DIM, MAP_W
 from pathfinding import (
-    shortest_stairs_distance,
+    compute_navigation_features,
     floor_exploration_ratio,
-    nearest_unseen_direction,
-    nearest_poi_direction,
     _seen_set,
 )
 
@@ -67,6 +65,7 @@ def extract_state(G, prev_action=None):
 
     # ── NAVIGATION (4) ───────────────────────────────────────────────────────
     px, py = p.get('x', 0), p.get('y', 0)
+    nav = compute_navigation_features(G, map_data, px, py)
 
     # Stair direction (the critical features)
     stair_dx, stair_dy = _stair_direction(G)
@@ -74,7 +73,7 @@ def extract_state(G, prev_action=None):
     features.append(stair_dy)                                           # 8: stair_dy
 
     # BFS distance to stairs
-    bfs_dist = shortest_stairs_distance(G, map_data, px, py)
+    bfs_dist = nav["stairs_distance"]
     features.append(min(bfs_dist / 30, 1.0) if bfs_dist is not None else 1.0)  # 9: bfs_dist
 
     # Floor exploration
@@ -114,21 +113,21 @@ def extract_state(G, prev_action=None):
     features.append(min(G.get('_steps_since_key_pickup', 0) / 200, 1.0))     # 29
     features.append(min(G.get('_steps_since_enemy_kill', 0) / 200, 1.0))     # 30
     
-    exp_dx, exp_dy = nearest_unseen_direction(G, map_data)
+    exp_dx, exp_dy = nav["unseen_dx"], nav["unseen_dy"]
     features.append(float(exp_dx))                                           # 31: explore_dx
     features.append(float(exp_dy))                                           # 32: explore_dy
     
-    shop_dx, shop_dy = nearest_poi_direction(G, map_data, 'shop')
+    shop_dx, shop_dy = nav["shop_dx"], nav["shop_dy"]
     features.append(float(shop_dx))                                          # 33: shop_dx
     features.append(float(shop_dy))                                          # 34: shop_dy
     
-    shrine_dx, shrine_dy = nearest_poi_direction(G, map_data, 'shrine')
+    shrine_dx, shrine_dy = nav["shrine_dx"], nav["shrine_dy"]
     features.append(float(shrine_dx))                                        # 35: shrine_dx
     features.append(float(shrine_dy))                                        # 36: shrine_dy
     
     has_key = any(i.get('type') == 'key' and i.get('carried') for i in G.get('items', []))
     if has_key:
-        ldoor_dx, ldoor_dy = nearest_poi_direction(G, map_data, 'locked_door')
+        ldoor_dx, ldoor_dy = nav["locked_door_dx"], nav["locked_door_dy"]
     else:
         ldoor_dx, ldoor_dy = 0.0, 0.0
     features.append(float(ldoor_dx))                                         # 37: locked_door_dx

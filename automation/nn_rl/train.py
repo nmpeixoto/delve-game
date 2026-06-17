@@ -6,6 +6,8 @@ Uses the existing headless_balance.js VM infrastructure directly.
 
 import argparse
 from collections import defaultdict, deque
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 import glob
 import os, sys, time, json
 import re
@@ -135,6 +137,26 @@ def parse_args(argv=None):
     parser.add_argument("--envs-per-worker", type=int, default=ENVS_PER_WORKER)
     parser.add_argument("--rollout-steps", type=int, default=ROLLOUT_STEPS)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    parser.add_argument("--hidden-dim", type=int, default=None)
+    parser.add_argument(
+        "--learning-rate",
+        "--lr",
+        dest="learning_rate",
+        type=float,
+        default=None,
+        help="Override PPO Adam learning rate; useful for conservative resumed training.",
+    )
+    parser.add_argument(
+        "--entropy-coeff",
+        type=float,
+        default=None,
+        help="Override PPO entropy bonus coefficient.",
+    )
+    parser.add_argument(
+        "--model-variant",
+        choices=sorted(MODEL_VARIANTS),
+        default="base",
+    )
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--checkpoint-dir", default="checkpoints")
     parser.add_argument("--save-every", type=int, default=SAVE_EVERY)
@@ -166,12 +188,62 @@ def parse_args(argv=None):
         help="JSONL file for durable scalar/event logging. Pass an empty string to disable.",
     )
     parser.add_argument(
+        "--tensorboard-logdir",
+        default=os.path.join("runs", "delve_ppo"),
+        help="TensorBoard event directory.",
+    )
+    parser.add_argument(
+        "--observation-mode",
+        choices=["legacy", "direct"],
+        default="legacy",
+        help="Observation builder used by rollout workers.",
+    )
+    parser.add_argument(
+        "--transport-mode",
+        choices=["pipe", "shared", "shared-contiguous"],
+        default="pipe",
+        help="Rollout transport used by worker processes.",
+    )
+    parser.add_argument(
+        "--trainer-mode",
+        choices=["sync", "async-double-buffer", "async-one-stale"],
+        default="sync",
+        help="Synchronous PPO or one-rollout-stale actor/learner overlap.",
+    )
+    parser.add_argument(
         "--curriculum-max-floor",
         type=int,
         default=None,
         help="Maximum floor the bot is allowed to reach. If it reaches stairs on this floor, it wins early.",
     )
     return parser.parse_args(argv)
+
+
+def build_ppo_config(args):
+    lr_start = float(args.learning_rate) if args.learning_rate is not None else LR_START
+    lr_end = min(LR_END, lr_start)
+    entropy_coeff = (
+        float(args.entropy_coeff)
+        if args.entropy_coeff is not None
+        else ENTROPY_COEFF
+    )
+    return {
+        "lr": lr_start,
+        "gamma": GAMMA,
+        "lam": LAM,
+        "clip_eps": CLIP_EPS,
+        "entropy_coeff": entropy_coeff,
+        "value_coeff": VALUE_COEFF,
+        "max_grad_norm": MAX_GRAD_NORM,
+        "epochs_per_update": EPOCHS_PER_UPDATE,
+        "batch_size": args.batch_size,
+        "num_envs": args.num_envs,
+        "rollout_steps": args.rollout_steps,
+        "lr_start": lr_start,
+        "lr_end": lr_end,
+        "lr_decay_steps": LR_DECAY_STEPS,
+        "clip_v_loss": CLIP_V_LOSS,
+    }
 
 
 def should_use_tensorboard(args):
@@ -424,7 +496,11 @@ def action_names():
         "Buy",
         "Sell",
         "Esc",
-    ] + [f"Buy{slot + 1}" for slot in range(MAX_SHOP_SLOTS)]
+    ] + [f"Buy{slot + 1}" for slot in range(MAX_SHOP_SLOTS)] + [
+        "RngWeak",
+        "RngNear",
+        "Kite",
+    ]
 
 
 def action_distribution(action_counts):
@@ -437,6 +513,185 @@ def action_distribution(action_counts):
         for i, count in enumerate(action_counts)
         if int(count) > 0
     }
+
+
+def copy_numpy_observation_into_tensors(
+    np_states,
+    np_maps,
+    np_masks,
+    state_tensor,
+    map_tensor,
+    mask_tensor,
+):
+    """Copy observation arrays into reusable tensors without replacing targets."""
+    state_tensor.copy_(torch.from_numpy(np_states), non_blocking=True)
+    map_tensor.copy_(torch.from_numpy(np_maps), non_blocking=True)
+    mask_tensor.copy_(
+        torch.from_numpy(np_masks.astype(np.bool_, copy=False)),
+        non_blocking=True,
+    )
+    return state_tensor, map_tensor, mask_tensor
+
+
+@dataclass
+class RolloutTransferTensors:
+    state: torch.Tensor
+    map: torch.Tensor
+    mask: torch.Tensor
+    bootstrap_state: torch.Tensor
+    bootstrap_map: torch.Tensor
+    bootstrap_mask: torch.Tensor
+
+
+@dataclass
+class RolloutResult:
+    buffer: RolloutBuffer
+    transfer: RolloutTransferTensors
+    np_states: np.ndarray
+    np_maps: np.ndarray
+    np_masks: np.ndarray
+    hidden: torch.Tensor | None
+    action_counts: np.ndarray
+    probe_accumulator: dict
+    episode_infos: list
+    steps_collected: int
+    policy_version: int
+
+
+def allocate_rollout_transfer_tensors(np_states, np_maps, np_masks, device):
+    state_tensor = torch.empty(np_states.shape, device=device, dtype=torch.float32)
+    map_tensor = torch.empty(np_maps.shape, device=device, dtype=torch.float32)
+    mask_tensor = torch.empty(np_masks.shape, device=device, dtype=torch.bool)
+    return RolloutTransferTensors(
+        state=state_tensor,
+        map=map_tensor,
+        mask=mask_tensor,
+        bootstrap_state=torch.empty_like(state_tensor),
+        bootstrap_map=torch.empty_like(map_tensor),
+        bootstrap_mask=torch.empty_like(mask_tensor),
+    )
+
+
+def prepare_bootstrap_tensors(result):
+    return copy_numpy_observation_into_tensors(
+        result.np_states,
+        result.np_maps,
+        result.np_masks,
+        result.transfer.bootstrap_state,
+        result.transfer.bootstrap_map,
+        result.transfer.bootstrap_mask,
+    )
+
+
+def collect_rollout_batch(
+    *,
+    env,
+    model,
+    buffer,
+    transfer,
+    np_states,
+    np_maps,
+    np_masks,
+    hidden,
+    args,
+    device,
+    policy_version=0,
+):
+    action_counts = np.zeros(ACTION_DIM, dtype=np.int64)
+    probe_accumulator = new_probe_accumulator()
+    episode_infos = []
+
+    for step in range(args.rollout_steps):
+        state_tensor, map_tensor, mask_tensor = copy_numpy_observation_into_tensors(
+            np_states,
+            np_maps,
+            np_masks,
+            transfer.state,
+            transfer.map,
+            transfer.mask,
+        )
+
+        hidden_in = hidden
+        with torch.inference_mode():
+            logits, values_raw, hidden = model(
+                state_tensor,
+                map_tensor,
+                action_mask=mask_tensor,
+                hidden=hidden_in,
+            )
+            dist = torch.distributions.Categorical(logits=logits)
+            actions = dist.sample()
+            log_probs = dist.log_prob(actions)
+            values = values_raw.squeeze(-1)
+            descend_logits = logits[:, ACTIONS["DESCEND"]]
+            descend_probs = torch.exp(descend_logits - torch.logsumexp(logits, dim=-1))
+        action_array = actions.cpu().numpy()
+        update_descend_probe(
+            probe_accumulator,
+            np_states,
+            np_masks,
+            action_array,
+            descend_probs.cpu().numpy(),
+        )
+        action_counts += np.bincount(action_array, minlength=ACTION_DIM)
+
+        (
+            next_np_states,
+            next_np_maps,
+            next_np_masks,
+            rewards_np,
+            dones_np,
+            infos,
+        ) = env.step(action_array)
+
+        buffer.store(
+            step=step,
+            states=state_tensor,
+            maps=map_tensor,
+            actions=actions,
+            log_probs=log_probs,
+            values=values,
+            rewards=torch.from_numpy(rewards_np).to(
+                device=device,
+                dtype=torch.float32,
+            ),
+            dones=torch.from_numpy(dones_np).to(
+                device=device,
+                dtype=torch.bool,
+            ),
+            masks=mask_tensor,
+            hidden=hidden_in,
+        )
+
+        np_states = next_np_states
+        np_maps = next_np_maps
+        np_masks = next_np_masks
+
+        if hidden is not None and dones_np.any():
+            done_mask = (
+                torch.from_numpy(dones_np)
+                .to(device=device, dtype=torch.bool)
+                .unsqueeze(0)
+            )
+            hidden = hidden.masked_fill(done_mask.unsqueeze(-1), 0.0)
+
+        for i, done in enumerate(dones_np.tolist()):
+            if done:
+                episode_infos.append(infos[i])
+
+    return RolloutResult(
+        buffer=buffer,
+        transfer=transfer,
+        np_states=np_states,
+        np_maps=np_maps,
+        np_masks=np_masks,
+        hidden=hidden,
+        action_counts=action_counts,
+        probe_accumulator=probe_accumulator,
+        episode_infos=episode_infos,
+        steps_collected=args.num_envs * args.rollout_steps,
+        policy_version=int(policy_version),
+    )
 
 
 def summarize_actions(action_counts):
@@ -489,21 +744,32 @@ def new_probe_accumulator():
     return defaultdict(float)
 
 
-def update_descend_probe(accumulator, np_states, np_masks, actions, action_probs):
+def update_descend_probe(accumulator, np_states, np_masks, actions, desc_probs):
     descend_idx = ACTIONS["DESCEND"]
     on_stairs = np_states[:, 6] > 0.5
     legal_desc = np_masks[:, descend_idx].astype(bool)
     selected_desc = actions == descend_idx
-    desc_probs = action_probs[:, descend_idx]
 
-    accumulator["legal_desc_steps"] += int(legal_desc.sum())
-    accumulator["legal_desc_actions"] += int((selected_desc & legal_desc).sum())
-    accumulator["legal_desc_prob_sum"] += (
+    accumulator["legal_desc_steps"] = accumulator.get("legal_desc_steps", 0) + int(
+        legal_desc.sum()
+    )
+    accumulator["legal_desc_actions"] = accumulator.get("legal_desc_actions", 0) + int(
+        (selected_desc & legal_desc).sum()
+    )
+    accumulator["legal_desc_prob_sum"] = accumulator.get(
+        "legal_desc_prob_sum", 0.0
+    ) + (
         float(desc_probs[legal_desc].sum()) if legal_desc.any() else 0.0
     )
-    accumulator["on_stairs_steps"] += int(on_stairs.sum())
-    accumulator["on_stairs_desc_actions"] += int((selected_desc & on_stairs).sum())
-    accumulator["on_stairs_desc_prob_sum"] += (
+    accumulator["on_stairs_steps"] = accumulator.get("on_stairs_steps", 0) + int(
+        on_stairs.sum()
+    )
+    accumulator["on_stairs_desc_actions"] = accumulator.get(
+        "on_stairs_desc_actions", 0
+    ) + int((selected_desc & on_stairs).sum())
+    accumulator["on_stairs_desc_prob_sum"] = accumulator.get(
+        "on_stairs_desc_prob_sum", 0.0
+    ) + (
         float(desc_probs[on_stairs].sum()) if on_stairs.any() else 0.0
     )
 
@@ -530,6 +796,7 @@ def finalize_probe_metrics(accumulator):
 def build_training_metrics_row(
     *,
     total_steps,
+    run_start_steps=0,
     elapsed,
     phase_index,
     phase_name,
@@ -551,6 +818,7 @@ def build_training_metrics_row(
     progress_key="wins",
     status_text=None,
     probe_metrics=None,
+    stage_seconds=None,
 ):
     row = {
         "event": "train_report",
@@ -586,6 +854,17 @@ def build_training_metrics_row(
         row["status_text"] = str(status_text)
     if probe_metrics:
         row["probe_metrics"] = dict(probe_metrics)
+    if stage_seconds is not None:
+        steps_this_run = max(int(total_steps) - int(run_start_steps or 0), 0)
+        row["perf"] = {
+            "steps_per_second": steps_this_run / max(float(elapsed), 1e-9),
+            "run_start_steps": int(run_start_steps or 0),
+            "steps_this_run": steps_this_run,
+            "stage_seconds": {
+                str(name): float(seconds)
+                for name, seconds in sorted(dict(stage_seconds).items())
+            },
+        }
     return row
 
 
@@ -638,38 +917,28 @@ def _format_action_ratio(count, total):
 
 def main():
     args = parse_args()
+    from async_trainer import assert_rollout_staleness, normalize_trainer_mode
+
+    trainer_mode = normalize_trainer_mode(args.trainer_mode)
     if args.device == "auto":
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
         device = torch.device(args.device)
 
+    model_kwargs = dict(MODEL_VARIANTS[args.model_variant])
+    if args.hidden_dim is not None:
+        model_kwargs["hidden_dim"] = args.hidden_dim
     model = DelveNet(
-        state_dim=STATE_DIM, action_dim=ACTION_DIM, hidden_dim=HIDDEN_DIM
+        state_dim=STATE_DIM, action_dim=ACTION_DIM, **model_kwargs
     ).to(device)
-    config = {
-        "lr": LR,
-        "gamma": GAMMA,
-        "lam": LAM,
-        "clip_eps": CLIP_EPS,
-        "entropy_coeff": ENTROPY_COEFF,
-        "value_coeff": VALUE_COEFF,
-        "max_grad_norm": MAX_GRAD_NORM,
-        "epochs_per_update": EPOCHS_PER_UPDATE,
-        "batch_size": args.batch_size,
-        "num_envs": args.num_envs,
-        "rollout_steps": args.rollout_steps,
-        "lr_start": LR_START,
-        "lr_end": LR_END,
-        "lr_decay_steps": LR_DECAY_STEPS,
-        "clip_v_loss": CLIP_V_LOSS,
-    }
+    config = build_ppo_config(args)
     ppo = PPO(model, config, device)
     buffer = RolloutBuffer(
         args.num_envs,
         args.rollout_steps,
         STATE_DIM,
         ACTION_DIM,
-        model.GRU_HIDDEN,
+        model.hidden_dim,
         device=device,
     )
 
@@ -681,11 +950,12 @@ def main():
     if resume_path:
         checkpoint = ppo.load(resume_path, load_optimizer=not args.reset_optimizer)
         total_steps = int(checkpoint.get("total_steps") or resume_step or 0)
+    run_start_steps = total_steps
 
     # TensorBoard
     writer = None
     if should_use_tensorboard(args):
-        writer = SummaryWriter("runs/delve_ppo")
+        writer = SummaryWriter(args.tensorboard_logdir)
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     metrics_log_path = (args.metrics_log or "").strip()
@@ -696,21 +966,35 @@ def main():
     print("=" * 60)
     print(f"  Device:       {device}")
     print(f"  Network:      {model.count_parameters():,} params")
+    print(f"  Model:        {args.model_variant} (hidden={model.hidden_dim})")
     print(
         f"  Envs:         {args.num_envs} ({args.envs_per_worker}/worker, {(args.num_envs + args.envs_per_worker - 1) // args.envs_per_worker} workers)"
     )
     print(f"  Rollout:      {args.rollout_steps} steps/env")
     print(f"  Batch size:   {args.batch_size}")
+    print(f"  LR/Entropy:   {config['lr']:.2g} / {config['entropy_coeff']:.3g}")
     print(f"  Total steps:  {args.total_timesteps:,}")
     print(f"  Episode cap:  {format_episode_cap(args.max_episode_steps)}")
+    print(f"  Observations: {args.observation_mode}")
+    print(f"  Transport:    {args.transport_mode}")
+    trainer_display = (
+        trainer_mode
+        if trainer_mode == args.trainer_mode
+        else f"{trainer_mode} ({args.trainer_mode} alias)"
+    )
+    print(f"  Trainer:      {trainer_display}")
     print(f"  Resume:       {resume_path or 'No'}")
     print(f"  Optimizer:    {'Reset' if args.reset_optimizer else 'Checkpoint'}")
-    print(f"  TensorBoard:  {'Yes' if writer else 'No'} (tensorboard --logdir=runs)")
+    tensorboard_hint = (
+        f"tensorboard --logdir={args.tensorboard_logdir}" if writer else "disabled"
+    )
+    print(f"  TensorBoard:  {'Yes' if writer else 'No'} ({tensorboard_hint})")
     print(f"  Checkpoints:  {args.checkpoint_dir}/delve_ppo_<step>.pt")
     print("=" * 60)
     print()
 
     start_time = time.time()
+    stage_seconds = defaultdict(float)
 
     saved_phase = None if checkpoint is None else checkpoint.get("curriculum_phase")
     saved_steps_in_phase = (
@@ -747,8 +1031,51 @@ def main():
         timeout_penalty=args.timeout_penalty,
         curriculum_max_floor=curriculum_max_floor,
         curriculum_hard_mode=curriculum_hard_mode,
+        observation_mode=args.observation_mode,
+        transport_mode=args.transport_mode,
     )
     np_states, np_maps, np_masks = env.reset()
+    rollout_transfer = allocate_rollout_transfer_tensors(
+        np_states,
+        np_maps,
+        np_masks,
+        device,
+    )
+    rollout_buffers = [buffer]
+    rollout_transfers = [rollout_transfer]
+    actor_model = model
+    async_executor = None
+    async_future = None
+    learner_version = 0
+    next_async_buffer_index = 1
+    hidden = None
+    if trainer_mode == "async-one-stale":
+        actor_model = DelveNet(
+            state_dim=STATE_DIM,
+            action_dim=ACTION_DIM,
+            **model_kwargs,
+        ).to(device)
+        actor_model.load_state_dict(model.state_dict())
+        actor_model.eval()
+        rollout_buffers.append(
+            RolloutBuffer(
+                args.num_envs,
+                args.rollout_steps,
+                STATE_DIM,
+                ACTION_DIM,
+                model.hidden_dim,
+                device=device,
+            )
+        )
+        rollout_transfers.append(
+            allocate_rollout_transfer_tensors(
+                np_states,
+                np_maps,
+                np_masks,
+                device,
+            )
+        )
+        async_executor = ThreadPoolExecutor(max_workers=1)
     print(
         f"=== Training Goal: {active_phase.get('name')} ({curriculum_phase_target(active_phase)}) ==="
     )
@@ -756,6 +1083,18 @@ def main():
 
     try:
         while total_steps < args.total_timesteps:
+            prefetched_result = None
+            if async_future is not None:
+                stage_t0 = time.perf_counter()
+                prefetched_result = async_future.result()
+                stage_seconds["collect_wait"] += time.perf_counter() - stage_t0
+                assert_rollout_staleness(
+                    prefetched_result.policy_version,
+                    learner_version,
+                    max_staleness=1,
+                )
+                async_future = None
+
             if curriculum_phase < len(CURRICULUM) - 1 and curriculum_should_advance(
                 active_phase, episode_window, steps_in_phase
             ):
@@ -790,92 +1129,68 @@ def main():
                 phase_budget_warned = True
 
             # Collect rollout from real game environments.
-            action_counts = np.zeros(ACTION_DIM, dtype=np.int64)
-            probe_accumulator = new_probe_accumulator()
-            prev_actions = [None] * args.num_envs
-            hidden = None  # GRU hidden state, carried across steps
-            for step in range(args.rollout_steps):
-                state_tensor = torch.from_numpy(np_states).to(device)
-                map_tensor = torch.from_numpy(np_maps).to(device)
-                mask_tensor = torch.from_numpy(np_masks).to(
-                    device=device, dtype=torch.bool
+            if prefetched_result is None:
+                stage_t0 = time.perf_counter()
+                result = collect_rollout_batch(
+                    env=env,
+                    model=actor_model,
+                    buffer=rollout_buffers[0],
+                    transfer=rollout_transfers[0],
+                    np_states=np_states,
+                    np_maps=np_maps,
+                    np_masks=np_masks,
+                    hidden=hidden,
+                    args=args,
+                    device=device,
+                    policy_version=learner_version,
                 )
-
-                hidden_in = hidden
-                with torch.inference_mode():
-                    logits, values_raw, hidden = model(
-                        state_tensor,
-                        map_tensor,
-                        action_mask=mask_tensor,
-                        hidden=hidden_in,
-                    )
-                    dist = torch.distributions.Categorical(logits=logits)
-                    actions = dist.sample()
-                    log_probs = dist.log_prob(actions)
-                    values = values_raw.squeeze(-1)
-                    action_probs = torch.softmax(logits, dim=-1)
-                action_array = actions.cpu().numpy()
-                update_descend_probe(
-                    probe_accumulator,
-                    np_states,
-                    np_masks,
-                    action_array,
-                    action_probs.cpu().numpy(),
-                )
-                action_counts += np.bincount(action_array, minlength=ACTION_DIM)
-
-                (
-                    next_np_states,
-                    next_np_maps,
-                    next_np_masks,
-                    rewards_np,
-                    dones_np,
-                    infos,
-                ) = env.step(action_array)
-
-                buffer.store(
-                    step=step,
-                    states=state_tensor,
-                    maps=map_tensor,
-                    actions=actions,
-                    log_probs=log_probs,
-                    values=values,
-                    rewards=torch.from_numpy(rewards_np).to(
-                        device=device, dtype=torch.float32
-                    ),
-                    dones=torch.from_numpy(dones_np).to(
-                        device=device, dtype=torch.bool
-                    ),
-                    masks=mask_tensor,
-                    hidden=hidden_in,
-                )
-
-                total_steps += args.num_envs
-                steps_in_phase += args.num_envs
-
-                np_states = next_np_states
-                np_maps = next_np_maps
-                np_masks = next_np_masks
-                prev_actions = actions.cpu().tolist()
-
-                # Reset hidden state for done environments
-                if hidden is not None and dones_np.any():
-                    done_mask = (
-                        torch.from_numpy(dones_np)
-                        .to(device=device, dtype=torch.bool)
-                        .unsqueeze(0)
-                    )
-                    hidden = hidden.masked_fill(done_mask.unsqueeze(-1), 0.0)
-
-                for i, done in enumerate(dones_np.tolist()):
-                    if done:
-                        record_episode(episode_window, infos[i])
+                stage_seconds["collect"] += time.perf_counter() - stage_t0
+            else:
+                result = prefetched_result
+            np_states = result.np_states
+            np_maps = result.np_maps
+            np_masks = result.np_masks
+            hidden = result.hidden
+            action_counts = result.action_counts
+            probe_accumulator = result.probe_accumulator
+            total_steps += result.steps_collected
+            steps_in_phase += result.steps_collected
+            for episode_info in result.episode_infos:
+                record_episode(episode_window, episode_info)
 
             # Update policy.
-            last_states = torch.from_numpy(np_states).to(device)
-            last_maps = torch.from_numpy(np_maps).to(device)
-            last_masks = torch.from_numpy(np_masks).to(device=device, dtype=torch.bool)
-            info = ppo.update(buffer, last_states, last_maps, last_masks, hidden)
+            last_states, last_maps, last_masks = prepare_bootstrap_tensors(result)
+            if trainer_mode == "async-one-stale" and total_steps < args.total_timesteps:
+                progress_key_for_weights = (
+                    "wins" if active_phase.get("max_floor") is None else "curriculum"
+                )
+                env.set_class_weights(
+                    calculate_dynamic_weights(episode_window, progress_key_for_weights)
+                )
+                actor_model.load_state_dict(model.state_dict())
+                actor_model.eval()
+                actor_version = learner_version
+                launch_index = next_async_buffer_index
+                next_async_buffer_index = 1 - next_async_buffer_index
+                async_future = async_executor.submit(
+                    collect_rollout_batch,
+                    env=env,
+                    model=actor_model,
+                    buffer=rollout_buffers[launch_index],
+                    transfer=rollout_transfers[launch_index],
+                    np_states=np_states,
+                    np_maps=np_maps,
+                    np_masks=np_masks,
+                    hidden=hidden,
+                    args=args,
+                    device=device,
+                    policy_version=actor_version,
+                )
+            stage_t0 = time.perf_counter()
+            info = ppo.update(result.buffer, last_states, last_maps, last_masks, hidden)
+            stage_seconds["learner"] += time.perf_counter() - stage_t0
+            if trainer_mode == "async-one-stale":
+                learner_version += 1
 
             # Logging.
             elapsed = time.time() - start_time
@@ -895,7 +1210,8 @@ def main():
 
                 # Push dynamic class weights to environments
                 dyn_weights = calculate_dynamic_weights(episode_window, progress_key)
-                env.set_class_weights(dyn_weights)
+                if trainer_mode != "async-one-stale":
+                    env.set_class_weights(dyn_weights)
 
                 progress_rate = progress_class_avg_rate
                 timeout_rate = sum(
@@ -947,6 +1263,7 @@ def main():
                     metrics_log_path,
                     build_training_metrics_row(
                         total_steps=total_steps,
+                        run_start_steps=run_start_steps,
                         elapsed=elapsed,
                         phase_index=curriculum_phase,
                         phase_name=active_phase.get("name", "unknown"),
@@ -968,6 +1285,7 @@ def main():
                         progress_key=progress_key,
                         status_text=readout,
                         probe_metrics=finalize_probe_metrics(probe_accumulator),
+                        stage_seconds=stage_seconds,
                     ),
                 )
                 last_report_snapshot = report_snapshot
@@ -1058,6 +1376,8 @@ def main():
         else:
             print("\nInterrupted before any training steps were collected.")
     finally:
+        if async_executor is not None:
+            async_executor.shutdown(wait=True, cancel_futures=True)
         env.close()
         if writer:
             writer.close()
