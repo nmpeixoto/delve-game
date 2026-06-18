@@ -34,7 +34,7 @@ CLASS_WEIGHTS = {
 # ─── STATE / ACTION ──────────────────────────────────────────────────────────
 MAX_SHOP_SLOTS = 18
 SHOP_ITEM_FEATURES = 19  # +4 upgrade-stat bits: atk/def/hp/other
-STATE_DIM = 64 + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES
+STATE_DIM = 69 + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES
 LEGACY_ACTION_DIM = 18 + MAX_SHOP_SLOTS  # Base gameplay actions + explicit shop buy-slot actions
 ACTION_SPACE_VERSION = 2
 

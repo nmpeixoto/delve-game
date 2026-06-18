@@ -5,7 +5,7 @@ def pad_checkpoint(input_path, output_path, added_features=8):
     print(f"Loading checkpoint: {input_path}")
     checkpoint = torch.load(input_path, map_location='cpu')
     
-    state_dict = checkpoint.get('model_state_dict', checkpoint)
+    state_dict = checkpoint.get('network', checkpoint)
     padded_keys = []
     
     # In DelveNet, the first layer that touches the flat state vector is the GRU.
@@ -23,13 +23,13 @@ def pad_checkpoint(input_path, output_path, added_features=8):
             out_features, in_features = tensor.shape
             
             # The GRU weight_ih_l0 has shape (3 * hidden_size, input_size)
-            # Old input_size = 370 (old state) + 128 (cnn) = 498
-            # We want to insert 8 columns at index 28 (after the 28 base features).
+            # Old input_size = 662 (406 state + 256 cnn)
+            # We want to insert 5 columns at index 406 (after the 406 base features).
             
             zero_pad = torch.zeros((out_features, added_features), dtype=tensor.dtype, device=tensor.device)
             
-            base_slice = tensor[:, :28]
-            shop_and_cnn_slice = tensor[:, 28:]
+            base_slice = tensor[:, :406]
+            shop_and_cnn_slice = tensor[:, 406:]
             
             new_tensor = torch.cat([base_slice, zero_pad, shop_and_cnn_slice], dim=1)
             state_dict[key] = new_tensor
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Pad a PPO checkpoint for new state features")
     parser.add_argument('input', help='Path to old checkpoint (e.g., delve_ppo_187564032.pt)')
     parser.add_argument('output', help='Path to save padded checkpoint')
-    parser.add_argument('--added', type=int, default=8, help='Number of new features added')
+    parser.add_argument('--added', type=int, default=5, help='Number of new features added')
     
     args = parser.parse_args()
     pad_checkpoint(args.input, args.output, args.added)

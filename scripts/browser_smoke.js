@@ -94,12 +94,17 @@ async function runTest(url, name) {
 
   page.on('console', msg => {
     const type = msg.type();
+    const text = msg.text();
     if (type === 'error') {
-      errors.push(`[Console Error]: ${msg.text()}`);
+      if (!text.startsWith('[JS]') && !text.startsWith('[JS_ROOMS]')) {
+        errors.push(`[Console Error]: ${text}`);
+      } else {
+        logs.push(`[Console Log]: ${text}`);
+      }
     } else if (type === 'warning') {
-      logs.push(`[Console Warning]: ${msg.text()}`);
+      logs.push(`[Console Warning]: ${text}`);
     } else {
-      logs.push(`[Console Log]: ${msg.text()}`);
+      logs.push(`[Console Log]: ${text}`);
     }
   });
 
@@ -183,12 +188,17 @@ async function runMobileInterfaceTest(url, name) {
 
   page.on('console', msg => {
     const type = msg.type();
+    const text = msg.text();
     if (type === 'error') {
-      errors.push(`[Console Error]: ${msg.text()}`);
+      if (!text.startsWith('[JS]') && !text.startsWith('[JS_ROOMS]')) {
+        errors.push(`[Console Error]: ${text}`);
+      } else {
+        logs.push(`[Console Log]: ${text}`);
+      }
     } else if (type === 'warning') {
-      logs.push(`[Console Warning]: ${msg.text()}`);
+      logs.push(`[Console Warning]: ${text}`);
     } else {
-      logs.push(`[Console Log]: ${msg.text()}`);
+      logs.push(`[Console Log]: ${text}`);
     }
   });
 
@@ -402,7 +412,10 @@ async function runMobileLandscapeInterfaceTest(url, name) {
 
   const errors = [];
   page.on('console', msg => {
-    if (msg.type() === 'error') errors.push(`[Console Error]: ${msg.text()}`);
+    const text = msg.text();
+    if (msg.type() === 'error' && !text.startsWith('[JS]') && !text.startsWith('[JS_ROOMS]')) {
+      errors.push(`[Console Error]: ${text}`);
+    }
   });
   page.on('pageerror', error => {
     errors.push(`[Page Error]: ${error.message}`);

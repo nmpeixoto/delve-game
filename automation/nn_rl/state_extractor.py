@@ -166,6 +166,13 @@ def extract_state(G, prev_action=None):
 
     features.extend(_encode_current_shop(G))
 
+    # ── ADVANCED TACTICAL CONTEXT (5 features) appended at the end to preserve index layout
+    features.append(float(_max_enemy_cluster_density(G)) / 4.0)
+    features.append(float(_enemies_adjacent_to_player(G)) / 8.0)
+    features.append(float(_max_enemies_in_line(G)) / 5.0)
+    features.append(1.0 if _is_closest_enemy_near_wall(G) else 0.0)
+    features.append(float(_enemies_within_dist(G, 2)) / 8.0)
+
     assert len(features) == STATE_DIM, f"Expected {STATE_DIM} features, got {len(features)}"
     return np.array(features, dtype=np.float32)
 

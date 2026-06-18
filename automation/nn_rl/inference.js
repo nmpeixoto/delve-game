@@ -47,8 +47,8 @@ const WALL = 0, FLOOR = 1, STAIRS = 2, SHOP = 3, LOCKED_DOOR = 4, SECRET_DOOR = 
 const DIRS = [[0,-1], [0,1], [-1,0], [1,0]];
 const MAX_SHOP_SLOTS = 18;
 const SHOP_ITEM_FEATURES = 19;
-const STATE_DIM = 406;
-const ACTION_DIM = 36;
+const STATE_DIM = 411;
+const ACTION_DIM = 39;
 const FLOORS = 5;
 
 // Actions mapping
@@ -59,6 +59,9 @@ const ACTIONS = {
     DESCEND: 13, SHOP_OPEN: 14, SHOP_SELL: 15, ESCAPE: 16, WAIT: 17
 };
 for (let i = 0; i < MAX_SHOP_SLOTS; i++) ACTIONS[`SHOP_BUY_${i}`] = 18 + i;
+ACTIONS.RANGED_ATTACK_WEAK = 36;
+ACTIONS.RANGED_ATTACK_NEAREST = 37;
+ACTIONS.KITE_SAFE_MOVE = 38;
 
 // --- PATHFINDING & HELPERS ---
 function _has_key(G) { return G.items && G.items.some(i => i.carried && i.type === 'key'); }
@@ -228,6 +231,182 @@ function _min_enemy_distance(G) {
     return Math.min(...vis.map(e => Math.max(Math.abs(p.x - e.x), Math.abs(p.y - e.y))));
 }
 
+function _max_enemy_cluster_density(G) {
+    const vis = _visible_enemies(G);
+    if (vis.length === 0) return 0.0;
+    const coords = new Set(vis.map(e => `${e.x},${e.y}`));
+    let maxAdj = 0;
+    for (const e of vis) {
+        let adjCount = 0;
+        for (const [dx, dy] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+            if (coords.has(`${e.x+dx},${e.y+dy}`)) adjCount++;
+        }
+        if (adjCount > maxAdj) maxAdj = adjCount;
+    }
+    return maxAdj;
+}
+
+function _enemies_adjacent_to_player(G) {
+    const p = G.player;
+    const vis = _visible_enemies(G);
+    const coords = new Set(vis.map(e => `${e.x},${e.y}`));
+    let count = 0;
+    for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            if (coords.has(`${p.x+dx},${p.y+dy}`)) count++;
+        }
+    }
+    return count;
+}
+
+function _max_enemies_in_line(G) {
+    const p = G.player;
+    const vis = _visible_enemies(G);
+    if (vis.length === 0) return 0.0;
+    let maxLine = 0;
+    for (const [dx, dy] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+        let count = 0;
+        let cx = p.x + dx, cy = p.y + dy;
+        while (cy >= 0 && cy < G.map.length && cx >= 0 && cx < G.map[0].length) {
+            if (G.map[cy][cx] === WALL) break;
+            if (vis.some(e => e.x === cx && e.y === cy)) count++;
+            cx += dx;
+            cy += dy;
+        }
+        if (count > maxLine) maxLine = count;
+    }
+    return maxLine;
+}
+
+function _is_closest_enemy_near_wall(G) {
+    const p = G.player;
+    const vis = _visible_enemies(G);
+    if (vis.length === 0) return false;
+    const closest = vis.reduce((a, b) => manhattan(a, p) < manhattan(b, p) ? a : b);
+    for (const [dx, dy] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+        const nx = closest.x + dx, ny = closest.y + dy;
+        if (ny >= 0 && ny < G.map.length && nx >= 0 && nx < G.map[0].length) {
+            if (G.map[ny][nx] === WALL) return true;
+        }
+    }
+    return false;
+}
+
+function _enemies_within_dist(G, maxDist) {
+    const p = G.player;
+    const vis = _visible_enemies(G);
+    return vis.filter(e => Math.max(Math.abs(e.x - p.x), Math.abs(e.y - p.y)) <= maxDist).length;
+}
+
+function _kite_pressure_enemies(player, visible_enemies) {
+    const px = player.x || 0, py = player.y || 0;
+    return visible_enemies.filter(e => Math.abs(e.x - px) + Math.abs(e.y - py) <= 4);
+}
+
+function choose_line_clear_enemy(G, prefer = "weak") {
+    const candidates = _visible_enemies(G).filter(e => _is_line_clear(G, G.player, e));
+    if (candidates.length === 0) return null;
+    const p = G.player;
+    if (prefer === "nearest") {
+        return candidates.reduce((best, curr) => {
+            const dBest = manhattan(best, p);
+            const dCurr = manhattan(curr, p);
+            if (dCurr < dBest) return curr;
+            if (dCurr > dBest) return best;
+            if ((curr.hp || 0) < (best.hp || 0)) return curr;
+            if ((curr.hp || 0) > (best.hp || 0)) return best;
+            return String(curr.id) < String(best.id) ? curr : best;
+        });
+    }
+    return candidates.reduce((best, curr) => {
+        const hpBest = best.hp || 0;
+        const hpCurr = curr.hp || 0;
+        if (hpCurr < hpBest) return curr;
+        if (hpCurr > hpBest) return best;
+        const dBest = manhattan(best, p);
+        const dCurr = manhattan(curr, p);
+        if (dCurr < dBest) return curr;
+        if (dCurr > dBest) return best;
+        return String(curr.id) < String(best.id) ? curr : best;
+    });
+}
+
+function safest_adjacent_move(G, threat_enemies = null, require_increase = false) {
+    const p = G.player;
+    if (!p) return null;
+    const all_enemies = (G.enemies || []).filter(e => !e.dying && !e.isPet);
+    const enemies = threat_enemies !== null ? threat_enemies.filter(e => !e.dying && !e.isPet) : all_enemies;
+    if (enemies.length === 0) return null;
+
+    const occupied = new Set(all_enemies.map(e => `${e.x},${e.y}`));
+    const px = p.x || 0, py = p.y || 0;
+    
+    let nearest = null;
+    let nearestDist = Infinity;
+    for (const e of enemies) {
+        const dist = manhattan(e, p);
+        if (dist < nearestDist) {
+            nearestDist = dist;
+            nearest = e;
+        } else if (dist === nearestDist) {
+            if (nearest === null || String(e.id) < String(nearest.id)) {
+                nearest = e;
+            }
+        }
+    }
+    
+    const current_min_dist = Math.min(...enemies.map(e => manhattan(e, p)));
+    let bestVal = null;
+    let bestAction = null;
+
+    const DIRS_MAP = {
+        'ArrowUp': [0, -1],
+        'ArrowDown': [0, 1],
+        'ArrowLeft': [-1, 0],
+        'ArrowRight': [1, 0]
+    };
+
+    for (const [key, [dx, dy]] of Object.entries(DIRS_MAP)) {
+        const x = px + dx, y = py + dy;
+        if (y < 0 || y >= G.map.length || x < 0 || x >= G.map[y].length) continue;
+        if (G.map[y][x] === WALL) continue;
+        if (G.map[y][x] === LOCKED_DOOR && !_has_key(G)) continue;
+        if (occupied.has(`${x},${y}`)) continue;
+
+        let min_dist = 99;
+        for (const e of enemies) {
+            const dist = Math.abs(e.x - x) + Math.abs(e.y - y);
+            if (dist < min_dist) min_dist = dist;
+        }
+
+        if (require_increase && min_dist <= current_min_dist) continue;
+
+        let away_score = 0;
+        if (nearest) {
+            const away_x = Math.sign(px - nearest.x);
+            const away_y = Math.sign(py - nearest.y);
+            away_score = dx * away_x + dy * away_y;
+        }
+
+        const candidate = [min_dist, away_score, -Math.abs(dx), -Math.abs(dy), -dy, -dx];
+        
+        const compare = (c1, c2) => {
+            for (let i = 0; i < c1.length; i++) {
+                if (c1[i] > c2[i]) return 1;
+                if (c1[i] < c2[i]) return -1;
+            }
+            return 0;
+        };
+
+        if (bestVal === null || compare(candidate, bestVal) > 0) {
+            bestVal = candidate;
+            bestAction = { type: 'key', val: key };
+        }
+    }
+    return bestAction;
+}
+
 // --- STATE EXTRACTOR ---
 function extractStateJS(G, prev_action = null) {
     const p = G.player;
@@ -354,6 +533,13 @@ function extractStateJS(G, prev_action = null) {
             features.push((stat && !all && !['atk','def','hp'].includes(stat)) ? 1.0 : 0.0);
         }
     }
+
+    // ── ADVANCED TACTICAL CONTEXT (5 features)
+    features.push(_max_enemy_cluster_density(G) / 4.0);
+    features.push(_enemies_adjacent_to_player(G) / 8.0);
+    features.push(_max_enemies_in_line(G) / 5.0);
+    features.push(_is_closest_enemy_near_wall(G) ? 1.0 : 0.0);
+    features.push(_enemies_within_dist(G, 2) / 8.0);
 
     if (features.length !== STATE_DIM) {
         console.error(`Expected ${STATE_DIM} features, got ${features.length}`);
@@ -532,6 +718,17 @@ function getActionMaskJS(G) {
     const shops = G.shops || [];
     if (shops.some(s => chebyshev(s, p) <= 1)) mask[ACTIONS.SHOP_OPEN] = true;
 
+    if (['rogue', 'mage', 'ranger'].includes((p.class || '').toLowerCase())) {
+        if (choose_line_clear_enemy(G) !== null) {
+            mask[ACTIONS.RANGED_ATTACK_WEAK] = true;
+            mask[ACTIONS.RANGED_ATTACK_NEAREST] = true;
+        }
+        const kite_enemies = _kite_pressure_enemies(p, visEnemies);
+        if (kite_enemies.length > 0 && safest_adjacent_move(G, kite_enemies, true) !== null) {
+            mask[ACTIONS.KITE_SAFE_MOVE] = true;
+        }
+    }
+
     if (!mask.some(m => m)) mask[ACTIONS.ESCAPE] = true;
 
     return mask;
@@ -556,6 +753,19 @@ function nnActionToDecision(idx) {
     if (idx >= ACTIONS.SHOP_BUY_0 && idx <= ACTIONS.SHOP_BUY_17) return { type: 'shop_buy', index: idx - ACTIONS.SHOP_BUY_0 };
     if (idx === ACTIONS.SHOP_SELL) return { type: 'shop_sell' };
     if (idx === ACTIONS.ESCAPE) return { type: 'key', val: 'Escape' };
+    if (idx === ACTIONS.RANGED_ATTACK_WEAK) {
+        const e = choose_line_clear_enemy(G, "weak");
+        return e ? { type: 'attack', target: e.id } : { type: 'key', val: ' ' };
+    }
+    if (idx === ACTIONS.RANGED_ATTACK_NEAREST) {
+        const e = choose_line_clear_enemy(G, "nearest");
+        return e ? { type: 'attack', target: e.id } : { type: 'key', val: ' ' };
+    }
+    if (idx === ACTIONS.KITE_SAFE_MOVE) {
+        const kite_enemies = _kite_pressure_enemies(G.player, _visible_enemies(G));
+        const decision = safest_adjacent_move(G, kite_enemies, true);
+        return decision || { type: 'key', val: ' ' };
+    }
     return { type: 'key', val: ' ' };
 }
 
