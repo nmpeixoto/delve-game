@@ -584,6 +584,12 @@ import multiprocessing as mp
 import numpy as np
 
 def _subproc_worker(pipe, env_kwargs):
+    import signal
+    try:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+    except Exception:
+        pass
+
     from vector_env import DelveVectorEnv
     from state_extractor import numpyize_states, numpyize_maps
     from action_mask import get_action_mask
@@ -664,7 +670,10 @@ def _subproc_worker(pipe, env_kwargs):
                 break
     except Exception as e:
         import traceback
+        import os
         tb = traceback.format_exc()
+        with open("worker_crash.log", "a") as f:
+            f.write(f"Worker PID {os.getpid()} crashed:\n{tb}\n\n")
         traceback.print_exc()
         try:
             pipe.send(('error', tb))

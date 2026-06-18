@@ -11,6 +11,10 @@ from dataclasses import dataclass
 import glob
 import os, sys, time, json
 import re
+
+# Disable Intel Fortran console Ctrl-C handler which crashes numpy on Windows
+os.environ["FOR_DISABLE_CONSOLE_CTRL_HANDLER"] = "1"
+
 import numpy as np
 import torch
 
@@ -1395,4 +1399,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        with open("train_crash.log", "w") as f:
+            f.write("Main process crashed:\n")
+            f.write(traceback.format_exc())
+        raise
