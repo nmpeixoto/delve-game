@@ -37,3 +37,45 @@ Please adhere to the following best practices and architectural constraints when
 - Prefer concise, modern ES6+ syntax (arrow functions, destructuring, template literals).
 - Do not remove existing comments unless the associated code is removed.
 - Keep CSS clean and namespaced if possible (e.g., `.tile-player`, `.act-btn`).
+
+## 7. Analytical Rigor & Methodology
+When examining code, writing new implementations, auditing for bugs, suggesting improvements, or proposing new features, always follow this process:
+
+### Step 1 — Read the actual source
+Never rely on assumptions from partial context. Read every file you reference in full before drawing conclusions. Verify shapes, dimensions, and data flows by tracing through the real code paths.
+
+### Step 2 — Trace before asserting
+When claiming a "mismatch," "shape error," or "dimension bug":
+- Calculate the actual tensor/array shapes at each stage using arithmetic (e.g., `512 % 16 == 0` to verify divisibility)
+- Check default parameter values and conditional branches that could change behavior
+- Verify whether a code pattern is intentional documentation or an oversight
+
+### Step 3 — Be critical of own findings
+Before presenting audit results:
+- Ask "Could this be standard practice?" (e.g., advantage normalization IS standard PPO; don't flag it as broken)
+- Ask "Is there explicit documentation for this behavior?" (intentionally disabled features are not bugs)
+- Ask "What's the blast radius of this issue?" (hardcoded indices in migration-only code are low-risk)
+- If you retract a finding, say so explicitly — false positives erode trust more than missed issues
+
+### Step 4 — Present findings with confidence levels
+Use severity tiers with honest uncertainty:
+- 🔴 **CRITICAL** — Verified bug that will cause failure (trace the exact failing path)
+- 🟡 **HIGH** — Likely issue but needs one more verification step before fixing
+- ⚠️ **MEDIUM** — Potential concern; present as "I'm not 100% sure" with reasoning
+- ❓ **UNKNOWN** — Can't verify from available context (e.g., need to read a file that wasn't provided)
+- ✅ **NOT A BUG** — Retract false alarms explicitly so they don't clutter the list
+
+### Step 5 — Show your work
+For each finding, include:
+1. The exact code path being analyzed
+2. The calculation or reasoning used to reach the conclusion  
+3. Any evidence that would contradict the finding (i.e., why you're confident it's real)
+4. What would change if assumptions were wrong
+
+### Anti-patterns to avoid
+- ❌ Presenting unverified shape assertions as fact without calculating dimensions first
+- ❌ Flagging standard patterns (normalization, clipping disabled for unnormalized returns) as bugs
+- ❌ Claiming "CRITICAL" severity when the issue has low blast radius or is intentional design
+- ❌ Failing to retract findings that were later shown to be false positives
+
+By defaulting to skepticism and showing your work, you'll avoid wasting time on false alarms and catch real issues with proper confidence levels.
