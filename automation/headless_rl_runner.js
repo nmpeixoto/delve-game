@@ -359,6 +359,10 @@ function createRuntime(seed) {
       seen_count: seen.size,
       known_stairs,
       shopOpen: shopOverlay && shopOverlay.classList.contains('open'),
+      pendingHit: G.pendingHit ? {
+        dmg: G.pendingHit.dmg || 0,
+        potionChain: (G.pendingHit.potionChain || []).map(potion => potion.id),
+      } : null,
       gameOver: !!G.gameOver, won: !!G.won,
     };
   }
@@ -366,6 +370,10 @@ function createRuntime(seed) {
   function interpretDecision(decision) {
     if (!decision) return;
     if (decision.type === 'status') return;
+    if (decision.type === 'emergency') {
+      if (context.G && context.G.pendingHit) context.resolveEmergency(!!decision.drink);
+      return;
+    }
     if (decision.type === 'click') {
       const t = decision.target || '';
       if (t === '#emergency-drink-btn') { context.resolveEmergency(true); return; }
@@ -412,13 +420,7 @@ function runWorker() {
     if (!env) return { envId, error: 'Unknown env', state: null, done: true, won: false };
 
     env.interpretDecision(decision);
-    
-    // Auto-resolve emergency potions (RL bot always drinks when it would die)
-    const G = env.context.G;
-    if (G && G.pendingHit) {
-      env.context.resolveEmergency(true);
-    }
-    
+
     env.flushTimers();
     const after = env.captureSnapshot();
     const done = after.gameOver || after.won;

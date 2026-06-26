@@ -149,6 +149,9 @@ class DelveVectorEnv:
         enemies = [e for e in (state or {}).get('enemies', []) if not e.get('dying') and not e.get('isPet')]
         items = [i for i in (state or {}).get('items', []) if i.get('carried')]
 
+        if state and (state.get('pendingHit') or state.get('pending_hit')):
+            return {'type': 'emergency', 'drink': action == ACTIONS['USE_POTION']}
+
         if action == 0:
             return {'type': 'key', 'val': 'ArrowUp'}
         if action == 1:
@@ -499,7 +502,9 @@ class DelveVectorEnv:
             self.prev_states[i] = prev_state
 
             atype = decision.get('type')
-            if prev_state and prev_state.get('shrineOpen'):
+            if prev_state and (prev_state.get('pendingHit') or prev_state.get('pending_hit')):
+                game.resolve_emergency(bool(decision.get('drink')))
+            elif prev_state and prev_state.get('shrineOpen'):
                 if action == ACTIONS['USE_BUFF']:
                     game.accept_shrine()
                 elif action == ACTIONS['ESCAPE']:

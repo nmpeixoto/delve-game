@@ -2,7 +2,7 @@
 State extractor for DELVE RL bot.
 Extracts a STATE_DIM-dimensional feature vector from game state G.
 
-Feature breakdown (total = 64 non-shop + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES shop):
+Feature breakdown (total = 69 non-shop + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES shop):
   - Player core (7):      hp_ratio, atk, def, lvl, has_key, floor, on_stairs
   - Navigation (4):       stair_dx, stair_dy, bfs_stair_dist, exploration_ratio
   - Context (6):          enemy_count, nearest_enemy_dist, has_weapon, ability1_ready,
@@ -12,9 +12,9 @@ Feature breakdown (total = 64 non-shop + MAX_SHOP_SLOTS * SHOP_ITEM_FEATURES sho
   - Temporal / event (6): steps_since_floor_change, steps_since_key_pickup,
                            steps_since_enemy_kill, steps_since_door_unlock,
                            doors_opened_this_floor, turns_norm
-  - Class context (8):    cluster_density, adj_enemies, enemies_in_line,
-                          closest_enemy_near_wall, enemies_within_2, is_wand,
-                          is_bow, is_melee
+  - Class context (8):    class one-hot
+  - Tactical context (5): cluster_density, adj_enemies, enemies_in_line,
+                          closest_enemy_near_wall, enemies_within_2
   - Secondary stats (10): vampirism, regen, swiftness, critChance, dodgeBonus,
                           freeMoves, rootedTurns, xp_ratio, gold, max_hp
   - Shop tail (MAX_SHOP_SLOTS x SHOP_ITEM_FEATURES): current shop stock encoding
@@ -164,14 +164,14 @@ def extract_state(G, prev_action=None):
     cls_name = str(p.get('class', '')).lower()
     features.extend([1.0 if cls_name == c else 0.0 for c in CLASS_NAMES]) # 56-63
 
-    features.extend(_encode_current_shop(G))
-
-    # ── ADVANCED TACTICAL CONTEXT (5 features) appended at the end to preserve index layout
+    # ── ADVANCED TACTICAL CONTEXT (5 features) ────────────────────────────
     features.append(float(_max_enemy_cluster_density(G)) / 4.0)
     features.append(float(_enemies_adjacent_to_player(G)) / 8.0)
     features.append(float(_max_enemies_in_line(G)) / 5.0)
     features.append(1.0 if _is_closest_enemy_near_wall(G) else 0.0)
-    features.append(float(_enemies_within_dist(G, 2)) / 8.0)
+    features.append(float(_enemies_within_dist(G, 2)) / 8.0)             # 64-68
+
+    features.extend(_encode_current_shop(G))
 
     assert len(features) == STATE_DIM, f"Expected {STATE_DIM} features, got {len(features)}"
     return np.array(features, dtype=np.float32)

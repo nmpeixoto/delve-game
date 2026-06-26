@@ -243,7 +243,7 @@ class DelveGame:
         self.ability1_cooldown = 0
         self.ability2_cooldown = 0
         self.alarmed_turns = 0
-        self.pending_hit = None  # for emergency potion (auto-resolve in RL)
+        self.pending_hit = None  # pending emergency potion prompt for RL policy
         self.player = {}
         self._stair_coords = []
         self._door_count = 0
@@ -990,50 +990,104 @@ class DelveGame:
         if dodge_chance > 0 and self.rng.ch(dodge_chance):
             self._advance_turn()
         else:
-            # Auto-resolve emergency potion
-            self._auto_emergency_potion(en, edm)
-            self.player['hp'] = round1(max(0, self.player['hp'] - edm))
+            def apply_hit():
+                self.player['hp'] = round1(max(0, self.player['hp'] - edm))
 
-            if en.get('vampiric') and edm > 0:
-                heal = int(edm * en['vampiric'])
-                if heal > 0:
-                    en['hp'] = round1(min(en['maxHp'], en['hp'] + heal))
-            if en.get('freezeChance') and self.rng.random() < en['freezeChance']:
-                self.player['rootedTurns'] = 2
+                if en.get('vampiric') and edm > 0:
+                    heal = int(edm * en['vampiric'])
+                    if heal > 0:
+                        en['hp'] = round1(min(en['maxHp'], en['hp'] + heal))
+                if en.get('freezeChance') and self.rng.random() < en['freezeChance']:
+                    self.player['rootedTurns'] = 2
 
-            self._advance_turn()
-            if self.player['hp'] <= 0:
-                self.game_over = True
+                self._advance_turn()
+                if self.player['hp'] <= 0:
+                    self.game_over = True
 
-    def _auto_emergency_potion(self, enemy, dmg):
-        """Auto-drink potion if next hit would kill us (RL bot always drinks)."""
+            if not self._offer_emergency_potion(en, edm, apply_hit):
+                apply_hit()
+
+    def _incoming_damage_max(self, enemy, dmg):
         max_next = round1(max(dmg, max(1, enemy['atk'] - self._gdef() + 2)))
         if self.player.get('shieldWallTurns', 0) > 0:
             max_next = math.ceil(max_next * 3 / 5)
         if self.player.get('bloodlustTurns', 0) > 0:
             max_next = math.ceil(max_next * 23 / 20)
+        return round1(max_next)
 
-        if self.player['hp'] - max_next > 0:
-            return  # safe
-
+    def _emergency_potion_chain(self, max_next):
+        """Return potion ids the browser prompt would offer for this hit."""
         potions = [i for i in self.items if i.get('carried') and i.get('type') == 'potion']
         if not potions:
-            return
+            return []
 
         potions.sort(key=lambda p: -p.get('heal', 0))
         needed = max_next - self.player['hp'] + 1
         chain = []
         total = 0
         for p in potions:
-            chain.append(p)
+            chain.append(p['id'])
             total += p.get('heal', 0)
             if total >= needed:
                 break
+        return chain
 
-        for p in chain:
-            heal = min(p['heal'], self.player['maxHp'] - self.player['hp'])
-            self.player['hp'] = round1(self.player['hp'] + heal)
-            self.items = [i for i in self.items if i['id'] != p['id']]
+    def _offer_emergency_potion(self, enemy, dmg, after_fn):
+        """Pause lethal incoming damage so the RL policy can drink or decline."""
+        max_next = self._incoming_damage_max(enemy, dmg)
+        if self.player['hp'] - max_next > 0:
+            return False
+
+        chain = self._emergency_potion_chain(max_next)
+        if not chain:
+            return False
+
+        self.pending_hit = {
+            'dmg': dmg,
+            'maxNextHit': max_next,
+            'potion_chain': chain,
+            'after_fn': after_fn,
+        }
+        return True
+
+    def _pending_hit_snapshot(self):
+        if not self.pending_hit:
+            return None
+        chain = list(self.pending_hit.get('potion_chain') or [])
+        return {
+            'dmg': self.pending_hit.get('dmg', 0),
+            'maxNextHit': self.pending_hit.get('maxNextHit', 0),
+            'potionChain': chain,
+        }
+
+    def resolve_emergency(self, drink):
+        pending = self.pending_hit
+        if not pending:
+            return
+        self.pending_hit = None
+
+        if drink:
+            for potion_id in list(pending.get('potion_chain') or []):
+                potion = next(
+                    (
+                        i for i in self.items
+                        if i.get('id') == potion_id
+                        and i.get('carried')
+                        and i.get('type') == 'potion'
+                    ),
+                    None,
+                )
+                if not potion:
+                    continue
+                heal = min(potion.get('heal', 0), self.player['maxHp'] - self.player['hp'])
+                self.player['hp'] = round1(self.player['hp'] + heal)
+                self.items = [i for i in self.items if i.get('id') != potion_id]
+
+        after_fn = pending.get('after_fn')
+        if after_fn:
+            after_fn()
+        if not self.pending_hit:
+            self._flush_death_batch()
 
     def _kill_enemy(self, en, skip_advance):
         if en.get('isPet'):
@@ -1183,11 +1237,13 @@ class DelveGame:
 
         self._process_enemy_turns()
 
-    def _process_enemy_turns(self):
+    def _process_enemy_turns(self, start_index=0):
         if self.game_over or self.won:
             return
 
-        for e in list(self.enemies):
+        enemies_this_turn = list(self.enemies)
+        for enemy_index in range(start_index, len(enemies_this_turn)):
+            e = enemies_this_turn[enemy_index]
             if self.game_over or self.won:
                 return
             if e['dying']:
@@ -1320,18 +1376,27 @@ class DelveGame:
                         if d_chance > 0 and self.rng.ch(d_chance):
                             break  # dodged, enemy turn complete
                         else:
-                            self._auto_emergency_potion(e, edm)
-                            self.player['hp'] = round1(max(0, self.player['hp'] - edm))
-                            if e.get('vampiric') and edm > 0:
-                                heal = int(edm * e['vampiric'])
-                                if heal > 0:
-                                    e['hp'] = round1(min(e['maxHp'], e['hp'] + heal))
-                            if e.get('freezeChance') and self.rng.random() < e['freezeChance']:
-                                self.player['rootedTurns'] = 2
-                            if self.player['hp'] <= 0:
-                                self.game_over = True
+                            def apply_enemy_hit(enemy=e, damage=edm):
+                                self.player['hp'] = round1(max(0, self.player['hp'] - damage))
+                                if enemy.get('vampiric') and damage > 0:
+                                    heal = int(damage * enemy['vampiric'])
+                                    if heal > 0:
+                                        enemy['hp'] = round1(min(enemy['maxHp'], enemy['hp'] + heal))
+                                if enemy.get('freezeChance') and self.rng.random() < enemy['freezeChance']:
+                                    self.player['rootedTurns'] = 2
+                                if self.player['hp'] <= 0:
+                                    self.game_over = True
+                                    return
+                                self._compute_vision()
+
+                            def resume_enemy_hit(enemy=e, damage=edm, next_index=enemy_index + 1):
+                                apply_enemy_hit(enemy, damage)
+                                if not self.game_over and not self.won:
+                                    self._process_enemy_turns(next_index)
+
+                            if self._offer_emergency_potion(e, edm, resume_enemy_hit):
                                 return
-                            self._compute_vision()
+                            apply_enemy_hit()
                     else:
                         # Attack another enemy/pet
                         t = target
@@ -1386,6 +1451,10 @@ class DelveGame:
         if not action:
             return
         atype = action.get('type')
+        if self.pending_hit:
+            if atype == 'emergency':
+                self.resolve_emergency(bool(action.get('drink')))
+            return
         if atype == 'status':
             return
         if atype == 'click':
@@ -1425,6 +1494,8 @@ class DelveGame:
             elif key in ('t', 'T'): self.open_shop()
             elif key == 'Escape': self.close_shop()
 
+        if self.pending_hit:
+            return
         self._flush_death_batch()
 
     def move(self, dx, dy):
@@ -2000,17 +2071,20 @@ class DelveGame:
                     edm = round1(edm)
                     dodge = self._player_dodge_chance()
                     if not (dodge > 0 and self.rng.ch(dodge)):
-                        self._auto_emergency_potion(en, edm)
-                        p['hp'] = round1(max(0, p['hp'] - edm))
-                        if en.get('vampiric') and edm > 0:
-                            heal = int(edm * en['vampiric'])
-                            if heal > 0:
-                                en['hp'] = round1(min(en['maxHp'], en['hp'] + heal))
-                        if en.get('freezeChance') and self.rng.random() < en['freezeChance']:
-                            p['rootedTurns'] = 2
-                        if p['hp'] <= 0:
-                            self.game_over = True
+                        def apply_flurry_counter():
+                            p['hp'] = round1(max(0, p['hp'] - edm))
+                            if en.get('vampiric') and edm > 0:
+                                heal = int(edm * en['vampiric'])
+                                if heal > 0:
+                                    en['hp'] = round1(min(en['maxHp'], en['hp'] + heal))
+                            if en.get('freezeChance') and self.rng.random() < en['freezeChance']:
+                                p['rootedTurns'] = 2
+                            if p['hp'] <= 0:
+                                self.game_over = True
+
+                        if self._offer_emergency_potion(en, edm, apply_flurry_counter):
                             return
+                        apply_flurry_counter()
                 self._advance_turn()
 
     # ─── SHOP ACTIONS ─────────────────────────────────────────────────────
@@ -2222,6 +2296,7 @@ class DelveGame:
             'shopOpen': self.current_shop is not None,
             'shrineOpen': getattr(self, 'current_shrine', None) is not None,
             '_stair_coords': self._stair_coords,
+            'pendingHit': self._pending_hit_snapshot(),
             'gameOver': self.game_over,
             'won': self.won,
         }

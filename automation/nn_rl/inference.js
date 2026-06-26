@@ -507,6 +507,13 @@ function extractStateJS(G, prev_action = null) {
     const cnames = ['warrior', 'rogue', 'mage', 'paladin', 'ranger', 'barbarian', 'necromancer', 'monk'];
     for (const c of cnames) features.push(((p.class || '').toLowerCase() === c) ? 1.0 : 0.0);
 
+    // Advanced tactical context
+    features.push(_max_enemy_cluster_density(G) / 4.0);
+    features.push(_enemies_adjacent_to_player(G) / 8.0);
+    features.push(_max_enemies_in_line(G) / 5.0);
+    features.push(_is_closest_enemy_near_wall(G) ? 1.0 : 0.0);
+    features.push(_enemies_within_dist(G, 2) / 8.0);
+
     // Shop items
     const stock = (G.shopOpen && G.currentShop) ? (G.currentShop.stock || []) : [];
     const SHOP_TYPE_ORDER = ['potion', 'potion_buff', 'bomb', 'scroll_teleport', 'scroll', 'weapon', 'armor', 'upgrade'];
@@ -533,13 +540,6 @@ function extractStateJS(G, prev_action = null) {
             features.push((stat && !all && !['atk','def','hp'].includes(stat)) ? 1.0 : 0.0);
         }
     }
-
-    // ── ADVANCED TACTICAL CONTEXT (5 features)
-    features.push(_max_enemy_cluster_density(G) / 4.0);
-    features.push(_enemies_adjacent_to_player(G) / 8.0);
-    features.push(_max_enemies_in_line(G) / 5.0);
-    features.push(_is_closest_enemy_near_wall(G) ? 1.0 : 0.0);
-    features.push(_enemies_within_dist(G, 2) / 8.0);
 
     if (features.length !== STATE_DIM) {
         console.error(`Expected ${STATE_DIM} features, got ${features.length}`);

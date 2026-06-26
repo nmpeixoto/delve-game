@@ -12,6 +12,7 @@ sys.path.insert(0, NN_RL_DIR)
 
 from headless_bridge import HeadlessWorker, RL_RUNNER
 from action_mask import get_action_mask
+from game_engine import DelveGame
 from config import (
     ACTION_DIM, ACTIONS, CLASSES, CURRICULUM, DEFAULT_MAX_EPISODE_STEPS,
     DEFAULT_TIMEOUT_PENALTY, LEGACY_ACTION_DIM, MAX_SHOP_SLOTS, REWARD_CURRICULUM_SUCCESS,
@@ -725,6 +726,86 @@ class NnRlBridgeTest(unittest.TestCase):
         self.assertEqual(mask.shape, (ACTION_DIM,))
         self.assertTrue(mask.any())
         self.assertFalse(mask[ACTIONS["ABILITY1"]])
+
+    def test_action_mask_limits_choices_to_emergency_potion_prompt(self):
+        state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)
+        state["player"].update({"hp": 5, "maxHp": 20, "class": "warrior"})
+        state["items"] = [
+            {"id": "p1", "type": "potion", "carried": True, "heal": 15},
+        ]
+        state["pendingHit"] = {"dmg": 12, "potionChain": ["p1"]}
+
+        mask = get_action_mask(state)
+
+        self.assertEqual(
+            set(np.flatnonzero(mask)),
+            {ACTIONS["USE_POTION"], ACTIONS["ESCAPE"]},
+        )
+
+    def test_action_to_decision_maps_pending_emergency_to_drink_or_decline(self):
+        env = DelveVectorEnv.__new__(DelveVectorEnv)
+        state = {
+            "pendingHit": {"dmg": 12, "potionChain": ["p1"]},
+            "player": {"x": 1, "y": 1, "hp": 5, "maxHp": 20},
+            "items": [{"id": "p1", "type": "potion", "carried": True, "heal": 15}],
+            "enemies": [],
+        }
+
+        drink = env.action_to_decision(state, ACTIONS["USE_POTION"])
+        decline = env.action_to_decision(state, ACTIONS["ESCAPE"])
+
+        self.assertEqual(drink, {"type": "emergency", "drink": True})
+        self.assertEqual(decline, {"type": "emergency", "drink": False})
+
+    def test_python_engine_waits_for_policy_on_lethal_emergency_hit(self):
+        game = DelveGame(seed=123, player_class="warrior")
+        game.map = [[1 for _ in range(56)] for _ in range(36)]
+        game.player.update({
+            "x": 5,
+            "y": 5,
+            "hp": 5,
+            "maxHp": 20,
+            "def": 0,
+            "dodgeBonus": 0,
+            "shieldWallTurns": 0,
+            "bloodlustTurns": 0,
+        })
+        game.items = [
+            {"id": "p1", "type": "potion", "carried": True, "heal": 15, "name": "Health Potion"},
+        ]
+        enemy = {
+            "id": "enemy-1",
+            "name": "Test Enemy",
+            "x": 6,
+            "y": 5,
+            "hp": 100,
+            "maxHp": 100,
+            "atk": 12,
+            "def": 0,
+            "xp": 0,
+            "gold": 0,
+            "dying": False,
+            "isPet": False,
+            "stunnedTurns": 0,
+            "boss": False,
+        }
+        game.enemies = [enemy]
+        game.visible = {5 * 56 + 6}
+        game.seen = set(game.visible)
+
+        game._attack_enemy("enemy-1")
+        state = game.snapshot()
+
+        self.assertIsNotNone(state["pendingHit"])
+        self.assertEqual(game.player["hp"], 5)
+        self.assertTrue(any(i["id"] == "p1" for i in game.items))
+        self.assertFalse(game.game_over)
+
+        game.resolve_emergency(True)
+
+        self.assertIsNone(game.snapshot()["pendingHit"])
+        self.assertGreater(game.player["hp"], 0)
+        self.assertFalse(any(i["id"] == "p1" for i in game.items))
 
     def test_action_mask_allows_exploration_with_known_stairs_before_floor_is_mostly_seen(self):
         state = self._known_stairs_state(player_x=5, player_y=5, stairs_x=8, stairs_y=5)

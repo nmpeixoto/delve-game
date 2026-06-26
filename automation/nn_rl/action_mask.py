@@ -50,6 +50,22 @@ def get_action_mask(G):
     if G.get("gameOver") or G.get("won"):
         return mask
 
+    pending_hit = G.get("pendingHit") or G.get("pending_hit")
+    if pending_hit:
+        chain = (
+            pending_hit.get("potionChain")
+            or pending_hit.get("potion_chain")
+            or []
+        )
+        has_emergency_potion = bool(chain) or any(
+            i.get("type") == "potion" and i.get("carried")
+            for i in items
+        )
+        if has_emergency_potion:
+            mask[ACTIONS["USE_POTION"]] = True
+        mask[ACTIONS["ESCAPE"]] = True
+        return mask
+
     if G.get("shrineOpen"):
         mask[ACTIONS["USE_BUFF"]] = True
         mask[ACTIONS["ESCAPE"]] = True
