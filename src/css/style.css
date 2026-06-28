@@ -62,7 +62,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   touch-action:none;
   background:#050507;
 }
-.legacy-map-wrap{
+#map-wrap.legacy-map-wrap{
   position:absolute;
   width:1px;
   height:1px;
