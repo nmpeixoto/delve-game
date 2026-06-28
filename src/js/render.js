@@ -96,6 +96,18 @@ const gdef=()=>{
 };
 
 function render(){
+  if (typeof renderPixedScene === 'function') {
+    renderPixedScene();
+  } else {
+    renderLegacyMap();
+  }
+  drawMinimap();
+  updateHUD();
+  updateInvDrawer();
+  updateActBtns();
+}
+
+function renderLegacyMap(){
   const mapEl=document.getElementById('map');
   const cs=getCellSize();
   mapEl.style.gridTemplateColumns=`repeat(${MAP_W},${cs}px)`;
@@ -160,8 +172,6 @@ function render(){
   }
   mapEl.innerHTML=h;
   positionMapOnPlayer();
-  drawMinimap();
-  updateHUD();updateInvDrawer();updateActBtns();
 }
 
 function updateHUD(){

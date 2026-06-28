@@ -53,6 +53,15 @@ async function startWarriorRun(page) {
   });
 }
 
+async function waitForCanvasReady(page) {
+  await page.waitForSelector('#game-canvas', { timeout: 2000 });
+  await page.waitForFunction(() => {
+    const canvas = document.getElementById('game-canvas');
+    return canvas && canvas.width > 0 && canvas.height > 0 && window.PixedRenderer && window.PixedRenderer.initialized;
+  });
+  return page.$eval('#game-canvas', el => ({ width: el.width, height: el.height }));
+}
+
 async function expectModalFits(page, selector, label) {
   const result = await page.$eval(selector, el => {
     const r = el.getBoundingClientRect();
@@ -129,9 +138,8 @@ async function runTest(url, name) {
 
     // Verify map is rendered
     console.log('Checking map render...');
-    await page.waitForSelector('#map .tile-player', { timeout: 2000 });
-    const tiles = await page.$$eval('#map .tile', els => els.length);
-    console.log(`Map rendered with ${tiles} tiles.`);
+    const canvasSize = await waitForCanvasReady(page);
+    console.log(`Canvas rendered at ${canvasSize.width}x${canvasSize.height}.`);
 
     // Verify HUD
     const hp = await page.$eval('#hp-val', el => el.textContent);
@@ -216,7 +224,7 @@ async function runMobileInterfaceTest(url, name) {
 
     console.log('Starting warrior run...');
     await startWarriorRun(page);
-    await page.waitForSelector('#map .tile-player', { timeout: 2000 });
+    await waitForCanvasReady(page);
 
     console.log('Testing mobile inventory drag and tap...');
     await page.evaluate(() => {
@@ -428,7 +436,7 @@ async function runMobileLandscapeInterfaceTest(url, name) {
     console.log(`Navigating to ${url}...`);
     await page.goto(url, { waitUntil: 'networkidle0', timeout: 5000 });
     await startWarriorRun(page);
-    await page.waitForSelector('#map .tile-player', { timeout: 2000 });
+    await waitForCanvasReady(page);
 
     const layout = await page.evaluate(() => {
       const map = document.getElementById('map-area').getBoundingClientRect();

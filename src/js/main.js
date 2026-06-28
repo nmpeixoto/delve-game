@@ -81,9 +81,15 @@ function confirmClassSelect() {
   startGame(_selectedClass, hm);
 }
 
-function startGame(playerClass = 'warrior', hardMode = false){
+async function startGame(playerClass = 'warrior', hardMode = false){
   document.getElementById('title-screen').classList.add('hidden');
   document.getElementById('game-screen').classList.remove('hidden');
+  if (typeof loadPixedAssets === 'function' && !PIXED_ASSETS.ready && !PIXED_ASSETS.error) {
+    document.getElementById('map-area').classList.add('pixed-loading');
+    try { await loadPixedAssets(); } catch (err) { console.warn(err); }
+    document.getElementById('map-area').classList.remove('pixed-loading');
+  }
+  if (typeof initPixedRenderer === 'function') initPixedRenderer();
   initGame(playerClass, hardMode);
   if(!_resizeHandlerBound){
     window.addEventListener('resize',handleResize);

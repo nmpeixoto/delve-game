@@ -7,6 +7,8 @@ const PixedRenderer = {
   initialized: false,
 };
 
+if (typeof window !== 'undefined') window.PixedRenderer = PixedRenderer;
+
 function initPixedRenderer() {
   const canvas = document.getElementById('game-canvas');
   const area = document.getElementById('map-area');
