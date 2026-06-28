@@ -1,0 +1,898 @@
+{
+  "environment.floor": {
+    "src": "environment_floor.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "environment.floorCracked": {
+    "src": "environment_floor_cracked.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "environment.wall": {
+    "src": "environment_wall.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "environment.doorLocked": {
+    "src": "environment_door_locked.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "environment.doorSecret": {
+    "src": "environment_door_secret.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "environment.stairs": {
+    "src": "environment_stairs.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "environment.shop": {
+    "src": "environment_shop.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "environment.shrine": {
+    "src": "environment_shrine.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "environment.trapSpike": {
+    "src": "environment_trap_spike.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "environment.trapGas": {
+    "src": "environment_trap_gas.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "environment.trapAlarm": {
+    "src": "environment_trap_alarm.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "environment.trapBear": {
+    "src": "environment_trap_bear.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "item.weapon": {
+    "src": "item_weapon.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "item.armor": {
+    "src": "item_armor.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "item.potion": {
+    "src": "item_potion.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "item.bomb": {
+    "src": "item_bomb.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "item.scroll": {
+    "src": "item_scroll.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "item.key": {
+    "src": "item_key.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "item.upgrade": {
+    "src": "item_upgrade.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "ui.hp": {
+    "src": "ui_hp.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "ui.xp": {
+    "src": "ui_xp.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "ui.gold": {
+    "src": "ui_gold.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 1,
+    "anchorX": 32,
+    "anchorY": 48
+  },
+  "fx.hit": {
+    "src": "fx_hit.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 4,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "fx.fireball": {
+    "src": "fx_fireball.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 4,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "fx.heal": {
+    "src": "fx_heal.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 4,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "fx.poison": {
+    "src": "fx_poison.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 4,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "fx.levelUp": {
+    "src": "fx_levelUp.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 4,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.warrior.idle": {
+    "src": "class_warrior_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.warrior.walk": {
+    "src": "class_warrior_walk.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.warrior.attack": {
+    "src": "class_warrior_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.warrior.hurt": {
+    "src": "class_warrior_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.warrior.death": {
+    "src": "class_warrior_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.rogue.idle": {
+    "src": "class_rogue_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.rogue.walk": {
+    "src": "class_rogue_walk.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.rogue.attack": {
+    "src": "class_rogue_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.rogue.hurt": {
+    "src": "class_rogue_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.rogue.death": {
+    "src": "class_rogue_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.mage.idle": {
+    "src": "class_mage_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.mage.walk": {
+    "src": "class_mage_walk.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.mage.attack": {
+    "src": "class_mage_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.mage.hurt": {
+    "src": "class_mage_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.mage.death": {
+    "src": "class_mage_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.paladin.idle": {
+    "src": "class_paladin_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.paladin.walk": {
+    "src": "class_paladin_walk.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.paladin.attack": {
+    "src": "class_paladin_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.paladin.hurt": {
+    "src": "class_paladin_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.paladin.death": {
+    "src": "class_paladin_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.ranger.idle": {
+    "src": "class_ranger_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.ranger.walk": {
+    "src": "class_ranger_walk.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.ranger.attack": {
+    "src": "class_ranger_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.ranger.hurt": {
+    "src": "class_ranger_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.ranger.death": {
+    "src": "class_ranger_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.barbarian.idle": {
+    "src": "class_barbarian_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.barbarian.walk": {
+    "src": "class_barbarian_walk.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.barbarian.attack": {
+    "src": "class_barbarian_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.barbarian.hurt": {
+    "src": "class_barbarian_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.barbarian.death": {
+    "src": "class_barbarian_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.necromancer.idle": {
+    "src": "class_necromancer_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.necromancer.walk": {
+    "src": "class_necromancer_walk.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.necromancer.attack": {
+    "src": "class_necromancer_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.necromancer.hurt": {
+    "src": "class_necromancer_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.necromancer.death": {
+    "src": "class_necromancer_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.monk.idle": {
+    "src": "class_monk_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.monk.walk": {
+    "src": "class_monk_walk.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.monk.attack": {
+    "src": "class_monk_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.monk.hurt": {
+    "src": "class_monk_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "class.monk.death": {
+    "src": "class_monk_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.rat.idle": {
+    "src": "enemy_rat_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.rat.move": {
+    "src": "enemy_rat_move.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.rat.attack": {
+    "src": "enemy_rat_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.rat.hurt": {
+    "src": "enemy_rat_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.rat.death": {
+    "src": "enemy_rat_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.goblin.idle": {
+    "src": "enemy_goblin_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.goblin.move": {
+    "src": "enemy_goblin_move.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.goblin.attack": {
+    "src": "enemy_goblin_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.goblin.hurt": {
+    "src": "enemy_goblin_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.goblin.death": {
+    "src": "enemy_goblin_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.skeleton.idle": {
+    "src": "enemy_skeleton_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.skeleton.move": {
+    "src": "enemy_skeleton_move.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.skeleton.attack": {
+    "src": "enemy_skeleton_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.skeleton.hurt": {
+    "src": "enemy_skeleton_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.skeleton.death": {
+    "src": "enemy_skeleton_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.bones.idle": {
+    "src": "enemy_bones_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.bones.move": {
+    "src": "enemy_bones_move.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.bones.attack": {
+    "src": "enemy_bones_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.bones.hurt": {
+    "src": "enemy_bones_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.bones.death": {
+    "src": "enemy_bones_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.orc.idle": {
+    "src": "enemy_orc_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.orc.move": {
+    "src": "enemy_orc_move.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.orc.attack": {
+    "src": "enemy_orc_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.orc.hurt": {
+    "src": "enemy_orc_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.orc.death": {
+    "src": "enemy_orc_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.troll.idle": {
+    "src": "enemy_troll_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.troll.move": {
+    "src": "enemy_troll_move.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.troll.attack": {
+    "src": "enemy_troll_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.troll.hurt": {
+    "src": "enemy_troll_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.troll.death": {
+    "src": "enemy_troll_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.demon.idle": {
+    "src": "enemy_demon_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.demon.move": {
+    "src": "enemy_demon_move.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.demon.attack": {
+    "src": "enemy_demon_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.demon.hurt": {
+    "src": "enemy_demon_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.demon.death": {
+    "src": "enemy_demon_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.lich.idle": {
+    "src": "enemy_lich_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.lich.move": {
+    "src": "enemy_lich_move.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.lich.attack": {
+    "src": "enemy_lich_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.lich.hurt": {
+    "src": "enemy_lich_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.lich.death": {
+    "src": "enemy_lich_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.dungeonLord.idle": {
+    "src": "enemy_dungeonLord_idle.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.dungeonLord.move": {
+    "src": "enemy_dungeonLord_move.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.dungeonLord.attack": {
+    "src": "enemy_dungeonLord_attack.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.dungeonLord.hurt": {
+    "src": "enemy_dungeonLord_hurt.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  },
+  "enemy.dungeonLord.death": {
+    "src": "enemy_dungeonLord_death.png",
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "frames": 5,
+    "anchorX": 32,
+    "anchorY": 58
+  }
+}

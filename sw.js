@@ -1,4 +1,16 @@
-const CACHE = 'delve-v0.11';
+const CACHE = 'delve-pixed-v0.1';
+
+async function cachePixedAssets(cache) {
+  try {
+    const response = await fetch('src/assets/pixed/pixed_manifest.json', { cache: 'no-store' });
+    if (!response.ok) return;
+    const manifest = await response.json();
+    const assetPaths = [...new Set(Object.values(manifest).map(meta => `src/assets/pixed/${meta.src}`))];
+    await cache.addAll(assetPaths);
+  } catch (err) {
+    console.warn('DELVE pixed asset cache warm failed', err);
+  }
+}
 
 // Install: cache core assets using relative paths
 self.addEventListener('install', e => {
@@ -30,10 +42,12 @@ self.addEventListener('install', e => {
         'src/js/input.js',
         'src/js/pwa.js',
         'src/js/main.js',
+        'src/js/assets.js',
+        'src/assets/pixed/pixed_manifest.json',
       ]).catch(err => {
         console.warn('DELVE cache warm failed', err);
         throw err;
-      })
+      }).then(() => cachePixedAssets(cache))
     )
   );
   self.skipWaiting();
