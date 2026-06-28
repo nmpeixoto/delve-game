@@ -1,4 +1,4 @@
-const CACHE = 'delve-pixed-v0.1';
+const CACHE = 'delve-pixed-v0.2';
 
 async function cachePixedAssets(cache) {
   try {
@@ -30,6 +30,10 @@ self.addEventListener('install', e => {
         'src/js/state.js',
         'src/js/map.js',
         'src/js/vision.js',
+        'src/js/iso.js',
+        'src/js/pathing.js',
+        'src/js/animation.js',
+        'src/js/canvas-renderer.js',
         'src/js/render.js',
         'src/js/combat.js',
         'src/js/items.js',

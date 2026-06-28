@@ -79,7 +79,8 @@
 
   <!-- MAP -->
   <div id="map-area">
-    <div id="map-wrap"><div id="map"></div></div>
+    <canvas id="game-canvas" width="1280" height="720" aria-label="DELVE dungeon"></canvas>
+    <div id="map-wrap" class="legacy-map-wrap" aria-hidden="true"><div id="map"></div></div>
     <canvas id="minimap" width="112" height="72"></canvas>
   </div>
 
@@ -291,6 +292,11 @@
 <script src="js/sfx.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/vision.js"></script>
+<script src="js/iso.js"></script>
+<script src="js/pathing.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/animation.js"></script>
+<script src="js/canvas-renderer.js"></script>
 <script src="js/render.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/emergency.js"></script>
