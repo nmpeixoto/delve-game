@@ -59,6 +59,14 @@ function getPlayerAttackRange(player) {
   return player.class === 'ranger' && player.weapon && player.weapon.sym === '\uD83C\uDFF9' ? 3 : 1;
 }
 
+function pathToBestCandidate({ map, start, candidates, hasKey = false, blocked = [] }) {
+  if (candidates.some(p => p.x === start.x && p.y === start.y)) return [];
+  return candidates
+    .map(goal => findGridPath({ map, start, goal, hasKey, blocked }))
+    .filter(path => path.length)
+    .sort((a, b) => a.length - b.length)[0] || [];
+}
+
 function pathToAdjacentTarget({ map, player, target, hasKey = false, blocked = [] }) {
   const candidates = [
     { x: target.x - 1, y: target.y },
@@ -67,10 +75,7 @@ function pathToAdjacentTarget({ map, player, target, hasKey = false, blocked = [
     { x: target.x, y: target.y + 1 },
   ].filter(p => isTileWalkableForPath(map, p.x, p.y, { hasKey }));
 
-  return candidates
-    .map(goal => findGridPath({ map, start: player, goal, hasKey, blocked }))
-    .filter(path => path.length)
-    .sort((a, b) => a.length - b.length)[0] || [];
+  return pathToBestCandidate({ map, start: player, candidates, hasKey, blocked });
 }
 
 function pathToEnemyTarget({ map, player, enemy, hasKey = false, blocked = [] }) {
@@ -85,8 +90,5 @@ function pathToEnemyTarget({ map, player, enemy, hasKey = false, blocked = [] })
     }
   }
 
-  return candidates
-    .map(goal => findGridPath({ map, start: player, goal, hasKey, blocked }))
-    .filter(path => path.length)
-    .sort((a, b) => a.length - b.length)[0] || [];
+  return pathToBestCandidate({ map, start: player, candidates, hasKey, blocked });
 }

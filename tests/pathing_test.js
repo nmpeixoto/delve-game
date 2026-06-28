@@ -62,6 +62,32 @@ test('findGridPath refuses locked doors when no key is available', () => {
   ]);
 });
 
+test('pathToAdjacentTarget routes to a tile beside the target', () => {
+  const context = loadPathing();
+  const map = makeMap();
+  const result = normalize(context.pathToAdjacentTarget({
+    map,
+    player: { x: 1, y: 1, class: 'warrior', weapon: null },
+    target: { x: 4, y: 1 },
+    hasKey: false,
+  }));
+
+  assert.deepStrictEqual(result[result.length - 1], { x: 3, y: 1 });
+});
+
+test('pathToAdjacentTarget returns [] when the player is already adjacent to the target', () => {
+  const context = loadPathing();
+  const map = makeMap();
+  const result = normalize(context.pathToAdjacentTarget({
+    map,
+    player: { x: 3, y: 1, class: 'warrior', weapon: null },
+    target: { x: 4, y: 1 },
+    hasKey: false,
+  }));
+
+  assert.deepStrictEqual(result, []);
+});
+
 test('pathToEnemyTarget stops adjacent to melee enemies', () => {
   const context = loadPathing();
   const map = makeMap();
@@ -73,6 +99,19 @@ test('pathToEnemyTarget stops adjacent to melee enemies', () => {
   }));
 
   assert.deepStrictEqual(result[result.length - 1], { x: 3, y: 1 });
+});
+
+test('pathToEnemyTarget returns [] when the player is already in bow range', () => {
+  const context = loadPathing();
+  const map = makeMap();
+  const result = normalize(context.pathToEnemyTarget({
+    map,
+    player: { x: 2, y: 1, class: 'ranger', weapon: { sym: '\uD83C\uDFF9' } },
+    enemy: { x: 5, y: 1 },
+    hasKey: false,
+  }));
+
+  assert.deepStrictEqual(result, []);
 });
 
 test('pathToEnemyTarget allows ranger bow range three', () => {
