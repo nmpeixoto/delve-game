@@ -82,18 +82,27 @@ function confirmClassSelect() {
 }
 
 async function startGame(playerClass = 'warrior', hardMode = false){
-  document.getElementById('title-screen').classList.add('hidden');
-  document.getElementById('game-screen').classList.remove('hidden');
-  if (typeof loadPixedAssets === 'function' && !PIXED_ASSETS.ready && !PIXED_ASSETS.error) {
-    document.getElementById('map-area').classList.add('pixed-loading');
-    try { await loadPixedAssets(); } catch (err) { console.warn(err); }
-    document.getElementById('map-area').classList.remove('pixed-loading');
-  }
-  if (typeof initPixedRenderer === 'function') initPixedRenderer();
-  initGame(playerClass, hardMode);
-  if(!_resizeHandlerBound){
-    window.addEventListener('resize',handleResize);
-    _resizeHandlerBound=true;
+  const gameScreen = document.getElementById('game-screen');
+  const titleScreen = document.getElementById('title-screen');
+  const mapArea = document.getElementById('map-area');
+  const pixedAssets = typeof PIXED_ASSETS !== 'undefined' ? PIXED_ASSETS : null;
+  gameScreen.classList.add('pixed-starting');
+  titleScreen.classList.add('hidden');
+  gameScreen.classList.remove('hidden');
+  try {
+    if (typeof loadPixedAssets === 'function' && pixedAssets && !pixedAssets.ready && !pixedAssets.error) {
+      mapArea.classList.add('pixed-loading');
+      try { await loadPixedAssets(); } catch (err) { console.warn(err); }
+      mapArea.classList.remove('pixed-loading');
+    }
+    if (typeof initPixedRenderer === 'function') initPixedRenderer();
+    initGame(playerClass, hardMode);
+    if(!_resizeHandlerBound){
+      window.addEventListener('resize',handleResize);
+      _resizeHandlerBound=true;
+    }
+  } finally {
+    gameScreen.classList.remove('pixed-starting');
   }
 }
 

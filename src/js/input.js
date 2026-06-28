@@ -13,6 +13,21 @@ function isShopActionOverlayOpen(){
     && document.getElementById('emergency-overlay').style.display!=='flex'
     && document.getElementById('shrine-overlay').style.display!=='flex';
 }
+
+function isGameInputReady(){
+  const gameScreen = document.getElementById('game-screen');
+  return !!(
+    gameScreen &&
+    !gameScreen.classList.contains('hidden') &&
+    !gameScreen.classList.contains('pixed-starting') &&
+    typeof G === 'object' &&
+    G &&
+    G.player &&
+    G.map &&
+    Array.isArray(G.items)
+  );
+}
+
 document.addEventListener('keydown',e=>{
   if(G.gameOver||G.won)return;
   if(document.getElementById('game-screen').classList.contains('hidden')){
@@ -46,6 +61,7 @@ document.addEventListener('keydown',e=>{
     }
     return;
   }
+  if(!isGameInputReady()) return;
   // Allow closing overlays with Escape
   if(e.key==='Escape'){
     if(document.getElementById('shop-overlay').classList.contains('open')){closeShop();return;}
@@ -83,10 +99,12 @@ document.addEventListener('touchend',e=>{
 
 // ===================== SWIPE =====================
 document.getElementById('map-area').addEventListener('touchstart',e=>{
+  if(!isGameInputReady()) return;
   if(e.touches.length!==1)return;
   _swipeStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
 },{passive:true});
 document.getElementById('map-area').addEventListener('touchend',e=>{
+  if(!isGameInputReady()){ _swipeStart=null; return; }
   if(!_swipeStart||G.gameOver||G.won)return;
   let dx=e.changedTouches[0].clientX-_swipeStart.x;
   let dy=e.changedTouches[0].clientY-_swipeStart.y;

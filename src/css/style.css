@@ -32,6 +32,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* ── GAME LAYOUT (portrait default) ── */
 #game-screen{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;}
+#game-screen.pixed-starting{pointer-events:none;}
 
 /* HUD */
 #hud{flex-shrink:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--accent);}
@@ -229,7 +230,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 #tooltip{position:fixed;background:var(--panel);border:1px solid var(--accent);padding:7px 11px;font-size:.6rem;line-height:1.9;pointer-events:none;z-index:90;display:none;max-width:160px;}
 
 /* FX */
-#map-wrap.shake{animation:shake .18s ease;}
+#map-wrap.shake,#game-canvas.shake{animation:shake .18s ease;}
 .float-text{position:fixed;font-family:'Press Start 2P',monospace;font-size:.45rem;pointer-events:none;z-index:200;animation:floatup .85s ease forwards;}
 #damage-flash{position:fixed;inset:0;z-index:300;background:rgba(248,113,113,0.35);pointer-events:none;opacity:0;}
 #damage-flash.flash{animation:damageFlash .4s ease-out forwards;}
