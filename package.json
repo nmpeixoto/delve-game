@@ -1,7 +1,7 @@
 {
   "scripts": {
     "build": "node scripts/build.js",
-    "test": "node tests/iso_test.js && node tests/bot_brain_test.js && node tests/bot_behavior_audit_test.js && node tests/autoplay_runner_test.js && node tests/headless_rl_runner_test.js && node tests/combat_test.js && node tests/format_test.js && node tests/map_test.js && node tests/movement_test.js && node tests/shop_test.js && node tests/headless_balance_test.js",
+    "test": "node tests/iso_test.js && node tests/pathing_test.js && node tests/bot_brain_test.js && node tests/bot_behavior_audit_test.js && node tests/autoplay_runner_test.js && node tests/headless_rl_runner_test.js && node tests/combat_test.js && node tests/format_test.js && node tests/map_test.js && node tests/movement_test.js && node tests/shop_test.js && node tests/headless_balance_test.js",
     "smoke": "node scripts/browser_smoke.js",
     "autoplay": "node scripts/autoplay_test.js",
     "balance": "node automation/headless-balance/headless_balance.js",
