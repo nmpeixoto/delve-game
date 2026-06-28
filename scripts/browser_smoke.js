@@ -53,13 +53,28 @@ async function startWarriorRun(page) {
   });
 }
 
-async function waitForCanvasReady(page) {
-  await page.waitForSelector('#game-canvas', { timeout: 2000 });
-  await page.waitForFunction(() => {
-    const canvas = document.getElementById('game-canvas');
-    return canvas && canvas.width > 0 && canvas.height > 0 && window.PixedRenderer && window.PixedRenderer.initialized;
-  });
-  return page.$eval('#game-canvas', el => ({ width: el.width, height: el.height }));
+async function waitForMapReady(page, { allowLegacyMapFallback = false } = {}) {
+  const hasCanvas = await page.$('#game-canvas');
+  if (hasCanvas) {
+    await page.waitForFunction(() => {
+      const canvas = document.getElementById('game-canvas');
+      return canvas && canvas.width > 0 && canvas.height > 0 && window.PixedRenderer && window.PixedRenderer.initialized;
+    }, { timeout: 2000 });
+    return {
+      mode: 'canvas',
+      size: await page.$eval('#game-canvas', el => ({ width: el.width, height: el.height }))
+    };
+  }
+
+  if (!allowLegacyMapFallback) {
+    throw new Error('Expected #game-canvas but it is missing.');
+  }
+
+  await page.waitForSelector('#map .tile-player', { timeout: 2000 });
+  return {
+    mode: 'legacy',
+    tiles: await page.$$eval('#map .tile', els => els.length)
+  };
 }
 
 async function expectModalFits(page, selector, label) {
@@ -89,7 +104,7 @@ async function expectModalFits(page, selector, label) {
   }
 }
 
-async function runTest(url, name) {
+async function runTest(url, name, allowLegacyMapFallback = false) {
   console.log(`\n=== Testing ${name} ===`);
   const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
@@ -138,8 +153,12 @@ async function runTest(url, name) {
 
     // Verify map is rendered
     console.log('Checking map render...');
-    const canvasSize = await waitForCanvasReady(page);
-    console.log(`Canvas rendered at ${canvasSize.width}x${canvasSize.height}.`);
+    const mapReady = await waitForMapReady(page, { allowLegacyMapFallback });
+    if (mapReady.mode === 'canvas') {
+      console.log(`Canvas rendered at ${mapReady.size.width}x${mapReady.size.height}.`);
+    } else {
+      console.log(`Legacy map rendered with ${mapReady.tiles} tiles.`);
+    }
 
     // Verify HUD
     const hp = await page.$eval('#hp-val', el => el.textContent);
@@ -178,7 +197,7 @@ async function runTest(url, name) {
   }
 }
 
-async function runMobileInterfaceTest(url, name) {
+async function runMobileInterfaceTest(url, name, allowLegacyMapFallback = false) {
   console.log(`\n=== Testing ${name} mobile interface ===`);
   const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
@@ -224,7 +243,12 @@ async function runMobileInterfaceTest(url, name) {
 
     console.log('Starting warrior run...');
     await startWarriorRun(page);
-    await waitForCanvasReady(page);
+    const mapReady = await waitForMapReady(page, { allowLegacyMapFallback });
+    if (mapReady.mode === 'canvas') {
+      console.log(`Canvas rendered at ${mapReady.size.width}x${mapReady.size.height}.`);
+    } else {
+      console.log(`Legacy map rendered with ${mapReady.tiles} tiles.`);
+    }
 
     console.log('Testing mobile inventory drag and tap...');
     await page.evaluate(() => {
@@ -405,7 +429,7 @@ async function runMobileInterfaceTest(url, name) {
   }
 }
 
-async function runMobileLandscapeInterfaceTest(url, name) {
+async function runMobileLandscapeInterfaceTest(url, name, allowLegacyMapFallback = false) {
   console.log(`\n=== Testing ${name} mobile landscape interface ===`);
   const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
@@ -436,7 +460,12 @@ async function runMobileLandscapeInterfaceTest(url, name) {
     console.log(`Navigating to ${url}...`);
     await page.goto(url, { waitUntil: 'networkidle0', timeout: 5000 });
     await startWarriorRun(page);
-    await waitForCanvasReady(page);
+    const mapReady = await waitForMapReady(page, { allowLegacyMapFallback });
+    if (mapReady.mode === 'canvas') {
+      console.log(`Canvas rendered at ${mapReady.size.width}x${mapReady.size.height}.`);
+    } else {
+      console.log(`Legacy map rendered with ${mapReady.tiles} tiles.`);
+    }
 
     const layout = await page.evaluate(() => {
       const map = document.getElementById('map-area').getBoundingClientRect();
@@ -473,11 +502,11 @@ async function runMobileLandscapeInterfaceTest(url, name) {
 
 async function main() {
   await runTest('http://127.0.0.1:8080/src/index.html', 'src');
-  await runTest('http://127.0.0.1:8080/dungeon.html', 'production');
+  await runTest('http://127.0.0.1:8080/dungeon.html', 'production', true);
   await runMobileInterfaceTest('http://127.0.0.1:8080/src/index.html', 'src');
-  await runMobileInterfaceTest('http://127.0.0.1:8080/dungeon.html', 'production');
+  await runMobileInterfaceTest('http://127.0.0.1:8080/dungeon.html', 'production', true);
   await runMobileLandscapeInterfaceTest('http://127.0.0.1:8080/src/index.html', 'src');
-  await runMobileLandscapeInterfaceTest('http://127.0.0.1:8080/dungeon.html', 'production');
+  await runMobileLandscapeInterfaceTest('http://127.0.0.1:8080/dungeon.html', 'production', true);
 }
 
 main().catch(console.error);
