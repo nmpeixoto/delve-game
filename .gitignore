@@ -29,6 +29,7 @@ __pycache__/
 *.py[cod]
 *.nbc
 *.nbi
+.superpowers/
 bot_findings.json
 screenshot_*.png
 out.json
