@@ -46,6 +46,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* ── GAME LAYOUT (portrait default) ── */
 #game-screen{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;}
+#game-screen.pixed-starting{pointer-events:none;}
 
 /* HUD */
 #hud{flex-shrink:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--accent);}
@@ -66,6 +67,35 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* MAP */
 #map-area{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg);min-height:0;}
+#game-canvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+  image-rendering:pixelated;
+  touch-action:none;
+  background:#050507;
+}
+#map-wrap.legacy-map-wrap{
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  opacity:0;
+  pointer-events:none;
+}
+#map-area.pixed-loading::after{
+  content:'LOADING CRYPT...';
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  font-family:'Press Start 2P',monospace;
+  font-size:.5rem;
+  color:var(--gold);
+  letter-spacing:.12em;
+}
 #map-wrap{background:var(--panel);border:1px solid var(--border);padding:3px;position:relative;flex-shrink:0;will-change:transform;}
 #map{display:grid;line-height:1;font-family:'Share Tech Mono',monospace;user-select:none;touch-action:none;}
 .tile{display:flex;align-items:center;justify-content:center;transition:background .08s;}
@@ -214,7 +244,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 #tooltip{position:fixed;background:var(--panel);border:1px solid var(--accent);padding:7px 11px;font-size:.6rem;line-height:1.9;pointer-events:none;z-index:90;display:none;max-width:160px;}
 
 /* FX */
-#map-wrap.shake{animation:shake .18s ease;}
+#map-wrap.shake,#game-canvas.shake{animation:shake .18s ease;}
 .float-text{position:fixed;font-family:'Press Start 2P',monospace;font-size:.45rem;pointer-events:none;z-index:200;animation:floatup .85s ease forwards;}
 #damage-flash{position:fixed;inset:0;z-index:300;background:rgba(248,113,113,0.35);pointer-events:none;opacity:0;}
 #damage-flash.flash{animation:damageFlash .4s ease-out forwards;}
@@ -331,7 +361,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="hud-center">
       DELVE<br>
       <span id="floor-label" style="color:var(--gold)">FLOOR 1</span><br>
-      <button onclick="openHelp()" style="font-family:'Press Start 2P',monospace;font-size:.32rem;padding:3px 7px;background:transparent;border:1px solid var(--dim);color:var(--dim);cursor:pointer;margin-top:3px;letter-spacing:.1em;">?</button>
+      <button onclick="manualOpenHelp()" style="font-family:'Press Start 2P',monospace;font-size:.32rem;padding:3px 7px;background:transparent;border:1px solid var(--dim);color:var(--dim);cursor:pointer;margin-top:3px;letter-spacing:.1em;">?</button>
     </div>
     <div class="hud-right">
       <div class="hud-stats">
@@ -346,7 +376,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
   <!-- MAP -->
   <div id="map-area">
-    <div id="map-wrap"><div id="map"></div></div>
+    <canvas id="game-canvas" width="1280" height="720" aria-label="DELVE dungeon"></canvas>
+    <div id="map-wrap" class="legacy-map-wrap" aria-hidden="true"><div id="map"></div></div>
     <canvas id="minimap" width="112" height="72"></canvas>
   </div>
 
@@ -357,22 +388,22 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div id="dpad-area">
     <div id="dpad">
       <div></div>
-      <div class="dpad-btn" ontouchstart="dpadPress(0,-1);event.preventDefault()" ontouchend="dpadRelease()" onclick="move(0,-1)">↑</div>
+      <div class="dpad-btn" ontouchstart="dpadPress(0,-1);event.preventDefault()" ontouchend="dpadRelease()" onclick="manualMove(0,-1)">↑</div>
       <div></div>
-      <div class="dpad-btn" ontouchstart="dpadPress(-1,0);event.preventDefault()" ontouchend="dpadRelease()" onclick="move(-1,0)">←</div>
+      <div class="dpad-btn" ontouchstart="dpadPress(-1,0);event.preventDefault()" ontouchend="dpadRelease()" onclick="manualMove(-1,0)">←</div>
       <div class="dpad-btn dpad-center">·</div>
-      <div class="dpad-btn" ontouchstart="dpadPress(1,0);event.preventDefault()"  ontouchend="dpadRelease()" onclick="move(1,0)">→</div>
+      <div class="dpad-btn" ontouchstart="dpadPress(1,0);event.preventDefault()"  ontouchend="dpadRelease()" onclick="manualMove(1,0)">→</div>
       <div></div>
-      <div class="dpad-btn" ontouchstart="dpadPress(0,1);event.preventDefault()"  ontouchend="dpadRelease()" onclick="move(0,1)">↓</div>
+      <div class="dpad-btn" ontouchstart="dpadPress(0,1);event.preventDefault()"  ontouchend="dpadRelease()" onclick="manualMove(0,1)">↓</div>
       <div></div>
     </div>
     <div id="action-btns">
-      <button class="act-btn" id="ability1-btn" onclick="if(!window._lpFiredUI) doAbility1(); window._lpFiredUI=false;" onmouseenter="showAbility1Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a1')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()">ABIL1</button>
-      <button class="act-btn" id="ability2-btn" onclick="if(!window._lpFiredUI) doAbility2(); window._lpFiredUI=false;" onmouseenter="showAbility2Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a2')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()" style="display:none">ABIL2</button>
-      <button class="act-btn" id="bomb-btn" onclick="useBombQuickAction()" style="display:none;border-color:var(--orange)!important;color:var(--orange)!important;">BOMB</button>
-      <button class="act-btn" id="stairs-btn" onclick="descend()">STAIRS</button>
-      <button class="act-btn" id="shop-btn"   onclick="openShop()">SHOP</button>
-      <button class="act-btn" id="bag-btn"    onclick="openInv()">BAG</button>
+      <button class="act-btn" id="ability1-btn" onclick="manualAbility1()" onmouseenter="showAbility1Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a1')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()">ABIL1</button>
+      <button class="act-btn" id="ability2-btn" onclick="manualAbility2()" onmouseenter="showAbility2Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a2')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()" style="display:none">ABIL2</button>
+      <button class="act-btn" id="bomb-btn" onclick="manualUseBomb()" style="display:none;border-color:var(--orange)!important;color:var(--orange)!important;">BOMB</button>
+      <button class="act-btn" id="stairs-btn" onclick="manualDescend()">STAIRS</button>
+      <button class="act-btn" id="shop-btn"   onclick="manualOpenShop()">SHOP</button>
+      <button class="act-btn" id="bag-btn"    onclick="manualOpenInv()">BAG</button>
     </div>
   </div>
 </div>
@@ -846,29 +877,50 @@ const SFX=(function(){
 </script>
 <script>
 // ===================== FX =====================
+function getFxPoint(gx, gy){
+  const renderer = typeof window !== 'undefined' ? window.PixedRenderer : null;
+  if(renderer && renderer.initialized && renderer.camera && typeof getIsoTileCenter === 'function' && typeof worldToScreen === 'function'){
+    const area = document.getElementById('map-area');
+    if(area){
+      const screen = worldToScreen(getIsoTileCenter(gx, gy), renderer.camera);
+      const rect = area.getBoundingClientRect();
+      return { left: rect.left + screen.x, top: rect.top + screen.y, halfW: ISO_HALF_W, halfH: ISO_HALF_H, mode: 'pixed' };
+    }
+  }
+
+  const wrap = document.getElementById('map-wrap');
+  const cs = typeof getCellSize === 'function' ? getCellSize() : 32;
+  const rect = wrap ? wrap.getBoundingClientRect() : { left: 0, top: 0 };
+  const half = cs / 2;
+  return { left: rect.left + gx * cs + half, top: rect.top + gy * cs + half, halfW: half, halfH: half, mode: 'legacy' };
+}
+
 function shakeMap(){
-  let m=document.getElementById('map-wrap');
-  m.classList.remove('shake');void m.offsetWidth;m.classList.add('shake');
+  const renderer = typeof window !== 'undefined' ? window.PixedRenderer : null;
+  const target = renderer && renderer.initialized && renderer.canvas ? renderer.canvas : document.getElementById('map-wrap');
+  const fallback = target === document.getElementById('game-canvas') ? document.getElementById('map-wrap') : document.getElementById('game-canvas');
+  if(!target) return;
+  if(fallback) fallback.classList.remove('shake');
+  target.classList.remove('shake');void target.offsetWidth;target.classList.add('shake');
 }
 function flashDamage(){
   let el=document.getElementById('damage-flash');
   el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');
 }
 function floatText(txt,gx,gy,color){
-  let r=document.getElementById('map-wrap').getBoundingClientRect();
-  let cs=getCellSize();
+  if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: gx, y: gy, color, text: txt, durationMs: 650 });
+  const p = getFxPoint(gx, gy);
   let el=document.createElement('div');
   el.className='float-text';el.textContent=txt;el.style.color=color;
-  el.style.left=(r.left+gx*cs+cs/2)+'px';el.style.top=(r.top+gy*cs)+'px';
+  el.style.left=p.left+'px';el.style.top=(p.top-p.halfH)+'px';
   document.body.appendChild(el);setTimeout(()=>el.remove(),880);
 }
 function popText(txt,gx,gy){
-  let r=document.getElementById('map-wrap').getBoundingClientRect();
-  let cs=getCellSize();
+  const p = getFxPoint(gx, gy);
   let el=document.createElement('div');
   el.className='pop-text';el.textContent=txt;
   // center on tile
-  el.style.left=(r.left+gx*cs+cs/4)+'px';el.style.top=(r.top+gy*cs-cs/4)+'px';
+  el.style.left=(p.left-p.halfW/2)+'px';el.style.top=(p.top-(p.halfH*1.5))+'px';
   document.body.appendChild(el);setTimeout(()=>el.remove(),400);
 }
 
@@ -936,6 +988,555 @@ function computeVision(){
       }
     }
   }
+}
+
+</script>
+<script>
+// ===================== ISOMETRIC HELPERS =====================
+const ISO_TILE_W = 64;
+const ISO_TILE_H = 32;
+const ISO_HALF_W = ISO_TILE_W / 2;
+const ISO_HALF_H = ISO_TILE_H / 2;
+
+// Create plain objects in the active realm so vm-based tests compare cleanly.
+function makeIsoPoint(x, y) {
+  const point = new Math.constructor();
+  point.x = x;
+  point.y = y;
+  return point;
+}
+
+function gridToIso(x, y) {
+  return makeIsoPoint((x - y) * ISO_HALF_W, (x + y) * ISO_HALF_H);
+}
+
+function getIsoTileCenter(x, y) {
+  const p = gridToIso(x, y);
+  return makeIsoPoint(p.x, p.y + ISO_HALF_H);
+}
+
+function isoToGrid(worldX, worldY) {
+  const adjustedY = worldY - ISO_HALF_H;
+  const gx = (worldX / ISO_HALF_W + adjustedY / ISO_HALF_H) / 2;
+  const gy = (adjustedY / ISO_HALF_H - worldX / ISO_HALF_W) / 2;
+  return makeIsoPoint(Math.round(gx), Math.round(gy));
+}
+
+function createIsoCamera(opts = {}) {
+  const camera = new Math.constructor();
+  camera.x = Number(opts.x) || 0;
+  camera.y = Number(opts.y) || 0;
+  camera.zoom = Number(opts.zoom) || 1;
+  camera.viewportWidth = Number(opts.viewportWidth) || 1;
+  camera.viewportHeight = Number(opts.viewportHeight) || 1;
+  return camera;
+}
+
+function centerCameraOnGrid(camera, gridX, gridY) {
+  const center = getIsoTileCenter(gridX, gridY);
+  camera.x = center.x - camera.viewportWidth / (2 * camera.zoom);
+  camera.y = center.y - camera.viewportHeight / (2 * camera.zoom);
+  return camera;
+}
+
+function worldToScreen(point, camera) {
+  return makeIsoPoint((point.x - camera.x) * camera.zoom, (point.y - camera.y) * camera.zoom);
+}
+
+function screenToWorld(screenX, screenY, camera) {
+  return makeIsoPoint(screenX / camera.zoom + camera.x, screenY / camera.zoom + camera.y);
+}
+
+function screenToGrid(screenX, screenY, camera) {
+  const world = screenToWorld(screenX, screenY, camera);
+  return isoToGrid(world.x, world.y);
+}
+
+function isoDepthKey(drawable) {
+  const base = (drawable.x + drawable.y) * 100;
+  const layer = drawable.kind === 'floor' ? 0
+    : drawable.kind === 'item' ? 20
+    : drawable.kind === 'actor' ? 40
+    : drawable.kind === 'fx' ? 60
+    : drawable.kind === 'wall' ? 80
+    : 50;
+  return base + layer + (drawable.tall ? 10 : 0);
+}
+
+</script>
+<script>
+// ===================== PATHING =====================
+function gridKey(x, y) {
+  return `${x},${y}`;
+}
+
+function parseGridKey(key) {
+  const [x, y] = key.split(',').map(Number);
+  const point = new Math.constructor();
+  point.x = x;
+  point.y = y;
+  return point;
+}
+
+function isTileWalkableForPath(map, x, y, opts = {}) {
+  if (x < 0 || y < 0 || y >= map.length || x >= map[y].length) return false;
+  const tile = map[y][x];
+  if (tile === TILE.WALL) return false;
+  if (tile === TILE.LOCKED_DOOR && !opts.hasKey) return false;
+  return true;
+}
+
+function getBlockedEntityTiles(enemies, exceptId = null) {
+  return (enemies || [])
+    .filter(enemy => !enemy.dying && enemy.id !== exceptId)
+    .map(enemy => ({ x: enemy.x, y: enemy.y }));
+}
+
+function findGridPath({ map, start, goal, hasKey = false, blocked = [] }) {
+  if (!map || !start || !goal) return [];
+  const blockedKeys = new Set(blocked.map(p => gridKey(p.x, p.y)));
+  const startKey = gridKey(start.x, start.y);
+  const goalKey = gridKey(goal.x, goal.y);
+  const queue = [start];
+  const cameFrom = new Map([[startKey, null]]);
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+  while (queue.length) {
+    const cur = queue.shift();
+    const curKey = gridKey(cur.x, cur.y);
+    if (curKey === goalKey) break;
+
+    for (const [dx, dy] of dirs) {
+      const nx = cur.x + dx;
+      const ny = cur.y + dy;
+      const nextKey = gridKey(nx, ny);
+      if (cameFrom.has(nextKey)) continue;
+      if (blockedKeys.has(nextKey) && nextKey !== goalKey) continue;
+      if (!isTileWalkableForPath(map, nx, ny, { hasKey })) continue;
+      cameFrom.set(nextKey, curKey);
+      queue.push({ x: nx, y: ny });
+    }
+  }
+
+  if (!cameFrom.has(goalKey)) return [];
+  const reversed = [];
+  let cursor = goalKey;
+  while (cursor && cursor !== startKey) {
+    reversed.push(parseGridKey(cursor));
+    cursor = cameFrom.get(cursor);
+  }
+  return reversed.reverse();
+}
+
+function getPlayerAttackRange(player) {
+  return player.class === 'ranger' && player.weapon && player.weapon.sym === '\uD83C\uDFF9' ? 3 : 1;
+}
+
+function pathToBestCandidate({ map, start, candidates, hasKey = false, blocked = [] }) {
+  if (candidates.some(p => p.x === start.x && p.y === start.y)) return [];
+  return candidates
+    .map(goal => findGridPath({ map, start, goal, hasKey, blocked }))
+    .filter(path => path.length)
+    .sort((a, b) => a.length - b.length)[0] || [];
+}
+
+function pathToAdjacentTarget({ map, player, target, hasKey = false, blocked = [] }) {
+  const candidates = [
+    { x: target.x - 1, y: target.y },
+    { x: target.x + 1, y: target.y },
+    { x: target.x, y: target.y - 1 },
+    { x: target.x, y: target.y + 1 },
+  ].filter(p => isTileWalkableForPath(map, p.x, p.y, { hasKey }));
+
+  return pathToBestCandidate({ map, start: player, candidates, hasKey, blocked });
+}
+
+function pathToEnemyTarget({ map, player, enemy, hasKey = false, blocked = [] }) {
+  const range = getPlayerAttackRange(player);
+  const candidates = [];
+  for (let y = enemy.y - range; y <= enemy.y + range; y++) {
+    for (let x = enemy.x - range; x <= enemy.x + range; x++) {
+      const dist = Math.max(Math.abs(enemy.x - x), Math.abs(enemy.y - y));
+      if (dist === 0 || dist > range) continue;
+      if (!isTileWalkableForPath(map, x, y, { hasKey })) continue;
+      candidates.push({ x, y });
+    }
+  }
+
+  return pathToBestCandidate({ map, start: player, candidates, hasKey, blocked });
+}
+
+</script>
+<script>
+// ===================== PIXED ASSETS =====================
+const PIXED_ASSET_BASE = location.pathname.includes('/src/index.html') ? 'assets/pixed/' : 'src/assets/pixed/';
+const PIXED_ASSETS = {
+  manifest: null,
+  images: {},
+  ready: false,
+  error: null,
+};
+
+function assetUrl(src) {
+  if (window.PIXED_INLINE_ASSETS && window.PIXED_INLINE_ASSETS[src]) return window.PIXED_INLINE_ASSETS[src];
+  return PIXED_ASSET_BASE + src;
+}
+
+async function loadPixedAssets() {
+  try {
+    const manifest = window.PIXED_INLINE_MANIFEST || await fetch(PIXED_ASSET_BASE + 'pixed_manifest.json').then(r => r.json());
+    PIXED_ASSETS.manifest = manifest;
+    const entries = Object.entries(manifest);
+    await Promise.all(entries.map(([key, meta]) => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        PIXED_ASSETS.images[key] = img;
+        resolve();
+      };
+      img.onerror = () => reject(new Error(`Failed to load pixed asset ${key}`));
+      img.src = assetUrl(meta.src);
+    })));
+    PIXED_ASSETS.ready = true;
+    return PIXED_ASSETS;
+  } catch (err) {
+    PIXED_ASSETS.error = err;
+    throw err;
+  }
+}
+
+function getPixedAsset(key) {
+  if (!PIXED_ASSETS.manifest) return null;
+  const meta = PIXED_ASSETS.manifest[key];
+  const image = PIXED_ASSETS.images[key];
+  return meta && image ? { ...meta, image } : null;
+}
+
+function playerAssetKey(anim = 'idle') {
+  const cls = typeof G !== 'undefined' && G && G.player && G.player.class ? G.player.class : 'warrior';
+  return `class.${cls}.${anim}`;
+}
+
+function enemyAssetSlug(enemy) {
+  if (!enemy) return 'goblin';
+  if (enemy.boss) return 'dungeonLord';
+  const normalized = String(enemy.name || enemy.sym || 'goblin').toLowerCase();
+  if (normalized.includes('bones')) return 'bones';
+  if (normalized.includes('skeleton')) return 'skeleton';
+  if (normalized.includes('rat')) return 'rat';
+  if (normalized.includes('orc')) return 'orc';
+  if (normalized.includes('troll')) return 'troll';
+  if (normalized.includes('demon')) return 'demon';
+  if (normalized.includes('lich')) return 'lich';
+  return 'goblin';
+}
+
+function enemyAssetKey(enemy, anim = 'idle') {
+  return `enemy.${enemyAssetSlug(enemy)}.${anim}`;
+}
+
+function itemAssetKey(item) {
+  if (!item) return 'item.upgrade';
+  if (item.type === 'weapon') return 'item.weapon';
+  if (item.type === 'armor') return 'item.armor';
+  if (item.type === 'potion' || item.type === 'potion_buff') return 'item.potion';
+  if (item.type === 'bomb') return 'item.bomb';
+  if (item.type === 'scroll' || item.type === 'scroll_teleport') return 'item.scroll';
+  if (item.type === 'key') return 'item.key';
+  return 'item.upgrade';
+}
+
+</script>
+<script>
+// ===================== PIXED ANIMATION STATE =====================
+const PIXED_ROOT = typeof globalThis !== 'undefined' ? globalThis : this;
+var PIXED_ANIM = PIXED_ROOT.PIXED_ANIM || {
+  entities: {},
+  fx: [],
+  nextFxId: 1,
+};
+PIXED_ROOT.PIXED_ANIM = PIXED_ANIM;
+
+function nowMs() {
+  return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+}
+
+function setEntityAnimation(key, name, durationMs = 180) {
+  PIXED_ANIM.entities[key] = {
+    name,
+    startedAt: nowMs(),
+    durationMs,
+  };
+}
+
+function getEntityAnimation(key) {
+  return PIXED_ANIM.entities[key] || null;
+}
+
+function spawnPixedFx({ key, x, y, color = '#ffffff', text = '', durationMs = 500 }) {
+  const id = `fx-${PIXED_ANIM.nextFxId++}`;
+  PIXED_ANIM.fx.push({ id, key, x, y, color, text, startedAt: nowMs(), durationMs });
+  return id;
+}
+
+function resetPixedAnimations() {
+  Object.keys(PIXED_ANIM.entities).forEach(key => delete PIXED_ANIM.entities[key]);
+  PIXED_ANIM.fx.length = 0;
+  PIXED_ANIM.nextFxId = 1;
+}
+
+function advanceAnimations(time = nowMs()) {
+  Object.keys(PIXED_ANIM.entities).forEach(key => {
+    const anim = PIXED_ANIM.entities[key];
+    if (time - anim.startedAt >= anim.durationMs) delete PIXED_ANIM.entities[key];
+  });
+  const liveFx = PIXED_ANIM.fx.filter(fx => time - fx.startedAt < fx.durationMs);
+  PIXED_ANIM.fx.length = 0;
+  PIXED_ANIM.fx.push(...liveFx);
+}
+
+PIXED_ROOT.setEntityAnimation = setEntityAnimation;
+PIXED_ROOT.getEntityAnimation = getEntityAnimation;
+PIXED_ROOT.spawnPixedFx = spawnPixedFx;
+PIXED_ROOT.resetPixedAnimations = resetPixedAnimations;
+PIXED_ROOT.advanceAnimations = advanceAnimations;
+
+</script>
+<script>
+// ===================== PIXED CANVAS RENDERER =====================
+const PixedRenderer = {
+  canvas: null,
+  ctx: null,
+  camera: null,
+  lastFrame: 0,
+  initialized: false,
+};
+
+if (typeof window !== 'undefined') window.PixedRenderer = PixedRenderer;
+
+function initPixedRenderer() {
+  const canvas = document.getElementById('game-canvas');
+  const area = document.getElementById('map-area');
+  if (!canvas || !area) return;
+  PixedRenderer.canvas = canvas;
+  PixedRenderer.ctx = canvas.getContext('2d');
+  PixedRenderer.camera = createIsoCamera({ viewportWidth: area.clientWidth, viewportHeight: area.clientHeight });
+  resizePixedCanvas();
+  PixedRenderer.initialized = true;
+}
+
+function resizePixedCanvas() {
+  if (!PixedRenderer.canvas) return;
+  const area = document.getElementById('map-area');
+  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+  const width = Math.max(1, area.clientWidth);
+  const height = Math.max(1, area.clientHeight);
+  PixedRenderer.canvas.width = Math.floor(width * dpr);
+  PixedRenderer.canvas.height = Math.floor(height * dpr);
+  PixedRenderer.canvas.style.width = `${width}px`;
+  PixedRenderer.canvas.style.height = `${height}px`;
+  if (PixedRenderer.ctx) {
+    PixedRenderer.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    PixedRenderer.ctx.imageSmoothingEnabled = false;
+  }
+  if (PixedRenderer.camera) {
+    PixedRenderer.camera.viewportWidth = width;
+    PixedRenderer.camera.viewportHeight = height;
+  }
+}
+
+function drawDebugDiamond(ctx, screen, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(screen.x, screen.y);
+  ctx.lineTo(screen.x + ISO_HALF_W, screen.y + ISO_HALF_H);
+  ctx.lineTo(screen.x, screen.y + ISO_TILE_H);
+  ctx.lineTo(screen.x - ISO_HALF_W, screen.y + ISO_HALF_H);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = stroke;
+  ctx.stroke();
+}
+
+function drawFallbackMarker(ctx, screen, fill, stroke, size = 6, offsetY = 16) {
+  const cx = Math.round(screen.x);
+  const cy = Math.round(screen.y + offsetY);
+  const canRestore = typeof ctx.save === 'function' && typeof ctx.restore === 'function';
+  if (canRestore) ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - size);
+  ctx.lineTo(cx + size, cy);
+  ctx.lineTo(cx, cy + size);
+  ctx.lineTo(cx - size, cy);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = stroke;
+  ctx.stroke();
+  if (canRestore) ctx.restore();
+}
+
+function getPixedFallbackStyle(drawable) {
+  const key = drawable && drawable.key ? drawable.key : '';
+  if (key === 'environment.trapSpike') return { fill: '#f87171', stroke: '#7f1d1d', size: 7, offsetY: 16 };
+  if (key === 'environment.trapGas') return { fill: '#4ade80', stroke: '#14532d', size: 7, offsetY: 16 };
+  if (key === 'environment.trapAlarm') return { fill: '#fde047', stroke: '#854d0e', size: 7, offsetY: 16 };
+  if (key === 'environment.trapBear') return { fill: '#d1d5db', stroke: '#374151', size: 7, offsetY: 16 };
+  if (key === 'environment.shrine') return { fill: '#c084fc', stroke: '#6d28d9', size: 8, offsetY: 16 };
+  if (drawable && drawable.kind === 'fx') {
+    return { fill: drawable.color || (drawable.fx && drawable.fx.color) || '#ffffff', stroke: '#050507', size: 5, offsetY: 16 };
+  }
+  if (drawable && drawable.kind === 'actor') {
+    if (drawable.enemy && drawable.enemy.boss) return { fill: '#c084fc', stroke: '#4c1d95', size: 7, offsetY: 24 };
+    if (drawable.enemy && drawable.enemy.isPet) return { fill: '#4ade80', stroke: '#14532d', size: 7, offsetY: 24 };
+    if (drawable.enemy) return { fill: '#f87171', stroke: '#7f1d1d', size: 7, offsetY: 24 };
+    return { fill: '#d7b46a', stroke: '#6b4f1d', size: 7, offsetY: 24 };
+  }
+  if (drawable && drawable.kind === 'item') {
+    const type = drawable.item && drawable.item.type;
+    if (type === 'weapon') return { fill: '#fb923c', stroke: '#7c2d12', size: 6, offsetY: 24 };
+    if (type === 'armor') return { fill: '#60a5fa', stroke: '#1d4ed8', size: 6, offsetY: 24 };
+    if (type === 'potion' || type === 'potion_buff') return { fill: '#4ade80', stroke: '#14532d', size: 6, offsetY: 24 };
+    if (type === 'bomb') return { fill: '#f87171', stroke: '#7f1d1d', size: 6, offsetY: 24 };
+    if (type === 'scroll' || type === 'scroll_teleport') return { fill: '#c084fc', stroke: '#6d28d9', size: 6, offsetY: 24 };
+    if (type === 'key') return { fill: '#fde047', stroke: '#854d0e', size: 6, offsetY: 24 };
+    return { fill: '#d7b46a', stroke: '#6b4f1d', size: 6, offsetY: 24 };
+  }
+  return { fill: '#c084fc', stroke: '#3b0764', size: 6, offsetY: 16 };
+}
+
+function drawPixedFallback(ctx, drawable, screen) {
+  const style = getPixedFallbackStyle(drawable);
+  drawFallbackMarker(ctx, screen, style.fill, style.stroke, style.size, style.offsetY);
+}
+
+function drawPixedImage(ctx, key, x, y, frame = 0) {
+  const asset = typeof getPixedAsset === 'function' ? getPixedAsset(key) : null;
+  if (!asset) return false;
+  const frameCount = Number.isFinite(asset.frames) ? Math.floor(asset.frames) : 0;
+  if (frameCount < 1) return false;
+  const rawFrame = Number.isFinite(frame) ? Math.floor(frame) : 0;
+  const clampedFrame = Math.max(0, Math.min(frameCount - 1, rawFrame));
+  const sx = clampedFrame * asset.frameWidth;
+  const sy = 0;
+  ctx.drawImage(
+    asset.image,
+    sx,
+    sy,
+    asset.frameWidth,
+    asset.frameHeight,
+    Math.round(x - asset.anchorX),
+    Math.round(y - asset.anchorY),
+    asset.frameWidth,
+    asset.frameHeight
+  );
+  return true;
+}
+
+function tileAssetKey(tile) {
+  if (tile === TILE.WALL || tile === TILE.SECRET_DOOR) return 'environment.wall';
+  if (tile === TILE.STAIRS) return 'environment.stairs';
+  if (tile === TILE.SHOP) return 'environment.shop';
+  if (tile === TILE.LOCKED_DOOR) return 'environment.doorLocked';
+  return 'environment.floor';
+}
+
+function renderPixedScene() {
+  if (!PixedRenderer.initialized) initPixedRenderer();
+  const ctx = PixedRenderer.ctx;
+  const canvas = PixedRenderer.canvas;
+  if (!ctx || !canvas || typeof G === 'undefined' || !G.map || !G.player) return;
+  resizePixedCanvas();
+  centerCameraOnGrid(PixedRenderer.camera, G.player.x, G.player.y);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#050507';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let y = 0; y < G.map.length; y++) {
+    for (let x = 0; x < G.map[y].length; x++) {
+      const seen = G.seen && G.seen.has(y * MAP_W + x);
+      if (!seen) continue;
+      const tile = G.map[y][x];
+      const world = gridToIso(x, y);
+      const screen = worldToScreen(world, PixedRenderer.camera);
+      const key = tileAssetKey(tile);
+      if (!drawPixedImage(ctx, key, screen.x, screen.y + 32)) {
+        const fill = tile === TILE.WALL ? '#11131b' : tile === TILE.STAIRS ? '#1f3b2a' : tile === TILE.SHOP ? '#3b2b12' : '#202231';
+        drawDebugDiamond(ctx, screen, fill, '#050507');
+      }
+    }
+  }
+
+  const drawables = [];
+  (G.traps || []).forEach(trap => {
+    const key = trap.y * MAP_W + trap.x;
+    if (!G.seen || !G.seen.has(key)) return;
+    if (!trap.revealed && !trap.triggered) return;
+    const trapKey = trap.type === 'spike' ? 'environment.trapSpike'
+      : trap.type === 'gas' ? 'environment.trapGas'
+      : trap.type === 'alarm' ? 'environment.trapAlarm'
+      : 'environment.trapBear';
+    drawables.push({ kind: 'item', x: trap.x, y: trap.y, key: trapKey, trap });
+  });
+  (G.items || []).filter(item => !item.carried && item.type === 'shrine').forEach(item => {
+    const key = item.y * MAP_W + item.x;
+    if (!G.seen || !G.seen.has(key)) return;
+    if (!G.visible || !G.visible.has(key)) return;
+    drawables.push({ kind: 'item', x: item.x, y: item.y, key: 'environment.shrine', item });
+  });
+  drawables.sort((a, b) => isoDepthKey(a) - isoDepthKey(b)).forEach(d => {
+    const screen = worldToScreen(gridToIso(d.x, d.y), PixedRenderer.camera);
+    if (!drawPixedImage(ctx, d.key, screen.x, screen.y + 32)) {
+      drawPixedFallback(ctx, d, screen);
+    }
+  });
+
+  const actors = [];
+  const playerAnim = typeof getEntityAnimation === 'function' ? getEntityAnimation('player') : null;
+  const playerAnimName = (playerAnim || {}).name || 'idle';
+  const playerKey = typeof playerAssetKey === 'function' ? playerAssetKey(playerAnimName) : `class.warrior.${playerAnimName}`;
+  actors.push({ kind: 'actor', x: G.player.x, y: G.player.y, key: playerKey, tall: true });
+  (G.enemies || []).forEach(enemy => {
+    const key = enemy.y * MAP_W + enemy.x;
+    if (!G.visible || !G.visible.has(key)) return;
+    const animState = typeof getEntityAnimation === 'function' ? getEntityAnimation(`enemy:${enemy.id}`) : null;
+    if (enemy.dying && !(animState || {}).name) return;
+    const animName = (animState || {}).name || 'idle';
+    const enemySlug = typeof enemyAssetSlug === 'function' ? enemyAssetSlug(enemy) : 'goblin';
+    const enemyKey = typeof enemyAssetKey === 'function' ? enemyAssetKey(enemy, animName) : `enemy.${enemySlug}.${animName}`;
+    actors.push({ kind: 'actor', x: enemy.x, y: enemy.y, key: enemyKey, enemy });
+  });
+  (G.items || []).filter(item => !item.carried && item.type !== 'shrine').forEach(item => {
+    const key = item.y * MAP_W + item.x;
+    if (!G.visible || !G.visible.has(key)) return;
+    const itemKey = typeof itemAssetKey === 'function' ? itemAssetKey(item) : 'item.upgrade';
+    actors.push({ kind: 'item', x: item.x, y: item.y, key: itemKey, item });
+  });
+  actors.sort((a, b) => isoDepthKey(a) - isoDepthKey(b)).forEach(d => {
+    const screen = worldToScreen(gridToIso(d.x, d.y), PixedRenderer.camera);
+    if (!drawPixedImage(ctx, d.key, screen.x, screen.y + 32)) {
+      drawPixedFallback(ctx, d, screen);
+    }
+  });
+
+  const fxList = typeof PIXED_ANIM !== 'undefined' && PIXED_ANIM && Array.isArray(PIXED_ANIM.fx) ? PIXED_ANIM.fx : [];
+  const now = typeof nowMs === 'function' ? nowMs() : Date.now();
+  fxList.forEach(fx => {
+    const screen = worldToScreen(gridToIso(fx.x, fx.y), PixedRenderer.camera);
+    if (!drawPixedImage(ctx, fx.key, screen.x, screen.y + 16)) {
+      drawPixedFallback(ctx, { kind: 'fx', key: fx.key, color: fx.color, fx }, screen);
+    }
+    if (fx.text) {
+      const age = now - fx.startedAt;
+      const canRestore = typeof ctx.save === 'function' && typeof ctx.restore === 'function';
+      if (canRestore) ctx.save();
+      ctx.font = '10px "Press Start 2P", monospace';
+      ctx.fillStyle = fx.color || '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.fillText(fx.text, screen.x, screen.y - 28 - age / 30);
+      if (canRestore) ctx.restore();
+    }
+  });
 }
 
 </script>
@@ -1038,6 +1639,19 @@ const gdef=()=>{
 };
 
 function render(){
+  if (typeof advanceAnimations === 'function') advanceAnimations();
+  if (typeof renderPixedScene === 'function') {
+    renderPixedScene();
+  } else {
+    renderLegacyMap();
+  }
+  drawMinimap();
+  updateHUD();
+  updateInvDrawer();
+  updateActBtns();
+}
+
+function renderLegacyMap(){
   const mapEl=document.getElementById('map');
   const cs=getCellSize();
   mapEl.style.gridTemplateColumns=`repeat(${MAP_W},${cs}px)`;
@@ -1102,8 +1716,6 @@ function render(){
   }
   mapEl.innerHTML=h;
   positionMapOnPlayer();
-  drawMinimap();
-  updateHUD();updateInvDrawer();updateActBtns();
 }
 
 function updateHUD(){
@@ -1771,6 +2383,7 @@ function move(dx,dy){
 
 function dpadPress(dx,dy){
   if(G.gameOver||G.won)return;
+  if(typeof stopActivePath === 'function') stopActivePath();
   move(dx,dy);clearInterval(_dpadTimer);
   _dpadTimer=setInterval(()=>move(dx,dy),185);
 }
@@ -1795,11 +2408,15 @@ function pickupItem(id, opts={}){
     it.carried=true;it.x=undefined;it.y=undefined;
     addLog(`Picked up ${it.name} — stored in bag`,'log-item');
     floatText(`+BAG`,G.player.x,G.player.y,'#fbbf24');
-    SFX.pickup();fireTip('firstPotion');
+    SFX.pickup();
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: G.player.x, y: G.player.y, color: '#fbbf24', text: 'loot' });
+    fireTip('firstPotion');
   } else {
     it.carried=true;it.x=undefined;it.y=undefined;
     addLog(`Picked up ${it.name}`,'log-item');
-    SFX.pickup();autoEquip(it);
+    SFX.pickup();
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: G.player.x, y: G.player.y, color: '#fbbf24', text: 'loot' });
+    autoEquip(it);
     fireTip('firstItem');
   }
   advanceTurn(opts);
@@ -2192,6 +2809,7 @@ function tileAttack(id){
 function attackEnemy(id,multiplier=1,opts={}){
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
   if(en.dying)return;
+  if (typeof setEntityAnimation === 'function') setEntityAnimation('player', 'attack', 180);
   let isSneak = false;
   let isCrit = false;
   if(G.player.vanishTurns > 0) {
@@ -2214,6 +2832,8 @@ function attackEnemy(id,multiplier=1,opts={}){
     let dmg=round1(Math.max(1,gatk()-en.def+rand(3)));
     if(multiplier>1){dmg=round1(dmg*multiplier);SFX.bash();}else{SFX.hit();}
     en.hp=round1(en.hp-dmg);
+    if (typeof setEntityAnimation === 'function') setEntityAnimation(`enemy:${en.id}`, 'hurt', 220);
+    if (typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#f87171', text: 'hit' });
     addDamageDealt(dmg);
     let atkSym = G.player.weapon ? G.player.weapon.sym : '🗡️';
     if(atkSym === '🏹') atkSym = '🎯';
@@ -2319,9 +2939,15 @@ function playerDodgeChance() {
   return dodge;
 }
 
+function emitPixedDeathFx(en) {
+  if (typeof setEntityAnimation === 'function') setEntityAnimation(`enemy:${en.id}`, 'death', 420);
+  if (typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#d7b46a', text: 'loot' });
+}
+
 function killEnemy(en, skipAdvanceTurn) {
   if(en.isPet) {
     addLog(`${en.name} crumbled to dust.`, 'log-dead');
+    emitPixedDeathFx(en);
     en.dying = true;
     _deathBatch.push({en, skipAdvanceTurn});
     if(!_deathTimer) {
@@ -2348,6 +2974,7 @@ function killEnemy(en, skipAdvanceTurn) {
   floatText(`+${goldDrop}💰`,en.x,en.y,'#fbbf24');
   SFX.enemyDeath();
   fireTip('firstGold');
+  emitPixedDeathFx(en);
   en.dying=true;
 
   _deathBatch.push({en, skipAdvanceTurn});
@@ -2688,12 +3315,18 @@ function doAbility1(){
 
   if(p.class === 'warrior') {
     let t=visEnemies.filter(e=>Math.abs(e.x-p.x)<=2&&Math.abs(e.y-p.y)<=2).sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
-    if(t.length) { G.ability1Cooldown = 5; attackEnemy(t[0].id,1.5); }
+    if(t.length) {
+      G.ability1Cooldown = 5;
+      let en = t[0];
+      attackEnemy(en.id,1.5);
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fb923c', text: 'BASH' });
+    }
     else addLog('No nearby enemies to Bash','log-info');
   }
   else if(p.class === 'rogue') {
     p.freeMoves = 2; G.ability1Cooldown = 3;
     addLog('Dashed! You have 2 free moves.', 'log-info'); updateActBtns();
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: p.x, y: p.y, color: '#a3a3a3', text: 'DASH' });
   }
   else if(p.class === 'mage') {
     let t=visEnemies.sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
@@ -2707,6 +3340,7 @@ function doAbility1(){
         }
       });
       SFX.bash(); addLog(`Fireball hit!`, 'log-combat');
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.fireball', x: target.x, y: target.y, color: '#fb923c', text: 'FIRE' });
       if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
       else advanceTurn();
     } else addLog('No visible enemies to Fireball', 'log-info');
@@ -2719,6 +3353,7 @@ function doAbility1(){
       en.stunnedTurns = 1;
       attackEnemy(en.id, 1);
       addLog(`Smited ${en.name}! They are stunned.`, 'log-combat');
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fde68a', text: 'SMITE' });
     } else addLog('No nearby enemies to Smite','log-info');
   }
   else if(p.class === 'ranger') {
@@ -2750,6 +3385,7 @@ function doAbility1(){
         cx += dx; cy += dy;
       }
       SFX.bash(); addLog('Piercing Shot fired!', 'log-combat');
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: target.x, y: target.y, color: '#bbf7d0', text: 'SHOT' });
       if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
       else advanceTurn();
     } else addLog('No visible enemies in line for Piercing Shot','log-info');
@@ -2765,6 +3401,7 @@ function doAbility1(){
         if(e.hp <= 0) hits.push(e);
     });
     SFX.bash(); addLog('Cleave!', 'log-combat');
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: p.x, y: p.y, color: '#fca5a5', text: 'CLEAVE' });
     if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
     else advanceTurn();
   }
@@ -2778,6 +3415,7 @@ function doAbility1(){
       let heal = dmg;
       p.hp = round1(Math.min(p.maxHp, p.hp + heal)); floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
       SFX.bash(); addLog(`Siphoned ${fmt1(dmg)} life from ${en.name}!`, 'log-combat');
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.heal', x: p.x, y: p.y, color: '#c4b5fd', text: 'SIPHON' });
       if(en.hp <= 0) killEnemy(en, false);
       else advanceTurn();
     } else addLog('No nearby enemies to Siphon','log-info');
@@ -2798,6 +3436,7 @@ function doAbility1(){
       }
       en.hp = round1(en.hp - dmg); floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171'); addDamageDealt(dmg);
       SFX.bash(); addLog(`Push Kick hit ${en.name} for ${fmt1(dmg)}!`, 'log-combat');
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fed7aa', text: 'KICK' });
       if(en.hp <= 0) killEnemy(en, false);
       else advanceTurn();
     } else addLog('No adjacent enemies to Push Kick','log-info');
@@ -2811,10 +3450,12 @@ function doAbility2(){
 
   if(p.class === 'warrior') {
     p.shieldWallTurns = 3; G.ability2Cooldown = 10;
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.heal', x: p.x, y: p.y, color: '#60a5fa', text: 'SHIELD' });
     addLog('Shield Wall active! Damage reduced by 40% for 3 turns.', 'log-info'); advanceTurn();
   }
   else if(p.class === 'rogue') {
     p.vanishTurns = 3; G.ability2Cooldown = 10;
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.poison', x: p.x, y: p.y, color: '#a3a3a3', text: 'VANISH' });
     addLog('Vanished! You are invisible for 3 turns.', 'log-info'); advanceTurn();
   }
   else if(p.class === 'mage') {
@@ -2837,6 +3478,7 @@ function doAbility2(){
       }
       let t = safeTiles[rand(safeTiles.length)];
       p.x = t.x; p.y = t.y; G.ability2Cooldown = 8;
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: p.x, y: p.y, color: '#93c5fd', text: 'BLINK' });
       addLog('Blinked to a safe location!', 'log-combat'); advanceTurn();
     } else addLog('No safe visible tile to Blink to', 'log-info');
   }
@@ -2845,6 +3487,7 @@ function doAbility2(){
     p.hp = round1(Math.min(p.maxHp, p.hp + heal));
     floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
     G.ability2Cooldown = 15;
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.heal', x: p.x, y: p.y, color: '#4ade80', text: 'HEAL' });
     addLog('Lay on Hands: Healed!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'ranger') {
@@ -2868,10 +3511,12 @@ function doAbility2(){
       }
     }
     G.ability2Cooldown = 10;
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'environment.trapBear', x: p.x, y: p.y, color: '#d1d5db', text: 'TRAP' });
     addLog('Dropped a Bear Trap and jumped back!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'barbarian') {
     p.bloodlustTurns = 3; G.ability2Cooldown = 12;
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: p.x, y: p.y, color: '#ef4444', text: 'BLOOD' });
     addLog('Bloodlust! Deal damage to heal, but take 15% more damage!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'necromancer') {
@@ -2881,6 +3526,7 @@ function doAbility2(){
       t[0].raiseCorpseTarget = true;
       t[0].raiseCorpseTurns = 3;
       G.ability2Cooldown = 8;
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.poison', x: t[0].x, y: t[0].y, color: '#a855f7', text: 'RAISE' });
       addLog(`Marked ${t[0].name} for Raise Dead!`, 'log-combat'); advanceTurn();
     } else addLog('No visible enemies to target', 'log-info');
   }
@@ -2892,6 +3538,7 @@ function doAbility2(){
       p.rootedTurns = 2;
       let en = t[0];
       addLog('Flurry of Blows! You are rooted.', 'log-combat');
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fed7aa', text: 'FLURRY' });
       for(let i = 0; i < 3; i++) {
         if(en.dying || en.hp <= 0) break;
         let mult = 1;
@@ -3820,17 +4467,35 @@ function confirmClassSelect() {
   startGame(_selectedClass, hm);
 }
 
-function startGame(playerClass = 'warrior', hardMode = false){
-  document.getElementById('title-screen').classList.add('hidden');
-  document.getElementById('game-screen').classList.remove('hidden');
-  initGame(playerClass, hardMode);
-  if(!_resizeHandlerBound){
-    window.addEventListener('resize',handleResize);
-    _resizeHandlerBound=true;
+async function startGame(playerClass = 'warrior', hardMode = false){
+  if (typeof stopActivePath === 'function') stopActivePath();
+  if (typeof resetPixedAnimations === 'function') resetPixedAnimations();
+  const gameScreen = document.getElementById('game-screen');
+  const titleScreen = document.getElementById('title-screen');
+  const mapArea = document.getElementById('map-area');
+  const pixedAssets = typeof PIXED_ASSETS !== 'undefined' ? PIXED_ASSETS : null;
+  gameScreen.classList.add('pixed-starting');
+  titleScreen.classList.add('hidden');
+  gameScreen.classList.remove('hidden');
+  try {
+    if (typeof loadPixedAssets === 'function' && pixedAssets && !pixedAssets.ready && !pixedAssets.error) {
+      mapArea.classList.add('pixed-loading');
+      try { await loadPixedAssets(); } catch (err) { console.warn(err); }
+      mapArea.classList.remove('pixed-loading');
+    }
+    if (typeof initPixedRenderer === 'function') initPixedRenderer();
+    initGame(playerClass, hardMode);
+    if(!_resizeHandlerBound){
+      window.addEventListener('resize',handleResize);
+      _resizeHandlerBound=true;
+    }
+  } finally {
+    gameScreen.classList.remove('pixed-starting');
   }
 }
 
 function showDeath(){
+  if (typeof stopActivePath === 'function') stopActivePath();
   SFX.playerDeath();
   let p=G.player,o=document.createElement('div');
   o.className='overlay';
@@ -3852,6 +4517,7 @@ function showDeath(){
 }
 
 function showVictory(){
+  if (typeof stopActivePath === 'function') stopActivePath();
   let p=G.player,o=document.createElement('div');
   o.className='overlay';
   let diffMult = G.hardMode ? 1.5 : 1.0;
@@ -3895,6 +4561,207 @@ function isShopActionOverlayOpen(){
     && document.getElementById('emergency-overlay').style.display!=='flex'
     && document.getElementById('shrine-overlay').style.display!=='flex';
 }
+
+function isGameInputReady(){
+  const gameScreen = document.getElementById('game-screen');
+  return !!(
+    gameScreen &&
+    !gameScreen.classList.contains('hidden') &&
+    !gameScreen.classList.contains('pixed-starting') &&
+    typeof G === 'object' &&
+    G &&
+    G.player &&
+    G.map &&
+    Array.isArray(G.items)
+  );
+}
+
+let _activePath = [];
+let _activePathIntent = null;
+let _pathTimer = null;
+
+function hasCarriedKey() {
+  return G.items && G.items.some(item => item.carried && item.type === 'key');
+}
+
+function stopActivePath() {
+  _activePath = [];
+  _activePathIntent = null;
+  if (_pathTimer) clearInterval(_pathTimer);
+  _pathTimer = null;
+}
+
+function getInputAttackRange(player) {
+  if (typeof getPlayerAttackRange === 'function') return getPlayerAttackRange(player);
+  return player && player.class === 'ranger' && player.weapon && player.weapon.sym === '\uD83C\uDFF9' ? 3 : 1;
+}
+
+function isAdjacentToTarget(player, target) {
+  if (!player || !target) return false;
+  return Math.abs(player.x - target.x) + Math.abs(player.y - target.y) === 1;
+}
+
+function isInEnemyInteractionRange(player, enemy) {
+  if (!player || !enemy) return false;
+  const range = getInputAttackRange(player);
+  const dist = Math.max(Math.abs(player.x - enemy.x), Math.abs(player.y - enemy.y));
+  return dist > 0 && dist <= range;
+}
+
+function beginActivePath(path, intent = null) {
+  stopActivePath();
+  _activePath = path || [];
+  _activePathIntent = intent;
+  if (!_activePath.length) {
+    resolvePathIntent(intent);
+    return;
+  }
+  _pathTimer = setInterval(stepActivePath, 110);
+  stepActivePath();
+}
+
+function stepActivePath() {
+  if (!isGameInputReady() || G.gameOver || G.won || isOverlayOpen()) {
+    stopActivePath();
+    return;
+  }
+  if (!_activePath.length) {
+    stopActivePath();
+    return;
+  }
+  const next = _activePath.shift();
+  const prevX = G.player.x;
+  const prevY = G.player.y;
+  const tile = G.map && G.map[next.y] ? G.map[next.y][next.x] : undefined;
+  const dx = Math.sign(next.x - prevX);
+  const dy = Math.sign(next.y - prevY);
+  move(dx, dy);
+  if (G.player.x === prevX && G.player.y === prevY) {
+    if (tile === TILE.LOCKED_DOOR || tile === TILE.SECRET_DOOR) {
+      _activePath.unshift(next);
+      return;
+    }
+    stopActivePath();
+    return;
+  }
+  if (!_activePath.length) {
+    const intent = _activePathIntent;
+    stopActivePath();
+    resolvePathIntent(intent);
+  }
+}
+
+function beginPathOrResolveIfSettled(path, intent, settled) {
+  if (!Array.isArray(path) || !path.length) {
+    stopActivePath();
+    if (settled) resolvePathIntent(intent);
+    return;
+  }
+  beginActivePath(path, intent);
+}
+
+function resolvePathIntent(intent) {
+  if (!intent) return;
+  if (intent.type === 'enemy' && intent.id) tileAttack(intent.id);
+  if (intent.type === 'item' && intent.id) tilePickup(intent.id);
+  if (intent.type === 'shop') openShop();
+  if (intent.type === 'stairs') descend();
+}
+
+function manualMove(dx, dy) {
+  stopActivePath();
+  move(dx, dy);
+}
+
+function manualAbility1() {
+  stopActivePath();
+  if (typeof window === 'undefined' || !window._lpFiredUI) doAbility1();
+  if (typeof window !== 'undefined') window._lpFiredUI = false;
+}
+
+function manualAbility2() {
+  stopActivePath();
+  if (typeof window === 'undefined' || !window._lpFiredUI) doAbility2();
+  if (typeof window !== 'undefined') window._lpFiredUI = false;
+}
+
+function manualUseBomb() {
+  stopActivePath();
+  useBombQuickAction();
+}
+
+function manualDescend() {
+  stopActivePath();
+  descend();
+}
+
+function manualOpenShop() {
+  stopActivePath();
+  openShop();
+}
+
+function manualOpenInv() {
+  stopActivePath();
+  openInv();
+}
+
+function manualOpenHelp() {
+  stopActivePath();
+  openHelp();
+}
+
+function handleCanvasPointer(e) {
+  if (!isGameInputReady() || G.gameOver || G.won || isOverlayOpen()) return;
+  const renderer = typeof PixedRenderer !== 'undefined' ? PixedRenderer : null;
+  if (!renderer || !renderer.camera || typeof screenToGrid !== 'function') return;
+  if (typeof e.button === 'number' && e.button !== 0) return;
+  const canvas = e.currentTarget || document.getElementById('game-canvas');
+  if (!canvas) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const grid = screenToGrid(e.clientX - rect.left, e.clientY - rect.top, renderer.camera);
+  if (!grid || !G.map || grid.y < 0 || grid.y >= G.map.length || grid.x < 0 || grid.x >= G.map[grid.y].length) return;
+
+  const enemy = G.enemies.find(en => !en.dying && en.x === grid.x && en.y === grid.y);
+  if (enemy) {
+    beginPathOrResolveIfSettled(pathToEnemyTarget({
+      map: G.map,
+      player: G.player,
+      enemy,
+      hasKey: hasCarriedKey(),
+      blocked: getBlockedEntityTiles(G.enemies, enemy.id),
+    }), { type: 'enemy', id: enemy.id }, isInEnemyInteractionRange(G.player, enemy));
+    return;
+  }
+
+  const item = G.items.find(it => !it.carried && it.x === grid.x && it.y === grid.y);
+  if (item) {
+    beginPathOrResolveIfSettled(pathToAdjacentTarget({
+      map: G.map,
+      player: G.player,
+      target: item,
+      hasKey: hasCarriedKey(),
+      blocked: getBlockedEntityTiles(G.enemies),
+    }), { type: 'item', id: item.id }, isAdjacentToTarget(G.player, item));
+    return;
+  }
+
+  const clickedTile = G.map[grid.y][grid.x];
+  const intent = clickedTile === TILE.STAIRS
+    ? { type: 'stairs' }
+    : clickedTile === TILE.SHOP
+      ? { type: 'shop' }
+      : null;
+
+  beginPathOrResolveIfSettled(findGridPath({
+    map: G.map,
+    start: G.player,
+    goal: { x: grid.x, y: grid.y },
+    hasKey: hasCarriedKey(),
+    blocked: getBlockedEntityTiles(G.enemies),
+  }), intent, grid.x === G.player.x && grid.y === G.player.y);
+}
+
 document.addEventListener('keydown',e=>{
   if(G.gameOver||G.won)return;
   if(document.getElementById('game-screen').classList.contains('hidden')){
@@ -3928,6 +4795,7 @@ document.addEventListener('keydown',e=>{
     }
     return;
   }
+  if(!isGameInputReady()) return;
   // Allow closing overlays with Escape
   if(e.key==='Escape'){
     if(document.getElementById('shop-overlay').classList.contains('open')){closeShop();return;}
@@ -3946,16 +4814,17 @@ document.addEventListener('keydown',e=>{
   }
   // Block game input when overlays are open
   if(isOverlayOpen()) return;
-  if(DIRS[e.key]){e.preventDefault();let[dx,dy]=DIRS[e.key];move(dx,dy);}
-  if(e.key==='1'||e.key==='b'||e.key==='B') doAbility1();
-  if(e.key==='2'||e.key==='v'||e.key==='V') doAbility2();
-  if(e.key==='.'||e.key==='>') descend();
+  if(DIRS[e.key]){e.preventDefault();let[dx,dy]=DIRS[e.key];stopActivePath();move(dx,dy);}
+  if(e.key==='1'||e.key==='b'||e.key==='B') { stopActivePath(); doAbility1(); }
+  if(e.key==='2'||e.key==='v'||e.key==='V') { stopActivePath(); doAbility2(); }
+  if(e.key==='.'||e.key==='>') { stopActivePath(); descend(); }
   if(e.key==='i'||e.key==='I') {
+    stopActivePath();
     if(document.getElementById('inv-drawer').classList.contains('open')) closeInv();
     else openInv();
   }
-  if(e.key==='t'||e.key==='T') openShop();
-  if(e.key==='?'||e.key==='h'||e.key==='H') openHelp();
+  if(e.key==='t'||e.key==='T') { stopActivePath(); openShop(); }
+  if(e.key==='?'||e.key==='h'||e.key==='H') { stopActivePath(); openHelp(); }
 });
 
 // Only prevent double-tap zoom on d-pad buttons
@@ -3965,18 +4834,24 @@ document.addEventListener('touchend',e=>{
 
 // ===================== SWIPE =====================
 document.getElementById('map-area').addEventListener('touchstart',e=>{
+  if(!isGameInputReady()) return;
   if(e.touches.length!==1)return;
   _swipeStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
 },{passive:true});
 document.getElementById('map-area').addEventListener('touchend',e=>{
+  if(!isGameInputReady()){ _swipeStart=null; return; }
   if(!_swipeStart||G.gameOver||G.won)return;
   let dx=e.changedTouches[0].clientX-_swipeStart.x;
   let dy=e.changedTouches[0].clientY-_swipeStart.y;
   _swipeStart=null;
   if(Math.sqrt(dx*dx+dy*dy)<20)return;
+  stopActivePath();
   if(Math.abs(dx)>Math.abs(dy))move(Math.sign(dx),0);
   else move(0,Math.sign(dy));
 },{passive:true});
+
+const _gameCanvas = document.getElementById('game-canvas');
+if (_gameCanvas) _gameCanvas.addEventListener('pointerdown', handleCanvasPointer);
 
 </script>
 <script>

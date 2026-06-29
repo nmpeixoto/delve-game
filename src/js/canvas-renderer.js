@@ -53,10 +53,67 @@ function drawDebugDiamond(ctx, screen, fill, stroke) {
   ctx.stroke();
 }
 
+function drawFallbackMarker(ctx, screen, fill, stroke, size = 6, offsetY = 16) {
+  const cx = Math.round(screen.x);
+  const cy = Math.round(screen.y + offsetY);
+  const canRestore = typeof ctx.save === 'function' && typeof ctx.restore === 'function';
+  if (canRestore) ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - size);
+  ctx.lineTo(cx + size, cy);
+  ctx.lineTo(cx, cy + size);
+  ctx.lineTo(cx - size, cy);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = stroke;
+  ctx.stroke();
+  if (canRestore) ctx.restore();
+}
+
+function getPixedFallbackStyle(drawable) {
+  const key = drawable && drawable.key ? drawable.key : '';
+  if (key === 'environment.trapSpike') return { fill: '#f87171', stroke: '#7f1d1d', size: 7, offsetY: 16 };
+  if (key === 'environment.trapGas') return { fill: '#4ade80', stroke: '#14532d', size: 7, offsetY: 16 };
+  if (key === 'environment.trapAlarm') return { fill: '#fde047', stroke: '#854d0e', size: 7, offsetY: 16 };
+  if (key === 'environment.trapBear') return { fill: '#d1d5db', stroke: '#374151', size: 7, offsetY: 16 };
+  if (key === 'environment.shrine') return { fill: '#c084fc', stroke: '#6d28d9', size: 8, offsetY: 16 };
+  if (drawable && drawable.kind === 'fx') {
+    return { fill: drawable.color || (drawable.fx && drawable.fx.color) || '#ffffff', stroke: '#050507', size: 5, offsetY: 16 };
+  }
+  if (drawable && drawable.kind === 'actor') {
+    if (drawable.enemy && drawable.enemy.boss) return { fill: '#c084fc', stroke: '#4c1d95', size: 7, offsetY: 24 };
+    if (drawable.enemy && drawable.enemy.isPet) return { fill: '#4ade80', stroke: '#14532d', size: 7, offsetY: 24 };
+    if (drawable.enemy) return { fill: '#f87171', stroke: '#7f1d1d', size: 7, offsetY: 24 };
+    return { fill: '#d7b46a', stroke: '#6b4f1d', size: 7, offsetY: 24 };
+  }
+  if (drawable && drawable.kind === 'item') {
+    const type = drawable.item && drawable.item.type;
+    if (type === 'weapon') return { fill: '#fb923c', stroke: '#7c2d12', size: 6, offsetY: 24 };
+    if (type === 'armor') return { fill: '#60a5fa', stroke: '#1d4ed8', size: 6, offsetY: 24 };
+    if (type === 'potion' || type === 'potion_buff') return { fill: '#4ade80', stroke: '#14532d', size: 6, offsetY: 24 };
+    if (type === 'bomb') return { fill: '#f87171', stroke: '#7f1d1d', size: 6, offsetY: 24 };
+    if (type === 'scroll' || type === 'scroll_teleport') return { fill: '#c084fc', stroke: '#6d28d9', size: 6, offsetY: 24 };
+    if (type === 'key') return { fill: '#fde047', stroke: '#854d0e', size: 6, offsetY: 24 };
+    return { fill: '#d7b46a', stroke: '#6b4f1d', size: 6, offsetY: 24 };
+  }
+  return { fill: '#c084fc', stroke: '#3b0764', size: 6, offsetY: 16 };
+}
+
+function drawPixedFallback(ctx, drawable, screen) {
+  const style = getPixedFallbackStyle(drawable);
+  drawFallbackMarker(ctx, screen, style.fill, style.stroke, style.size, style.offsetY);
+}
+
 function drawPixedImage(ctx, key, x, y, frame = 0) {
   const asset = typeof getPixedAsset === 'function' ? getPixedAsset(key) : null;
   if (!asset) return false;
-  const sx = Math.min(asset.frames - 1, frame) * asset.frameWidth;
+  const frameCount = Number.isFinite(asset.frames) ? Math.floor(asset.frames) : 0;
+  if (frameCount < 1) return false;
+  const rawFrame = Number.isFinite(frame) ? Math.floor(frame) : 0;
+  const clampedFrame = Math.max(0, Math.min(frameCount - 1, rawFrame));
+  const sx = clampedFrame * asset.frameWidth;
   const sy = 0;
   ctx.drawImage(
     asset.image,
@@ -84,7 +141,7 @@ function renderPixedScene() {
   if (!PixedRenderer.initialized) initPixedRenderer();
   const ctx = PixedRenderer.ctx;
   const canvas = PixedRenderer.canvas;
-  if (!ctx || !canvas || !G.map || !G.player) return;
+  if (!ctx || !canvas || typeof G === 'undefined' || !G.map || !G.player) return;
   resizePixedCanvas();
   centerCameraOnGrid(PixedRenderer.camera, G.player.x, G.player.y);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -115,20 +172,65 @@ function renderPixedScene() {
       : trap.type === 'gas' ? 'environment.trapGas'
       : trap.type === 'alarm' ? 'environment.trapAlarm'
       : 'environment.trapBear';
-    drawables.push({ kind: 'item', x: trap.x, y: trap.y, key: trapKey });
+    drawables.push({ kind: 'item', x: trap.x, y: trap.y, key: trapKey, trap });
   });
   (G.items || []).filter(item => !item.carried && item.type === 'shrine').forEach(item => {
     const key = item.y * MAP_W + item.x;
     if (!G.seen || !G.seen.has(key)) return;
     if (!G.visible || !G.visible.has(key)) return;
-    drawables.push({ kind: 'item', x: item.x, y: item.y, key: 'environment.shrine' });
+    drawables.push({ kind: 'item', x: item.x, y: item.y, key: 'environment.shrine', item });
   });
   drawables.sort((a, b) => isoDepthKey(a) - isoDepthKey(b)).forEach(d => {
     const screen = worldToScreen(gridToIso(d.x, d.y), PixedRenderer.camera);
-    drawPixedImage(ctx, d.key, screen.x, screen.y + 32);
+    if (!drawPixedImage(ctx, d.key, screen.x, screen.y + 32)) {
+      drawPixedFallback(ctx, d, screen);
+    }
   });
 
-  const player = worldToScreen(gridToIso(G.player.x, G.player.y), PixedRenderer.camera);
-  ctx.fillStyle = '#d7b46a';
-  ctx.fillRect(Math.round(player.x - 8), Math.round(player.y - 28), 16, 24);
+  const actors = [];
+  const playerAnim = typeof getEntityAnimation === 'function' ? getEntityAnimation('player') : null;
+  const playerAnimName = (playerAnim || {}).name || 'idle';
+  const playerKey = typeof playerAssetKey === 'function' ? playerAssetKey(playerAnimName) : `class.warrior.${playerAnimName}`;
+  actors.push({ kind: 'actor', x: G.player.x, y: G.player.y, key: playerKey, tall: true });
+  (G.enemies || []).forEach(enemy => {
+    const key = enemy.y * MAP_W + enemy.x;
+    if (!G.visible || !G.visible.has(key)) return;
+    const animState = typeof getEntityAnimation === 'function' ? getEntityAnimation(`enemy:${enemy.id}`) : null;
+    if (enemy.dying && !(animState || {}).name) return;
+    const animName = (animState || {}).name || 'idle';
+    const enemySlug = typeof enemyAssetSlug === 'function' ? enemyAssetSlug(enemy) : 'goblin';
+    const enemyKey = typeof enemyAssetKey === 'function' ? enemyAssetKey(enemy, animName) : `enemy.${enemySlug}.${animName}`;
+    actors.push({ kind: 'actor', x: enemy.x, y: enemy.y, key: enemyKey, enemy });
+  });
+  (G.items || []).filter(item => !item.carried && item.type !== 'shrine').forEach(item => {
+    const key = item.y * MAP_W + item.x;
+    if (!G.visible || !G.visible.has(key)) return;
+    const itemKey = typeof itemAssetKey === 'function' ? itemAssetKey(item) : 'item.upgrade';
+    actors.push({ kind: 'item', x: item.x, y: item.y, key: itemKey, item });
+  });
+  actors.sort((a, b) => isoDepthKey(a) - isoDepthKey(b)).forEach(d => {
+    const screen = worldToScreen(gridToIso(d.x, d.y), PixedRenderer.camera);
+    if (!drawPixedImage(ctx, d.key, screen.x, screen.y + 32)) {
+      drawPixedFallback(ctx, d, screen);
+    }
+  });
+
+  const fxList = typeof PIXED_ANIM !== 'undefined' && PIXED_ANIM && Array.isArray(PIXED_ANIM.fx) ? PIXED_ANIM.fx : [];
+  const now = typeof nowMs === 'function' ? nowMs() : Date.now();
+  fxList.forEach(fx => {
+    const screen = worldToScreen(gridToIso(fx.x, fx.y), PixedRenderer.camera);
+    if (!drawPixedImage(ctx, fx.key, screen.x, screen.y + 16)) {
+      drawPixedFallback(ctx, { kind: 'fx', key: fx.key, color: fx.color, fx }, screen);
+    }
+    if (fx.text) {
+      const age = now - fx.startedAt;
+      const canRestore = typeof ctx.save === 'function' && typeof ctx.restore === 'function';
+      if (canRestore) ctx.save();
+      ctx.font = '10px "Press Start 2P", monospace';
+      ctx.fillStyle = fx.color || '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.fillText(fx.text, screen.x, screen.y - 28 - age / 30);
+      if (canRestore) ctx.restore();
+    }
+  });
 }
