@@ -17,6 +17,79 @@ const CLASS_DATA = {
 };
 
 let _selectedClass = 'warrior';
+let _pixedAssetLoadPromise = null;
+
+function ensurePixedAssetsLoaded() {
+  if (typeof PIXED_ASSETS === 'undefined') return Promise.reject(new Error('Pixed assets unavailable'));
+  if (PIXED_ASSETS.ready) return Promise.resolve(PIXED_ASSETS);
+  if (PIXED_ASSETS.error) return Promise.reject(PIXED_ASSETS.error);
+  if (_pixedAssetLoadPromise) return _pixedAssetLoadPromise;
+  if (typeof loadPixedAssets !== 'function') return Promise.reject(new Error('loadPixedAssets unavailable'));
+  _pixedAssetLoadPromise = loadPixedAssets()
+    .then(result => {
+      _pixedAssetLoadPromise = null;
+      return result;
+    })
+    .catch(err => {
+      _pixedAssetLoadPromise = null;
+      throw err;
+    });
+  return _pixedAssetLoadPromise;
+}
+
+function drawClassPreview(id) {
+  const canvas = document.getElementById(`class-preview-${id}`);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const w = canvas.width || 96;
+  const h = canvas.height || 96;
+
+  const paintFallback = () => {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#08080b';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(215,180,106,.08)';
+    ctx.fillRect(0, h - 14, w, 14);
+    ctx.strokeStyle = '#3f3324';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+    ctx.restore();
+  };
+
+  paintFallback();
+
+  const asset = getPixedAsset(`class.${id}.idle`);
+  if (!asset || !asset.image) {
+    if (typeof PIXED_ASSETS !== 'undefined' && !PIXED_ASSETS.ready && !PIXED_ASSETS.error) {
+      ensurePixedAssetsLoaded().then(() => drawClassPreview(id)).catch(() => {});
+    }
+    return;
+  }
+
+  const frameWidth = asset.frameWidth || asset.image.naturalWidth || 64;
+  const frameHeight = asset.frameHeight || asset.image.naturalHeight || 64;
+  const scale = Math.min((w - 16) / frameWidth, (h - 16) / frameHeight);
+  if (!Number.isFinite(scale) || scale <= 0) return;
+
+  const dw = Math.max(1, Math.round(frameWidth * scale));
+  const dh = Math.max(1, Math.round(frameHeight * scale));
+  const dx = Math.round((w - dw) / 2);
+  const dy = Math.round((h - dh) / 2);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#08080b';
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(asset.image, 0, 0, frameWidth, frameHeight, dx, dy, dw, dh);
+  ctx.strokeStyle = '#3f3324';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+  ctx.restore();
+}
 
 function openClassSelect() {
   document.getElementById('class-select-overlay').style.display='flex';
@@ -46,6 +119,7 @@ function selectClass(id) {
   let per = (c.perception||0) + (wp.perception||0) + (ar.perception||0);
 
   let h = `
+    <canvas class="class-preview" id="class-preview-${id}" width="96" height="96"></canvas>
     <div class="class-title">${c.name}</div>
     <div class="class-tagline">${c.tagline}</div>
     <div class="class-stat-box">
@@ -73,6 +147,7 @@ function selectClass(id) {
     </div>
   `;
   document.getElementById('class-details').innerHTML = h;
+  drawClassPreview(id);
 }
 
 function confirmClassSelect() {
@@ -94,7 +169,7 @@ async function startGame(playerClass = 'warrior', hardMode = false){
   try {
     if (typeof loadPixedAssets === 'function' && pixedAssets && !pixedAssets.ready && !pixedAssets.error) {
       mapArea.classList.add('pixed-loading');
-      try { await loadPixedAssets(); } catch (err) { console.warn(err); }
+      try { await ensurePixedAssetsLoaded(); } catch (err) { console.warn(err); }
       mapArea.classList.remove('pixed-loading');
     }
     if (typeof initPixedRenderer === 'function') initPixedRenderer();

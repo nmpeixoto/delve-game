@@ -126,7 +126,7 @@ function renderShop(){
         ontouchmove="trackActionTouch(event)"
         ontouchend="if(finishActionTouch(event))buyItem('${item.id}')">
         <div class="shop-item-left">
-          <div class="shop-item-name ${colorCls}">${item.sym} ${item.name}${item.sold?' (SOLD)':''}</div>
+          <div class="shop-item-name ${colorCls}"><span class="shop-icon" aria-hidden="true">${item.sym}</span> ${item.name}${item.sold?' (SOLD)':''}</div>
         <div class="shop-item-desc">${desc} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
       </div>
       <div class="shop-item-price${canAfford?'':' cant-afford'}">💰${fmt1(item.price)}</div>
@@ -209,7 +209,7 @@ function renderSellPanel(){
         ontouchmove="trackActionTouch(event)"
         ontouchend="if(finishActionTouch(event))sellItem('${item.id}','${item._equipped||''}')">
         <div class="sell-item-left">
-          <div class="sell-item-name ${colorCls}">${item.sym} ${item.name}${equippedTag}${countTag}</div>
+          <div class="sell-item-name ${colorCls}"><span class="shop-icon" aria-hidden="true">${item.sym}</span> ${item.name}${equippedTag}${countTag}</div>
           <div class="sell-item-desc">${iDesc(item)} · <span style="color:var(--dim);font-size:.5rem">${item.rarity}</span></div>
         </div>
         <div class="sell-item-price">+${fmt1(sellPrice)}💰</div>
