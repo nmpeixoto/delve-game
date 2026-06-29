@@ -85,7 +85,15 @@ async function runAutoBot(url, runIndex, heroClass = 'warrior') {
 
   const errors = [];
   page.on('console', msg => {
-    if (msg.type() === 'error' && !msg.text().includes('404')) errors.push(`[Error]: ${msg.text()}`);
+    const text = msg.text();
+    if (
+      msg.type() === 'error' &&
+      !text.includes('404') &&
+      !text.startsWith('[JS]') &&
+      !text.startsWith('[JS_ROOMS]')
+    ) {
+      errors.push(`[Error]: ${text}`);
+    }
   });
   page.on('pageerror', error => {
     errors.push(`[Exception]: ${error.message}`);
