@@ -29,6 +29,9 @@ function tileAttack(id){
 function attackEnemy(id,multiplier=1,opts={}){
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
   if(en.dying)return;
+  if (typeof setEntityAnimation === 'function') setEntityAnimation('player', 'attack', 180);
+  if (typeof setEntityAnimation === 'function') setEntityAnimation(`enemy:${en.id}`, 'hurt', 220);
+  if (typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#f87171', text: 'hit' });
   let isSneak = false;
   let isCrit = false;
   if(G.player.vanishTurns > 0) {
@@ -185,6 +188,8 @@ function killEnemy(en, skipAdvanceTurn) {
   floatText(`+${goldDrop}💰`,en.x,en.y,'#fbbf24');
   SFX.enemyDeath();
   fireTip('firstGold');
+  if (typeof setEntityAnimation === 'function') setEntityAnimation(`enemy:${en.id}`, 'death', 420);
+  if (typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#d7b46a', text: 'loot' });
   en.dying=true;
 
   _deathBatch.push({en, skipAdvanceTurn});
@@ -525,12 +530,18 @@ function doAbility1(){
 
   if(p.class === 'warrior') {
     let t=visEnemies.filter(e=>Math.abs(e.x-p.x)<=2&&Math.abs(e.y-p.y)<=2).sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
-    if(t.length) { G.ability1Cooldown = 5; attackEnemy(t[0].id,1.5); }
+    if(t.length) {
+      G.ability1Cooldown = 5;
+      let en = t[0];
+      attackEnemy(en.id,1.5);
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fb923c', text: 'BASH' });
+    }
     else addLog('No nearby enemies to Bash','log-info');
   }
   else if(p.class === 'rogue') {
     p.freeMoves = 2; G.ability1Cooldown = 3;
     addLog('Dashed! You have 2 free moves.', 'log-info'); updateActBtns();
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: p.x, y: p.y, color: '#a3a3a3', text: 'DASH' });
   }
   else if(p.class === 'mage') {
     let t=visEnemies.sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
@@ -544,6 +555,7 @@ function doAbility1(){
         }
       });
       SFX.bash(); addLog(`Fireball hit!`, 'log-combat');
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.fireball', x: target.x, y: target.y, color: '#fb923c', text: 'FIRE' });
       if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
       else advanceTurn();
     } else addLog('No visible enemies to Fireball', 'log-info');
@@ -556,6 +568,7 @@ function doAbility1(){
       en.stunnedTurns = 1;
       attackEnemy(en.id, 1);
       addLog(`Smited ${en.name}! They are stunned.`, 'log-combat');
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fde68a', text: 'SMITE' });
     } else addLog('No nearby enemies to Smite','log-info');
   }
   else if(p.class === 'ranger') {
@@ -587,6 +600,7 @@ function doAbility1(){
         cx += dx; cy += dy;
       }
       SFX.bash(); addLog('Piercing Shot fired!', 'log-combat');
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: target.x, y: target.y, color: '#bbf7d0', text: 'SHOT' });
       if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
       else advanceTurn();
     } else addLog('No visible enemies in line for Piercing Shot','log-info');
@@ -602,6 +616,7 @@ function doAbility1(){
         if(e.hp <= 0) hits.push(e);
     });
     SFX.bash(); addLog('Cleave!', 'log-combat');
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: p.x, y: p.y, color: '#fca5a5', text: 'CLEAVE' });
     if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
     else advanceTurn();
   }
@@ -615,6 +630,7 @@ function doAbility1(){
       let heal = dmg;
       p.hp = round1(Math.min(p.maxHp, p.hp + heal)); floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
       SFX.bash(); addLog(`Siphoned ${fmt1(dmg)} life from ${en.name}!`, 'log-combat');
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.heal', x: p.x, y: p.y, color: '#c4b5fd', text: 'SIPHON' });
       if(en.hp <= 0) killEnemy(en, false);
       else advanceTurn();
     } else addLog('No nearby enemies to Siphon','log-info');
@@ -635,6 +651,7 @@ function doAbility1(){
       }
       en.hp = round1(en.hp - dmg); floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171'); addDamageDealt(dmg);
       SFX.bash(); addLog(`Push Kick hit ${en.name} for ${fmt1(dmg)}!`, 'log-combat');
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fed7aa', text: 'KICK' });
       if(en.hp <= 0) killEnemy(en, false);
       else advanceTurn();
     } else addLog('No adjacent enemies to Push Kick','log-info');
@@ -648,10 +665,12 @@ function doAbility2(){
 
   if(p.class === 'warrior') {
     p.shieldWallTurns = 3; G.ability2Cooldown = 10;
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.heal', x: p.x, y: p.y, color: '#60a5fa', text: 'SHIELD' });
     addLog('Shield Wall active! Damage reduced by 40% for 3 turns.', 'log-info'); advanceTurn();
   }
   else if(p.class === 'rogue') {
     p.vanishTurns = 3; G.ability2Cooldown = 10;
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.poison', x: p.x, y: p.y, color: '#a3a3a3', text: 'VANISH' });
     addLog('Vanished! You are invisible for 3 turns.', 'log-info'); advanceTurn();
   }
   else if(p.class === 'mage') {
@@ -674,6 +693,7 @@ function doAbility2(){
       }
       let t = safeTiles[rand(safeTiles.length)];
       p.x = t.x; p.y = t.y; G.ability2Cooldown = 8;
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: p.x, y: p.y, color: '#93c5fd', text: 'BLINK' });
       addLog('Blinked to a safe location!', 'log-combat'); advanceTurn();
     } else addLog('No safe visible tile to Blink to', 'log-info');
   }
@@ -682,6 +702,7 @@ function doAbility2(){
     p.hp = round1(Math.min(p.maxHp, p.hp + heal));
     floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
     G.ability2Cooldown = 15;
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.heal', x: p.x, y: p.y, color: '#4ade80', text: 'HEAL' });
     addLog('Lay on Hands: Healed!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'ranger') {
@@ -705,10 +726,12 @@ function doAbility2(){
       }
     }
     G.ability2Cooldown = 10;
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'environment.trapBear', x: p.x, y: p.y, color: '#d1d5db', text: 'TRAP' });
     addLog('Dropped a Bear Trap and jumped back!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'barbarian') {
     p.bloodlustTurns = 3; G.ability2Cooldown = 12;
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: p.x, y: p.y, color: '#ef4444', text: 'BLOOD' });
     addLog('Bloodlust! Deal damage to heal, but take 15% more damage!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'necromancer') {
@@ -718,6 +741,7 @@ function doAbility2(){
       t[0].raiseCorpseTarget = true;
       t[0].raiseCorpseTurns = 3;
       G.ability2Cooldown = 8;
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.poison', x: t[0].x, y: t[0].y, color: '#a855f7', text: 'RAISE' });
       addLog(`Marked ${t[0].name} for Raise Dead!`, 'log-combat'); advanceTurn();
     } else addLog('No visible enemies to target', 'log-info');
   }
@@ -729,6 +753,7 @@ function doAbility2(){
       p.rootedTurns = 2;
       let en = t[0];
       addLog('Flurry of Blows! You are rooted.', 'log-combat');
+      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fed7aa', text: 'FLURRY' });
       for(let i = 0; i < 3; i++) {
         if(en.dying || en.hp <= 0) break;
         let mult = 1;

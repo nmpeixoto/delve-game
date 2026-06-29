@@ -15,11 +15,15 @@ function pickupItem(id, opts={}){
     it.carried=true;it.x=undefined;it.y=undefined;
     addLog(`Picked up ${it.name} — stored in bag`,'log-item');
     floatText(`+BAG`,G.player.x,G.player.y,'#fbbf24');
-    SFX.pickup();fireTip('firstPotion');
+    SFX.pickup();
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: G.player.x, y: G.player.y, color: '#fbbf24', text: 'loot' });
+    fireTip('firstPotion');
   } else {
     it.carried=true;it.x=undefined;it.y=undefined;
     addLog(`Picked up ${it.name}`,'log-item');
-    SFX.pickup();autoEquip(it);
+    SFX.pickup();
+    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: G.player.x, y: G.player.y, color: '#fbbf24', text: 'loot' });
+    autoEquip(it);
     fireTip('firstItem');
   }
   advanceTurn(opts);

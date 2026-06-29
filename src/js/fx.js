@@ -30,6 +30,7 @@ function flashDamage(){
   el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');
 }
 function floatText(txt,gx,gy,color){
+  if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: gx, y: gy, color, text: txt, durationMs: 650 });
   const p = getFxPoint(gx, gy);
   let el=document.createElement('div');
   el.className='float-text';el.textContent=txt;el.style.color=color;
