@@ -179,6 +179,36 @@ test('attackEnemy stores cumulative damage rounded to one decimal place', () => 
   assert.strictEqual(context.G.player.damageDealt, 498.2);
 });
 
+test('attackEnemy does not emit enemy hurt FX on a dodge', () => {
+  const animations = [];
+  const fx = [];
+  const context = loadCombat({
+    Math: Object.assign(Object.create(Math), { random: () => 0 }),
+    setEntityAnimation: (key, name, durationMs) => animations.push({ key, name, durationMs }),
+    spawnPixedFx: payload => fx.push(payload),
+  });
+  context.G.enemies = [{
+    id: 'goblin-1',
+    name: 'Goblin',
+    hp: 20,
+    maxHp: 20,
+    atk: 4,
+    def: 1,
+    dodge: 1,
+    xp: 6,
+    gold: 4,
+    x: 4,
+    y: 5,
+    stunnedTurns: 0,
+  }];
+
+  context.attackEnemy('goblin-1');
+
+  assert.ok(animations.some(anim => anim.key === 'player' && anim.name === 'attack'));
+  assert.ok(!animations.some(anim => anim.key === 'enemy:goblin-1' && anim.name === 'hurt'));
+  assert.ok(!fx.some(entry => entry.key === 'fx.hit' && entry.text === 'hit'));
+});
+
 test('paladin smite prevents the target immediate counterattack', () => {
   const context = loadCombat({
     G: {

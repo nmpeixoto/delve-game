@@ -10,6 +10,28 @@ function loadAnimation() {
   return context;
 }
 
+function loadRenderContext() {
+  const calls = { advance: 0, scene: 0 };
+  const context = {
+    G: {},
+    MAP_W: 56,
+    MAP_H: 36,
+    TILE: {},
+    performance: { now: () => 1000 },
+    Math,
+  };
+  vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src/js/render.js'), 'utf8'), context);
+  context.drawMinimap = () => {};
+  context.updateHUD = () => {};
+  context.updateInvDrawer = () => {};
+  context.updateActBtns = () => {};
+  context.renderPixedScene = () => { calls.scene += 1; };
+  context.advanceAnimations = () => { calls.advance += 1; };
+  context.__calls = calls;
+  return context;
+}
+
 function test(name, fn) {
   try {
     fn();
@@ -41,4 +63,23 @@ test('spawnPixedFx creates expiring effects with grid coordinates', () => {
   assert.ok(context.PIXED_ANIM.fx.some(fx => fx.id === id && fx.key === 'fx.hit' && fx.x === 4 && fx.y === 5));
   context.advanceAnimations(1300);
   assert.strictEqual(context.PIXED_ANIM.fx.length, 0);
+});
+
+test('resetPixedAnimations clears state and rewinds fx ids', () => {
+  const context = loadAnimation();
+  context.setEntityAnimation('player', 'attack', 180);
+  const firstFx = context.spawnPixedFx({ key: 'fx.hit', x: 1, y: 2, durationMs: 250 });
+  assert.strictEqual(firstFx, 'fx-1');
+  context.resetPixedAnimations();
+  assert.strictEqual(Object.keys(context.PIXED_ANIM.entities).length, 0);
+  assert.strictEqual(context.PIXED_ANIM.fx.length, 0);
+  const nextFx = context.spawnPixedFx({ key: 'fx.hit', x: 3, y: 4, durationMs: 250 });
+  assert.strictEqual(nextFx, 'fx-1');
+});
+
+test('render advances animation state once per frame', () => {
+  const context = loadRenderContext();
+  context.render();
+  assert.strictEqual(context.__calls.advance, 1);
+  assert.strictEqual(context.__calls.scene, 1);
 });

@@ -96,6 +96,7 @@ const gdef=()=>{
 };
 
 function render(){
+  if (typeof advanceAnimations === 'function') advanceAnimations();
   if (typeof renderPixedScene === 'function') {
     renderPixedScene();
   } else {

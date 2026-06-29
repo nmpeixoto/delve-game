@@ -83,6 +83,7 @@ function confirmClassSelect() {
 
 async function startGame(playerClass = 'warrior', hardMode = false){
   if (typeof stopActivePath === 'function') stopActivePath();
+  if (typeof resetPixedAnimations === 'function') resetPixedAnimations();
   const gameScreen = document.getElementById('game-screen');
   const titleScreen = document.getElementById('title-screen');
   const mapArea = document.getElementById('map-area');

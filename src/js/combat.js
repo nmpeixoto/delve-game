@@ -30,8 +30,6 @@ function attackEnemy(id,multiplier=1,opts={}){
   let en=G.enemies.find(e=>e.id==id);if(!en)return;
   if(en.dying)return;
   if (typeof setEntityAnimation === 'function') setEntityAnimation('player', 'attack', 180);
-  if (typeof setEntityAnimation === 'function') setEntityAnimation(`enemy:${en.id}`, 'hurt', 220);
-  if (typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#f87171', text: 'hit' });
   let isSneak = false;
   let isCrit = false;
   if(G.player.vanishTurns > 0) {
@@ -54,6 +52,8 @@ function attackEnemy(id,multiplier=1,opts={}){
     let dmg=round1(Math.max(1,gatk()-en.def+rand(3)));
     if(multiplier>1){dmg=round1(dmg*multiplier);SFX.bash();}else{SFX.hit();}
     en.hp=round1(en.hp-dmg);
+    if (typeof setEntityAnimation === 'function') setEntityAnimation(`enemy:${en.id}`, 'hurt', 220);
+    if (typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#f87171', text: 'hit' });
     addDamageDealt(dmg);
     let atkSym = G.player.weapon ? G.player.weapon.sym : '🗡️';
     if(atkSym === '🏹') atkSym = '🎯';

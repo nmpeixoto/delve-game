@@ -29,15 +29,24 @@ function spawnPixedFx({ key, x, y, color = '#ffffff', text = '', durationMs = 50
   return id;
 }
 
+function resetPixedAnimations() {
+  Object.keys(PIXED_ANIM.entities).forEach(key => delete PIXED_ANIM.entities[key]);
+  PIXED_ANIM.fx.length = 0;
+  PIXED_ANIM.nextFxId = 1;
+}
+
 function advanceAnimations(time = nowMs()) {
   Object.keys(PIXED_ANIM.entities).forEach(key => {
     const anim = PIXED_ANIM.entities[key];
     if (time - anim.startedAt >= anim.durationMs) delete PIXED_ANIM.entities[key];
   });
-  PIXED_ANIM.fx = PIXED_ANIM.fx.filter(fx => time - fx.startedAt < fx.durationMs);
+  const liveFx = PIXED_ANIM.fx.filter(fx => time - fx.startedAt < fx.durationMs);
+  PIXED_ANIM.fx.length = 0;
+  PIXED_ANIM.fx.push(...liveFx);
 }
 
 PIXED_ROOT.setEntityAnimation = setEntityAnimation;
 PIXED_ROOT.getEntityAnimation = getEntityAnimation;
 PIXED_ROOT.spawnPixedFx = spawnPixedFx;
+PIXED_ROOT.resetPixedAnimations = resetPixedAnimations;
 PIXED_ROOT.advanceAnimations = advanceAnimations;
