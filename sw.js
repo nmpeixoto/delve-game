@@ -1,4 +1,4 @@
-const CACHE = 'delve-pixed-v0.2';
+const CACHE = 'delve-pixed-v0.3';
 const PIXED_ASSET_CACHE = [
   'src/assets/pixed/class_barbarian_attack.png',
   'src/assets/pixed/class_barbarian_death.png',

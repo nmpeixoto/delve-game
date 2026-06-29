@@ -107,21 +107,210 @@ function writeTile(name, draw) {
   return { src: `${name}.png`, frameWidth: width, frameHeight: height, frames: 1, anchorX: 32, anchorY: 48 };
 }
 
-function writeStrip(name, palette, frames = 5) {
+function drawFxFrame(pixels, sheetWidth, ox, frame, palette) {
+  const bob = frame % 2;
+  rect(pixels, sheetWidth, ox + 28, 20 + bob, 8, 8, rgba(palette.light));
+  rect(pixels, sheetWidth, ox + 24, 28 + bob, 16, 20, rgba(palette.mid));
+  rect(pixels, sheetWidth, ox + 20 + frame, 34 + bob, 8, 20, rgba(palette.dark));
+  rect(pixels, sheetWidth, ox + 38 - frame, 34 + bob, 8, 20, rgba(palette.dark));
+  rect(pixels, sheetWidth, ox + 26, 48, 5, 10, rgba('#151015'));
+  rect(pixels, sheetWidth, ox + 35, 48, 5, 10, rgba('#151015'));
+  rect(pixels, sheetWidth, ox + 30, 24 + bob, 2, 2, rgba('#f6e6b8'));
+  rect(pixels, sheetWidth, ox + 35, 24 + bob, 2, 2, rgba('#f6e6b8'));
+}
+
+function drawShadow(pixels, sheetWidth, ox, y = 56, color = '#050507') {
+  rect(pixels, sheetWidth, ox + 20, y, 24, 3, rgba(color, 165));
+  rect(pixels, sheetWidth, ox + 25, y + 3, 14, 2, rgba(color, 140));
+}
+
+function drawHead(pixels, sheetWidth, ox, x, y, color, eye = '#f8e8b8') {
+  rect(pixels, sheetWidth, ox + x, y, 10, 9, rgba(color));
+  rect(pixels, sheetWidth, ox + x + 2, y + 3, 2, 2, rgba(eye));
+  rect(pixels, sheetWidth, ox + x + 7, y + 3, 2, 2, rgba(eye));
+}
+
+function drawWeapon(pixels, sheetWidth, ox, x, y, kind, active = false) {
+  const metal = active ? '#f8fafc' : '#c7c2b5';
+  const wood = '#5b3717';
+  if (kind === 'sword') {
+    rect(pixels, sheetWidth, ox + x, y - 16, 3, 18, rgba(metal));
+    rect(pixels, sheetWidth, ox + x - 2, y, 7, 2, rgba('#d7b46a'));
+  } else if (kind === 'dagger') {
+    rect(pixels, sheetWidth, ox + x, y - 8, 2, 11, rgba(metal));
+    rect(pixels, sheetWidth, ox + x - 1, y + 3, 4, 2, rgba('#6b4f1d'));
+  } else if (kind === 'staff') {
+    rect(pixels, sheetWidth, ox + x, y - 24, 3, 30, rgba(wood));
+    rect(pixels, sheetWidth, ox + x - 3, y - 28, 9, 7, rgba(active ? '#f59e0b' : '#a78bfa'));
+  } else if (kind === 'mace') {
+    rect(pixels, sheetWidth, ox + x, y - 16, 3, 20, rgba(wood));
+    rect(pixels, sheetWidth, ox + x - 4, y - 21, 11, 7, rgba(metal));
+  } else if (kind === 'axe') {
+    rect(pixels, sheetWidth, ox + x, y - 22, 3, 27, rgba(wood));
+    rect(pixels, sheetWidth, ox + x - 8, y - 22, 9, 9, rgba(metal));
+    rect(pixels, sheetWidth, ox + x + 3, y - 20, 8, 7, rgba(metal));
+  } else if (kind === 'bow') {
+    rect(pixels, sheetWidth, ox + x, y - 22, 2, 28, rgba('#8b5a2b'));
+    rect(pixels, sheetWidth, ox + x + 4, y - 16, 2, 18, rgba('#d7b46a'));
+  }
+}
+
+function drawClassFrame(pixels, sheetWidth, ox, frame, palette, profile) {
+  const cls = profile.slug;
+  const anim = profile.anim;
+  const bob = anim === 'walk' ? frame % 2 : anim === 'hurt' ? 1 : 0;
+  const attack = anim === 'attack';
+  const dead = anim === 'death';
+  const y = dead ? 47 : 25 + bob;
+  const x = dead ? 21 : 27;
+  drawShadow(pixels, sheetWidth, ox, 57);
+
+  if (dead) {
+    rect(pixels, sheetWidth, ox + 19, 44, 26, 8, rgba(palette.mid));
+    rect(pixels, sheetWidth, ox + 42, 42, 8, 8, rgba(palette.light));
+    rect(pixels, sheetWidth, ox + 24, 53, 22, 3, rgba(palette.dark));
+    return;
+  }
+
+  if (cls === 'barbarian' || cls === 'paladin') rect(pixels, sheetWidth, ox + x - 3, y + 12, 20, 23, rgba(palette.dark));
+  rect(pixels, sheetWidth, ox + x - 1, y + 11, 14, 21, rgba(palette.mid));
+  rect(pixels, sheetWidth, ox + x + 1, y + 13, 10, 5, rgba(palette.light));
+
+  if (cls === 'mage' || cls === 'necromancer') {
+    rect(pixels, sheetWidth, ox + x - 3, y + 26, 20, 10, rgba(palette.mid));
+    rect(pixels, sheetWidth, ox + x + 5, y + 16, 3, 23, rgba(palette.light));
+  }
+
+  if (cls === 'rogue' || cls === 'ranger') {
+    rect(pixels, sheetWidth, ox + x - 3, y - 1, 16, 9, rgba(palette.dark));
+    rect(pixels, sheetWidth, ox + x - 7, y + 5, 5, 17, rgba(palette.dark));
+  }
+
+  drawHead(pixels, sheetWidth, ox, x + 1, y + 1, cls === 'necromancer' ? '#d8d0c0' : '#c9b08d');
+
+  rect(pixels, sheetWidth, ox + x - 4, y + 17, 5, 18, rgba(palette.dark));
+  rect(pixels, sheetWidth, ox + x + 12, y + 17, 5, 18, rgba(palette.dark));
+  rect(pixels, sheetWidth, ox + x + 1, y + 31, 4, 14, rgba('#151015'));
+  rect(pixels, sheetWidth, ox + x + 9, y + 31, 4, 14, rgba('#151015'));
+
+  const rightArmX = attack ? x + 20 : x + 15;
+  rect(pixels, sheetWidth, ox + x - 7, y + 16, 5, 17, rgba(palette.mid));
+  rect(pixels, sheetWidth, ox + rightArmX, y + 15, 5, 17, rgba(palette.mid));
+
+  if (cls === 'warrior') {
+    rect(pixels, sheetWidth, ox + x - 6, y + 15, 8, 14, rgba('#667085'));
+    drawWeapon(pixels, sheetWidth, ox, rightArmX + 3, y + 19, 'sword', attack);
+  } else if (cls === 'rogue') {
+    drawWeapon(pixels, sheetWidth, ox, x - 8, y + 25, 'dagger', attack);
+    drawWeapon(pixels, sheetWidth, ox, rightArmX + 3, y + 25, 'dagger', attack);
+  } else if (cls === 'mage') {
+    drawWeapon(pixels, sheetWidth, ox, rightArmX + 4, y + 22, 'staff', attack);
+  } else if (cls === 'paladin') {
+    rect(pixels, sheetWidth, ox + x - 8, y + 15, 9, 15, rgba('#d7b46a'));
+    drawWeapon(pixels, sheetWidth, ox, rightArmX + 3, y + 22, 'mace', attack);
+  } else if (cls === 'ranger') {
+    drawWeapon(pixels, sheetWidth, ox, rightArmX + 3, y + 24, 'bow', attack);
+  } else if (cls === 'barbarian') {
+    drawWeapon(pixels, sheetWidth, ox, rightArmX + 4, y + 23, 'axe', attack);
+  } else if (cls === 'necromancer') {
+    drawWeapon(pixels, sheetWidth, ox, rightArmX + 3, y + 23, 'staff', attack);
+    rect(pixels, sheetWidth, ox + x + 2, y - 3, 8, 5, rgba('#111827'));
+  } else if (cls === 'monk') {
+    rect(pixels, sheetWidth, ox + x - 9, y + 24, 7, 5, rgba('#fed7aa'));
+    rect(pixels, sheetWidth, ox + rightArmX + 2, y + 24, 7, 5, rgba('#fed7aa'));
+  }
+}
+
+function drawEnemyFrame(pixels, sheetWidth, ox, frame, palette, profile) {
+  const enemy = profile.slug;
+  const anim = profile.anim;
+  const bob = anim === 'move' ? frame % 2 : anim === 'hurt' ? 1 : 0;
+  const attack = anim === 'attack';
+  const dead = anim === 'death';
+  drawShadow(pixels, sheetWidth, ox, enemy === 'rat' || enemy === 'bones' ? 55 : 57);
+
+  if (enemy === 'rat') {
+    const y = dead ? 47 : 42 + bob;
+    rect(pixels, sheetWidth, ox + 20, y, 22, 9, rgba(palette.mid));
+    rect(pixels, sheetWidth, ox + 39, y - 3, 8, 8, rgba(palette.light));
+    rect(pixels, sheetWidth, ox + 16, y + 4, 8, 2, rgba(palette.dark));
+    rect(pixels, sheetWidth, ox + 45, y, 2, 2, rgba('#f8e8b8'));
+    return;
+  }
+
+  if (enemy === 'bones') {
+    const y = 43 + bob;
+    rect(pixels, sheetWidth, ox + 22, y, 20, 4, rgba(palette.light));
+    rect(pixels, sheetWidth, ox + 28, y - 8, 12, 4, rgba(palette.mid));
+    rect(pixels, sheetWidth, ox + 18, y + 8, 22, 4, rgba(palette.mid));
+    return;
+  }
+
+  const scale = enemy === 'troll' || enemy === 'dungeonLord' ? 1 : 0;
+  const x = enemy === 'dungeonLord' ? 22 : 27;
+  const y = dead ? 46 : 24 + bob - scale * 4;
+
+  if (dead) {
+    rect(pixels, sheetWidth, ox + 18, 45, 28, 8, rgba(palette.mid));
+    rect(pixels, sheetWidth, ox + 39, 42, 9, 8, rgba(palette.light));
+    return;
+  }
+
+  if (enemy === 'skeleton') {
+    drawHead(pixels, sheetWidth, ox, x + 1, y + 1, palette.light, '#111827');
+    rect(pixels, sheetWidth, ox + x + 5, y + 10, 3, 19, rgba(palette.light));
+    rect(pixels, sheetWidth, ox + x - 4, y + 17, 20, 3, rgba(palette.mid));
+    rect(pixels, sheetWidth, ox + x + 1, y + 30, 4, 15, rgba(palette.light));
+    rect(pixels, sheetWidth, ox + x + 10, y + 30, 4, 15, rgba(palette.light));
+    drawWeapon(pixels, sheetWidth, ox, attack ? x + 20 : x + 15, y + 26, 'sword', attack);
+    return;
+  }
+
+  if (enemy === 'demon' || enemy === 'dungeonLord') {
+    rect(pixels, sheetWidth, ox + x - 5, y - 2, 6, 8, rgba('#1f0303'));
+    rect(pixels, sheetWidth, ox + x + 13, y - 2, 6, 8, rgba('#1f0303'));
+    rect(pixels, sheetWidth, ox + x - 10, y + 18, 8, 20, rgba(palette.dark));
+    rect(pixels, sheetWidth, ox + x + 18, y + 18, 8, 20, rgba(palette.dark));
+  }
+
+  if (enemy === 'lich') {
+    rect(pixels, sheetWidth, ox + x - 4, y, 18, 37, rgba(palette.dark));
+    rect(pixels, sheetWidth, ox + x - 1, y + 8, 12, 26, rgba(palette.mid));
+    drawHead(pixels, sheetWidth, ox, x + 1, y + 2, '#d8d0c0', '#67e8f9');
+    drawWeapon(pixels, sheetWidth, ox, attack ? x + 21 : x + 16, y + 26, 'staff', attack);
+    return;
+  }
+
+  drawHead(pixels, sheetWidth, ox, x + 1, y + 1, palette.light);
+  rect(pixels, sheetWidth, ox + x - 2, y + 11, 16 + scale * 8, 22 + scale * 6, rgba(palette.mid));
+  rect(pixels, sheetWidth, ox + x + 1, y + 14, 10 + scale * 5, 6, rgba(palette.light));
+  rect(pixels, sheetWidth, ox + x - 8, y + 16, 6, 19 + scale * 4, rgba(palette.dark));
+  rect(pixels, sheetWidth, ox + x + 15 + scale * 7, y + 16, 6, 19 + scale * 4, rgba(palette.dark));
+  rect(pixels, sheetWidth, ox + x + 1, y + 31 + scale * 3, 5, 14, rgba('#151015'));
+  rect(pixels, sheetWidth, ox + x + 10 + scale * 3, y + 31 + scale * 3, 5, 14, rgba('#151015'));
+
+  if (enemy === 'goblin') {
+    rect(pixels, sheetWidth, ox + x - 6, y + 4, 5, 4, rgba(palette.light));
+    rect(pixels, sheetWidth, ox + x + 10, y + 4, 5, 4, rgba(palette.light));
+    drawWeapon(pixels, sheetWidth, ox, attack ? x + 21 : x + 16, y + 27, 'dagger', attack);
+  } else if (enemy === 'orc' || enemy === 'troll') {
+    rect(pixels, sheetWidth, ox + x + 3, y + 8, 3, 3, rgba('#f8fafc'));
+    rect(pixels, sheetWidth, ox + x + 10, y + 8, 3, 3, rgba('#f8fafc'));
+    drawWeapon(pixels, sheetWidth, ox, attack ? x + 24 + scale * 4 : x + 18 + scale * 4, y + 28, 'mace', attack);
+  } else if (enemy === 'demon' || enemy === 'dungeonLord') {
+    drawWeapon(pixels, sheetWidth, ox, attack ? x + 26 : x + 20, y + 30, 'sword', attack);
+  }
+}
+
+function writeStrip(name, palette, frames = 5, profile = {}) {
   const frameWidth = 64;
   const frameHeight = 64;
   const pixels = makeCanvas(frameWidth * frames, frameHeight);
   for (let frame = 0; frame < frames; frame++) {
     const ox = frame * frameWidth;
-    const bob = frame % 2;
-    rect(pixels, frameWidth * frames, ox + 28, 20 + bob, 8, 8, rgba(palette.light));
-    rect(pixels, frameWidth * frames, ox + 24, 28 + bob, 16, 20, rgba(palette.mid));
-    rect(pixels, frameWidth * frames, ox + 20 + frame, 34 + bob, 8, 20, rgba(palette.dark));
-    rect(pixels, frameWidth * frames, ox + 38 - frame, 34 + bob, 8, 20, rgba(palette.dark));
-    rect(pixels, frameWidth * frames, ox + 26, 48, 5, 10, rgba('#151015'));
-    rect(pixels, frameWidth * frames, ox + 35, 48, 5, 10, rgba('#151015'));
-    rect(pixels, frameWidth * frames, ox + 30, 24 + bob, 2, 2, rgba('#f6e6b8'));
-    rect(pixels, frameWidth * frames, ox + 35, 24 + bob, 2, 2, rgba('#f6e6b8'));
+    if (profile.type === 'class') drawClassFrame(pixels, frameWidth * frames, ox, frame, palette, profile);
+    else if (profile.type === 'enemy') drawEnemyFrame(pixels, frameWidth * frames, ox, frame, palette, profile);
+    else drawFxFrame(pixels, frameWidth * frames, ox, frame, palette);
   }
   writePng(path.join(outDir, `${name}.png`), frameWidth * frames, frameHeight, pixels);
   return { src: `${name}.png`, frameWidth, frameHeight, frames, anchorX: 32, anchorY: 58 };
@@ -185,15 +374,19 @@ function main() {
 
   ['hit', 'fireball', 'heal', 'poison', 'levelUp'].forEach((name, index) => {
     const colors = ['#f87171', '#fb923c', '#4ade80', '#a855f7', '#fbbf24'];
-    manifest[`fx.${name}`] = writeStrip(`fx_${name}`, { light: '#ffffff', mid: colors[index], dark: '#111827' }, 4);
+    manifest[`fx.${name}`] = writeStrip(`fx_${name}`, { light: '#ffffff', mid: colors[index], dark: '#111827' }, 4, { type: 'fx' });
   });
 
   for (const [cls, palette] of Object.entries(classPalettes)) {
-    for (const anim of ['idle', 'walk', 'attack', 'hurt', 'death']) manifest[`class.${cls}.${anim}`] = writeStrip(`class_${cls}_${anim}`, palette, 5);
+    for (const anim of ['idle', 'walk', 'attack', 'hurt', 'death']) {
+      manifest[`class.${cls}.${anim}`] = writeStrip(`class_${cls}_${anim}`, palette, 5, { type: 'class', slug: cls, anim });
+    }
   }
 
   for (const [enemy, palette] of Object.entries(enemyPalettes)) {
-    for (const anim of ['idle', 'move', 'attack', 'hurt', 'death']) manifest[`enemy.${enemy}.${anim}`] = writeStrip(`enemy_${enemy}_${anim}`, palette, 5);
+    for (const anim of ['idle', 'move', 'attack', 'hurt', 'death']) {
+      manifest[`enemy.${enemy}.${anim}`] = writeStrip(`enemy_${enemy}_${anim}`, palette, 5, { type: 'enemy', slug: enemy, anim });
+    }
   }
 
   fs.writeFileSync(path.join(outDir, 'pixed_manifest.json'), JSON.stringify(manifest, null, 2));
