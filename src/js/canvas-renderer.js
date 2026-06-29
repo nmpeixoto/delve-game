@@ -342,6 +342,10 @@ function drawPixedFallback(ctx, drawable, screen) {
 }
 
 function drawPixedImage(ctx, key, x, y, frame = 0) {
+  return drawPixedImageScaled(ctx, key, x, y, frame, 1);
+}
+
+function drawPixedImageScaled(ctx, key, x, y, frame = 0, scale = 1) {
   const asset = typeof getPixedAsset === 'function' ? getPixedAsset(key) : null;
   if (!asset) return false;
   const frameCount = Number.isFinite(asset.frames) ? Math.floor(asset.frames) : 0;
@@ -350,18 +354,110 @@ function drawPixedImage(ctx, key, x, y, frame = 0) {
   const clampedFrame = Math.max(0, Math.min(frameCount - 1, rawFrame));
   const sx = clampedFrame * asset.frameWidth;
   const sy = 0;
+  const drawScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+  const drawWidth = Math.round(asset.frameWidth * drawScale);
+  const drawHeight = Math.round(asset.frameHeight * drawScale);
   ctx.drawImage(
     asset.image,
     sx,
     sy,
     asset.frameWidth,
     asset.frameHeight,
-    Math.round(x - asset.anchorX),
-    Math.round(y - asset.anchorY),
-    asset.frameWidth,
-    asset.frameHeight
+    Math.round(x - asset.anchorX * drawScale),
+    Math.round(y - asset.anchorY * drawScale),
+    drawWidth,
+    drawHeight
   );
   return true;
+}
+
+function getPixedPropScale(tile) {
+  if (tile === TILE.SHOP) return 1.45;
+  if (tile === TILE.STAIRS) return 1.25;
+  if (tile === TILE.LOCKED_DOOR) return 1.35;
+  return 1;
+}
+
+function getPixedDrawableScale(drawable) {
+  if (!drawable) return 1;
+  if (drawable.kind === 'actor') {
+    if (drawable.enemy && drawable.enemy.boss) return 1.75;
+    if (drawable.enemy && drawable.enemy.name === 'Dungeon Lord') return 1.9;
+    if (drawable.enemy && (drawable.enemy.name || '').toLowerCase().includes('troll')) return 1.65;
+    return drawable.enemy ? 1.45 : 1.55;
+  }
+  if (drawable.kind === 'item') {
+    if (drawable.item && drawable.item.type === 'shrine') return 1.35;
+    if (drawable.trap) return 1.15;
+    return 1.3;
+  }
+  if (drawable.kind === 'fx') return 1.35;
+  return 1;
+}
+
+function getPixedGlowColor(drawable) {
+  if (!drawable) return null;
+  if (drawable.trap) {
+    if (drawable.trap.type === 'gas') return '#4ade80';
+    if (drawable.trap.type === 'alarm') return '#f87171';
+    return '#fb923c';
+  }
+  const type = drawable.item && drawable.item.type;
+  if (type === 'weapon') return '#fb923c';
+  if (type === 'armor') return '#60a5fa';
+  if (type === 'potion' || type === 'potion_buff') return '#ef4444';
+  if (type === 'bomb') return '#f97316';
+  if (type === 'scroll' || type === 'scroll_teleport') return '#d7b46a';
+  if (type === 'key') return '#fbbf24';
+  if (type === 'upgrade') return '#c084fc';
+  if (type === 'shrine') return '#c084fc';
+  return drawable.kind === 'item' ? '#d7b46a' : null;
+}
+
+function drawPixedGroundGlow(ctx, screen, color, radius = 24, alpha = 0.28) {
+  if (!screen || !color || typeof ctx.createRadialGradient !== 'function') return;
+  const canRestore = typeof ctx.save === 'function' && typeof ctx.restore === 'function';
+  if (canRestore) ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  const cx = screen.x;
+  const cy = screen.y + 30;
+  const glow = ctx.createRadialGradient(cx, cy, 1, cx, cy, radius);
+  glow.addColorStop(0, `${color}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`);
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(Math.round(cx - radius), Math.round(cy - radius), Math.round(radius * 2), Math.round(radius * 2));
+  if (canRestore) ctx.restore();
+}
+
+function normalizePixedFxText(text) {
+  return String(text == null ? '' : text)
+    .replace(/\uD83D\uDCB0/g, 'G')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function drawPixedFloatingText(ctx, fx, screen, age) {
+  if (!fx || !fx.text || !screen) return;
+  const canRestore = typeof ctx.save === 'function' && typeof ctx.restore === 'function';
+  const progress = Math.max(0, Math.min(1, age / Math.max(1, fx.durationMs || 650)));
+  const y = screen.y - 56 - progress * 32;
+  const text = normalizePixedFxText(fx.text);
+  if (!text) return;
+  if (canRestore) ctx.save();
+  ctx.globalAlpha = Math.max(0, 1 - progress);
+  ctx.font = 'bold 13px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = 'rgba(0,0,0,0.95)';
+  ctx.strokeText(text, Math.round(screen.x), Math.round(y));
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(255,244,214,0.35)';
+  ctx.strokeText(text, Math.round(screen.x), Math.round(y));
+  ctx.fillStyle = fx.color || '#ffffff';
+  ctx.fillText(text, Math.round(screen.x), Math.round(y));
+  if (canRestore) ctx.restore();
 }
 
 function tileAssetKey(tile) {
@@ -405,7 +501,10 @@ function renderPixedScene() {
 
   propTiles.forEach(({ tile, screen }) => {
     const key = tileAssetKey(tile);
-    if (!drawPixedImage(ctx, key, screen.x, screen.y + 32)) {
+    const scale = getPixedPropScale(tile);
+    if (tile === TILE.SHOP) drawPixedGroundGlow(ctx, screen, '#fbbf24', 34, 0.28);
+    if (tile === TILE.STAIRS) drawPixedGroundGlow(ctx, screen, '#4ade80', 26, 0.2);
+    if (!drawPixedImageScaled(ctx, key, screen.x, screen.y + 32, 0, scale)) {
       const fill = tile === TILE.STAIRS ? '#1f3b2a' : tile === TILE.SHOP ? '#3b2b12' : '#3f2717';
       drawDebugDiamond(ctx, screen, fill, '#050507');
     }
@@ -430,7 +529,8 @@ function renderPixedScene() {
   });
   drawables.sort((a, b) => isoDepthKey(a) - isoDepthKey(b)).forEach(d => {
     const screen = worldToScreen(gridToIso(d.x, d.y), PixedRenderer.camera);
-    if (!drawPixedImage(ctx, d.key, screen.x, screen.y + 32)) {
+    drawPixedGroundGlow(ctx, screen, getPixedGlowColor(d), 25, 0.22);
+    if (!drawPixedImageScaled(ctx, d.key, screen.x, screen.y + 32, 0, getPixedDrawableScale(d))) {
       drawPixedFallback(ctx, d, screen);
     }
   });
@@ -458,7 +558,9 @@ function renderPixedScene() {
   });
   actors.sort((a, b) => isoDepthKey(a) - isoDepthKey(b)).forEach(d => {
     const screen = worldToScreen(gridToIso(d.x, d.y), PixedRenderer.camera);
-    if (!drawPixedImage(ctx, d.key, screen.x, screen.y + 32)) {
+    if (d.kind === 'item') drawPixedGroundGlow(ctx, screen, getPixedGlowColor(d), 26, 0.24);
+    const scale = getPixedDrawableScale(d);
+    if (!drawPixedImageScaled(ctx, d.key, screen.x, screen.y + 32, 0, scale)) {
       drawPixedFallback(ctx, d, screen);
     }
   });
@@ -469,18 +571,9 @@ function renderPixedScene() {
   const now = typeof nowMs === 'function' ? nowMs() : Date.now();
   fxList.forEach(fx => {
     const screen = worldToScreen(gridToIso(fx.x, fx.y), PixedRenderer.camera);
-    if (!drawPixedImage(ctx, fx.key, screen.x, screen.y + 16)) {
+    if (!drawPixedImageScaled(ctx, fx.key, screen.x, screen.y + 16, 0, getPixedDrawableScale({ kind: 'fx' }))) {
       drawPixedFallback(ctx, { kind: 'fx', key: fx.key, color: fx.color, fx }, screen);
     }
-    if (fx.text) {
-      const age = now - fx.startedAt;
-      const canRestore = typeof ctx.save === 'function' && typeof ctx.restore === 'function';
-      if (canRestore) ctx.save();
-      ctx.font = '10px "Press Start 2P", monospace';
-      ctx.fillStyle = fx.color || '#ffffff';
-      ctx.textAlign = 'center';
-      ctx.fillText(fx.text, screen.x, screen.y - 28 - age / 30);
-      if (canRestore) ctx.restore();
-    }
+    drawPixedFloatingText(ctx, fx, screen, now - fx.startedAt);
   });
 }

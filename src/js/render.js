@@ -193,6 +193,9 @@ function updateHUD(){
 function updateActBtns(){
   const A1 = { warrior:'BASH', rogue:'DASH', mage:'FIREBALL', paladin:'SMITE', ranger:'PIERCING SHOT', barbarian:'CLEAVE', necromancer:'SIPHON LIFE', monk:'PUSH KICK' };
   const A2 = { warrior:'SHIELD', rogue:'VANISH', mage:'BLINK', paladin:'HEAL', ranger:'BEAR TRAP', barbarian:'BLOODLUST', necromancer:'RAISE', monk:'FLURRY' };
+  const A1Short = { warrior:'BASH', rogue:'DASH', mage:'FIRE', paladin:'SMITE', ranger:'PIERCE', barbarian:'CLEAVE', necromancer:'SIPHON', monk:'KICK' };
+  const A2Short = { warrior:'WARD', rogue:'VANISH', mage:'BLINK', paladin:'HEAL', ranger:'TRAP', barbarian:'BLOOD', necromancer:'RAISE', monk:'FLURRY' };
+  const cdLabel = (name, cooldown) => cooldown > 0 ? `${name}\n${cooldown}` : name;
 
   // ABILITY 1
   let a1=document.getElementById('ability1-btn');
@@ -200,6 +203,14 @@ function updateActBtns(){
     let a1Name = A1[G.player.class] || 'ABIL1';
     a1.className='act-btn ability-slot'+(G.ability1Cooldown===0?' bash-ready':'');
     a1.textContent=G.ability1Cooldown>0?`${a1Name} ${G.ability1Cooldown}`:`⚡${a1Name}`;
+  }
+
+  if(a1) {
+    const a1ShortName = A1Short[G.player.class] || 'ABIL1';
+    const a1FullName = A1[G.player.class] || a1ShortName;
+    a1.title = a1FullName;
+    a1.setAttribute('aria-label', a1FullName);
+    a1.textContent = cdLabel(a1ShortName, G.ability1Cooldown);
   }
 
   // ABILITY 2
@@ -215,11 +226,20 @@ function updateActBtns(){
     }
   }
 
+  if(a2 && G.player.lvl >= 5) {
+    const a2ShortName = A2Short[G.player.class] || 'ABIL2';
+    const a2FullName = A2[G.player.class] || a2ShortName;
+    a2.style.display = 'flex';
+    a2.title = a2FullName;
+    a2.setAttribute('aria-label', a2FullName);
+    a2.textContent = cdLabel(a2ShortName, G.ability2Cooldown);
+  }
+
   // BOMB
   let bombBtn=document.getElementById('bomb-btn');
   if(bombBtn) {
     let hasBomb=G.items.some(i=>i.name==='Bomb' && i.carried);
-    bombBtn.style.display=hasBomb?'block':'none';
+    bombBtn.style.display=hasBomb?'flex':'none';
   }
 
   // STAIRS
@@ -227,16 +247,19 @@ function updateActBtns(){
   let onS=G.map&&G.map[G.player.y][G.player.x]===TILE.STAIRS;
   sb.className='act-btn ability-slot'+(onS?' stairs-avail':'');
   sb.textContent=onS?'▼ GO':'STAIRS';
+  sb.textContent=onS?'GO':'STAIRS';
   // SHOP
   let shopBtn=document.getElementById('shop-btn');
   let nearShop=G.shops && G.shops.some(s => Math.abs(G.player.x-s.x)<=1 && Math.abs(G.player.y-s.y)<=1);
   shopBtn.className='act-btn ability-slot'+(nearShop?' shop-avail':'');
   shopBtn.textContent=nearShop?'$ SHOP':'SHOP';
+  shopBtn.textContent='SHOP';
   // BAG
   let bagBtn=document.getElementById('bag-btn');
   let hasItems=G.items.some(i=>i.carried);
   bagBtn.className='act-btn ability-slot'+(hasItems?' bag-has':'');
   bagBtn.textContent=hasItems?'🎒 BAG':'BAG';
+  bagBtn.textContent='BAG';
 }
 
 function updateInvDrawer(){
