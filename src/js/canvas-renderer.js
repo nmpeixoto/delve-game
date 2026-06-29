@@ -53,6 +53,33 @@ function drawDebugDiamond(ctx, screen, fill, stroke) {
   ctx.stroke();
 }
 
+function drawPixedImage(ctx, key, x, y, frame = 0) {
+  const asset = typeof getPixedAsset === 'function' ? getPixedAsset(key) : null;
+  if (!asset) return false;
+  const sx = Math.min(asset.frames - 1, frame) * asset.frameWidth;
+  const sy = 0;
+  ctx.drawImage(
+    asset.image,
+    sx,
+    sy,
+    asset.frameWidth,
+    asset.frameHeight,
+    Math.round(x - asset.anchorX),
+    Math.round(y - asset.anchorY),
+    asset.frameWidth,
+    asset.frameHeight
+  );
+  return true;
+}
+
+function tileAssetKey(tile) {
+  if (tile === TILE.WALL || tile === TILE.SECRET_DOOR) return 'environment.wall';
+  if (tile === TILE.STAIRS) return 'environment.stairs';
+  if (tile === TILE.SHOP) return 'environment.shop';
+  if (tile === TILE.LOCKED_DOOR) return 'environment.doorLocked';
+  return 'environment.floor';
+}
+
 function renderPixedScene() {
   if (!PixedRenderer.initialized) initPixedRenderer();
   const ctx = PixedRenderer.ctx;
@@ -71,10 +98,35 @@ function renderPixedScene() {
       const tile = G.map[y][x];
       const world = gridToIso(x, y);
       const screen = worldToScreen(world, PixedRenderer.camera);
-      const fill = tile === TILE.WALL ? '#11131b' : tile === TILE.STAIRS ? '#1f3b2a' : tile === TILE.SHOP ? '#3b2b12' : '#202231';
-      drawDebugDiamond(ctx, screen, fill, '#050507');
+      const key = tileAssetKey(tile);
+      if (!drawPixedImage(ctx, key, screen.x, screen.y + 32)) {
+        const fill = tile === TILE.WALL ? '#11131b' : tile === TILE.STAIRS ? '#1f3b2a' : tile === TILE.SHOP ? '#3b2b12' : '#202231';
+        drawDebugDiamond(ctx, screen, fill, '#050507');
+      }
     }
   }
+
+  const drawables = [];
+  (G.traps || []).forEach(trap => {
+    const key = trap.y * MAP_W + trap.x;
+    if (!G.seen || !G.seen.has(key)) return;
+    if (!trap.revealed && !trap.triggered) return;
+    const trapKey = trap.type === 'spike' ? 'environment.trapSpike'
+      : trap.type === 'gas' ? 'environment.trapGas'
+      : trap.type === 'alarm' ? 'environment.trapAlarm'
+      : 'environment.trapBear';
+    drawables.push({ kind: 'item', x: trap.x, y: trap.y, key: trapKey });
+  });
+  (G.items || []).filter(item => !item.carried && item.type === 'shrine').forEach(item => {
+    const key = item.y * MAP_W + item.x;
+    if (!G.seen || !G.seen.has(key)) return;
+    if (!G.visible || !G.visible.has(key)) return;
+    drawables.push({ kind: 'item', x: item.x, y: item.y, key: 'environment.shrine' });
+  });
+  drawables.sort((a, b) => isoDepthKey(a) - isoDepthKey(b)).forEach(d => {
+    const screen = worldToScreen(gridToIso(d.x, d.y), PixedRenderer.camera);
+    drawPixedImage(ctx, d.key, screen.x, screen.y + 32);
+  });
 
   const player = worldToScreen(gridToIso(G.player.x, G.player.y), PixedRenderer.camera);
   ctx.fillStyle = '#d7b46a';

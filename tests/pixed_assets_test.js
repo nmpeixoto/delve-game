@@ -71,3 +71,12 @@ test('every manifest source file exists under src/assets/pixed', () => {
     assert.ok(fs.statSync(assetPath).size > 40, `${key} source is empty: ${value.src}`);
   }
 });
+
+test('service worker caches the pixed manifest and generated png assets', () => {
+  const sw = fs.readFileSync(path.join(repoRoot, 'sw.js'), 'utf8');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  assert.ok(sw.includes('src/assets/pixed/pixed_manifest.json'));
+  for (const value of Object.values(manifest)) {
+    assert.ok(sw.includes(`src/assets/pixed/${value.src}`), `sw missing ${value.src}`);
+  }
+});
