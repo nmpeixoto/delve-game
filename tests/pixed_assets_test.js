@@ -80,3 +80,11 @@ test('service worker caches the pixed manifest and generated png assets', () => 
     assert.ok(sw.includes(`src/assets/pixed/${value.src}`), `sw missing ${value.src}`);
   }
 });
+
+test('production build contains inline pixed asset globals after build', () => {
+  const production = fs.readFileSync(path.join(repoRoot, 'dungeon.html'), 'utf8');
+  assert.ok(production.includes('window.PIXED_INLINE_MANIFEST'));
+  assert.ok(production.includes('window.PIXED_INLINE_ASSETS'));
+  assert.ok(production.includes('<script>\nwindow.PIXED_INLINE_MANIFEST='));
+  assert.ok(production.includes('window.PIXED_INLINE_ASSETS='));
+});

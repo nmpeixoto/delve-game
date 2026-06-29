@@ -14,6 +14,22 @@ html = html.replace(/<link rel="stylesheet" href="css\/style\.css">/, () => {
     return `<style>\n${css}\n</style>`;
 });
 
+// Inline generated pixed assets for single-file production.
+const pixedManifestPath = path.join(srcDir, 'assets', 'pixed', 'pixed_manifest.json');
+if (fs.existsSync(pixedManifestPath)) {
+    const manifest = JSON.parse(fs.readFileSync(pixedManifestPath, 'utf8'));
+    const inlineAssets = {};
+    Object.values(manifest).forEach(meta => {
+        if (!inlineAssets[meta.src]) {
+            const assetPath = path.join(srcDir, 'assets', 'pixed', meta.src);
+            const data = fs.readFileSync(assetPath);
+            inlineAssets[meta.src] = `data:image/png;base64,${data.toString('base64')}`;
+        }
+    });
+    const assetScript = `<script>\nwindow.PIXED_INLINE_MANIFEST=${JSON.stringify(manifest)};\nwindow.PIXED_INLINE_ASSETS=${JSON.stringify(inlineAssets)};\n</script>`;
+    html = html.replace('</head>', `${assetScript}\n</head>`);
+}
+
 // Inline JS
 html = html.replace(/<script src="(js\/[^"]+)"><\/script>/g, (match, jsPath) => {
     const js = fs.readFileSync(path.join(srcDir, jsPath), 'utf8');
