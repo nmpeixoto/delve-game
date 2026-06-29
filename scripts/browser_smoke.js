@@ -252,6 +252,41 @@ async function runMobileInterfaceTest(url, name, allowLegacyMapFallback = false)
       console.log(`Legacy map rendered with ${mapReady.tiles} tiles.`);
     }
 
+    await page.evaluate(() => {
+      G.player.lvl = Math.max(G.player.lvl, 5);
+      G.items.push({
+        id: 'mobile-hud-belt-bomb',
+        name: 'Bomb',
+        type: 'bomb',
+        carried: true
+      });
+      render();
+    });
+
+    const hudBelt = await page.$eval('#hud .hud-belt', el => ({
+      clientWidth: el.clientWidth,
+      scrollWidth: el.scrollWidth,
+      pointerEvents: getComputedStyle(el).pointerEvents
+    }));
+    if (hudBelt.pointerEvents !== 'auto') {
+      throw new Error(`HUD belt should accept pointer events, got ${hudBelt.pointerEvents}`);
+    }
+    if (hudBelt.scrollWidth <= hudBelt.clientWidth) {
+      throw new Error(`HUD belt should overflow horizontally on mobile portrait, got ${JSON.stringify(hudBelt)}`);
+    }
+
+    const portraitHud = await page.evaluate(() => {
+      const hud = document.getElementById('hud').getBoundingClientRect();
+      const bottomBar = document.getElementById('bottom-bar').getBoundingClientRect();
+      return {
+        hudTop: hud.top,
+        bottomBarBottom: bottomBar.bottom
+      };
+    });
+    if (portraitHud.bottomBarBottom - portraitHud.hudTop > 1) {
+      throw new Error(`Portrait HUD still overlaps the log: ${JSON.stringify(portraitHud)}`);
+    }
+
     console.log('Testing mobile inventory drag and tap...');
     await page.evaluate(() => {
       G.player.hp = Math.max(1, G.player.maxHp - 10);
@@ -473,16 +508,21 @@ async function runMobileLandscapeInterfaceTest(url, name, allowLegacyMapFallback
       const map = document.getElementById('map-area').getBoundingClientRect();
       const dpad = document.getElementById('dpad-area').getBoundingClientRect();
       const logDisplay = getComputedStyle(document.getElementById('bottom-bar')).display;
+      const dpadDisplay = getComputedStyle(document.getElementById('dpad-area')).display;
       return {
         viewportWidth: window.innerWidth,
         mapRight: map.right,
         dpadLeft: dpad.left,
-        logDisplay
+        logDisplay,
+        dpadDisplay
       };
     });
 
     if (layout.logDisplay !== 'none') {
       throw new Error(`Landscape log strip should be hidden, got display=${layout.logDisplay}`);
+    }
+    if (layout.dpadDisplay === 'none') {
+      throw new Error('Landscape fallback d-pad should remain visible');
     }
     if (Math.abs(layout.mapRight - layout.dpadLeft) > 1) {
       throw new Error(`Landscape map should meet controls without a dead column: ${JSON.stringify(layout)}`);

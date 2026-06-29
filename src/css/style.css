@@ -76,6 +76,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   gap:6px;
   max-width:100%;
   overflow-x:auto;
+  min-width:0;
+  pointer-events:auto;
+  touch-action:pan-x;
+  -webkit-overflow-scrolling:touch;
   scrollbar-width:none;
 }
 .ability-slot{
@@ -210,7 +214,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   .ability-slot{min-width:68px;font-size:.32rem;padding:8px 6px;}
 }
 
-@media(max-width:640px){
+@media(max-width:640px) and (orientation:portrait){
+  #game-screen{padding-bottom:160px;}
   #hud.pixed-hud{
     grid-template-columns:auto 1fr;
     align-items:end;

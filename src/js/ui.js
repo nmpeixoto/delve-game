@@ -27,6 +27,7 @@ let _uiLpTimer = null;
 function startUILongPress(e, type) {
   window._lpFiredUI = false;
   _uiLpTimer = setTimeout(() => {
+    if (typeof stopActivePath === 'function') stopActivePath();
     window._lpFiredUI = true;
     if(type === 'class') showClassTip(e);
     else if(type === 'a1') showAbility1Tip(e);
