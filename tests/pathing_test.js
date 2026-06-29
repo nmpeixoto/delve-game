@@ -112,6 +112,7 @@ function loadInput(overrides = {}) {
     openHelp: () => calls.push(['help']),
     doAbility1: () => calls.push(['ability1']),
     doAbility2: () => calls.push(['ability2']),
+    useBombQuickAction: () => calls.push(['bomb']),
     screenToGrid: () => context._grid || { x: 0, y: 0 },
     PixedRenderer: { camera: {} },
     _grid: { x: 0, y: 0 },
@@ -442,4 +443,13 @@ test('manualAbility1 cancels an active path and preserves long-press suppression
 
   assert.deepStrictEqual(context.calls, [['clearInterval', 29]]);
   assert.strictEqual(context.window._lpFiredUI, false);
+});
+
+test('manualUseBomb cancels an active path before triggering the bomb action', () => {
+  const context = loadInput();
+  vm.runInContext('_pathTimer = 41', context);
+
+  context.manualUseBomb();
+
+  assert.deepStrictEqual(context.calls, [['clearInterval', 41], ['bomb']]);
 });

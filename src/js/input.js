@@ -137,6 +137,11 @@ function manualAbility2() {
   if (typeof window !== 'undefined') window._lpFiredUI = false;
 }
 
+function manualUseBomb() {
+  stopActivePath();
+  useBombQuickAction();
+}
+
 function manualDescend() {
   stopActivePath();
   descend();
