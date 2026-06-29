@@ -173,29 +173,34 @@ function handleCanvasPointer(e) {
   const rect = canvas.getBoundingClientRect();
   const grid = screenToGrid(e.clientX - rect.left, e.clientY - rect.top, renderer.camera);
   if (!grid || !G.map || grid.y < 0 || grid.y >= G.map.length || grid.x < 0 || grid.x >= G.map[grid.y].length) return;
+  const tileKey = grid.y * MAP_W + grid.x;
+  if (G.seen && !G.seen.has(tileKey)) return;
 
-  const enemy = G.enemies.find(en => !en.dying && en.x === grid.x && en.y === grid.y);
-  if (enemy) {
-    beginPathOrResolveIfSettled(pathToEnemyTarget({
-      map: G.map,
-      player: G.player,
-      enemy,
-      hasKey: hasCarriedKey(),
-      blocked: getBlockedEntityTiles(G.enemies, enemy.id),
-    }), { type: 'enemy', id: enemy.id }, isInEnemyInteractionRange(G.player, enemy));
-    return;
-  }
+  const isVisibleTile = !G.visible || G.visible.has(tileKey);
+  if (isVisibleTile) {
+    const enemy = G.enemies.find(en => !en.dying && en.x === grid.x && en.y === grid.y);
+    if (enemy) {
+      beginPathOrResolveIfSettled(pathToEnemyTarget({
+        map: G.map,
+        player: G.player,
+        enemy,
+        hasKey: hasCarriedKey(),
+        blocked: getBlockedEntityTiles(G.enemies, enemy.id),
+      }), { type: 'enemy', id: enemy.id }, isInEnemyInteractionRange(G.player, enemy));
+      return;
+    }
 
-  const item = G.items.find(it => !it.carried && it.x === grid.x && it.y === grid.y);
-  if (item) {
-    beginPathOrResolveIfSettled(pathToAdjacentTarget({
-      map: G.map,
-      player: G.player,
-      target: item,
-      hasKey: hasCarriedKey(),
-      blocked: getBlockedEntityTiles(G.enemies),
-    }), { type: 'item', id: item.id }, isAdjacentToTarget(G.player, item));
-    return;
+    const item = G.items.find(it => !it.carried && it.x === grid.x && it.y === grid.y);
+    if (item) {
+      beginPathOrResolveIfSettled(pathToAdjacentTarget({
+        map: G.map,
+        player: G.player,
+        target: item,
+        hasKey: hasCarriedKey(),
+        blocked: getBlockedEntityTiles(G.enemies),
+      }), { type: 'item', id: item.id }, isAdjacentToTarget(G.player, item));
+      return;
+    }
   }
 
   const clickedTile = G.map[grid.y][grid.x];

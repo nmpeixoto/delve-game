@@ -15,6 +15,10 @@ function normalize(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function tileKey(x, y) {
+  return y * MAP_W + x;
+}
+
 function loadPathing(overrides = {}) {
   const context = { MAP_W, MAP_H, TILE, Math, ...overrides };
   vm.createContext(context);
@@ -356,6 +360,140 @@ test('clicking an unreachable item no longer resolves to tilePickup', () => {
   });
 
   assert.deepStrictEqual(context.calls, []);
+});
+
+test('clicking an unseen tile does not begin canvas pathing', () => {
+  const context = loadInput({
+    G: {
+      gameOver: false,
+      won: false,
+      player: {
+        x: 1,
+        y: 1,
+        class: 'warrior',
+        weapon: null,
+      },
+      map: makeMap(),
+      seen: new Set([tileKey(1, 1)]),
+      visible: new Set([tileKey(1, 1)]),
+      items: [],
+      enemies: [],
+    },
+    _grid: { x: 3, y: 3 },
+    screenToGrid: () => ({ x: 3, y: 3 }),
+  });
+
+  context.handleCanvasPointer({
+    button: 0,
+    clientX: 0,
+    clientY: 0,
+    currentTarget: context.elements['game-canvas'],
+  });
+
+  assert.deepStrictEqual(context.calls, []);
+});
+
+test('clicking a hidden enemy does not trigger tileAttack', () => {
+  const context = loadInput({
+    G: {
+      gameOver: false,
+      won: false,
+      player: {
+        x: 1,
+        y: 1,
+        class: 'warrior',
+        weapon: null,
+      },
+      map: makeMap(),
+      seen: new Set([tileKey(1, 1), tileKey(2, 1)]),
+      visible: new Set([tileKey(1, 1)]),
+      items: [],
+      enemies: [{
+        id: 'hidden-enemy',
+        x: 2,
+        y: 1,
+        dying: false,
+      }],
+    },
+    _grid: { x: 2, y: 1 },
+    screenToGrid: () => ({ x: 2, y: 1 }),
+  });
+
+  context.handleCanvasPointer({
+    button: 0,
+    clientX: 0,
+    clientY: 0,
+    currentTarget: context.elements['game-canvas'],
+  });
+
+  assert.strictEqual(context.calls.some(call => call[0] === 'attack'), false);
+});
+
+test('clicking a hidden item does not trigger tilePickup', () => {
+  const context = loadInput({
+    G: {
+      gameOver: false,
+      won: false,
+      player: {
+        x: 1,
+        y: 1,
+        class: 'warrior',
+        weapon: null,
+      },
+      map: makeMap(),
+      seen: new Set([tileKey(1, 1), tileKey(2, 1)]),
+      visible: new Set([tileKey(1, 1)]),
+      items: [{
+        id: 'hidden-item',
+        x: 2,
+        y: 1,
+        carried: false,
+      }],
+      enemies: [],
+    },
+    _grid: { x: 2, y: 1 },
+    screenToGrid: () => ({ x: 2, y: 1 }),
+  });
+
+  context.handleCanvasPointer({
+    button: 0,
+    clientX: 0,
+    clientY: 0,
+    currentTarget: context.elements['game-canvas'],
+  });
+
+  assert.strictEqual(context.calls.some(call => call[0] === 'pickup'), false);
+});
+
+test('clicking a seen but not visible empty tile still paths normally', () => {
+  const context = loadInput({
+    G: {
+      gameOver: false,
+      won: false,
+      player: {
+        x: 1,
+        y: 1,
+        class: 'warrior',
+        weapon: null,
+      },
+      map: makeMap(),
+      seen: new Set([tileKey(1, 1), tileKey(2, 1)]),
+      visible: new Set([tileKey(1, 1)]),
+      items: [],
+      enemies: [],
+    },
+    _grid: { x: 2, y: 1 },
+    screenToGrid: () => ({ x: 2, y: 1 }),
+  });
+
+  context.handleCanvasPointer({
+    button: 0,
+    clientX: 0,
+    clientY: 0,
+    currentTarget: context.elements['game-canvas'],
+  });
+
+  assert.deepStrictEqual(context.calls, [['move', 1, 0], ['clearInterval', 1]]);
 });
 
 test('clicking an item already beside the player still resolves an empty path', () => {
