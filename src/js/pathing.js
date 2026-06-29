@@ -19,6 +19,12 @@ function isTileWalkableForPath(map, x, y, opts = {}) {
   return true;
 }
 
+function getBlockedEntityTiles(enemies, exceptId = null) {
+  return (enemies || [])
+    .filter(enemy => !enemy.dying && enemy.id !== exceptId)
+    .map(enemy => ({ x: enemy.x, y: enemy.y }));
+}
+
 function findGridPath({ map, start, goal, hasKey = false, blocked = [] }) {
   if (!map || !start || !goal) return [];
   const blockedKeys = new Set(blocked.map(p => gridKey(p.x, p.y)));

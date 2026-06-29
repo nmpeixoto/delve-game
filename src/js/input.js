@@ -28,6 +28,123 @@ function isGameInputReady(){
   );
 }
 
+let _activePath = [];
+let _activePathIntent = null;
+let _pathTimer = null;
+
+function hasCarriedKey() {
+  return G.items && G.items.some(item => item.carried && item.type === 'key');
+}
+
+function stopActivePath() {
+  _activePath = [];
+  _activePathIntent = null;
+  if (_pathTimer) clearInterval(_pathTimer);
+  _pathTimer = null;
+}
+
+function beginActivePath(path, intent = null) {
+  stopActivePath();
+  _activePath = path || [];
+  _activePathIntent = intent;
+  if (!_activePath.length) {
+    resolvePathIntent(intent);
+    return;
+  }
+  _pathTimer = setInterval(stepActivePath, 110);
+  stepActivePath();
+}
+
+function stepActivePath() {
+  if (!isGameInputReady() || G.gameOver || G.won || isOverlayOpen()) {
+    stopActivePath();
+    return;
+  }
+  if (!_activePath.length) {
+    stopActivePath();
+    return;
+  }
+  const next = _activePath.shift();
+  const prevX = G.player.x;
+  const prevY = G.player.y;
+  const tile = G.map && G.map[next.y] ? G.map[next.y][next.x] : undefined;
+  const dx = Math.sign(next.x - prevX);
+  const dy = Math.sign(next.y - prevY);
+  move(dx, dy);
+  if (G.player.x === prevX && G.player.y === prevY) {
+    if (tile === TILE.LOCKED_DOOR || tile === TILE.SECRET_DOOR) {
+      _activePath.unshift(next);
+      return;
+    }
+    stopActivePath();
+    return;
+  }
+  if (!_activePath.length) {
+    const intent = _activePathIntent;
+    stopActivePath();
+    resolvePathIntent(intent);
+  }
+}
+
+function resolvePathIntent(intent) {
+  if (!intent) return;
+  if (intent.type === 'enemy' && intent.id) tileAttack(intent.id);
+  if (intent.type === 'item' && intent.id) tilePickup(intent.id);
+  if (intent.type === 'shop') openShop();
+  if (intent.type === 'stairs') descend();
+}
+
+function handleCanvasPointer(e) {
+  if (!isGameInputReady() || G.gameOver || G.won || isOverlayOpen()) return;
+  const renderer = typeof PixedRenderer !== 'undefined' ? PixedRenderer : null;
+  if (!renderer || !renderer.camera || typeof screenToGrid !== 'function') return;
+  if (typeof e.button === 'number' && e.button !== 0) return;
+  const canvas = e.currentTarget || document.getElementById('game-canvas');
+  if (!canvas) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const grid = screenToGrid(e.clientX - rect.left, e.clientY - rect.top, renderer.camera);
+  if (!grid || !G.map || grid.y < 0 || grid.y >= G.map.length || grid.x < 0 || grid.x >= G.map[grid.y].length) return;
+
+  const enemy = G.enemies.find(en => !en.dying && en.x === grid.x && en.y === grid.y);
+  if (enemy) {
+    beginActivePath(pathToEnemyTarget({
+      map: G.map,
+      player: G.player,
+      enemy,
+      hasKey: hasCarriedKey(),
+      blocked: getBlockedEntityTiles(G.enemies, enemy.id),
+    }), { type: 'enemy', id: enemy.id });
+    return;
+  }
+
+  const item = G.items.find(it => !it.carried && it.x === grid.x && it.y === grid.y);
+  if (item) {
+    beginActivePath(pathToAdjacentTarget({
+      map: G.map,
+      player: G.player,
+      target: item,
+      hasKey: hasCarriedKey(),
+      blocked: getBlockedEntityTiles(G.enemies),
+    }), { type: 'item', id: item.id });
+    return;
+  }
+
+  const intent = G.map[grid.y][grid.x] === TILE.STAIRS
+    ? { type: 'stairs' }
+    : G.map[grid.y][grid.x] === TILE.SHOP
+      ? { type: 'shop' }
+      : null;
+
+  beginActivePath(findGridPath({
+    map: G.map,
+    start: G.player,
+    goal: { x: grid.x, y: grid.y },
+    hasKey: hasCarriedKey(),
+    blocked: getBlockedEntityTiles(G.enemies),
+  }), intent);
+}
+
 document.addEventListener('keydown',e=>{
   if(G.gameOver||G.won)return;
   if(document.getElementById('game-screen').classList.contains('hidden')){
@@ -80,16 +197,17 @@ document.addEventListener('keydown',e=>{
   }
   // Block game input when overlays are open
   if(isOverlayOpen()) return;
-  if(DIRS[e.key]){e.preventDefault();let[dx,dy]=DIRS[e.key];move(dx,dy);}
-  if(e.key==='1'||e.key==='b'||e.key==='B') doAbility1();
-  if(e.key==='2'||e.key==='v'||e.key==='V') doAbility2();
-  if(e.key==='.'||e.key==='>') descend();
+  if(DIRS[e.key]){e.preventDefault();let[dx,dy]=DIRS[e.key];stopActivePath();move(dx,dy);}
+  if(e.key==='1'||e.key==='b'||e.key==='B') { stopActivePath(); doAbility1(); }
+  if(e.key==='2'||e.key==='v'||e.key==='V') { stopActivePath(); doAbility2(); }
+  if(e.key==='.'||e.key==='>') { stopActivePath(); descend(); }
   if(e.key==='i'||e.key==='I') {
+    stopActivePath();
     if(document.getElementById('inv-drawer').classList.contains('open')) closeInv();
     else openInv();
   }
-  if(e.key==='t'||e.key==='T') openShop();
-  if(e.key==='?'||e.key==='h'||e.key==='H') openHelp();
+  if(e.key==='t'||e.key==='T') { stopActivePath(); openShop(); }
+  if(e.key==='?'||e.key==='h'||e.key==='H') { stopActivePath(); openHelp(); }
 });
 
 // Only prevent double-tap zoom on d-pad buttons
@@ -110,6 +228,10 @@ document.getElementById('map-area').addEventListener('touchend',e=>{
   let dy=e.changedTouches[0].clientY-_swipeStart.y;
   _swipeStart=null;
   if(Math.sqrt(dx*dx+dy*dy)<20)return;
+  stopActivePath();
   if(Math.abs(dx)>Math.abs(dy))move(Math.sign(dx),0);
   else move(0,Math.sign(dy));
 },{passive:true});
+
+const _gameCanvas = document.getElementById('game-canvas');
+if (_gameCanvas) _gameCanvas.addEventListener('pointerdown', handleCanvasPointer);

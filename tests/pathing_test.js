@@ -126,3 +126,13 @@ test('pathToEnemyTarget allows ranger bow range three', () => {
 
   assert.deepStrictEqual(result[result.length - 1], { x: 2, y: 1 });
 });
+
+test('getBlockedEntityTiles excludes the selected enemy target', () => {
+  const context = loadPathing();
+  const blocked = normalize(context.getBlockedEntityTiles([
+    { id: 'a', x: 2, y: 2 },
+    { id: 'b', x: 3, y: 2 },
+  ], 'b'));
+
+  assert.deepStrictEqual(blocked, [{ x: 2, y: 2 }]);
+});

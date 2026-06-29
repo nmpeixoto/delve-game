@@ -183,6 +183,7 @@ function move(dx,dy){
 
 function dpadPress(dx,dy){
   if(G.gameOver||G.won)return;
+  if(typeof stopActivePath === 'function') stopActivePath();
   move(dx,dy);clearInterval(_dpadTimer);
   _dpadTimer=setInterval(()=>move(dx,dy),185);
 }
