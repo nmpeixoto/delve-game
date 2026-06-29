@@ -246,7 +246,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .drawer-handle{width:40px;height:4px;background:var(--dim);border-radius:2px;margin:0 auto 14px;}
 .panel-title{font-family:'Press Start 2P',monospace;font-size:.38rem;color:var(--accent);letter-spacing:.2em;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:8px;}
 .inv-section{margin-bottom:14px;}
-.inv-slot{padding:8px 10px;border:1px solid var(--border);margin-bottom:5px;cursor:pointer;transition:all .12s;display:flex;justify-content:space-between;align-items:center;gap:8px;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+.inv-slot{padding:8px 10px;border:1px solid #332a20;margin-bottom:5px;cursor:pointer;transition:all .12s;display:flex;justify-content:space-between;align-items:center;gap:8px;touch-action:manipulation;user-select:none;-webkit-user-select:none;background:rgba(255,255,255,.035);}
 .inv-slot:active{border-color:var(--gold);background:rgba(251,191,36,.07);}
 .inv-slot.equipped{border-color:var(--accent);background:rgba(192,132,252,.08);}
 .inv-name{color:var(--text);font-size:.65rem;}
