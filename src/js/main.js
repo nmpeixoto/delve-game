@@ -82,6 +82,7 @@ function confirmClassSelect() {
 }
 
 async function startGame(playerClass = 'warrior', hardMode = false){
+  if (typeof stopActivePath === 'function') stopActivePath();
   const gameScreen = document.getElementById('game-screen');
   const titleScreen = document.getElementById('title-screen');
   const mapArea = document.getElementById('map-area');
@@ -107,6 +108,7 @@ async function startGame(playerClass = 'warrior', hardMode = false){
 }
 
 function showDeath(){
+  if (typeof stopActivePath === 'function') stopActivePath();
   SFX.playerDeath();
   let p=G.player,o=document.createElement('div');
   o.className='overlay';
@@ -128,6 +130,7 @@ function showDeath(){
 }
 
 function showVictory(){
+  if (typeof stopActivePath === 'function') stopActivePath();
   let p=G.player,o=document.createElement('div');
   o.className='overlay';
   let diffMult = G.hardMode ? 1.5 : 1.0;

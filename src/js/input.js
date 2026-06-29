@@ -43,6 +43,23 @@ function stopActivePath() {
   _pathTimer = null;
 }
 
+function getInputAttackRange(player) {
+  if (typeof getPlayerAttackRange === 'function') return getPlayerAttackRange(player);
+  return player && player.class === 'ranger' && player.weapon && player.weapon.sym === '\uD83C\uDFF9' ? 3 : 1;
+}
+
+function isAdjacentToTarget(player, target) {
+  if (!player || !target) return false;
+  return Math.abs(player.x - target.x) + Math.abs(player.y - target.y) === 1;
+}
+
+function isInEnemyInteractionRange(player, enemy) {
+  if (!player || !enemy) return false;
+  const range = getInputAttackRange(player);
+  const dist = Math.max(Math.abs(player.x - enemy.x), Math.abs(player.y - enemy.y));
+  return dist > 0 && dist <= range;
+}
+
 function beginActivePath(path, intent = null) {
   stopActivePath();
   _activePath = path || [];
@@ -86,12 +103,58 @@ function stepActivePath() {
   }
 }
 
+function beginPathOrResolveIfSettled(path, intent, settled) {
+  if (!Array.isArray(path) || !path.length) {
+    stopActivePath();
+    if (settled) resolvePathIntent(intent);
+    return;
+  }
+  beginActivePath(path, intent);
+}
+
 function resolvePathIntent(intent) {
   if (!intent) return;
   if (intent.type === 'enemy' && intent.id) tileAttack(intent.id);
   if (intent.type === 'item' && intent.id) tilePickup(intent.id);
   if (intent.type === 'shop') openShop();
   if (intent.type === 'stairs') descend();
+}
+
+function manualMove(dx, dy) {
+  stopActivePath();
+  move(dx, dy);
+}
+
+function manualAbility1() {
+  stopActivePath();
+  if (typeof window === 'undefined' || !window._lpFiredUI) doAbility1();
+  if (typeof window !== 'undefined') window._lpFiredUI = false;
+}
+
+function manualAbility2() {
+  stopActivePath();
+  if (typeof window === 'undefined' || !window._lpFiredUI) doAbility2();
+  if (typeof window !== 'undefined') window._lpFiredUI = false;
+}
+
+function manualDescend() {
+  stopActivePath();
+  descend();
+}
+
+function manualOpenShop() {
+  stopActivePath();
+  openShop();
+}
+
+function manualOpenInv() {
+  stopActivePath();
+  openInv();
+}
+
+function manualOpenHelp() {
+  stopActivePath();
+  openHelp();
 }
 
 function handleCanvasPointer(e) {
@@ -108,41 +171,42 @@ function handleCanvasPointer(e) {
 
   const enemy = G.enemies.find(en => !en.dying && en.x === grid.x && en.y === grid.y);
   if (enemy) {
-    beginActivePath(pathToEnemyTarget({
+    beginPathOrResolveIfSettled(pathToEnemyTarget({
       map: G.map,
       player: G.player,
       enemy,
       hasKey: hasCarriedKey(),
       blocked: getBlockedEntityTiles(G.enemies, enemy.id),
-    }), { type: 'enemy', id: enemy.id });
+    }), { type: 'enemy', id: enemy.id }, isInEnemyInteractionRange(G.player, enemy));
     return;
   }
 
   const item = G.items.find(it => !it.carried && it.x === grid.x && it.y === grid.y);
   if (item) {
-    beginActivePath(pathToAdjacentTarget({
+    beginPathOrResolveIfSettled(pathToAdjacentTarget({
       map: G.map,
       player: G.player,
       target: item,
       hasKey: hasCarriedKey(),
       blocked: getBlockedEntityTiles(G.enemies),
-    }), { type: 'item', id: item.id });
+    }), { type: 'item', id: item.id }, isAdjacentToTarget(G.player, item));
     return;
   }
 
-  const intent = G.map[grid.y][grid.x] === TILE.STAIRS
+  const clickedTile = G.map[grid.y][grid.x];
+  const intent = clickedTile === TILE.STAIRS
     ? { type: 'stairs' }
-    : G.map[grid.y][grid.x] === TILE.SHOP
+    : clickedTile === TILE.SHOP
       ? { type: 'shop' }
       : null;
 
-  beginActivePath(findGridPath({
+  beginPathOrResolveIfSettled(findGridPath({
     map: G.map,
     start: G.player,
     goal: { x: grid.x, y: grid.y },
     hasKey: hasCarriedKey(),
     blocked: getBlockedEntityTiles(G.enemies),
-  }), intent);
+  }), intent, grid.x === G.player.x && grid.y === G.player.y);
 }
 
 document.addEventListener('keydown',e=>{
