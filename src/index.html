@@ -48,33 +48,24 @@
 <!-- GAME -->
 <div id="game-screen" class="hidden">
   <!-- HUD -->
-  <div id="hud">
-    <div class="hud-left">
-      <div class="stat-row">
-        <span class="stat-label">HP</span>
-        <div class="bar"><div class="bar-fill hp-fill" id="hp-bar"></div></div>
-        <span class="stat-val" id="hp-val">20/20</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">XP</span>
-        <div class="bar"><div class="bar-fill xp-fill" id="xp-bar" style="width:0%"></div></div>
-        <span class="stat-val" id="xp-val">0/10</span>
-      </div>
+  <div id="hud" class="pixed-hud">
+    <div class="hud-orb hp-orb"><span id="hp-val">20/20</span></div>
+    <div class="hud-belt">
+      <button class="act-btn ability-slot" id="ability1-btn" onclick="if(!window._lpFiredUI) manualAbility1(); window._lpFiredUI=false;" onmouseenter="showAbility1Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a1')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()">ABIL1</button>
+      <button class="act-btn ability-slot" id="ability2-btn" onclick="if(!window._lpFiredUI) manualAbility2(); window._lpFiredUI=false;" onmouseenter="showAbility2Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a2')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()" style="display:none">ABIL2</button>
+      <button class="act-btn ability-slot" id="bomb-btn" onclick="manualUseBomb()" style="display:none">BOMB</button>
+      <button class="act-btn ability-slot" id="stairs-btn" onclick="manualDescend()">STAIRS</button>
+      <button class="act-btn ability-slot" id="shop-btn" onclick="manualOpenShop()">SHOP</button>
+      <button class="act-btn ability-slot" id="bag-btn" onclick="manualOpenInv()">BAG</button>
     </div>
-    <div class="hud-center">
-      DELVE<br>
-      <span id="floor-label" style="color:var(--gold)">FLOOR 1</span><br>
-      <button onclick="manualOpenHelp()" style="font-family:'Press Start 2P',monospace;font-size:.32rem;padding:3px 7px;background:transparent;border:1px solid var(--dim);color:var(--dim);cursor:pointer;margin-top:3px;letter-spacing:.1em;">?</button>
+    <div class="hud-cluster">
+      <div><span id="floor-label">FLOOR 1</span></div>
+      <div>XP <span id="xp-val">0/10</span></div>
+      <div>ATK <span id="atk-val">4</span> DEF <span id="def-val">1</span> PERC <span id="per-val">0</span></div>
+      <div>LVL <span id="lvl-val">1</span> <span id="class-val" onmouseenter="showClassTip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'class')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()"></span> GP <span id="gold-val">0</span></div>
     </div>
-    <div class="hud-right">
-      <div class="hud-stats">
-        <div class="hud-stat"><span class="hud-label">ATK</span><span id="atk-val" style="color:var(--orange)">4</span></div>
-        <div class="hud-stat"><span class="hud-label">DEF</span><span id="def-val" style="color:var(--blue)">1</span></div>
-        <div class="hud-stat"><span class="hud-label">PERC</span><span id="per-val" style="color:var(--green)">0</span></div>
-        <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span> <span id="class-val" style="color:var(--dim);text-transform:uppercase;font-size:.45rem;margin-left:2px;" onmouseenter="showClassTip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'class')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()"></span></div>
-        <div class="hud-stat"><span class="hud-label" style="color:var(--gold)">GP</span><span id="gold-val" style="color:var(--gold)">0</span></div>
-      </div>
-    </div>
+    <div class="bar hidden-meter"><div class="bar-fill hp-fill" id="hp-bar"></div></div>
+    <div class="bar hidden-meter"><div class="bar-fill xp-fill" id="xp-bar"></div></div>
   </div>
 
   <!-- MAP -->
@@ -87,8 +78,8 @@
   <!-- LOG (portrait only) -->
   <div id="bottom-bar"><div id="log"></div></div>
 
-  <!-- D-PAD + ACTIONS -->
-  <div id="dpad-area">
+  <!-- D-PAD -->
+  <div id="dpad-area" class="pixed-dpad-collapsed">
     <div id="dpad">
       <div></div>
       <div class="dpad-btn" ontouchstart="dpadPress(0,-1);event.preventDefault()" ontouchend="dpadRelease()" onclick="manualMove(0,-1)">↑</div>
@@ -99,14 +90,6 @@
       <div></div>
       <div class="dpad-btn" ontouchstart="dpadPress(0,1);event.preventDefault()"  ontouchend="dpadRelease()" onclick="manualMove(0,1)">↓</div>
       <div></div>
-    </div>
-    <div id="action-btns">
-      <button class="act-btn" id="ability1-btn" onclick="manualAbility1()" onmouseenter="showAbility1Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a1')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()">ABIL1</button>
-      <button class="act-btn" id="ability2-btn" onclick="manualAbility2()" onmouseenter="showAbility2Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a2')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()" style="display:none">ABIL2</button>
-      <button class="act-btn" id="bomb-btn" onclick="manualUseBomb()" style="display:none;border-color:var(--orange)!important;color:var(--orange)!important;">BOMB</button>
-      <button class="act-btn" id="stairs-btn" onclick="manualDescend()">STAIRS</button>
-      <button class="act-btn" id="shop-btn"   onclick="manualOpenShop()">SHOP</button>
-      <button class="act-btn" id="bag-btn"    onclick="manualOpenInv()">BAG</button>
     </div>
   </div>
 </div>

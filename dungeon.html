@@ -49,21 +49,79 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 #game-screen.pixed-starting{pointer-events:none;}
 
 /* HUD */
-#hud{flex-shrink:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--accent);}
-.hud-left{display:flex;flex-direction:column;gap:4px;}
-.hud-center{font-family:'Press Start 2P',monospace;font-size:.38rem;color:var(--accent);text-align:center;line-height:1.8;}
-.hud-right{display:flex;flex-direction:column;gap:3px;align-items:flex-end;}
-.stat-row{display:flex;align-items:center;gap:6px;}
-.stat-label{color:var(--dim);font-size:.55rem;}
+#hud.pixed-hud{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:25;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:end;
+  gap:10px;
+  padding:10px 14px max(10px,env(safe-area-inset-bottom));
+  background:linear-gradient(0deg,rgba(5,5,7,.92),rgba(5,5,7,.15) 78%,transparent);
+  border-bottom:none;
+  border-right:none;
+  pointer-events:none;
+  width:auto;
+  flex-shrink:0;
+  overflow:visible;
+}
+#hud.pixed-hud button,#hud.pixed-hud .hud-orb,#hud.pixed-hud .hud-cluster{pointer-events:auto;}
+.hud-orb{
+  width:78px;
+  height:78px;
+  border-radius:50%;
+  border:3px solid #4b2b25;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:'Press Start 2P',monospace;
+  font-size:.38rem;
+  color:#fee2e2;
+  background:radial-gradient(circle at 40% 35%,#f87171,#7f1d1d 70%);
+  box-shadow:0 0 22px rgba(127,29,29,.7), inset 0 0 18px rgba(0,0,0,.7);
+}
+.hud-belt{
+  justify-self:center;
+  display:flex;
+  align-items:end;
+  gap:6px;
+  max-width:100%;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.ability-slot{
+  width:64px;
+  height:52px;
+  min-width:64px;
+  border:2px solid #3f3f46;
+  background:linear-gradient(#18181b,#0a0a0f);
+  box-shadow:inset 0 0 0 1px #000,0 4px 12px rgba(0,0,0,.5);
+}
+.hud-cluster{
+  min-width:150px;
+  padding:8px 10px;
+  border:1px solid #3f3324;
+  background:rgba(10,10,15,.78);
+  color:#d6d3d1;
+  font-size:.48rem;
+  line-height:1.7;
+  text-align:right;
+}
 .bar{height:5px;background:var(--border);overflow:hidden;width:min(100px,22vw);}
 .bar-fill{height:100%;transition:width .3s;}
 .hp-fill{background:linear-gradient(90deg,var(--red),#ff9999);}
 .xp-fill{background:linear-gradient(90deg,var(--accent),#e879f9);}
-.stat-val{color:var(--text);font-size:.55rem;min-width:36px;}
-.hud-stats{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
-.hud-stat{font-size:.55rem;display:flex;align-items:baseline;gap:2px;}
-.hud-stat span{color:var(--text);}
-.hud-label{color:var(--dim);font-size:.5rem;}
+.hidden-meter{
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  opacity:0;
+  pointer-events:none;
+}
 
 /* MAP */
 #map-area{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg);min-height:0;}
@@ -123,12 +181,20 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .log-shop{color:var(--gold);}
 
 /* D-PAD */
-#dpad-area{flex-shrink:0;padding:10px 16px max(10px,env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+#dpad-area.pixed-dpad-collapsed{
+  position:absolute;
+  left:12px;
+  bottom:96px;
+  z-index:24;
+  width:auto;
+  border:0;
+  background:transparent;
+  padding:0;
+}
 #dpad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:3px;flex-shrink:0;}
 .dpad-btn{background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:1.1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;transition:background .1s,border-color .1s;user-select:none;touch-action:none;}
 .dpad-btn:active{background:var(--border);border-color:var(--accent);}
 .dpad-center{background:rgba(192,132,252,.05);border-color:var(--dim);font-size:.5rem;color:var(--dim);}
-#action-btns{display:grid;grid-template-columns:1fr;gap:4px;flex-shrink:0;}
 .act-btn{font-family:'Press Start 2P',monospace;font-size:.36rem;padding:9px 10px;background:var(--panel);border:1px solid var(--border);color:var(--dim);cursor:pointer;letter-spacing:.08em;border-radius:3px;transition:all .15s;min-width:76px;text-align:center;}
 .act-btn:active{background:var(--border);}
 .bash-ready{border-color:var(--orange)!important;color:var(--orange)!important;}
@@ -139,36 +205,45 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 /* ── LANDSCAPE LAYOUT — mobile only (excludes desktop monitors) ── */
 @media (orientation:landscape) and (max-height: 600px) {
   #game-screen{flex-direction:row;flex-wrap:nowrap;}
-  #hud{
-    writing-mode:initial;
-    width:120px;flex-shrink:0;
-    grid-template-columns:1fr;
-    grid-template-rows:auto auto auto;
-    border-bottom:none;border-right:1px solid var(--accent);
-    padding:6px 5px;align-items:start;gap:6px;
-    overflow:hidden;
-  }
-  .hud-left{width:100%;}
-  .bar{width:100%!important;max-width:100px;}
-  .stat-val{min-width:28px;font-size:.5rem;}
-  .stat-label{font-size:.48rem;}
-  .hud-right{align-items:flex-start;width:100%;}
-  .hud-stats{flex-direction:column;gap:3px;}
-  .hud-stat{font-size:.5rem;}
-  .hud-center{font-size:.34rem;}
   #map-area{flex:1;min-width:0;}
   #bottom-bar{display:none;}
   #log{height:46px;padding:2px 8px;font-size:.45rem;overflow-y:auto;scrollbar-width:none;}
   #install-banner{display:none!important;}
-  #dpad-area{
-    width:150px;flex-shrink:0;
+  #dpad-area.pixed-dpad-collapsed{
+    position:relative;
+    left:auto;
+    bottom:auto;
+    width:150px;
+    flex-shrink:0;
     flex-direction:column;justify-content:center;align-items:center;
     border-top:none;border-left:1px solid var(--border);
     padding:10px max(10px,env(safe-area-inset-right)) 10px 10px;
     gap:10px;
+    display:flex;
   }
-  #action-btns{display:grid;grid-template-columns:1fr;gap:5px;}
-  .act-btn{min-width:68px;font-size:.32rem;padding:8px 6px;}
+  .ability-slot{min-width:68px;font-size:.32rem;padding:8px 6px;}
+}
+
+@media(max-width:640px){
+  #hud.pixed-hud{
+    grid-template-columns:auto 1fr;
+    align-items:end;
+    gap:8px;
+  }
+  .hud-orb{width:58px;height:58px;font-size:.32rem;}
+  .hud-cluster{
+    grid-column:1 / -1;
+    justify-self:end;
+    font-size:.42rem;
+    padding:5px 7px;
+  }
+  .ability-slot{
+    width:52px;
+    height:46px;
+    min-width:52px;
+    font-size:.3rem;
+  }
+  #dpad-area.pixed-dpad-collapsed{display:none;}
 }
 
 /* ── INVENTORY DRAWER ── */
@@ -345,33 +420,24 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <!-- GAME -->
 <div id="game-screen" class="hidden">
   <!-- HUD -->
-  <div id="hud">
-    <div class="hud-left">
-      <div class="stat-row">
-        <span class="stat-label">HP</span>
-        <div class="bar"><div class="bar-fill hp-fill" id="hp-bar"></div></div>
-        <span class="stat-val" id="hp-val">20/20</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">XP</span>
-        <div class="bar"><div class="bar-fill xp-fill" id="xp-bar" style="width:0%"></div></div>
-        <span class="stat-val" id="xp-val">0/10</span>
-      </div>
+  <div id="hud" class="pixed-hud">
+    <div class="hud-orb hp-orb"><span id="hp-val">20/20</span></div>
+    <div class="hud-belt">
+      <button class="act-btn ability-slot" id="ability1-btn" onclick="if(!window._lpFiredUI) manualAbility1(); window._lpFiredUI=false;" onmouseenter="showAbility1Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a1')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()">ABIL1</button>
+      <button class="act-btn ability-slot" id="ability2-btn" onclick="if(!window._lpFiredUI) manualAbility2(); window._lpFiredUI=false;" onmouseenter="showAbility2Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a2')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()" style="display:none">ABIL2</button>
+      <button class="act-btn ability-slot" id="bomb-btn" onclick="manualUseBomb()" style="display:none">BOMB</button>
+      <button class="act-btn ability-slot" id="stairs-btn" onclick="manualDescend()">STAIRS</button>
+      <button class="act-btn ability-slot" id="shop-btn" onclick="manualOpenShop()">SHOP</button>
+      <button class="act-btn ability-slot" id="bag-btn" onclick="manualOpenInv()">BAG</button>
     </div>
-    <div class="hud-center">
-      DELVE<br>
-      <span id="floor-label" style="color:var(--gold)">FLOOR 1</span><br>
-      <button onclick="manualOpenHelp()" style="font-family:'Press Start 2P',monospace;font-size:.32rem;padding:3px 7px;background:transparent;border:1px solid var(--dim);color:var(--dim);cursor:pointer;margin-top:3px;letter-spacing:.1em;">?</button>
+    <div class="hud-cluster">
+      <div><span id="floor-label">FLOOR 1</span></div>
+      <div>XP <span id="xp-val">0/10</span></div>
+      <div>ATK <span id="atk-val">4</span> DEF <span id="def-val">1</span> PERC <span id="per-val">0</span></div>
+      <div>LVL <span id="lvl-val">1</span> <span id="class-val" onmouseenter="showClassTip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'class')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()"></span> GP <span id="gold-val">0</span></div>
     </div>
-    <div class="hud-right">
-      <div class="hud-stats">
-        <div class="hud-stat"><span class="hud-label">ATK</span><span id="atk-val" style="color:var(--orange)">4</span></div>
-        <div class="hud-stat"><span class="hud-label">DEF</span><span id="def-val" style="color:var(--blue)">1</span></div>
-        <div class="hud-stat"><span class="hud-label">PERC</span><span id="per-val" style="color:var(--green)">0</span></div>
-        <div class="hud-stat"><span class="hud-label">LVL</span><span id="lvl-val" style="color:var(--accent)">1</span> <span id="class-val" style="color:var(--dim);text-transform:uppercase;font-size:.45rem;margin-left:2px;" onmouseenter="showClassTip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'class')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()"></span></div>
-        <div class="hud-stat"><span class="hud-label" style="color:var(--gold)">GP</span><span id="gold-val" style="color:var(--gold)">0</span></div>
-      </div>
-    </div>
+    <div class="bar hidden-meter"><div class="bar-fill hp-fill" id="hp-bar"></div></div>
+    <div class="bar hidden-meter"><div class="bar-fill xp-fill" id="xp-bar"></div></div>
   </div>
 
   <!-- MAP -->
@@ -384,8 +450,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <!-- LOG (portrait only) -->
   <div id="bottom-bar"><div id="log"></div></div>
 
-  <!-- D-PAD + ACTIONS -->
-  <div id="dpad-area">
+  <!-- D-PAD -->
+  <div id="dpad-area" class="pixed-dpad-collapsed">
     <div id="dpad">
       <div></div>
       <div class="dpad-btn" ontouchstart="dpadPress(0,-1);event.preventDefault()" ontouchend="dpadRelease()" onclick="manualMove(0,-1)">↑</div>
@@ -396,14 +462,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div></div>
       <div class="dpad-btn" ontouchstart="dpadPress(0,1);event.preventDefault()"  ontouchend="dpadRelease()" onclick="manualMove(0,1)">↓</div>
       <div></div>
-    </div>
-    <div id="action-btns">
-      <button class="act-btn" id="ability1-btn" onclick="manualAbility1()" onmouseenter="showAbility1Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a1')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()">ABIL1</button>
-      <button class="act-btn" id="ability2-btn" onclick="manualAbility2()" onmouseenter="showAbility2Tip(event)" onmouseleave="hideTip()" ontouchstart="startUILongPress(event,'a2')" ontouchend="cancelUILongPress()" ontouchmove="cancelUILongPress()" style="display:none">ABIL2</button>
-      <button class="act-btn" id="bomb-btn" onclick="manualUseBomb()" style="display:none;border-color:var(--orange)!important;color:var(--orange)!important;">BOMB</button>
-      <button class="act-btn" id="stairs-btn" onclick="manualDescend()">STAIRS</button>
-      <button class="act-btn" id="shop-btn"   onclick="manualOpenShop()">SHOP</button>
-      <button class="act-btn" id="bag-btn"    onclick="manualOpenInv()">BAG</button>
     </div>
   </div>
 </div>
@@ -1741,7 +1799,7 @@ function updateActBtns(){
   let a1=document.getElementById('ability1-btn');
   if(a1) {
     let a1Name = A1[G.player.class] || 'ABIL1';
-    a1.className='act-btn'+(G.ability1Cooldown===0?' bash-ready':'');
+    a1.className='act-btn ability-slot'+(G.ability1Cooldown===0?' bash-ready':'');
     a1.textContent=G.ability1Cooldown>0?`${a1Name} ${G.ability1Cooldown}`:`⚡${a1Name}`;
   }
 
@@ -1751,7 +1809,7 @@ function updateActBtns(){
     if(G.player.lvl >= 5) {
       a2.style.display = 'block';
       let a2Name = A2[G.player.class] || 'ABIL2';
-      a2.className='act-btn'+(G.ability2Cooldown===0?' bash-ready':'');
+      a2.className='act-btn ability-slot'+(G.ability2Cooldown===0?' bash-ready':'');
       a2.textContent=G.ability2Cooldown>0?`${a2Name} ${G.ability2Cooldown}`:`⚡${a2Name}`;
     } else {
       a2.style.display = 'none';
@@ -1768,17 +1826,17 @@ function updateActBtns(){
   // STAIRS
   let sb=document.getElementById('stairs-btn');
   let onS=G.map&&G.map[G.player.y][G.player.x]===TILE.STAIRS;
-  sb.className='act-btn'+(onS?' stairs-avail':'');
+  sb.className='act-btn ability-slot'+(onS?' stairs-avail':'');
   sb.textContent=onS?'▼ GO':'STAIRS';
   // SHOP
   let shopBtn=document.getElementById('shop-btn');
   let nearShop=G.shops && G.shops.some(s => Math.abs(G.player.x-s.x)<=1 && Math.abs(G.player.y-s.y)<=1);
-  shopBtn.className='act-btn'+(nearShop?' shop-avail':'');
+  shopBtn.className='act-btn ability-slot'+(nearShop?' shop-avail':'');
   shopBtn.textContent=nearShop?'$ SHOP':'SHOP';
   // BAG
   let bagBtn=document.getElementById('bag-btn');
   let hasItems=G.items.some(i=>i.carried);
-  bagBtn.className='act-btn'+(hasItems?' bag-has':'');
+  bagBtn.className='act-btn ability-slot'+(hasItems?' bag-has':'');
   bagBtn.textContent=hasItems?'🎒 BAG':'BAG';
 }
 

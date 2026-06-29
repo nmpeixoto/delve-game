@@ -164,6 +164,8 @@ async function runTest(url, name, allowLegacyMapFallback = false) {
     const hp = await page.$eval('#hp-val', el => el.textContent);
     console.log(`Initial HP: ${hp}`);
     if (hp !== '32/32') throw new Error('Initial HP is incorrect');
+    const hudMode = await page.$eval('#hud', el => el.classList.contains('pixed-hud'));
+    if (!hudMode) throw new Error('Pixed HUD class missing');
 
     // Take screenshot
     screenshotPath = path.join(__dirname, '..', `screenshot_${name}.png`);

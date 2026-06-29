@@ -198,7 +198,7 @@ function updateActBtns(){
   let a1=document.getElementById('ability1-btn');
   if(a1) {
     let a1Name = A1[G.player.class] || 'ABIL1';
-    a1.className='act-btn'+(G.ability1Cooldown===0?' bash-ready':'');
+    a1.className='act-btn ability-slot'+(G.ability1Cooldown===0?' bash-ready':'');
     a1.textContent=G.ability1Cooldown>0?`${a1Name} ${G.ability1Cooldown}`:`⚡${a1Name}`;
   }
 
@@ -208,7 +208,7 @@ function updateActBtns(){
     if(G.player.lvl >= 5) {
       a2.style.display = 'block';
       let a2Name = A2[G.player.class] || 'ABIL2';
-      a2.className='act-btn'+(G.ability2Cooldown===0?' bash-ready':'');
+      a2.className='act-btn ability-slot'+(G.ability2Cooldown===0?' bash-ready':'');
       a2.textContent=G.ability2Cooldown>0?`${a2Name} ${G.ability2Cooldown}`:`⚡${a2Name}`;
     } else {
       a2.style.display = 'none';
@@ -225,17 +225,17 @@ function updateActBtns(){
   // STAIRS
   let sb=document.getElementById('stairs-btn');
   let onS=G.map&&G.map[G.player.y][G.player.x]===TILE.STAIRS;
-  sb.className='act-btn'+(onS?' stairs-avail':'');
+  sb.className='act-btn ability-slot'+(onS?' stairs-avail':'');
   sb.textContent=onS?'▼ GO':'STAIRS';
   // SHOP
   let shopBtn=document.getElementById('shop-btn');
   let nearShop=G.shops && G.shops.some(s => Math.abs(G.player.x-s.x)<=1 && Math.abs(G.player.y-s.y)<=1);
-  shopBtn.className='act-btn'+(nearShop?' shop-avail':'');
+  shopBtn.className='act-btn ability-slot'+(nearShop?' shop-avail':'');
   shopBtn.textContent=nearShop?'$ SHOP':'SHOP';
   // BAG
   let bagBtn=document.getElementById('bag-btn');
   let hasItems=G.items.some(i=>i.carried);
-  bagBtn.className='act-btn'+(hasItems?' bag-has':'');
+  bagBtn.className='act-btn ability-slot'+(hasItems?' bag-has':'');
   bagBtn.textContent=hasItems?'🎒 BAG':'BAG';
 }
 
