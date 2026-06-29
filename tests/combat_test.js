@@ -722,8 +722,12 @@ test('players swap positions with adjacent raised pets instead of attacking them
 test('raised pets crumble once and leave play when their lifespan expires', () => {
   let queuedDeathFlush = null;
   const logs = [];
+  const animations = [];
+  const fx = [];
   const context = loadCombat({
     addLog: msg => logs.push(msg),
+    setEntityAnimation: (key, name, durationMs) => animations.push({ key, name, durationMs }),
+    spawnPixedFx: payload => fx.push(payload),
     setTimeout: fn => {
       queuedDeathFlush = fn;
       return 1;
@@ -751,6 +755,8 @@ test('raised pets crumble once and leave play when their lifespan expires', () =
   const pet = context.G.enemies[0];
   assert.strictEqual(pet.dying, true);
   assert.strictEqual(logs.filter(msg => msg.includes('crumbled to dust')).length, 1);
+  assert.ok(animations.some(anim => anim.key === 'enemy:pet' && anim.name === 'death' && anim.durationMs === 420));
+  assert.ok(fx.some(entry => entry.key === 'fx.hit' && entry.x === 7 && entry.y === 5 && entry.text === 'loot'));
   assert.strictEqual(typeof queuedDeathFlush, 'function');
 
   queuedDeathFlush();

@@ -159,9 +159,15 @@ function playerDodgeChance() {
   return dodge;
 }
 
+function emitPixedDeathFx(en) {
+  if (typeof setEntityAnimation === 'function') setEntityAnimation(`enemy:${en.id}`, 'death', 420);
+  if (typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#d7b46a', text: 'loot' });
+}
+
 function killEnemy(en, skipAdvanceTurn) {
   if(en.isPet) {
     addLog(`${en.name} crumbled to dust.`, 'log-dead');
+    emitPixedDeathFx(en);
     en.dying = true;
     _deathBatch.push({en, skipAdvanceTurn});
     if(!_deathTimer) {
@@ -188,8 +194,7 @@ function killEnemy(en, skipAdvanceTurn) {
   floatText(`+${goldDrop}💰`,en.x,en.y,'#fbbf24');
   SFX.enemyDeath();
   fireTip('firstGold');
-  if (typeof setEntityAnimation === 'function') setEntityAnimation(`enemy:${en.id}`, 'death', 420);
-  if (typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#d7b46a', text: 'loot' });
+  emitPixedDeathFx(en);
   en.dying=true;
 
   _deathBatch.push({en, skipAdvanceTurn});
