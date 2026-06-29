@@ -77,6 +77,60 @@ async function waitForMapReady(page, { allowLegacyMapFallback = false } = {}) {
   };
 }
 
+async function expectCanvasHasVisiblePixels(page, selector, label) {
+  const result = await page.$eval(selector, canvas => {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    if (!w || !h) return { visible: 0, width: w, height: h, reason: 'zero-dimensions' };
+    if (!ctx) return { visible: 0, width: w, height: h, reason: 'missing-context' };
+    const sample = ctx.getImageData(
+      Math.floor(w * 0.25),
+      Math.floor(h * 0.25),
+      Math.max(1, Math.floor(w * 0.5)),
+      Math.max(1, Math.floor(h * 0.5))
+    ).data;
+    let visible = 0;
+    for (let i = 3; i < sample.length; i += 4) {
+      if (sample[i] > 0 && (sample[i - 1] > 10 || sample[i - 2] > 10 || sample[i - 3] > 10)) visible++;
+    }
+    return { visible, width: w, height: h };
+  });
+  if (result.visible < 100) throw new Error(`${label} canvas appears blank: ${JSON.stringify(result)}`);
+}
+
+async function getVisibleCanvasMovePoint(page) {
+  return page.evaluate(() => {
+    const canvas = document.getElementById('game-canvas');
+    const renderer = typeof PixedRenderer !== 'undefined' ? PixedRenderer : null;
+    if (!canvas || !renderer || !renderer.camera || typeof getIsoTileCenter !== 'function' || typeof worldToScreen !== 'function') {
+      return null;
+    }
+    if (!G || !G.player || !Array.isArray(G.map)) return null;
+    const rect = canvas.getBoundingClientRect();
+    for (let radius = 1; radius <= 6; radius++) {
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (Math.abs(dx) + Math.abs(dy) !== radius) continue;
+          const x = G.player.x + dx;
+          const y = G.player.y + dy;
+          if (y < 0 || y >= G.map.length || x < 0 || x >= G.map[y].length) continue;
+          if (G.map[y][x] !== TILE.FLOOR) continue;
+          const key = y * MAP_W + x;
+          if (G.seen && !G.seen.has(key)) continue;
+          if (G.visible && !G.visible.has(key)) continue;
+          if ((G.enemies || []).some(en => !en.dying && en.x === x && en.y === y)) continue;
+          if ((G.items || []).some(it => !it.carried && it.x === x && it.y === y)) continue;
+          const screen = worldToScreen(getIsoTileCenter(x, y), renderer.camera);
+          if (screen.x < 0 || screen.y < 0 || screen.x > rect.width || screen.y > rect.height) continue;
+          return { x: rect.left + screen.x, y: rect.top + screen.y, gridX: x, gridY: y };
+        }
+      }
+    }
+    return null;
+  });
+}
+
 async function expectModalFits(page, selector, label) {
   const result = await page.$eval(selector, el => {
     const r = el.getBoundingClientRect();
@@ -156,6 +210,7 @@ async function runTest(url, name, allowLegacyMapFallback = false) {
     const mapReady = await waitForMapReady(page, { allowLegacyMapFallback });
     if (mapReady.mode === 'canvas') {
       console.log(`Canvas rendered at ${mapReady.size.width}x${mapReady.size.height}.`);
+      await expectCanvasHasVisiblePixels(page, '#game-canvas', `${name} dungeon`);
     } else {
       console.log(`Legacy map rendered with ${mapReady.tiles} tiles.`);
     }
@@ -166,6 +221,19 @@ async function runTest(url, name, allowLegacyMapFallback = false) {
     if (hp !== '32/32') throw new Error('Initial HP is incorrect');
     const hudMode = await page.$eval('#hud', el => el.classList.contains('pixed-hud'));
     if (!hudMode) throw new Error('Pixed HUD class missing');
+
+    const movePoint = await getVisibleCanvasMovePoint(page);
+    if (!movePoint) throw new Error(`Unable to find a visible reachable canvas tile for ${name} click-to-move check`);
+    const beforeTurn = await page.evaluate(() => ({ turn: G.turn, x: G.player.x, y: G.player.y }));
+    await page.mouse.click(movePoint.x, movePoint.y);
+    await delay(350);
+    const afterTurn = await page.evaluate(() => ({ turn: G.turn, x: G.player.x, y: G.player.y }));
+    if (afterTurn.turn <= beforeTurn.turn) {
+      throw new Error(`Click-to-move did not advance the run turn count: before ${beforeTurn.turn}, after ${afterTurn.turn}`);
+    }
+    if (afterTurn.x === beforeTurn.x && afterTurn.y === beforeTurn.y) {
+      throw new Error(`Click-to-move did not move the player: before ${JSON.stringify(beforeTurn)}, after ${JSON.stringify(afterTurn)}`);
+    }
 
     // Take screenshot
     screenshotPath = path.join(__dirname, '..', `screenshot_${name}.png`);
@@ -248,6 +316,7 @@ async function runMobileInterfaceTest(url, name, allowLegacyMapFallback = false)
     const mapReady = await waitForMapReady(page, { allowLegacyMapFallback });
     if (mapReady.mode === 'canvas') {
       console.log(`Canvas rendered at ${mapReady.size.width}x${mapReady.size.height}.`);
+      await expectCanvasHasVisiblePixels(page, '#game-canvas', `${name} dungeon`);
     } else {
       console.log(`Legacy map rendered with ${mapReady.tiles} tiles.`);
     }
@@ -500,6 +569,7 @@ async function runMobileLandscapeInterfaceTest(url, name, allowLegacyMapFallback
     const mapReady = await waitForMapReady(page, { allowLegacyMapFallback });
     if (mapReady.mode === 'canvas') {
       console.log(`Canvas rendered at ${mapReady.size.width}x${mapReady.size.height}.`);
+      await expectCanvasHasVisiblePixels(page, '#game-canvas', `${name} dungeon`);
     } else {
       console.log(`Legacy map rendered with ${mapReady.tiles} tiles.`);
     }
