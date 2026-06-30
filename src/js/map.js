@@ -222,9 +222,7 @@ function initGame(playerClass = 'warrior', hardMode = false){
 }
 
 function buildFloor(){
-  console.error('[JS] RNG start buildFloor: ' + (Math.rCount||0));
   let{map,rooms}=generateMap();
-  console.error('[JS] RNG after generateMap: ' + (Math.rCount||0));
   G.map=map;G.rooms=rooms;G.enemies=[];G.shops=[];G.traps=[];G.currentShop=null;
   G.visible = new Set();
   G.seen = new Set();
@@ -276,14 +274,10 @@ function buildFloor(){
       map[sr.cy][sr.cx]=TILE.SHOP;
     }
   }
-  console.error('[JS] RNG after shops: ' + (Math.rCount||0));
-
   map[stairsRoom.cy][stairsRoom.cx] = TILE.STAIRS;
 
   computeVision();
   const startVisible = new Set(G.visible);
-
-  console.error('[JS_ROOMS] ' + JSON.stringify(G.rooms.map(r => r.type)));
 
   for(let i=1;i<rooms.length;i++){
     let r=rooms[i];
@@ -313,8 +307,6 @@ function buildFloor(){
       ne = baseEnemies;
       if(ch(.65)) guaranteedItems = 1;
     }
-    console.error('[JS] Room ' + i + ' type=' + r.type + ' ne=' + ne + ' guaranteedItems=' + guaranteedItems + ' (RNG: ' + (Math.rCount||0) + ')');
-
     let enemyProfile = getFloorEnemyProfile(G.floor);
     for(let e=0;e<ne;e++){
       let tier=rr(enemyProfile.tierMin, enemyProfile.tierMax);

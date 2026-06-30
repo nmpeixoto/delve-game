@@ -38,7 +38,6 @@ function generateShopStock(){
 
   // 4-6 weapons scaled to floor
   let wepsFilter = weaponCandidates.filter(w=>!usedNames.has(w.name));
-  console.error('[JS] weps len: ' + wepsFilter.length + ' arms len: ' + armorCandidates.filter(a=>!usedNames.has(a.name)).length);
   let weps=shuffle(wepsFilter);
   let numWeps = Math.min(weps.length, rr(4,6));
   for(let i=0; i<numWeps; i++) {

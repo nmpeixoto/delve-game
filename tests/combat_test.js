@@ -155,6 +155,38 @@ test('attackEnemy ignores enemies already marked dying', () => {
   assert.strictEqual(context.G.enemies.length, 1);
 });
 
+test('attackEnemy ignores direct calls after the run has ended', () => {
+  const context = loadCombat();
+  context.G.gameOver = true;
+  context.G.enemies = [{
+    id: 'goblin-1',
+    name: 'Goblin',
+    hp: 20,
+    maxHp: 20,
+    atk: 4,
+    def: 1,
+    xp: 6,
+    gold: 4,
+    x: 4,
+    y: 5,
+    stunnedTurns: 0,
+  }];
+
+  context.attackEnemy('goblin-1');
+
+  assert.strictEqual(context.G.enemies[0].hp, 20);
+  assert.strictEqual(context.G.player.damageDealt, 0);
+  assert.strictEqual(context.G.turn, 0);
+
+  context.G.gameOver = false;
+  context.G.won = true;
+  context.attackEnemy('goblin-1');
+
+  assert.strictEqual(context.G.enemies[0].hp, 20);
+  assert.strictEqual(context.G.player.damageDealt, 0);
+  assert.strictEqual(context.G.turn, 0);
+});
+
 test('attackEnemy stores cumulative damage rounded to one decimal place', () => {
   const context = loadCombat({
     gatk: () => 2.1,
@@ -527,6 +559,36 @@ test('necromancer raise dead turns destroyed bones into a stable pet skeleton', 
   assert.strictEqual(pet.dying, false);
 });
 
+test('collapsing a skeleton into bones does not counterattack', () => {
+  const context = loadCombat();
+  context.G.player.hp = 20;
+  context.G.enemies = [{
+    id: 'skeleton',
+    name: 'Skeleton',
+    sym: 's',
+    hp: 1,
+    maxHp: 25,
+    atk: 12,
+    def: 0,
+    xp: 10,
+    gold: 6,
+    color: '#e2e8f0',
+    revive: true,
+    x: 6,
+    y: 5,
+    stunnedTurns: 0,
+  }];
+
+  context.attackEnemy('skeleton');
+
+  const bones = context.G.enemies[0];
+  assert.strictEqual(context.G.player.hp, 20);
+  assert.strictEqual(context.G.turn, 1);
+  assert.strictEqual(bones.name, 'Bones');
+  assert.strictEqual(bones.hp, 0);
+  assert.strictEqual(bones.reviveTurns, 1);
+});
+
 test('necromancer raise dead still works when the marked enemy dies during enemy processing', () => {
   let queuedDeathFlush = null;
   const context = loadCombat({
@@ -824,6 +886,76 @@ test('monk flurry leaves the player rooted for the next movement attempt', () =>
   context.doAbility2();
 
   assert.strictEqual(context.G.player.rootedTurns, 1);
+});
+
+test('monk flurry collapsing a skeleton into bones does not trigger a counterattack', () => {
+  const context = loadCombat({
+    G: {
+      player: {
+        x: 5,
+        y: 5,
+        hp: 20,
+        maxHp: 20,
+        atk: 4,
+        def: 1,
+        lvl: 5,
+        xp: 0,
+        xpNext: 10,
+        kills: 0,
+        gold: 0,
+        damageDealt: 0,
+        class: 'monk',
+        weapon: null,
+        armor: null,
+        shieldWallTurns: 0,
+        vanishTurns: 0,
+        freeMoves: 0,
+        bloodlustTurns: 0,
+        rootedTurns: 0,
+        vampirism: 0,
+        regen: 0,
+        swiftness: 0,
+      },
+      enemies: [{
+        id: 'skeleton',
+        name: 'Skeleton',
+        sym: 's',
+        hp: 1,
+        maxHp: 25,
+        atk: 12,
+        def: 0,
+        xp: 10,
+        gold: 6,
+        color: '#e2e8f0',
+        revive: true,
+        x: 6,
+        y: 5,
+        stunnedTurns: 0,
+      }],
+      items: [],
+      traps: [],
+      map: makeMap(),
+      rooms: [{ cx: 5, cy: 5 }],
+      shops: [],
+      ability1Cooldown: 0,
+      ability2Cooldown: 0,
+      turn: 0,
+      gameOver: false,
+      won: false,
+      visible: new Set([5 * MAP_W + 5, 5 * MAP_W + 6]),
+      seen: new Set([5 * MAP_W + 5, 5 * MAP_W + 6]),
+    },
+  });
+
+  context.doAbility2();
+
+  const bones = context.G.enemies[0];
+  assert.strictEqual(context.G.player.hp, 20);
+  assert.strictEqual(context.G.player.rootedTurns, 1);
+  assert.strictEqual(context.G.turn, 1);
+  assert.strictEqual(bones.name, 'Bones');
+  assert.strictEqual(bones.hp, 0);
+  assert.strictEqual(bones.reviveTurns, 1);
 });
 
 test('ranger bow attacks from 2 tiles away still trigger a counterattack', () => {

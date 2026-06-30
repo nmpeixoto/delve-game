@@ -57,3 +57,13 @@ test('death summary limits damage dealt to one decimal place', () => {
   assert.ok(context.elements[0].innerHTML.includes('Damage dealt: <span>498.2</span>'));
   assert.strictEqual(context.elements[0].innerHTML.includes('498.20000000000004'), false);
 });
+
+test('gameplay source modules do not keep debug console error traces', () => {
+  const jsDir = path.join(__dirname, '..', 'src/js');
+  const debugTracePattern = /console\.error\('\[JS(?:_ROOMS)?\]/;
+  const offenders = fs.readdirSync(jsDir)
+    .filter(file => file.endsWith('.js'))
+    .filter(file => debugTracePattern.test(fs.readFileSync(path.join(jsDir, file), 'utf8')));
+
+  assert.deepStrictEqual(offenders, []);
+});

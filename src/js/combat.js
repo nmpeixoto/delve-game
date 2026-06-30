@@ -96,6 +96,8 @@ function attackEnemy(id,multiplier=1,opts={}){
       addLog(`The Skeleton collapsed into a pile of bones!`, 'log-combat');
       floatText('COLLAPSED', en.x, en.y, '#94a3b8');
       popText('🦴', en.x, en.y);
+      advanceTurn();
+      return;
     } else {
       killEnemy(en, false);
       return;
@@ -824,6 +826,8 @@ function doAbility2(){
             addLog(`The Skeleton collapsed into a pile of bones!`, 'log-combat');
             floatText('COLLAPSED', en.x, en.y, '#94a3b8');
             popText('🦴', en.x, en.y);
+            advanceTurn();
+            return;
           } else {
             killEnemy(en, false);
             return;
