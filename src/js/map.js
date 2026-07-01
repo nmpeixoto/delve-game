@@ -212,13 +212,19 @@ function initGame(playerClass = 'warrior', hardMode = false){
     log:[],turn:0,
     ability1Cooldown:0, ability2Cooldown:0,
     gameOver:false,won:false,
+    bloodstains:new Set(),
   };
+  G._prevVisible = new Set();
   if(!G.hardMode) {
     let potion = POTIONS.find(item => item.name === 'Health Potion');
     if(potion) G.items.push({...potion, id:`starter-potion-${playerClass}`, carried:true, x:undefined, y:undefined});
   }
   resetTips();
   buildFloor();
+  // Start ambient dungeon effects & visual theme coordinator
+  if (typeof ensureCoordinatorDOM === 'function') ensureCoordinatorDOM();
+  if (typeof initThemeCoordinator === 'function') initThemeCoordinator();
+  if (typeof startDungeonAmbient === 'function') startDungeonAmbient();
 }
 
 function buildFloor(){
@@ -227,6 +233,9 @@ function buildFloor(){
   G.visible = new Set();
   G.seen = new Set();
   G.items=G.items.filter(i=>i.carried);
+  G.bloodstains = new Set();
+  G._prevVisible = new Set();
+  if (typeof setFloorTheme === 'function') setFloorTheme(G.floor);
   
   if(G.floor === FLOORS) {
     map = Array(MAP_H).fill(0).map(()=>Array(MAP_W).fill(TILE.WALL));

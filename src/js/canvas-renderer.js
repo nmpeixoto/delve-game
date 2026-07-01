@@ -273,16 +273,30 @@ function drawPixedSceneLighting(ctx) {
   const playerScreen = worldToScreen(getIsoTileCenter(G.player.x, G.player.y), PixedRenderer.camera);
   const canRestore = typeof ctx.save === 'function' && typeof ctx.restore === 'function';
   if (canRestore) ctx.save();
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = 'rgba(0,0,0,0.18)';
-  ctx.fillRect(0, 0, width, height);
+
+  // Radial fog of war: dark vignette from edges, player torch in center
   if (typeof ctx.createRadialGradient === 'function') {
+    // Inner torch glow
     ctx.globalCompositeOperation = 'lighter';
     const glow = ctx.createRadialGradient(playerScreen.x, playerScreen.y + 10, 8, playerScreen.x, playerScreen.y + 10, 260);
     glow.addColorStop(0, 'rgba(214,138,55,0.23)');
     glow.addColorStop(0.35, 'rgba(126,71,35,0.10)');
     glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, width, height);
+
+    // Distance fog: darkens everything beyond torch range
+    ctx.globalCompositeOperation = 'source-over';
+    const fog = ctx.createRadialGradient(playerScreen.x, playerScreen.y + 10, 180, playerScreen.x, playerScreen.y + 10, Math.max(width, height) * 0.7);
+    fog.addColorStop(0, 'rgba(0,0,0,0)');
+    fog.addColorStop(0.4, 'rgba(0,0,0,0.08)');
+    fog.addColorStop(0.7, 'rgba(0,0,0,0.35)');
+    fog.addColorStop(1, 'rgba(0,0,0,0.65)');
+    ctx.fillStyle = fog;
+    ctx.fillRect(0, 0, width, height);
+  } else {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.fillRect(0, 0, width, height);
   }
   if (canRestore) ctx.restore();
@@ -497,7 +511,19 @@ function renderPixedScene() {
 
   surfaceTiles
     .sort((a, b) => isoDepthKey({ kind: 'wall', x: a.x, y: a.y }) - isoDepthKey({ kind: 'wall', x: b.x, y: b.y }))
-    .forEach(tile => drawPixedWallEdgesForTile(ctx, G.map, tile.x, tile.y, tile.screen, G.seen, G.visible));
+    .forEach(tile => {
+      const vis = G.visible && G.visible.has(tile.y * MAP_W + tile.x);
+      drawPixedWallEdgesForTile(ctx, G.map, tile.x, tile.y, tile.screen, G.seen, G.visible);
+      // Fog of war: non-visible floor tiles get a dark overlay
+      if (!vis) {
+        ctx.save();
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = '#000000';
+        const pts = pixedDiamondPoints(tile.screen);
+        drawPixedPolygon(ctx, [pts.top, pts.right, pts.bottom, pts.left], '#000000');
+        ctx.restore();
+      }
+    });
 
   propTiles.forEach(({ tile, screen }) => {
     const key = tileAssetKey(tile);
@@ -543,8 +569,8 @@ function renderPixedScene() {
   (G.enemies || []).forEach(enemy => {
     const key = enemy.y * MAP_W + enemy.x;
     if (!G.visible || !G.visible.has(key)) return;
+    if (enemy.dying) return;  // death is handled by legacy fx (ripples, skull, bloodstain)
     const animState = typeof getEntityAnimation === 'function' ? getEntityAnimation(`enemy:${enemy.id}`) : null;
-    if (enemy.dying && !(animState || {}).name) return;
     const animName = (animState || {}).name || 'idle';
     const enemySlug = typeof enemyAssetSlug === 'function' ? enemyAssetSlug(enemy) : 'goblin';
     const enemyKey = typeof enemyAssetKey === 'function' ? enemyAssetKey(enemy, animName) : `enemy.${enemySlug}.${animName}`;
@@ -564,6 +590,34 @@ function renderPixedScene() {
       drawPixedFallback(ctx, d, screen);
     }
   });
+
+  // Second pass: make tall walls translucent where actors stand behind them
+  // An actor at (ax,ay) stands behind the north wall if map[ay-1][ax] is WALL
+  // and behind the west wall if map[ay][ax-1] is WALL
+  const actorPositions = new Set();
+  actorPositions.add(`${G.player.x},${G.player.y}`);
+  (G.enemies || []).forEach(e => {
+    if (!e.dying && G.visible && G.visible.has(e.y * MAP_W + e.x)) {
+      actorPositions.add(`${e.x},${e.y}`);
+    }
+  });
+  if (G.map && actorPositions.size > 0) {
+    for (const pos of actorPositions) {
+      const [ax, ay] = pos.split(',').map(Number);
+      const tile = getPixedMapTile(G.map, ax, ay);
+      if (!isPixedSurfaceTile(tile)) continue;
+      const screen = worldToScreen(gridToIso(ax, ay), PixedRenderer.camera);
+      const edges = getPixedWallEdges(G.map, ax, ay);
+      for (const edge of edges) {
+        if (edge.dir === 'north' || edge.dir === 'west') {
+          ctx.save();
+          ctx.globalAlpha = 0.22;
+          drawPixedWallFace(ctx, screen, edge, ax, ay);
+          ctx.restore();
+        }
+      }
+    }
+  }
 
   drawPixedSceneLighting(ctx);
 

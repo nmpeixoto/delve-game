@@ -3,9 +3,13 @@ function computeVision(){
   G.visible=new Set();
   let px=G.player.x,py=G.player.y;
   let newTiles = 0;
+  // Base vision radius 6, extended by perception (+1 per point, capped at 12)
+  let perception = getStat('perception') || 0;
+  let extraVision = Math.floor(perception);
+  let radius = Math.min(12, 6 + extraVision);
   for(let a=0;a<360;a+=3){
     let rad=a*Math.PI/180;
-    for(let r=0;r<6;r++){
+    for(let r=0;r<radius;r++){
       let ix=Math.round(px+Math.cos(rad)*r),iy=Math.round(py+Math.sin(rad)*r);
       if(ix<0||ix>=MAP_W||iy<0||iy>=MAP_H) break;
       let k=iy*MAP_W+ix;

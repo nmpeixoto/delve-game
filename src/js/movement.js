@@ -138,6 +138,8 @@ function move(dx,dy){
     return;
   }
 
+  // Leave a trail glow on the tile we're leaving
+  if (typeof spawnPlayerTrail === 'function') spawnPlayerTrail(G.player.x, G.player.y);
   G.player.x=nx;G.player.y=ny;
   computeVision();
 

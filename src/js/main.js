@@ -3,6 +3,9 @@ let _resizeHandlerBound=false;
 
 function handleResize(){
   if(G.map)render();
+  if (typeof ThreeScene !== 'undefined' && ThreeScene.renderer) {
+    ThreeScene.handleResize();
+  }
 }
 
 const CLASS_DATA = {
@@ -173,7 +176,29 @@ async function startGame(playerClass = 'warrior', hardMode = false){
       mapArea.classList.remove('pixed-loading');
     }
     if (typeof initPixedRenderer === 'function') initPixedRenderer();
+
+    // Initialize 3D WebGL renderer if WebGL is supported
+    // Guard: ThreeScene may not exist in Node test environments
+    if (typeof ThreeScene !== 'undefined') {
+      const gameCanvas = document.getElementById('game-canvas');
+      if (gameCanvas && ThreeScene.supportsWebGL() && !ThreeScene.isHeadlessTest()) {
+        ThreeScene.init(gameCanvas);
+        // buildMapFromGrid() called below AFTER initGame generates G.map
+        ThreeScene.setupCameraControls(gameCanvas);
+        ThreeScene.setupClickHandler(gameCanvas);
+        console.log('[DELVE] 3D WebGL renderer active');
+      }
+    }
+
     initGame(playerClass, hardMode);
+
+    // Build 3D map NOW that initGame has generated G.map
+    if (typeof ThreeScene !== 'undefined' && ThreeScene.renderer) {
+      ThreeScene.buildMapFromGrid();
+      ThreeScene.start();
+      ThreeScene._lastEnemyKey = null;
+      ThreeScene._lastItemKey = null;
+    }
     if(!_resizeHandlerBound){
       window.addEventListener('resize',handleResize);
       _resizeHandlerBound=true;
@@ -185,6 +210,12 @@ async function startGame(playerClass = 'warrior', hardMode = false){
 
 function showDeath(){
   if (typeof stopActivePath === 'function') stopActivePath();
+  if (typeof shutdownCoordinator === 'function') shutdownCoordinator();
+  // Stop 3D renderer on death (guard for test environments where ThreeScene may not exist)
+  if (typeof ThreeScene !== 'undefined' && ThreeScene.isRunning) {
+    ThreeScene.stop();
+    ThreeScene.resetScene();
+  }
   SFX.playerDeath();
   let p=G.player,o=document.createElement('div');
   o.className='overlay';
@@ -207,6 +238,7 @@ function showDeath(){
 
 function showVictory(){
   if (typeof stopActivePath === 'function') stopActivePath();
+  if (typeof shutdownCoordinator === 'function') shutdownCoordinator();
   let p=G.player,o=document.createElement('div');
   o.className='overlay';
   let diffMult = G.hardMode ? 1.5 : 1.0;

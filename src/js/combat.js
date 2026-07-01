@@ -42,24 +42,29 @@ function attackEnemy(id,multiplier=1,opts={}){
     multiplier *= 2;
     isCrit = true;
     addLog('Critical Hit!', 'log-combat');
+    if (typeof spawnCritBurst === 'function') spawnCritBurst(en.x, en.y);
   }
   if(en.dodge && Math.random() < en.dodge) {
     addLog(`${en.name} agilely dodged your attack!`, 'log-combat');
-    floatText('DODGED', en.x, en.y, '#fbbf24');
-    popText('💨', en.x, en.y);
+    if (typeof spawnDodgeEffect === 'function') spawnDodgeEffect(en.x, en.y, '#fbbf24');
+    else { floatText('DODGED', en.x, en.y, '#fbbf24'); popText('💨', en.x, en.y); }
     SFX.hit();
   } else {
     let dmg=round1(Math.max(1,gatk()-en.def+rand(3)));
     if(multiplier>1){dmg=round1(dmg*multiplier);SFX.bash();}else{SFX.hit();}
     en.hp=round1(en.hp-dmg);
     if (typeof setEntityAnimation === 'function') setEntityAnimation(`enemy:${en.id}`, 'hurt', 220);
-    if (typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#f87171', text: 'hit' });
     addDamageDealt(dmg);
+    // Enhanced hit visual
+    if (typeof spawnCombatRipple === 'function') spawnCombatRipple(en.x, en.y, '#f87171');
+    if (typeof enemyHitFlash === 'function') enemyHitFlash(en.id);
     let atkSym = G.player.weapon ? G.player.weapon.sym : '🗡️';
     if(atkSym === '🏹') atkSym = '🎯';
     if(atkSym === '🪄') atkSym = '💥';
     popText(atkSym, en.x, en.y);
     floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171');
+    // Crit visual supplementary
+    if (isCrit && typeof spawnCritText === 'function') spawnCritText(en.x, en.y, '⚡CRIT!');
     let multTag='';
     if(isSneak && isCrit) multTag=' (SNEAK CRIT!)';
     else if(isSneak) multTag=' (SNEAK!)';
@@ -70,13 +75,16 @@ function attackEnemy(id,multiplier=1,opts={}){
       let heal = Math.floor(dmg / 2);
       if(heal > 0) {
         G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + heal));
-        floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
+        if (typeof spawnHealEffect === 'function') spawnHealEffect(G.player.x, G.player.y, `+${fmt1(heal)} HP`, '#ef4444');
+        else floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
+        if (typeof coordScreenFlash === 'function') coordScreenFlash('heal');
       }
     }
     if(en.enrage && en.hp <= en.maxHp / 2 && en.color !== '#dc2626') {
       en.color = '#dc2626';
       popText('💢', en.x, en.y);
       floatText('ENRAGED', en.x, en.y, '#dc2626');
+      if (typeof spawnStatusEffect === 'function') spawnStatusEffect(en.x, en.y, '💢', '#ef4444');
     }
   }
 
@@ -84,6 +92,7 @@ function attackEnemy(id,multiplier=1,opts={}){
     if(en.reviveTurns > 0) {
       addLog(`You shattered the bones!`, 'log-combat');
       popText('💥', en.x, en.y);
+      if (typeof spawnDeathExplosion === 'function') spawnDeathExplosion(en.x, en.y, '#94a3b8');
       killEnemy(en, false);
       return;
     } else if(en.revive) {
@@ -96,6 +105,7 @@ function attackEnemy(id,multiplier=1,opts={}){
       addLog(`The Skeleton collapsed into a pile of bones!`, 'log-combat');
       floatText('COLLAPSED', en.x, en.y, '#94a3b8');
       popText('🦴', en.x, en.y);
+      if (typeof spawnDeathBurst === 'function') spawnDeathBurst(en.x, en.y, '#94a3b8');
       advanceTurn();
       return;
     } else {
@@ -123,13 +133,15 @@ function attackEnemy(id,multiplier=1,opts={}){
   let dodgeChance = playerDodgeChance();
   if(dodgeChance > 0 && ch(dodgeChance)) {
     addLog(`Dodged ${en.name}'s attack!`, 'log-info');
-    popText('💨', G.player.x, G.player.y);
+    if (typeof spawnDodgeEffect === 'function') spawnDodgeEffect(G.player.x, G.player.y, '#60a5fa');
+    else popText('💨', G.player.x, G.player.y);
     advanceTurn();
   } else {
     checkEmergencyPotion(en, edm, ()=>{
       G.player.hp=round1(Math.max(0,G.player.hp-edm));
       popText('🩸', G.player.x, G.player.y);
       floatText(`-${fmt1(edm)}`,G.player.x,G.player.y,'#60a5fa');
+      if (typeof spawnCombatRipple === 'function') spawnCombatRipple(G.player.x, G.player.y, '#60a5fa');
       addLog(`${en.name} hits you for ${fmt1(edm)}`,'log-combat');
       SFX.damage();shakeMap();flashDamage();
       
@@ -137,13 +149,15 @@ function attackEnemy(id,multiplier=1,opts={}){
         let heal = Math.floor(edm * en.vampiric);
         if(heal > 0) {
           en.hp = round1(Math.min(en.maxHp, en.hp + heal));
-          floatText(`+${fmt1(heal)}`, en.x, en.y, '#4ade80');
+          if (typeof spawnHealEffect === 'function') spawnHealEffect(en.x, en.y, `+${fmt1(heal)}`, '#4ade80');
+          else floatText(`+${fmt1(heal)}`, en.x, en.y, '#4ade80');
         }
       }
       if(en.freezeChance && Math.random() < en.freezeChance) {
         G.player.rootedTurns = 2;
         addLog(`The ${en.name} froze you!`, 'log-combat');
-        floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
+        if (typeof spawnStatusApplied === 'function') spawnStatusApplied(G.player.x, G.player.y, 'frozen');
+        else floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
       }
 
       advanceTurn();
@@ -162,14 +176,15 @@ function playerDodgeChance() {
 }
 
 function emitPixedDeathFx(en) {
-  if (typeof setEntityAnimation === 'function') setEntityAnimation(`enemy:${en.id}`, 'death', 420);
-  if (typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#d7b46a', text: 'loot' });
+  // Death visuals handled by legacy fx (ripples, skull, bloodstain).
 }
 
 function killEnemy(en, skipAdvanceTurn) {
   if(en.isPet) {
     addLog(`${en.name} crumbled to dust.`, 'log-dead');
     emitPixedDeathFx(en);
+    if (typeof spawnDeathBurst === 'function') spawnDeathBurst(en.x, en.y, en.color || '#a78bfa');
+    if (typeof spawnBloodstain === 'function') spawnBloodstain(en.x, en.y);
     en.dying = true;
     _deathBatch.push({en, skipAdvanceTurn});
     if(!_deathTimer) {
@@ -185,15 +200,27 @@ function killEnemy(en, skipAdvanceTurn) {
   if(getStat('vampirism') > 0) {
     let heal = getStat('vampirism');
     G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + heal));
-    floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
+    if (typeof spawnHealEffect === 'function') spawnHealEffect(G.player.x, G.player.y, `+${fmt1(heal)} HP`);
+    else floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
   }
   if(G.player.class === 'necromancer') {
     G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + 2));
-    floatText('+2 HP', G.player.x, G.player.y, '#4ade80');
+    if (typeof spawnHealEffect === 'function') spawnHealEffect(G.player.x, G.player.y, '+2 HP');
+    else floatText('+2 HP', G.player.x, G.player.y, '#4ade80');
   }
 
   addLog(`${en.name} slain! +${xpDrop} XP  +${goldDrop}💰`, 'log-dead');
   floatText(`+${goldDrop}💰`,en.x,en.y,'#fbbf24');
+  // Death explosion
+  if (typeof spawnDeathExplosion === 'function') {
+    if (en.boss) {
+      for(let i = 0; i < 5; i++) setTimeout(() => spawnDeathExplosion(en.x, en.y, '#fbbf24'), i * 150);
+    } else {
+      spawnDeathExplosion(en.x, en.y, en.color || '#f87171');
+    }
+  }
+  // Bloodstain on the tile
+  if (typeof spawnBloodstain === 'function') spawnBloodstain(en.x, en.y);
   SFX.enemyDeath();
   fireTip('firstGold');
   emitPixedDeathFx(en);
@@ -214,7 +241,9 @@ function flushDeathBatch() {
   _deathBatch.forEach(d => {
     if(d.en.raiseCorpseTarget && !d.en.boss && !d.en.isPet) {
       addLog(`${d.en.name} rises to fight for you!`, 'log-combat');
+      if (typeof spawnDeathBurst === 'function') spawnDeathBurst(d.en.x, d.en.y, '#a78bfa');
       popText('🧟', d.en.x, d.en.y);
+      if (typeof spawnCombatRipple === 'function') spawnCombatRipple(d.en.x, d.en.y, '#a78bfa');
       let petBaseName = d.en.name === 'Bones' ? 'Skeleton' : d.en.name;
       d.en.name = `Pet ${petBaseName}`;
       d.en.isPet = true;
@@ -269,6 +298,7 @@ function checkLevelUp(){
     }
     addLog(`LEVEL UP! Now level ${G.player.lvl}!`,'log-level');
     floatText('LVL UP!',G.player.x,G.player.y,'#c084fc');
+    if (typeof coordLevelUpFlash === 'function') coordLevelUpFlash();
     SFX.levelUp();fireTip('firstLevelUp');
     leveled = true;
   }
@@ -297,6 +327,7 @@ function advanceTurn(opts={}){
     let pdmg = Math.max(1, Math.floor(G.player.maxHp * 0.05));
     G.player.hp = round1(G.player.hp - pdmg);
     addLog(`Poison damage: -${fmt1(pdmg)} HP`, 'log-combat');
+    if (typeof spawnStatusEffect === 'function') spawnStatusEffect(G.player.x, G.player.y, '☠️', '#a855f7');
     floatText(`-${fmt1(pdmg)} HP`, G.player.x, G.player.y, '#a855f7');
     flashDamage();
     SFX.hit();
@@ -353,6 +384,8 @@ function processEnemyTurns(index) {
     e.stunnedTurns = 5;
     e.hp = round1(e.hp - 5);
     floatText(`-5`, e.x, e.y, '#f87171');
+    if (typeof spawnCombatRipple === 'function') spawnCombatRipple(e.x, e.y, '#d1d5db');
+    if (typeof spawnStatusApplied === 'function') spawnStatusApplied(e.x, e.y, 'stunned');
     addLog(`${e.name} stepped on a Bear Trap!`, 'log-combat');
     if(e.hp<=0) killEnemy(e, true);
     return processEnemyTurns(index + 1);
@@ -457,13 +490,15 @@ function processEnemyTurns(index) {
           let dChance = playerDodgeChance();
           if(dChance > 0 && ch(dChance)) {
             addLog(`Dodged ${e.name}'s attack!`, 'log-info');
-            popText('💨', G.player.x, G.player.y);
+            if (typeof spawnDodgeEffect === 'function') spawnDodgeEffect(G.player.x, G.player.y, '#60a5fa');
+            else popText('💨', G.player.x, G.player.y);
             return processEnemyTurns(index + 1);
           } else {
             checkEmergencyPotion(e, edm, ()=>{
               G.player.hp=round1(Math.max(0,G.player.hp-edm));
               addLog(`${e.name} attacks! -${fmt1(edm)} HP`,'log-combat');
               SFX.damage();shakeMap();flashDamage();
+              if (typeof spawnCombatRipple === 'function') spawnCombatRipple(G.player.x, G.player.y, '#f87171');
               popText('🩸', G.player.x, G.player.y);
               floatText(`-${fmt1(edm)}`,G.player.x,G.player.y,'#f87171');
               
@@ -471,15 +506,16 @@ function processEnemyTurns(index) {
                 let heal = Math.floor(edm * e.vampiric);
                 if(heal > 0) {
                   e.hp = round1(Math.min(e.maxHp, e.hp + heal));
-                  floatText(`+${fmt1(heal)}`, e.x, e.y, '#4ade80');
+                  if (typeof spawnHealEffect === 'function') spawnHealEffect(e.x, e.y, `+${fmt1(heal)}`, '#4ade80');
+                  else floatText(`+${fmt1(heal)}`, e.x, e.y, '#4ade80');
                   popText('🦇', e.x, e.y);
                 }
               }
               if(e.freezeChance && Math.random() < e.freezeChance) {
                 G.player.rootedTurns = 2;
                 addLog(`The ${e.name} froze you!`, 'log-combat');
-                floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
-                popText('❄️', G.player.x, G.player.y);
+                if (typeof spawnStatusApplied === 'function') spawnStatusApplied(G.player.x, G.player.y, 'frozen');
+                else { floatText('FROZEN', G.player.x, G.player.y, '#3b82f6'); popText('❄️', G.player.x, G.player.y); }
               }
 
               if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
@@ -491,7 +527,8 @@ function processEnemyTurns(index) {
         } else {
           if(target.dodge && Math.random() < target.dodge) {
             addLog(`${target.name} dodged ${e.name}'s attack!`, 'log-info');
-            popText('💨', target.x, target.y);
+            if (typeof spawnDodgeEffect === 'function') spawnDodgeEffect(target.x, target.y, '#a78bfa');
+            else popText('💨', target.x, target.y);
             return processEnemyTurns(index + 1);
           }
 
@@ -502,6 +539,7 @@ function processEnemyTurns(index) {
           target.hp = round1(target.hp - edm);
           addLog(`${e.name} attacks ${target.name}! -${fmt1(edm)} HP`, 'log-combat');
           SFX.damage();
+          if (typeof spawnCombatRipple === 'function') spawnCombatRipple(target.x, target.y, '#f87171');
           popText('🩸', target.x, target.y);
           floatText(`-${fmt1(edm)}`, target.x, target.y, '#f87171');
 
@@ -509,7 +547,8 @@ function processEnemyTurns(index) {
             let heal = Math.floor(edm * e.vampiric);
             if(heal > 0) {
               e.hp = round1(Math.min(e.maxHp, e.hp + heal));
-              floatText(`+${fmt1(heal)}`, e.x, e.y, '#4ade80');
+              if (typeof spawnHealEffect === 'function') spawnHealEffect(e.x, e.y, `+${fmt1(heal)}`, '#4ade80');
+              else floatText(`+${fmt1(heal)}`, e.x, e.y, '#4ade80');
               popText('🦇', e.x, e.y);
             }
           }
@@ -540,15 +579,15 @@ function doAbility1(){
     if(t.length) {
       G.ability1Cooldown = 5;
       let en = t[0];
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(en.x, en.y, 'BASH');
       attackEnemy(en.id,1.5);
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fb923c', text: 'BASH' });
     }
     else addLog('No nearby enemies to Bash','log-info');
   }
   else if(p.class === 'rogue') {
     p.freeMoves = 2; G.ability1Cooldown = 3;
     addLog('Dashed! You have 2 free moves.', 'log-info'); updateActBtns();
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: p.x, y: p.y, color: '#a3a3a3', text: 'DASH' });
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'DASH');
   }
   else if(p.class === 'mage') {
     let t=visEnemies.sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
@@ -558,11 +597,12 @@ function doAbility1(){
         if(!e.dying && Math.abs(e.x-target.x)<=1 && Math.abs(e.y-target.y)<=1) {
           let dmg = round1(Math.max(1, gatk() - e.def + rand(3))); e.hp = round1(e.hp - dmg);
           floatText(`-${fmt1(dmg)}`,e.x,e.y,'#f87171'); addDamageDealt(dmg);
+          if (typeof spawnCombatRipple === 'function') spawnCombatRipple(e.x, e.y, '#fb923c');
           if(e.hp <= 0) hits.push(e);
         }
       });
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(target.x, target.y, 'FIREBALL');
       SFX.bash(); addLog(`Fireball hit!`, 'log-combat');
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.fireball', x: target.x, y: target.y, color: '#fb923c', text: 'FIRE' });
       if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
       else advanceTurn();
     } else addLog('No visible enemies to Fireball', 'log-info');
@@ -573,9 +613,10 @@ function doAbility1(){
       G.ability1Cooldown = 5;
       let en = t[0];
       en.stunnedTurns = 1;
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(en.x, en.y, 'SMITE');
+      if (typeof spawnStatusApplied === 'function') spawnStatusApplied(en.x, en.y, 'stunned');
       attackEnemy(en.id, 1);
       addLog(`Smited ${en.name}! They are stunned.`, 'log-combat');
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fde68a', text: 'SMITE' });
     } else addLog('No nearby enemies to Smite','log-info');
   }
   else if(p.class === 'ranger') {
@@ -597,17 +638,18 @@ function doAbility1(){
       let dx = t[0].sx, dy = t[0].sy;
       let cx = p.x + dx, cy = p.y + dy;
       let hits = [];
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(target.x, target.y, 'PIERCING_SHOT');
       while(cx>=0&&cx<MAP_W&&cy>=0&&cy<MAP_H&&G.map[cy][cx] !== TILE.WALL) {
         let e = G.enemies.find(e => e.x === cx && e.y === cy && !e.dying);
         if(e) {
           let dmg = round1(Math.max(1, gatk() - e.def + rand(3))); e.hp = round1(e.hp - dmg);
           floatText(`-${fmt1(dmg)}`,e.x,e.y,'#f87171'); addDamageDealt(dmg);
+          if (typeof spawnCombatRipple === 'function') spawnCombatRipple(e.x, e.y, '#bbf7d0');
           if(e.hp <= 0) hits.push(e);
         }
         cx += dx; cy += dy;
       }
       SFX.bash(); addLog('Piercing Shot fired!', 'log-combat');
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: target.x, y: target.y, color: '#bbf7d0', text: 'SHOT' });
       if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
       else advanceTurn();
     } else addLog('No visible enemies in line for Piercing Shot','log-info');
@@ -617,13 +659,14 @@ function doAbility1(){
     if(!targets.length){addLog('No adjacent enemies to Cleave','log-info');return;}
     G.ability1Cooldown = 4;
     let hits = [];
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'CLEAVE');
     targets.forEach(e => {
         let dmg = round1(Math.max(1, gatk() - e.def + rand(3))); e.hp = round1(e.hp - dmg);
         floatText(`-${fmt1(dmg)}`,e.x,e.y,'#f87171'); addDamageDealt(dmg);
+        if (typeof spawnCombatRipple === 'function') spawnCombatRipple(e.x, e.y, '#fca5a5');
         if(e.hp <= 0) hits.push(e);
     });
     SFX.bash(); addLog('Cleave!', 'log-combat');
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: p.x, y: p.y, color: '#fca5a5', text: 'CLEAVE' });
     if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
     else advanceTurn();
   }
@@ -634,10 +677,13 @@ function doAbility1(){
       let en = t[0];
       let dmg = round1(Math.max(1, gatk() - en.def + rand(3)));
       en.hp = round1(en.hp - dmg); floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171'); addDamageDealt(dmg);
+      if (typeof spawnCombatRipple === 'function') spawnCombatRipple(en.x, en.y, '#c4b5fd');
       let heal = dmg;
-      p.hp = round1(Math.min(p.maxHp, p.hp + heal)); floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
+      p.hp = round1(Math.min(p.maxHp, p.hp + heal));
+      if (typeof spawnHealEffect === 'function') spawnHealEffect(p.x, p.y, `+${fmt1(heal)} HP`, '#c4b5fd');
+      else floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(en.x, en.y, 'SIPHON');
       SFX.bash(); addLog(`Siphoned ${fmt1(dmg)} life from ${en.name}!`, 'log-combat');
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.heal', x: p.x, y: p.y, color: '#c4b5fd', text: 'SIPHON' });
       if(en.hp <= 0) killEnemy(en, false);
       else advanceTurn();
     } else addLog('No nearby enemies to Siphon','log-info');
@@ -647,6 +693,7 @@ function doAbility1(){
     if(t.length) {
       G.ability1Cooldown = 3;
       let en = t[0];
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(en.x, en.y, 'PUSH_KICK');
       let dx = Math.sign(en.x - p.x), dy = Math.sign(en.y - p.y);
       let nx = en.x + dx, ny = en.y + dy;
       let dmg = round1(Math.max(1, gatk() - en.def + rand(3)));
@@ -654,11 +701,11 @@ function doAbility1(){
         en.x = nx; en.y = ny;
       } else {
         dmg = round1(dmg * 2);
+        if (typeof spawnCombatRipple === 'function') spawnCombatRipple(en.x, en.y, '#fed7aa');
         addLog('Slammed into a wall!', 'log-combat');
       }
       en.hp = round1(en.hp - dmg); floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171'); addDamageDealt(dmg);
       SFX.bash(); addLog(`Push Kick hit ${en.name} for ${fmt1(dmg)}!`, 'log-combat');
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fed7aa', text: 'KICK' });
       if(en.hp <= 0) killEnemy(en, false);
       else advanceTurn();
     } else addLog('No adjacent enemies to Push Kick','log-info');
@@ -672,12 +719,12 @@ function doAbility2(){
 
   if(p.class === 'warrior') {
     p.shieldWallTurns = 3; G.ability2Cooldown = 10;
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.heal', x: p.x, y: p.y, color: '#60a5fa', text: 'SHIELD' });
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'SHIELD_WALL');
     addLog('Shield Wall active! Damage reduced by 40% for 3 turns.', 'log-info'); advanceTurn();
   }
   else if(p.class === 'rogue') {
     p.vanishTurns = 3; G.ability2Cooldown = 10;
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.poison', x: p.x, y: p.y, color: '#a3a3a3', text: 'VANISH' });
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'VANISH');
     addLog('Vanished! You are invisible for 3 turns.', 'log-info'); advanceTurn();
   }
   else if(p.class === 'mage') {
@@ -700,16 +747,17 @@ function doAbility2(){
       }
       let t = safeTiles[rand(safeTiles.length)];
       p.x = t.x; p.y = t.y; G.ability2Cooldown = 8;
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: p.x, y: p.y, color: '#93c5fd', text: 'BLINK' });
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'BLINK');
       addLog('Blinked to a safe location!', 'log-combat'); advanceTurn();
     } else addLog('No safe visible tile to Blink to', 'log-info');
   }
   else if(p.class === 'paladin') {
     let heal = Math.floor(p.maxHp * 0.2);
     p.hp = round1(Math.min(p.maxHp, p.hp + heal));
-    floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
+    if (typeof spawnHealEffect === 'function') spawnHealEffect(p.x, p.y, `+${fmt1(heal)} HP`, '#4ade80');
+    else floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'LAY_ON_HANDS');
     G.ability2Cooldown = 15;
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.heal', x: p.x, y: p.y, color: '#4ade80', text: 'HEAL' });
     addLog('Lay on Hands: Healed!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'ranger') {
@@ -733,12 +781,12 @@ function doAbility2(){
       }
     }
     G.ability2Cooldown = 10;
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'environment.trapBear', x: p.x, y: p.y, color: '#d1d5db', text: 'TRAP' });
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'BEAR_TRAP');
     addLog('Dropped a Bear Trap and jumped back!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'barbarian') {
     p.bloodlustTurns = 3; G.ability2Cooldown = 12;
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: p.x, y: p.y, color: '#ef4444', text: 'BLOOD' });
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'BLOODLUST');
     addLog('Bloodlust! Deal damage to heal, but take 15% more damage!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'necromancer') {
@@ -748,7 +796,7 @@ function doAbility2(){
       t[0].raiseCorpseTarget = true;
       t[0].raiseCorpseTurns = 3;
       G.ability2Cooldown = 8;
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.poison', x: t[0].x, y: t[0].y, color: '#a855f7', text: 'RAISE' });
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(t[0].x, t[0].y, 'RAISE_DEAD');
       addLog(`Marked ${t[0].name} for Raise Dead!`, 'log-combat'); advanceTurn();
     } else addLog('No visible enemies to target', 'log-info');
   }
@@ -760,7 +808,7 @@ function doAbility2(){
       p.rootedTurns = 2;
       let en = t[0];
       addLog('Flurry of Blows! You are rooted.', 'log-combat');
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fed7aa', text: 'FLURRY' });
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(en.x, en.y, 'FLURRY');
       for(let i = 0; i < 3; i++) {
         if(en.dying || en.hp <= 0) break;
         let mult = 1;

@@ -21,6 +21,18 @@
   --accent:#c084fc;--gold:#fbbf24;--red:#f87171;
   --green:#4ade80;--blue:#60a5fa;--orange:#fb923c;
   --dim:#7e7ea3;--text:#e2e8f0;--floor:#1a1a28;--wall:#0d0d15;
+  /* Theme-coordinated variables (updated by theme-coordinator.js) */
+  --theme-ambient:#c084fc;
+  --theme-combat:#f87171;
+  --theme-particle:#c084fc;
+  --theme-heal:#4ade80;
+  --theme-death:#94a3b8;
+  --theme-magic:#c084fc;
+  --theme-floor:#1a1a28;
+  --theme-wall:#0d0d15;
+  --theme-vignette:rgba(10,30,60,0.12);
+  --theme-accent:#c084fc;
+  --theme-transition:none;
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;}
@@ -37,8 +49,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 @media(min-width:700px){#title-screen h1{transform:scale(4);margin-bottom:80px;}}
 .subtitle{color:var(--dim);font-size:.7rem;letter-spacing:.3em;margin-bottom:32px;text-transform:uppercase;}
 .flavor{color:var(--text);font-size:.68rem;line-height:2.2;max-width:340px;margin:0 auto 40px;opacity:.55;}
-.btn{font-family:'Press Start 2P',monospace;font-size:.6rem;padding:16px 32px;background:transparent;border:2px solid var(--accent);color:var(--accent);cursor:pointer;letter-spacing:.15em;transition:all .2s;position:relative;overflow:hidden;min-width:180px;z-index:1;}
-.btn::before{content:'';position:absolute;inset:0;background:var(--accent);transform:translateX(-100%);transition:transform .2s;z-index:-1;}
+.btn{font-family:'Press Start 2P',monospace;font-size:.6rem;padding:16px 32px;background:transparent;border:2px solid var(--accent);color:var(--accent);cursor:pointer;letter-spacing:.15em;transition:all .2s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden;min-width:180px;z-index:1;}
+.btn::before{content:'';position:absolute;inset:0;background:var(--accent);transform:translateX(-100%);transition:transform .2s cubic-bezier(.4,0,.2,1);z-index:-1;}
 .btn:active::before,.btn:hover::before{transform:translateX(0);}
 .btn:active,.btn:hover{color:var(--bg);}
 .btn-gold{border-color:var(--gold);color:var(--gold);}
@@ -116,9 +128,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   text-align:right;
 }
 .bar{height:5px;background:var(--border);overflow:hidden;width:min(100px,22vw);}
-.bar-fill{height:100%;transition:width .3s;}
-.hp-fill{background:linear-gradient(90deg,var(--red),#ff9999);}
-.xp-fill{background:linear-gradient(90deg,var(--accent),#e879f9);}
+.bar-fill{height:100%;transition:width .4s cubic-bezier(.4,0,.2,1), background-color .3s ease;}
+.hp-fill{background:linear-gradient(90deg,var(--red),#ff9999); transition: all 0.4s cubic-bezier(0.4,0,0.2,1);}
+.xp-fill{background:linear-gradient(90deg,var(--accent),#e879f9); transition: all 0.4s cubic-bezier(0.4,0,0.2,1);}
 .hidden-meter{
   position:absolute;
   width:1px;
@@ -161,7 +173,48 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 }
 #map-wrap{background:var(--panel);border:1px solid var(--border);padding:3px;position:relative;flex-shrink:0;will-change:transform;}
 #map{display:grid;line-height:1;font-family:'Share Tech Mono',monospace;user-select:none;touch-action:none;}
-.tile{display:flex;align-items:center;justify-content:center;transition:background .08s;}
+.tile{display:flex;align-items:center;justify-content:center;transition:all 0.2s cubic-bezier(.4,0,.2,1); transform-origin: center center;}
+.tile:hover{transform:scale(1.05);}
+.tile::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:0; transition:opacity 0.2s ease;}
+.tile:hover::before{background:rgba(255,255,255,0.03); opacity:1;}
+
+/* ── PARTICLE EFFECTS (CSS-based) ── */
+@keyframes particleFloat{0%{opacity:1;transform:translateY(0);} 100%{opacity:0;transform:translateY(-40px);} }
+@keyframes sparkle{0%{opacity:0.7;transform:scale(1);} 50%{opacity:1;transform:scale(1.2);} 100%{opacity:0.7;transform:scale(1);} }
+.particle{position:absolute;width:4px;height:4px;border-radius:50%;pointer-events:none;animation:particleFloat 1.5s cubic-bezier(.4,0,.2,1) forwards;}
+.sparkle{animation:sparkle 2s ease-in-out infinite;}
+
+/* ── LIGHTING EFFECTS ── */
+.tile-lighted{box-shadow:0 0 10px rgba(255,215,0,0.3), inset 0 0 10px rgba(255,215,0,0.2);}
+.tile-darkness{filter:brightness(0.4) contrast(1.2);transition:all 0.3s ease;}
+
+/* ── AURAS AND GLOWS ── */
+@keyframes auraPulse{0%{box-shadow:0 0 5px rgba(192,132,252,0.3);} 50%{box-shadow:0 0 20px rgba(192,132,252,0.6);} 100%{box-shadow:0 0 5px rgba(192,132,252,0.3);} }
+.aura-magic{animation:auraPulse 2s ease-in-out infinite;}
+.aura-fire{box-shadow:0 0 15px rgba(255,69,0,0.8); animation:auraPulse 2s ease-in-out infinite; }
+.aura-lightning{box-shadow:0 0 15px rgba(100,181,241,0.8); animation:auraPulse 2s ease-in-out infinite;}
+
+/* ── ENVIRONMENTAL FX ── */
+.tile-floor-etched::after{content:'';position:absolute;inset:0;background:radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);pointer-events:none;}
+
+/* ── ENEMY FX ── */
+.enemy-burning{filter:brightness(1.3) contrast(1.2);}
+.enemy-freezing{filter:blur(1px) brightness(1.3) saturate(0.8);}
+
+/* ── COMBAT FEEDBACK FX ── */
+@keyframes hitBurst{0%{opacity:1;transform:scale(0);} 60%{opacity:0.8;transform:scale(1.3);} 100%{opacity:0;transform:scale(1.6);}}
+@keyframes combatFlash{0%{opacity:1;filter:brightness(2);} 100%{opacity:0;filter:brightness(1);}}
+@keyframes critImpact{0%{transform:scale(1) rotate(0deg);opacity:1;} 30%{transform:scale(1.4) rotate(10deg);opacity:1;} 100%{transform:scale(0.5) rotate(-5deg);opacity:0;}}
+@keyframes dodgeSway{0%{opacity:1;transform:translateX(0);} 25%{transform:translateX(-6px);} 50%{transform:translateX(6px);} 75%{transform:translateX(-3px);} 100%{opacity:1;transform:translateX(0);}}
+@keyframes healRise{0%{opacity:1;transform:translateY(0) scale(1);} 50%{opacity:1;transform:translateY(-12px) scale(1.2);} 100%{opacity:0;transform:translateY(-24px) scale(0.8);}}
+@keyframes enemyHit{0%{box-shadow:inset 0 0 0 0 rgba(248,113,113,0);} 30%{box-shadow:inset 0 0 20px 8px rgba(248,113,113,0.6);} 100%{box-shadow:inset 0 0 0 0 rgba(248,113,113,0);}}
+@keyframes skullRise{0%{opacity:0;transform:translateY(0) scale(0.5);} 50%{opacity:1;transform:translateY(-20px) scale(1.2);} 100%{opacity:1;transform:translateY(-10px) scale(1);}}
+
+.combat-ripple{position:fixed;width:40px;height:40px;border:2px solid rgba(255,255,255,0.6);border-radius:50%;pointer-events:none;z-index:150;animation:hitBurst 0.5s cubic-bezier(.4,0,.2,1) forwards;transform:translate(-50%,-50%);}
+.combat-flash{animation:enemyHit 0.35s ease-out;}
+.crit-text{position:fixed;font-family:'Press Start 2P',monospace;font-size:16px;font-weight:bold;pointer-events:none;z-index:200;animation:critImpact 0.6s cubic-bezier(.4,0,.2,1) forwards;text-shadow:-2px 0 #050507,2px 0 #050507,0 -2px #050507,0 2px #050507;}
+.dodge-text{position:fixed;font-size:12px;font-weight:bold;pointer-events:none;z-index:200;animation:dodgeSway 0.5s ease-out forwards;text-shadow:-1px 0 #050507,1px 0 #050507,0 -1px #050507,0 1px #050507;}
+.heal-text{position:fixed;font-family:'Press Start 2P',monospace;font-size:12px;font-weight:bold;pointer-events:none;z-index:200;animation:healRise 0.8s cubic-bezier(.4,0,.2,1) forwards;text-shadow:-2px 0 #050507,2px 0 #050507,0 -2px #050507,0 2px #050507;}
 .tile-wall{background:var(--wall);color:#1a1a2e;}
 .tile-floor{background:var(--floor);color:#2a2a40;}
 .tile-player{background:var(--floor);color:var(--accent);text-shadow:0 0 8px var(--accent);}
@@ -200,7 +253,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .dpad-btn{background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:1.1rem;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:4px;transition:background .1s,border-color .1s;user-select:none;touch-action:none;}
 .dpad-btn:active{background:var(--border);border-color:var(--accent);}
 .dpad-center{background:rgba(192,132,252,.05);border-color:var(--dim);font-size:.5rem;color:var(--dim);}
-.act-btn{font-family:'Press Start 2P',monospace;font-size:10px;line-height:1.25;padding:7px 8px;background:var(--panel);border:2px solid var(--border);color:var(--dim);cursor:pointer;letter-spacing:0;border-radius:3px;transition:all .15s;min-width:86px;text-align:center;display:flex;align-items:center;justify-content:center;white-space:pre-line;overflow:hidden;text-transform:uppercase;}
+.act-btn{font-family:'Press Start 2P',monospace;font-size:10px;line-height:1.25;padding:7px 8px;background:var(--panel);border:2px solid var(--border);color:var(--dim);cursor:pointer;letter-spacing:0;border-radius:3px;transition:all .15s cubic-bezier(.4,0,.2,1);min-width:86px;text-align:center;display:flex;align-items:center;justify-content:center;white-space:pre-line;overflow:hidden;text-transform:uppercase;}
 .act-btn:active{background:var(--border);}
 .bash-ready{border-color:var(--orange)!important;color:var(--orange)!important;}
 .stairs-avail{border-color:var(--green)!important;color:var(--green)!important;}
@@ -258,15 +311,18 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 }
 
 /* ── INVENTORY DRAWER ── */
-#inv-drawer{position:fixed;bottom:0;left:0;right:0;z-index:80;background:linear-gradient(#171317,#0c0a0d);border:2px solid #6f5430;transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);max-height:65vh;overflow-y:auto;padding:14px 16px max(16px,env(safe-area-inset-bottom));box-shadow:0 0 0 2px #050507,0 0 48px rgba(0,0,0,.75);}
+#inv-drawer{position:fixed;bottom:0;left:0;right:0;z-index:80;background:linear-gradient(#171317,#0c0a0d);border:2px solid #6f5430;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);max-height:65vh;overflow-y:auto;padding:14px 16px max(16px,env(safe-area-inset-bottom));box-shadow:0 0 0 2px #050507,0 0 48px rgba(0,0,0,.75);}
 #inv-drawer.open{transform:translateY(0);}
+
+/* ── ENVIRONMENTAL FX (CSS-based) ── */
+.tile-floor-etched::after{content:'';position:absolute;inset:0;background:radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);pointer-events:none;}
 @media(orientation:landscape) and (max-height:600px){
   #inv-drawer{max-height:80vh;}
 }
 .drawer-handle{width:40px;height:4px;background:var(--dim);border-radius:2px;margin:0 auto 14px;}
 .panel-title{font-family:'Press Start 2P',monospace;font-size:.38rem;color:var(--accent);letter-spacing:.2em;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:8px;}
 .inv-section{margin-bottom:14px;}
-.inv-slot{padding:8px 10px;border:1px solid #332a20;margin-bottom:5px;cursor:pointer;transition:all .12s;display:flex;justify-content:space-between;align-items:center;gap:8px;touch-action:manipulation;user-select:none;-webkit-user-select:none;background:rgba(255,255,255,.035);}
+.inv-slot{padding:8px 10px;border:1px solid #332a20;margin-bottom:5px;cursor:pointer;transition:all .15s cubic-bezier(.4,0,.2,1);display:flex;justify-content:space-between;align-items:center;gap:8px;touch-action:manipulation;user-select:none;-webkit-user-select:none;background:rgba(255,255,255,.035);}
 .inv-slot:active{border-color:var(--gold);background:rgba(251,191,36,.07);}
 .inv-slot.equipped{border-color:var(--accent);background:rgba(192,132,252,.08);}
 .inv-name{color:var(--text);font-size:.65rem;}
@@ -279,12 +335,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* ── SHOP OVERLAY ── */
 #shop-overlay{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:16px;animation:fadeIn .3s;}
-#shop-overlay.open{display:flex;}
+#shop-overlay.open{display:flex; animation:overlaySlideIn .3s cubic-bezier(.4,0,.2,1);}
 #shop-modal{background:linear-gradient(#171317,#0c0a0d);border:2px solid #6f5430;padding:20px;max-width:420px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 0 2px #050507,0 0 48px rgba(0,0,0,.75);touch-action:pan-y;}
 #shop-modal h2{font-family:'Press Start 2P',monospace;font-size:.7rem;color:#d7b46a;text-align:center;margin-bottom:4px;text-shadow:0 0 10px rgba(215,180,106,.35);}
 .shop-subtitle{color:var(--dim);font-size:.58rem;text-align:center;margin-bottom:14px;}
 .shop-gold-display{font-size:.7rem;color:var(--gold);text-align:center;margin-bottom:14px;}
-.shop-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border:1px solid #332a20;margin-bottom:6px;cursor:pointer;transition:all .15s;touch-action:manipulation;user-select:none;-webkit-user-select:none;background:rgba(255,255,255,.035);}
+.shop-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border:1px solid #332a20;margin-bottom:6px;cursor:pointer;transition:all .15s cubic-bezier(.4,0,.2,1);touch-action:manipulation;user-select:none;-webkit-user-select:none;background:rgba(255,255,255,.035);}
 .shop-item:active,.shop-item:hover{border-color:var(--gold);background:rgba(251,191,36,.06);}
 .shop-item.sold{opacity:.35;pointer-events:none;}
 .shop-item-left{flex:1;}
@@ -298,7 +354,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .shop-tab.active{border-color:var(--gold);color:var(--gold);background:rgba(251,191,36,.08);}
 .shop-tab:active{background:var(--border);}
 #shop-buy-panel,#shop-sell-panel{padding-bottom:24px;}
-.sell-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border:1px solid #332a20;margin-bottom:6px;cursor:pointer;transition:all .15s;touch-action:manipulation;user-select:none;-webkit-user-select:none;background:rgba(255,255,255,.035);}
+.sell-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border:1px solid #332a20;margin-bottom:6px;cursor:pointer;transition:all .15s cubic-bezier(.4,0,.2,1);touch-action:manipulation;user-select:none;-webkit-user-select:none;background:rgba(255,255,255,.035);}
 .sell-item:active,.sell-item:hover{border-color:var(--green);background:rgba(74,222,128,.06);}
 .sell-item-left{flex:1;}
 .sell-item-name{color:var(--text);font-size:.65rem;}
@@ -321,33 +377,42 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* ── OTHER OVERLAYS ── */
 .overlay{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;animation:fadeIn .3s;padding:16px;}
-.modal{background:linear-gradient(#171317,#0c0a0d);border:2px solid #6f5430;padding:28px 24px;text-align:center;max-width:360px;width:100%;box-shadow:0 0 0 2px #050507,0 0 48px rgba(0,0,0,.75);}
+.modal{background:linear-gradient(#171317,#0c0a0d);border:2px solid #6f5430;padding:28px 24px;text-align:center;max-width:360px;width:100%;box-shadow:0 0 0 2px #050507,0 0 48px rgba(0,0,0,.75); transition: transform 0.2s ease;}
 .modal h2{font-family:'Press Start 2P',monospace;font-size:.9rem;margin-bottom:14px;color:var(--accent);}
 .modal.death h2{color:var(--red);}
 .modal.victory h2{color:var(--gold);}
 .modal p{font-size:.65rem;line-height:2;color:var(--dim);margin-bottom:16px;}
 .modal .stats-list{font-size:.62rem;line-height:2.4;margin-bottom:18px;}
 .modal .stats-list span{color:var(--text);}
-#tooltip{position:fixed;background:var(--panel);border:1px solid var(--accent);padding:7px 11px;font-size:.6rem;line-height:1.9;pointer-events:none;z-index:90;display:none;max-width:160px;}
+#tooltip{position:fixed;background:var(--panel);border:1px solid var(--accent);padding:7px 11px;font-size:.6rem;line-height:1.9;pointer-events:none;z-index:90;display:none;max-width:160px; transition: all 0.2s ease;}
 
 /* FX */
 #map-wrap.shake,#game-canvas.shake{animation:shake .18s ease;}
-.float-text{position:fixed;font-family:'Press Start 2P',monospace;font-size:12px;line-height:1;pointer-events:none;z-index:200;animation:floatup .85s ease forwards;text-shadow:-2px 0 #050507,2px 0 #050507,0 -2px #050507,0 2px #050507;transform:translate(-50%,-50%);}
-#damage-flash{position:fixed;inset:0;z-index:300;background:rgba(248,113,113,0.35);pointer-events:none;opacity:0;}
-#damage-flash.flash{animation:damageFlash .4s ease-out forwards;}
-@keyframes damageFlash{0%{opacity:1;}100%{opacity:0;}}
+.float-text{position:fixed;font-family:'Press Start 2P',monospace;font-size:14px;line-height:1;pointer-events:none;z-index:200;animation:floatup .85s ease forwards;text-shadow:-2px 0 #050507,2px 0 #050507,0 -2px #050507,0 2px #050507;transform:translate(-50%,-50%); font-weight: bold;}
+.float-text.damage{color: var(--red);}
+.float-text.heal{color: var(--green);}
+.float-text.gold{color: var(--gold);}
+.float-text.magic{color: var(--accent);}
+#damage-flash{position:fixed;inset:0;z-index:300;background:linear-gradient(45deg, rgba(248,113,113,0.3), rgba(255,100,100,0.2)); pointer-events:none; opacity:0;}
+#damage-flash.flash{animation:damageFlash .4s cubic-bezier(.4,0,.2,1) forwards;}
+@keyframes damageFlash{0%{opacity:1; transform: scale(1);} 100%{opacity:0; transform: scale(1.2);}}
 @keyframes enemyDeath{0%{filter:brightness(3) saturate(0);}100%{filter:brightness(0);opacity:0;}}
 .tile-enemy-dying{animation:enemyDeath .3s ease-out forwards;pointer-events:none;}
 @keyframes pulse{0%,100%{text-shadow:0 0 40px rgba(192,132,252,.6)}50%{text-shadow:0 0 80px rgba(192,132,252,.95),0 0 120px rgba(192,132,252,.4)}}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 @keyframes floatup{0%{opacity:1;transform:translate(-50%,-50%)}100%{opacity:0;transform:translate(-50%,calc(-50% - 34px))}}
-.pop-text{position:fixed;font-size:1.4rem;pointer-events:none;z-index:200;animation:popAnim .4s ease-out forwards;text-shadow:0 0 10px rgba(255,255,255,0.5);}
+.pop-text{position:fixed;font-family:'Press Start 2P',monospace;font-size:1.4rem;pointer-events:none;z-index:200;animation:popAnim .4s ease-out forwards;text-shadow:0 0 10px rgba(255,255,255,0.5);}
+.pop-text.damage{color: var(--red); text-shadow: 0 0 20px var(--red);}
+.pop-text.heal{color: var(--green); text-shadow: 0 0 20px var(--green);}
 @keyframes popAnim{0%{opacity:0;transform:scale(0.2) translateY(10px)}30%{opacity:1;transform:scale(1.2) translateY(-5px)}100%{opacity:0;transform:scale(1.5) translateY(-15px)}}
 @keyframes shopPulse{0%,100%{opacity:1}50%{opacity:.6}}
 @keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
+@keyframes overlaySlideIn{from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);}}
 .hidden{display:none!important;}
-::-webkit-scrollbar{width:3px;}
-::-webkit-scrollbar-thumb{background:var(--dim);}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--panel);}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--accent);}
 .req-tag{display:inline-block;background:rgba(248,113,113,0.15);border:1px solid var(--red);color:#ff9999;padding:1px 4px;border-radius:2px;font-size:0.5rem;margin-left:4px;vertical-align:middle;}
 .req-tag.req-match{background:rgba(74,222,128,0.15);border-color:var(--green);color:#86efac;}
 .req-tag.req-wait{background:rgba(251,146,60,0.15);border-color:var(--orange);color:#fdba74;}
@@ -401,6 +466,135 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 @media (min-width: 1600px) and (min-height: 1000px) {
   #minimap { width: 336px; height: 216px; top: 30px; right: 30px; border-width: 3px; opacity: 1; }
 }
+
+/* ══════════════════════════════════════════════
+   ROUND D — TILE & ENVIRONMENTAL FX
+   ══════════════════════════════════════════════ */
+
+/* ── TILE VARIATION ── */
+/* Wall density variants (applied via inline style color) */
+.tile-wall-heavy{color:#0a0a18;background:#08080e;}
+.tile-wall-medium{color:#111128;background:#0a0a15;}
+.tile-wall-light{color:#161630;background:#0c0c18;}
+.tile-wall-outer{color:#0d0d14;background:#06060c;}
+
+/* Floor texture variants */
+.tile-floor-var-a{background:#181828;}
+.tile-floor-var-b{background:#1c1c2a;}
+.tile-floor-var-c{background:#1a1a28;}
+
+/* ── BLOODSTAINS ── */
+.tile-stained{position:relative;}
+.tile-stained::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%, rgba(180,30,30,0.25), transparent 70%);pointer-events:none;z-index:2;}
+.tile-stained-heavy::after{background:radial-gradient(ellipse at 40% 50%, rgba(180,30,30,0.4), transparent 65%), radial-gradient(ellipse at 70% 40%, rgba(160,20,20,0.25), transparent 60%);}
+.tile-stained-old::after{background:radial-gradient(ellipse at 50% 55%, rgba(100,40,25,0.2), transparent 65%);}
+
+/* ── TILE REVEAL ANIMATION ── */
+@keyframes tileReveal{0%{opacity:0;transform:scale(0.6) rotateX(10deg);filter:brightness(2);} 60%{opacity:1;transform:scale(1.05);filter:brightness(1.3);} 100%{opacity:1;transform:scale(1) rotateX(0);filter:brightness(1);}}
+.tile-reveal{animation:tileReveal 0.35s cubic-bezier(.2,0,.2,1) forwards;}
+
+/* ── FOG / DARKNESS OVERLAY ── */
+.tile-fog{position:relative;}
+.tile-fog::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center, rgba(10,10,18,0) 30%, rgba(10,10,18,0.35) 100%);pointer-events:none;z-index:1;transition:opacity 0.5s ease;}
+
+/* ── DOOR ENHANCEMENTS ── */
+.tile-locked-door{background:linear-gradient(135deg,#2a1a1a,#1a0a0a);color:#f87171;text-shadow:0 0 8px rgba(248,113,113,0.6),0 0 16px rgba(248,113,113,0.3);border:1px solid rgba(248,113,113,0.15);animation:lockedDoorPulse 2.5s ease-in-out infinite;}
+@keyframes lockedDoorPulse{0%,100%{box-shadow:inset 0 0 6px rgba(248,113,113,0.1);} 50%{box-shadow:inset 0 0 12px rgba(248,113,113,0.25);}}
+
+.tile-secret-door{background:linear-gradient(135deg,#0d0d15,#0a0a12);color:#1a1a30;}
+
+/* ── AMBIENT PARTICLES ── */
+@keyframes dripFall{0%{opacity:0;transform:translateY(-10px);} 20%{opacity:0.8;} 80%{opacity:0.6;} 100%{opacity:0;transform:translateY(30px);}}
+@keyframes dustDrift{0%{opacity:0;transform:translate(0,0) scale(1);} 20%{opacity:0.5;} 80%{opacity:0.3;} 100%{opacity:0;transform:translate(20px,-15px) scale(0.5);}}
+@keyframes torchFlicker{0%,100%{opacity:0.15;} 25%{opacity:0.2;} 50%{opacity:0.1;} 75%{opacity:0.18;}}
+.ambient-drip{position:fixed;width:2px;height:6px;background:linear-gradient(180deg,transparent,rgba(120,160,220,0.4));border-radius:0 0 2px 2px;pointer-events:none;z-index:40;animation:dripFall 1.8s ease-in forwards;}
+.ambient-dust{position:fixed;width:3px;height:3px;background:rgba(200,200,220,0.15);border-radius:50%;pointer-events:none;z-index:40;animation:dustDrift 4s ease-out forwards;}
+
+/* ── PLAYER TRAIL ── */
+@keyframes trailFade{0%{opacity:0.4;transform:scale(1);} 100%{opacity:0;transform:scale(0.85);}}
+.trail-glow{position:absolute;width:100%;height:100%;top:0;left:0;background:radial-gradient(circle, rgba(192,132,252,0.15), transparent 70%);border-radius:50%;pointer-events:none;animation:trailFade 0.6s ease-out forwards;z-index:1;}
+
+/* ── WALL GLOW / TORCH NEAR PLAYER ── */
+@keyframes torchGlow{0%,100%{opacity:0.08;} 30%{opacity:0.12;} 60%{opacity:0.06;} 80%{opacity:0.1;}}
+.player-glow{position:absolute;width:200%;height:200%;left:-50%;top:-50%;background:radial-gradient(circle, rgba(192,132,252,0.08), transparent 60%);pointer-events:none;z-index:0;animation:torchGlow 1.2s ease-in-out infinite;}
+
+/* ── ENHANCED STAIRS ── */
+.tile-stairs{background:linear-gradient(135deg,#0a1a10,#0d2015);color:var(--green);text-shadow:0 0 8px rgba(74,222,128,0.5),0 0 20px rgba(74,222,128,0.2);border:1px solid rgba(74,222,128,0.1);}
+
+/* ── ENHANCED SHOP ── */
+.tile-shop{background:linear-gradient(135deg,#1a1508,#201a0a);color:var(--gold);text-shadow:0 0 10px rgba(251,191,36,0.5),0 0 25px rgba(251,191,36,0.2);border:1px solid rgba(251,191,36,0.12);animation:shopPulse 2s ease-in-out infinite;}
+
+/* ── ENHANCED TRAPS ── */
+.tile-trap-spike{background:linear-gradient(180deg,transparent,rgba(251,146,60,0.08));}
+.tile-trap-gas{background:radial-gradient(circle,rgba(74,222,128,0.06),transparent 80%);}
+.tile-trap-bear{background:radial-gradient(circle,rgba(248,113,113,0.06),transparent 80%);}
+
+/* ── FLOOR DECORATIONS (cracks, moss, runes) ── */
+.tile-deco-crack::after{content:'';position:absolute;inset:0;background:linear-gradient(45deg,transparent 40%,rgba(60,50,40,0.08) 42%,transparent 44%);pointer-events:none;}
+.tile-deco-moss::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 70%,rgba(50,120,50,0.06),transparent 60%);pointer-events:none;}
+.tile-deco-rune::after{content:'✦';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.5em;color:rgba(192,132,252,0.06);pointer-events:none;}
+
+/* ══════════════════════════════════════════════
+   ROUND E — COORDINATED VISUAL THEME SYSTEM
+   ══════════════════════════════════════════════ */
+
+/* ── THEME VIGNETTE ── */
+#theme-vignette{
+  pointer-events:none;
+  z-index:5;
+  transition: background var(--theme-transition, 0.6s cubic-bezier(0.4,0,0.2,1));
+}
+
+/* ── FLOOR TRANSITION ── */
+@keyframes floorTransitionIn{0%{opacity:1;} 60%{opacity:0.6;} 100%{opacity:0;}}
+#floor-transition{
+  pointer-events:none;
+  z-index:400;
+  opacity:0;
+  background:#000;
+  transition:opacity 0s;
+}
+#floor-transition.active{
+  animation:floorTransitionIn 0.7s cubic-bezier(0.4,0,0.2,1) forwards;
+}
+
+/* ── COORDINATED SCREEN FLASH ── */
+#coord-flash{
+  pointer-events:none;
+  z-index:350;
+  transition:opacity 0.15s ease;
+}
+
+/* ── THEME-AWARE TILE TRANSITIONS ── */
+.tile{
+  transition: background var(--theme-transition, 0.3s ease),
+              color var(--theme-transition, 0.3s ease),
+              box-shadow var(--theme-transition, 0.3s ease);
+}
+.tile-wall{transition: background var(--theme-transition, 0.3s ease), color var(--theme-transition, 0.3s ease);}
+.tile-floor{transition: background var(--theme-transition, 0.3s ease), color var(--theme-transition, 0.3s ease);}
+
+/* ── THEME-AWARE PARTICLES ── */
+.particle{transition: background-color var(--theme-transition);}
+
+/* ── LEVEL-UP BURST ── */
+@keyframes levelUpBurst{0%{opacity:0;transform:scale(0.2);} 30%{opacity:1;transform:scale(1.3);} 100%{opacity:0;transform:scale(1.8);}}
+.level-up-ring{position:fixed;width:60px;height:60px;border:2px solid var(--theme-magic,#c084fc);border-radius:50%;pointer-events:none;z-index:300;animation:levelUpBurst 0.8s cubic-bezier(.4,0,.2,1) forwards;transform:translate(-50%,-50%);}
+
+/* ── THEME-COLORED COMBAT RIPPLES ── */
+.combat-ripple{transition: border-color var(--theme-transition);}
+.combat-flash{transition: box-shadow var(--theme-transition);}
+
+/* ── COORDINATED PARTICLES THEME AWARE ── */
+@keyframes particleFloatTheme{0%{opacity:1;transform:translateY(0);} 100%{opacity:0;transform:translateY(-40px);}}
+.theme-particle{position:absolute;width:3px;height:3px;border-radius:50%;pointer-events:none;background:var(--theme-particle,#c084fc);animation:particleFloatTheme 1.5s cubic-bezier(.4,0,.2,1) forwards;}
+
+/* ── DEPTH INDICATOR FLOOR LABEL ── */
+#floor-label{transition: color var(--theme-transition), text-shadow var(--theme-transition);}
+
+/* ── COORDINATED HUD ACCENT ── */
+.hud-orb{transition: background var(--theme-transition), box-shadow var(--theme-transition);}
+.bash-ready{transition: border-color var(--theme-transition), color var(--theme-transition);}
 
 </style>
 <link rel="manifest" href="manifest.json">
@@ -989,11 +1183,6 @@ function flashDamage(){
   el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');
 }
 function floatText(txt,gx,gy,color){
-  const renderer = typeof window !== 'undefined' ? window.PixedRenderer : null;
-  if(renderer && renderer.initialized && renderer.canvas && typeof spawnPixedFx === 'function'){
-    spawnPixedFx({ key: 'fx.hit', x: gx, y: gy, color, text: txt, durationMs: 650 });
-    return;
-  }
   const p = getFxPoint(gx, gy);
   let el=document.createElement('div');
   el.className='float-text';el.textContent=txt;el.style.color=color;
@@ -1009,6 +1198,715 @@ function popText(txt,gx,gy){
   document.body.appendChild(el);setTimeout(()=>el.remove(),400);
 }
 
+// === ENHANCED COMBAT VISUAL FEEDBACK ===
+
+function spawnCombatRipple(x, y, color = '#ffffff'){
+  const p = getFxPoint(x, y);
+  const el = document.createElement('div');
+  el.className = 'combat-ripple';
+  el.style.left = p.left + 'px';
+  el.style.top = p.top + 'px';
+  el.style.borderColor = color;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 500);
+}
+
+function spawnCritText(x, y, text){
+  const p = getFxPoint(x, y);
+  const el = document.createElement('div');
+  el.className = 'crit-text';
+  el.textContent = text;
+  el.style.left = (p.left - 20) + 'px';
+  el.style.top = (p.top - 30) + 'px';
+  el.style.color = '#fbbf24';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 600);
+  // Also spawn gold ripple for crit
+  spawnCombatRipple(x, y, '#fbbf24');
+}
+
+function spawnDodgeEffect(x, y, color = '#60a5fa'){
+  const p = getFxPoint(x, y);
+  const el = document.createElement('div');
+  el.className = 'dodge-text';
+  el.textContent = '💨';
+  el.style.left = (p.left - 10) + 'px';
+  el.style.top = (p.top - 10) + 'px';
+  el.style.color = color;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 500);
+}
+
+function spawnHealEffect(x, y, text, color = '#4ade80'){
+  const p = getFxPoint(x, y);
+  const el = document.createElement('div');
+  el.className = 'heal-text';
+  el.textContent = text;
+  el.style.left = (p.left - 20) + 'px';
+  el.style.top = (p.top - 5) + 'px';
+  el.style.color = color;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 800);
+}
+
+function enemyHitFlash(enemyId) {
+  const tile = document.querySelector(`.tile-enemy[onclick*="${enemyId}"]`);
+  if(tile) {
+    tile.classList.remove('combat-flash');
+    void tile.offsetWidth;
+    tile.classList.add('combat-flash');
+  }
+}
+
+function spawnDeathExplosion(x, y, color = '#f87171') {
+  // Spawn multiple ripples for death
+  for(let i = 0; i < 3; i++) {
+    setTimeout(() => {
+      spawnCombatRipple(x, y, color);
+    }, i * 80);
+  }
+  // Bonus pop for death
+  popText('💀', x, y);
+}
+
+function spawnAbilityEffect(x, y, type) {
+  const colors = {
+    bash: '#fb923c',
+    fireball: '#ef4444',
+    smite: '#fde68a',
+    shot: '#bbf7d0',
+    cleave: '#fca5a5',
+    siphon: '#c4b5fd',
+    kick: '#fed7aa',
+    shield: '#60a5fa',
+    vanish: '#a3a3a3',
+    heal: '#4ade80',
+    lightning: '#818cf8',
+    dark: '#a78bfa'
+  };
+  const color = colors[type] || '#ffffff';
+  spawnCombatRipple(x, y, color);
+  // Bigger ripple for abilities
+  setTimeout(() => spawnCombatRipple(x, y, color), 100);
+  setTimeout(() => spawnCombatRipple(x, y, color), 200);
+}
+
+function spawnStatusEffect(x, y, symbol, color = '#ffffff') {
+  const p = getFxPoint(x, y);
+  const el = document.createElement('div');
+  el.className = 'pop-text';
+  el.textContent = symbol;
+  el.style.left = (p.left - p.halfW/2) + 'px';
+  el.style.top = (p.top - p.halfH - 10) + 'px';
+  el.style.fontSize = '1.8rem';
+  el.style.color = color;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 500);
+}
+
+</script>
+<script>
+// ===================== VISUAL EFFECTS MODULE =====================
+
+// NEW: Particle system for visual effects
+function spawnParticle(x, y, color = '#ffffff', duration = 800) {
+  const el = document.createElement('div');
+  el.className = 'particle';
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.style.backgroundColor = color;
+  el.style.boxShadow = `0 0 ${Math.random() * 10}px ${color}`;
+  document.body.appendChild(el);
+
+  setTimeout(() => {
+    el.remove();
+  }, duration);
+}
+
+// NEW: Auras for magic and special abilities
+function createAura(elementId, type) {
+  const element = document.getElementById(elementId);
+  if (element && ['aura-magic', 'aura-fire', 'aura-lightning'].includes(type)) {
+    element.classList.add(type);
+  }
+}
+
+// NEW: Lighting effects on tiles
+function updateTileLighting(tileId, isLit) {
+  const tile = document.querySelector(`#${tileId}`);
+  if (!tile) return;
+
+  if (isLit) {
+    tile.classList.add('tile-lighted');
+  } else {
+    tile.classList.remove('tile-lighted');
+  }
+}
+
+// NEW: Dynamic background patterns for atmosphere
+function setAtmosphericPattern(type) {
+  const body = document.body;
+  // Remove existing pattern classes
+  body.classList.remove('pattern-dark', 'pattern-ethereal', 'pattern-fire');
+
+  if (type === 'dark') {
+    body.classList.add('pattern-dark');
+  } else if (type === 'ethereal') {
+    body.classList.add('pattern-ethereal');
+  } else if (type === 'fire') {
+    body.classList.add('pattern-fire');
+  }
+}
+
+// NEW: Dynamic lighting system for dungeon ambiance
+function setDungeonLighting(brightness = 1.0) {
+  const mapArea = document.getElementById('map-area');
+  if (!mapArea) return;
+
+  // Apply dynamic brightness and contrast adjustments
+  mapArea.style.filter = `brightness(${brightness}) contrast(1.2)`;
+}
+
+// NEW: Add floating text for magic effects
+function spawnMagicText(x, y, text, color) {
+  const el = document.createElement('div');
+  el.className = 'float-text';
+  el.textContent = text;
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.style.color = color;
+  document.body.appendChild(el);
+
+  setTimeout(() => {
+    el.remove();
+  }, 1000);
+}
+
+// NEW: Create elemental particles on impact
+function spawnImpactParticles(x, y, type) {
+  const count = 8;
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => {
+      spawnParticle(
+        x + Math.random() * 20 - 10,
+        y + Math.random() * 20 - 10,
+        type === 'fire' ? '#ff6f00' : 
+                      type === 'lightning' ? '#4fc3f7' :
+                      type === 'magic' ? '#c59bf8' : '#ffffff',
+      600 + Math.random() * 200
+      );
+    }, i * 50);
+  }
+}
+// === COMBAT-SPECIFIC VISUAL EFFECTS ===
+
+// Player damage burst (when player hits enemy)
+function spawnPlayerHitEffect(gx, gy) {
+  spawnCombatRipple(gx, gy, '#ef4444');
+  enemyHitFlash(gx, gy);
+}
+
+// Crit-specific burst with extra particles
+function spawnCritBurst(x, y) {
+  spawnCritText(x, y, '⚡CRIT!');
+  // Extra ripples
+  spawnCombatRipple(x, y, '#fbbf24');
+  spawnCombatRipple(x, y, '#fbbf24');
+}
+
+// Death burst with type-specific color
+function spawnDeathBurst(gx, gy, enemyColor) {
+  spawnDeathExplosion(gx, gy, enemyColor || '#f87171');
+  // Extra particles
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => {
+      spawnParticle(
+        gx * 32 + 16 + Math.random() * 16 - 8,
+        gy * 32 + 16 + Math.random() * 16 - 8,
+        enemyColor || '#f87171',
+        500 + Math.random() * 300
+      );
+    }, i * 60);
+  }
+}
+
+// Ability visual with class-specific theming
+function spawnClassAbilityEffect(gx, gy, abilityType) {
+  const themeColors = {
+    'FIREBALL': '#fb923c',
+    'SMITE': '#fde68a',
+    'PIERCING_SHOT': '#bbf7d0',
+    'CLEAVE': '#fca5a5',
+    'SIPHON': '#c4b5fd',
+    'BASH': '#fb923c',
+    'PUSH_KICK': '#fed7aa',
+    'DASH': '#a3a3a3',
+    'VANISH': '#94a3b8',
+    'BLINK': '#818cf8',
+    'SHIELD_WALL': '#60a5fa',
+    'BLOODLUST': '#ef4444',
+    'RAISE_DEAD': '#a78bfa',
+    'BEAR_TRAP': '#fb923c',
+    'FLURRY': '#fca5a5',
+    'LAY_ON_HANDS': '#4ade80'
+  };
+  const color = themeColors[abilityType] || '#ffffff';
+  // Big triple ripple for abilities
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => spawnCombatRipple(gx, gy, color), i * 100);
+  }
+}
+
+// Dodge/Miss visual feedback
+function spawnEvadeEffect(gx, gy, type) {
+  if (type === 'dodge') {
+    spawnDodgeEffect(gx, gy, '#60a5fa');
+  } else if (type === 'block') {
+    spawnDodgeEffect(gx, gy, '#a78bfa');
+  }
+}
+
+// Status application visual
+function spawnStatusApplied(gx, gy, statusType) {
+  const statusIcons = {
+    'stunned': { symbol: '💫', color: '#fbbf24' },
+    'poisoned': { symbol: '☠️', color: '#a855f7' },
+    'frozen': { symbol: '❄️', color: '#3b82f6' },
+    'rooted': { symbol: '🌿', color: '#4ade80' },
+    'enraged': { symbol: '💢', color: '#ef4444' },
+    'burning': { symbol: '🔥', color: '#fb923c' }
+  };
+  const s = statusIcons[statusType] || { symbol: '✨', color: '#ffffff' };
+  spawnStatusEffect(gx, gy, s.symbol, s.color);
+}
+
+// ════════════════════════════════════════════════
+// ROUND D — ENVIRONMENTAL & AMBIENT FX
+// ════════════════════════════════════════════════
+
+// Ambient water drip particle
+function spawnAmbientDrip() {
+  const mapArea = document.getElementById('map-area');
+  if (!mapArea || !G || !G.map) return;
+  const rect = mapArea.getBoundingClientRect();
+  // Spawn drips only over dark/seen areas (random positions)
+  const x = rect.left + Math.random() * rect.width;
+  const y = rect.top + Math.random() * rect.height * 0.6;
+  const el = document.createElement('div');
+  el.className = 'ambient-drip';
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.style.animationDuration = (1.5 + Math.random() * 1.0) + 's';
+  el.style.opacity = 0.15 + Math.random() * 0.2;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2500);
+}
+
+// Ambient dust mote particle
+function spawnAmbientDust() {
+  const mapArea = document.getElementById('map-area');
+  if (!mapArea || !G || !G.map) return;
+  const rect = mapArea.getBoundingClientRect();
+  const x = rect.left + Math.random() * rect.width;
+  const y = rect.top + Math.random() * rect.height;
+  const el = document.createElement('div');
+  el.className = 'ambient-dust';
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.style.animationDuration = (3 + Math.random() * 3) + 's';
+  el.style.width = (2 + Math.random() * 3) + 'px';
+  el.style.height = el.style.width;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 6000);
+}
+
+// Player movement trail — fading glow on tile
+function spawnPlayerTrail(gx, gy) {
+  const mapEl = document.getElementById('map');
+  if (!mapEl) return;
+  // Find the tile div at this grid position
+  const idx = gy * MAP_W + gx;
+  const tile = mapEl.children[idx];
+  if (!tile) return;
+  // Check it's a floor tile and not player's current position
+  if (gx === G.player.x && gy === G.player.y) return;
+  const trail = document.createElement('div');
+  trail.className = 'trail-glow';
+  tile.appendChild(trail);
+  setTimeout(() => { if (trail.parentNode) trail.remove(); }, 600);
+}
+
+// Add bloodstain to the game state
+function spawnBloodstain(gx, gy) {
+  if (!G.bloodstains) G.bloodstains = new Set();
+  const key = gx + ',' + gy;
+  G.bloodstains.add(key);
+}
+
+// Tile reveal burst effect
+function spawnTileReveal(gx, gy) {
+  const mapEl = document.getElementById('map');
+  if (!mapEl) return;
+  const idx = gy * MAP_W + gx;
+  const tile = mapEl.children[idx];
+  if (!tile) return;
+  // The tile-reveal CSS animation is already applied in renderLegacyMap
+  // This can add an extra particle burst
+  if (typeof spawnParticle === 'function') {
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        const rect = tile.getBoundingClientRect();
+        spawnParticle(
+          rect.left + rect.width / 2 + Math.random() * 10 - 5,
+          rect.top + rect.height / 2 + Math.random() * 10 - 5,
+          'rgba(200,200,255,0.3)',
+          400
+        );
+      }, i * 80);
+    }
+  }
+}
+
+// Start/stop ambient dungeon effects (managed externally)
+let _ambientTimer = null;
+
+function startDungeonAmbient() {
+  stopDungeonAmbient();
+  // Drip sounds-like effect (visual only — occasional droplets)
+  _ambientTimer = setInterval(() => {
+    if (!G || !G.map) return;
+    if (Math.random() < 0.3) spawnAmbientDrip();
+    if (Math.random() < 0.4) spawnAmbientDust();
+  }, 2000);
+}
+
+function stopDungeonAmbient() {
+  if (_ambientTimer) {
+    clearInterval(_ambientTimer);
+    _ambientTimer = null;
+  }
+}
+</script>
+<script>
+// ===================== VISUAL THEME COORDINATOR =====================
+// Central hub that ties together all visual systems (fx.js, visual-effects.js,
+// CSS, combat feedback) into coordinated themes based on dungeon depth.
+
+const DUNGEON_THEMES = {
+  // Floor 1 — Damp Catacombs (cool blue-grey)
+  damp_catacombs: {
+    name: 'Damp Catacombs',
+    ambient: '#3b82b6', combat: '#60a5fa', particle: '#93c5fd',
+    heal: '#34d399', death: '#94a3b8', magic: '#818cf8',
+    floorBase: '#181828', wallBase: '#0a0a18',
+    vignette: 'rgba(10,30,60,0.12)',
+    dripColor: 'rgba(100,150,210,0.35)',
+    cssAccent: '#60a5fa',
+  },
+  // Floor 2 — Ossuary (bone-white & rust)
+  ossuary: {
+    name: 'Ossuary',
+    ambient: '#a3a3a3', combat: '#f87171', particle: '#e5e5e0',
+    heal: '#86efac', death: '#78716c', magic: '#c4b5fd',
+    floorBase: '#1c1c1e', wallBase: '#111115',
+    vignette: 'rgba(30,20,15,0.15)',
+    dripColor: 'rgba(160,140,120,0.25)',
+    cssAccent: '#d6d3d1',
+  },
+  // Floor 3 — Fiery Abyss (orange-red heat)
+  fiery_abyss: {
+    name: 'Fiery Abyss',
+    ambient: '#ef4444', combat: '#fb923c', particle: '#fca5a5',
+    heal: '#fbbf24', death: '#991b1b', magic: '#fde68a',
+    floorBase: '#1a1414', wallBase: '#0a0808',
+    vignette: 'rgba(40,10,5,0.18)',
+    dripColor: 'rgba(220,100,50,0.25)',
+    cssAccent: '#fb923c',
+  },
+  // Floor 4 — Ethereal Crypt (purple-magenta)
+  ethereal_crypt: {
+    name: 'Ethereal Crypt',
+    ambient: '#a855f7', combat: '#c084fc', particle: '#d8b4fe',
+    heal: '#67e8f9', death: '#7c3aed', magic: '#e879f9',
+    floorBase: '#1a1828', wallBase: '#0c0a18',
+    vignette: 'rgba(40,10,50,0.15)',
+    dripColor: 'rgba(160,120,220,0.3)',
+    cssAccent: '#c084fc',
+  },
+  // Floor 5 — Boss Chamber (golden-bright)
+  boss_chamber: {
+    name: 'Boss Chamber',
+    ambient: '#fbbf24', combat: '#f59e0b', particle: '#fde68a',
+    heal: '#a3e635', death: '#b45309', magic: '#fef3c7',
+    floorBase: '#1a1810', wallBase: '#0c0a06',
+    vignette: 'rgba(30,25,5,0.12)',
+    dripColor: 'rgba(200,180,80,0.3)',
+    cssAccent: '#fbbf24',
+  },
+};
+
+// Active theme state
+let _activeTheme = null;
+let _themeTransitioning = false;
+let _coordinatorInitialized = false;
+
+// Effect throttle — prevent overwhelming the DOM
+const _effectCooldowns = {};
+const EFFECT_COOLDOWNS = {
+  ripple: 50,
+  particle: 30,
+  text: 80,
+  flash: 200,
+};
+
+function throttleEffect(key, minMs) {
+  const now = performance.now();
+  if (_effectCooldowns[key] && now - _effectCooldowns[key] < minMs) return true;
+  _effectCooldowns[key] = now;
+  return false;
+}
+
+// ── THEME MANAGEMENT ──
+
+function getThemeForFloor(floor) {
+  if (floor >= 5) return DUNGEON_THEMES.boss_chamber;
+  if (floor >= 4) return DUNGEON_THEMES.ethereal_crypt;
+  if (floor >= 3) return DUNGEON_THEMES.fiery_abyss;
+  if (floor >= 2) return DUNGEON_THEMES.ossuary;
+  return DUNGEON_THEMES.damp_catacombs;
+}
+
+function initThemeCoordinator() {
+  if (_coordinatorInitialized) return;
+  _coordinatorInitialized = true;
+  const theme = getThemeForFloor(G.floor || 1);
+  applyTheme(theme, false);
+}
+
+function applyTheme(theme, animate = true) {
+  if (_themeTransitioning) return;
+  _activeTheme = theme;
+  const root = document.documentElement;
+
+  if (animate) {
+    _themeTransitioning = true;
+    root.style.setProperty('--theme-transition', 'all 0.6s cubic-bezier(0.4,0,0.2,1)');
+    // Brief dark pulse during transition
+    const vignette = document.getElementById('theme-vignette');
+    if (vignette) {
+      vignette.style.opacity = '0.35';
+      setTimeout(() => { vignette.style.opacity = ''; }, 400);
+    }
+    setTimeout(() => {
+      _themeTransitioning = false;
+      root.style.setProperty('--theme-transition', '');
+    }, 700);
+  }
+
+  // Set CSS variables for coordinated theme colors
+  root.style.setProperty('--theme-ambient', theme.ambient);
+  root.style.setProperty('--theme-combat', theme.combat);
+  root.style.setProperty('--theme-particle', theme.particle);
+  root.style.setProperty('--theme-heal', theme.heal);
+  root.style.setProperty('--theme-death', theme.death);
+  root.style.setProperty('--theme-magic', theme.magic);
+  root.style.setProperty('--theme-floor', theme.floorBase);
+  root.style.setProperty('--theme-wall', theme.wallBase);
+  root.style.setProperty('--theme-vignette', theme.vignette);
+  root.style.setProperty('--theme-accent', theme.cssAccent);
+
+  // Update vignette
+  const vignette = document.getElementById('theme-vignette');
+  if (vignette) {
+    vignette.style.background = `radial-gradient(ellipse at 50% 50%, transparent 55%, ${theme.vignette} 100%)`;
+  }
+}
+
+function setFloorTheme(floor) {
+  const theme = getThemeForFloor(floor);
+  if (_activeTheme !== theme) {
+    applyTheme(theme, true);
+  }
+}
+
+// ── COORDINATED EFFECT DISPATCH ──
+
+function coordCombatHit(x, y, isCrit = false) {
+  if (!_activeTheme) return;
+  const color = isCrit ? '#fbbf24' : _activeTheme.combat;
+  if (typeof spawnCombatRipple === 'function') spawnCombatRipple(x, y, color);
+  // Coordinated particle burst
+  if (typeof spawnParticle === 'function') {
+    for (let i = 0; i < (isCrit ? 5 : 2); i++) {
+      setTimeout(() => {
+        const cx = x * 32 + 16 + Math.random() * 10 - 5;
+        const cy = y * 32 + 16 + Math.random() * 10 - 5;
+        spawnParticle(cx, cy, isCrit ? '#fbbf24' : _activeTheme.particle, 400 + Math.random() * 200);
+      }, i * 40);
+    }
+  }
+}
+
+function coordDeathEffect(x, y, isBoss = false) {
+  if (!_activeTheme) return;
+  const color = isBoss ? '#fbbf24' : _activeTheme.death;
+  if (typeof spawnDeathExplosion === 'function') {
+    spawnDeathExplosion(x, y, color);
+  }
+  // Coordinated burst
+  if (typeof spawnDeathBurst === 'function' && !isBoss) {
+    spawnDeathBurst(x, y, color);
+  }
+  if (isBoss && typeof spawnCombatRipple === 'function') {
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => spawnCombatRipple(x, y, '#fbbf24'), i * 150);
+    }
+  }
+}
+
+function coordHealEffect(x, y, text) {
+  if (!_activeTheme) return;
+  if (typeof spawnHealEffect === 'function') {
+    spawnHealEffect(x, y, text, _activeTheme.heal);
+  }
+}
+
+function coordDodgeEffect(x, y, isPlayer = true) {
+  const color = isPlayer ? '#60a5fa' : '#fbbf24';
+  if (typeof spawnDodgeEffect === 'function') {
+    spawnDodgeEffect(x, y, color);
+  }
+}
+
+function coordCritEffect(x, y) {
+  if (typeof spawnCritBurst === 'function') spawnCritBurst(x, y);
+  if (typeof spawnCritText === 'function') spawnCritText(x, y, '⚡CRIT!');
+}
+
+function coordStatusEffect(x, y, statusType) {
+  if (typeof spawnStatusApplied === 'function') {
+    spawnStatusApplied(x, y, statusType);
+  }
+}
+
+function coordAbilityEffect(x, y, abilityType) {
+  if (typeof spawnClassAbilityEffect === 'function') {
+    spawnClassAbilityEffect(x, y, abilityType);
+  }
+  if (typeof spawnAbilityEffect === 'function') {
+    const typeMap = {
+      FIREBALL: 'fireball', SMITE: 'smite', PIERCING_SHOT: 'shot',
+      CLEAVE: 'cleave', SIPHON: 'siphon', BASH: 'bash',
+      PUSH_KICK: 'kick', SHIELD_WALL: 'shield', VANISH: 'vanish',
+      BLINK: 'lightning', BLOODLUST: 'cleave', RAISE_DEAD: 'dark',
+      BEAR_TRAP: 'bash', FLURRY: 'kick', LAY_ON_HANDS: 'heal',
+    };
+    spawnAbilityEffect(x, y, typeMap[abilityType] || 'bash');
+  }
+}
+
+// ── GLOBAL SCREEN EFFECTS ──
+
+function coordScreenFlash(type = 'combat') {
+  if (!_activeTheme) return;
+  const colorMap = {
+    combat: _activeTheme.combat,
+    heal: _activeTheme.heal,
+    level: _activeTheme.magic,
+    death: _activeTheme.death,
+  };
+  const color = colorMap[type] || _activeTheme.combat;
+
+  let el = document.getElementById('coord-flash');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'coord-flash';
+    el.style.cssText = 'position:fixed;inset:0;z-index:350;pointer-events:none;opacity:0;transition:opacity 0.15s ease;';
+    document.body.appendChild(el);
+  }
+  // Very subtle — just a faint edge vignette, not a solid overlay
+  el.style.background = `radial-gradient(ellipse at center, transparent 55%, ${color}18 100%)`;
+  el.style.opacity = '1';
+  setTimeout(() => { el.style.opacity = '0'; }, 250);
+  // Don't pulse vignette on every effect — too distracting
+}
+
+function pulseVignette() {
+  const vignette = document.getElementById('theme-vignette');
+  if (!vignette) return;
+  vignette.style.opacity = '0.35';
+  setTimeout(() => { vignette.style.opacity = ''; }, 400);
+}
+
+function coordLevelUpFlash() {
+  coordScreenFlash('level');
+  // Subtle sparkle burst around player — fewer particles, centered properly
+  if (typeof spawnParticle === 'function' && G && G.player) {
+    const cs = typeof getCellSize === 'function' ? getCellSize() : 32;
+    for (let i = 0; i < 6; i++) {
+      setTimeout(() => {
+        const px = getFxPoint(G.player.x, G.player.y);
+        spawnParticle(
+          px.left + Math.random() * cs - cs/2,
+          px.top + Math.random() * cs - cs/2,
+          _activeTheme ? _activeTheme.magic : '#c084fc',
+          500 + Math.random() * 300
+        );
+      }, i * 80);
+    }
+  }
+}
+
+function coordFloorTransition() {
+  const el = document.getElementById('floor-transition');
+  if (el) {
+    el.classList.remove('active');
+    void el.offsetWidth;
+    el.classList.add('active');
+  }
+  // Show theme name briefly
+  showThemeBanner();
+}
+
+function showThemeBanner() {
+  if (!_activeTheme) return;
+  let banner = document.getElementById('theme-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'theme-banner';
+    banner.style.cssText = 'position:fixed;top:15%;left:50%;transform:translate(-50%,-50%);z-index:450;pointer-events:none;font-family:"Press Start 2P",monospace;font-size:0.5rem;color:var(--theme-accent,#c084fc);text-shadow:0 0 20px var(--theme-accent,#c084fc);opacity:0;transition:opacity 0.4s ease;text-align:center;letter-spacing:0.15em;';
+    document.body.appendChild(banner);
+  }
+  banner.textContent = _activeTheme.name.toUpperCase();
+  banner.style.opacity = '1';
+  setTimeout(() => { banner.style.opacity = '0'; }, 2000);
+}
+
+// ── INIT / TEARDOWN ──
+
+function ensureCoordinatorDOM() {
+  // Create vignette element
+  if (!document.getElementById('theme-vignette')) {
+    const v = document.createElement('div');
+    v.id = 'theme-vignette';
+    v.style.cssText = 'position:fixed;inset:0;z-index:5;pointer-events:none;transition:opacity 0.5s ease,background 0.6s cubic-bezier(0.4,0,0.2,1);';
+    document.body.appendChild(v);
+  }
+  // Create floor transition overlay
+  if (!document.getElementById('floor-transition')) {
+    const ft = document.createElement('div');
+    ft.id = 'floor-transition';
+    ft.style.cssText = 'position:fixed;inset:0;z-index:400;pointer-events:none;background:#000;opacity:0;transition:opacity 0.5s ease;';
+    document.body.appendChild(ft);
+  }
+}
+
+function shutdownCoordinator() {
+  if (typeof stopDungeonAmbient === 'function') stopDungeonAmbient();
+  _coordinatorInitialized = false;
+  _activeTheme = null;
+}
+
 </script>
 <script>
 // ===================== FOV =====================
@@ -1016,9 +1914,13 @@ function computeVision(){
   G.visible=new Set();
   let px=G.player.x,py=G.player.y;
   let newTiles = 0;
+  // Base vision radius 6, extended by perception (+1 per point, capped at 12)
+  let perception = getStat('perception') || 0;
+  let extraVision = Math.floor(perception);
+  let radius = Math.min(12, 6 + extraVision);
   for(let a=0;a<360;a+=3){
     let rad=a*Math.PI/180;
-    for(let r=0;r<6;r++){
+    for(let r=0;r<radius;r++){
       let ix=Math.round(px+Math.cos(rad)*r),iy=Math.round(py+Math.sin(rad)*r);
       if(ix<0||ix>=MAP_W||iy<0||iy>=MAP_H) break;
       let k=iy*MAP_W+ix;
@@ -1662,16 +2564,30 @@ function drawPixedSceneLighting(ctx) {
   const playerScreen = worldToScreen(getIsoTileCenter(G.player.x, G.player.y), PixedRenderer.camera);
   const canRestore = typeof ctx.save === 'function' && typeof ctx.restore === 'function';
   if (canRestore) ctx.save();
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = 'rgba(0,0,0,0.18)';
-  ctx.fillRect(0, 0, width, height);
+
+  // Radial fog of war: dark vignette from edges, player torch in center
   if (typeof ctx.createRadialGradient === 'function') {
+    // Inner torch glow
     ctx.globalCompositeOperation = 'lighter';
     const glow = ctx.createRadialGradient(playerScreen.x, playerScreen.y + 10, 8, playerScreen.x, playerScreen.y + 10, 260);
     glow.addColorStop(0, 'rgba(214,138,55,0.23)');
     glow.addColorStop(0.35, 'rgba(126,71,35,0.10)');
     glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, width, height);
+
+    // Distance fog: darkens everything beyond torch range
+    ctx.globalCompositeOperation = 'source-over';
+    const fog = ctx.createRadialGradient(playerScreen.x, playerScreen.y + 10, 180, playerScreen.x, playerScreen.y + 10, Math.max(width, height) * 0.7);
+    fog.addColorStop(0, 'rgba(0,0,0,0)');
+    fog.addColorStop(0.4, 'rgba(0,0,0,0.08)');
+    fog.addColorStop(0.7, 'rgba(0,0,0,0.35)');
+    fog.addColorStop(1, 'rgba(0,0,0,0.65)');
+    ctx.fillStyle = fog;
+    ctx.fillRect(0, 0, width, height);
+  } else {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.fillRect(0, 0, width, height);
   }
   if (canRestore) ctx.restore();
@@ -1886,7 +2802,19 @@ function renderPixedScene() {
 
   surfaceTiles
     .sort((a, b) => isoDepthKey({ kind: 'wall', x: a.x, y: a.y }) - isoDepthKey({ kind: 'wall', x: b.x, y: b.y }))
-    .forEach(tile => drawPixedWallEdgesForTile(ctx, G.map, tile.x, tile.y, tile.screen, G.seen, G.visible));
+    .forEach(tile => {
+      const vis = G.visible && G.visible.has(tile.y * MAP_W + tile.x);
+      drawPixedWallEdgesForTile(ctx, G.map, tile.x, tile.y, tile.screen, G.seen, G.visible);
+      // Fog of war: non-visible floor tiles get a dark overlay
+      if (!vis) {
+        ctx.save();
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = '#000000';
+        const pts = pixedDiamondPoints(tile.screen);
+        drawPixedPolygon(ctx, [pts.top, pts.right, pts.bottom, pts.left], '#000000');
+        ctx.restore();
+      }
+    });
 
   propTiles.forEach(({ tile, screen }) => {
     const key = tileAssetKey(tile);
@@ -1932,8 +2860,8 @@ function renderPixedScene() {
   (G.enemies || []).forEach(enemy => {
     const key = enemy.y * MAP_W + enemy.x;
     if (!G.visible || !G.visible.has(key)) return;
+    if (enemy.dying) return;  // death is handled by legacy fx (ripples, skull, bloodstain)
     const animState = typeof getEntityAnimation === 'function' ? getEntityAnimation(`enemy:${enemy.id}`) : null;
-    if (enemy.dying && !(animState || {}).name) return;
     const animName = (animState || {}).name || 'idle';
     const enemySlug = typeof enemyAssetSlug === 'function' ? enemyAssetSlug(enemy) : 'goblin';
     const enemyKey = typeof enemyAssetKey === 'function' ? enemyAssetKey(enemy, animName) : `enemy.${enemySlug}.${animName}`;
@@ -1953,6 +2881,34 @@ function renderPixedScene() {
       drawPixedFallback(ctx, d, screen);
     }
   });
+
+  // Second pass: make tall walls translucent where actors stand behind them
+  // An actor at (ax,ay) stands behind the north wall if map[ay-1][ax] is WALL
+  // and behind the west wall if map[ay][ax-1] is WALL
+  const actorPositions = new Set();
+  actorPositions.add(`${G.player.x},${G.player.y}`);
+  (G.enemies || []).forEach(e => {
+    if (!e.dying && G.visible && G.visible.has(e.y * MAP_W + e.x)) {
+      actorPositions.add(`${e.x},${e.y}`);
+    }
+  });
+  if (G.map && actorPositions.size > 0) {
+    for (const pos of actorPositions) {
+      const [ax, ay] = pos.split(',').map(Number);
+      const tile = getPixedMapTile(G.map, ax, ay);
+      if (!isPixedSurfaceTile(tile)) continue;
+      const screen = worldToScreen(gridToIso(ax, ay), PixedRenderer.camera);
+      const edges = getPixedWallEdges(G.map, ax, ay);
+      for (const edge of edges) {
+        if (edge.dir === 'north' || edge.dir === 'west') {
+          ctx.save();
+          ctx.globalAlpha = 0.22;
+          drawPixedWallFace(ctx, screen, edge, ax, ay);
+          ctx.restore();
+        }
+      }
+    }
+  }
 
   drawPixedSceneLighting(ctx);
 
@@ -2066,12 +3022,27 @@ const gdef=()=>{
   return round1(G.player.def + armDef);
 };
 
+// Seeded tile variation hash for deterministic variety
+function tileHash(x, y) {
+  return ((x * 7 + y * 13 + (x ^ y) * 3) >>> 0) % 4;
+}
+
 function render(){
+  // Track newly visible tiles for reveal animation
+  if (typeof G._prevVisible === 'undefined') G._prevVisible = new Set();
+  const newlyVisible = new Set();
+  if (G.visible) {
+    for (const k of G.visible) {
+      if (!G._prevVisible.has(k)) newlyVisible.add(k);
+    }
+  }
+  G._prevVisible = new Set(G.visible);
+
   if (typeof advanceAnimations === 'function') advanceAnimations();
   if (typeof renderPixedScene === 'function') {
     renderPixedScene();
   } else {
-    renderLegacyMap();
+    renderLegacyMap(newlyVisible);
   }
   drawMinimap();
   updateHUD();
@@ -2079,20 +3050,32 @@ function render(){
   updateActBtns();
 }
 
-function renderLegacyMap(){
+function renderLegacyMap(newlyVisible){
+  if (!G.bloodstains) G.bloodstains = new Set();
   const mapEl=document.getElementById('map');
   const cs=getCellSize();
   mapEl.style.gridTemplateColumns=`repeat(${MAP_W},${cs}px)`;
   mapEl.style.fontSize=`${cs*.72}px`;
-  const CH={[TILE.WALL]:'█',[TILE.FLOOR]:'·',[TILE.STAIRS]:'>',[TILE.SHOP]:'$',[TILE.LOCKED_DOOR]:'🔒',[TILE.SECRET_DOOR]:'█'};
+  // Wall symbols by density for variation
+  const WALL_SYMS=['█','▓','▒','░'];
+  // Floor symbols with subtle variation
+  const FLOOR_SYMS=['·','∙','⋅',' '];
+  const TRAP_SYM={spike:'^',gas:'*',bear:'!'};
+  const TRAP_CLS={spike:'tile-trap-spike',gas:'tile-trap-gas',bear:'tile-trap-bear'};
+  const DECO_TYPES=['crack','moss','rune',''];
   let h='';
   for(let y=0;y<MAP_H;y++){
     for(let x=0;x<MAP_W;x++){
       let k=y*MAP_W+x,vis=G.visible.has(k),seen=G.seen.has(k);
-      let s=`width:${cs}px;height:${cs}px;`;
+      let s=`width:${cs}px;height:${cs}px;position:relative;`;
       if(!seen){h+=`<div class="tile tile-dark" style="${s}"></div>`;continue;}
       let t=G.map[y][x];
-      if(x===G.player.x&&y===G.player.y){h+=`<div class="tile tile-player" style="${s}">@</div>`;continue;}
+      // Player tile with torch glow
+      if(x===G.player.x&&y===G.player.y){
+        h+=`<div class="tile tile-player" style="${s}">@<div class="player-glow"></div></div>`;
+        continue;
+      }
+      // ----- ENEMIES -----
       let en=vis?G.enemies.find(e=>e.x===x&&e.y===y):null;
       if(en){
         let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
@@ -2111,6 +3094,7 @@ function renderLegacyMap(){
           ${en.sym.toUpperCase()}</div>`;
         continue;
       }
+      // ----- ITEMS -----
       let it=vis?G.items.find(i=>!i.carried&&i.x===x&&i.y===y):null;
       if(it){
         let safeName = it.name.replace(/'/g,"\\'").replace(/"/g,"&quot;");
@@ -2123,23 +3107,60 @@ function renderLegacyMap(){
           onclick="tilePickup('${it.id}')">${it.sym}</div>`;
         continue;
       }
+      // ----- TRAPS -----
       let trap=seen&&G.traps?G.traps.find(t=>t.x===x&&t.y===y):null;
       if(trap && (trap.triggered || trap.revealed)){
-        let trapSym = trap.type === 'spike' ? '^' : trap.type === 'gas' ? '*' : '!';
+        let trapSym = TRAP_SYM[trap.type] || '!';
         let trapColor = trap.type === 'spike' ? 'var(--orange)' : trap.type === 'gas' ? 'var(--green)' : 'var(--red)';
         let opacity = trap.triggered ? '1' : '0.5';
-        h+=`<div class="tile tile-trap" style="${s}color:${trapColor};text-shadow:0 0 5px ${trapColor};opacity:${opacity}"
+        let trapCls = TRAP_CLS[trap.type] || '';
+        h+=`<div class="tile tile-trap ${trapCls}" style="${s}color:${trapColor};text-shadow:0 0 5px ${trapColor};opacity:${opacity}"
             onmouseenter="showTip(event,'${trap.type.toUpperCase()} TRAP (Revealed)')"
             onmouseleave="hideTip()">${trapSym}</div>`;continue;
       }
+      // ----- STAIRS -----
       if(t===TILE.STAIRS&&seen){
         h+=`<div class="tile tile-stairs" style="${s}" onclick="descend()" ontouchend="event.preventDefault();descend()">></div>`;continue;
       }
+      // ----- SHOP -----
       if(t===TILE.SHOP&&seen){
         h+=`<div class="tile tile-shop" style="${s}" onclick="openShop()" ontouchend="event.preventDefault();openShop()">$</div>`;continue;
       }
-      let sc=(seen&&!vis)?' tile-seen':'';
-      h+=`<div class="tile ${(t===TILE.WALL||t===TILE.SECRET_DOOR)?'tile-wall':'tile-floor'}${sc}" style="${s}">${CH[t]||' '}</div>`;
+      // ----- DOORS -----
+      if(t===TILE.LOCKED_DOOR){
+        h+=`<div class="tile tile-locked-door" style="${s}" onclick="bump()" ontouchend="event.preventDefault();bump()">🔒</div>`;continue;
+      }
+      if(t===TILE.SECRET_DOOR){
+        h+=`<div class="tile tile-secret-door" style="${s}">█</div>`;continue;
+      }
+      // ----- FLOOR / WALL TILES -----
+      let isWall = (t===TILE.WALL);
+      // Determine base tile class
+      let baseCls = isWall ? 'tile-wall' : 'tile-floor';
+      // Add variation based on seeded hash
+      let hval = tileHash(x, y);
+      let varCls = isWall
+        ? ['tile-wall-heavy','tile-wall-medium','tile-wall-light','tile-wall-outer'][hval]
+        : ['tile-floor-var-a','tile-floor-var-b','tile-floor-var-c','tile-floor-var-a'][hval];
+      // Seen but not visible: fog overlay
+      let fog = (seen&&!vis) ? ' tile-fog' : '';
+      // Reveal animation for newly visible tiles
+      let reveal = (newlyVisible && newlyVisible.has(k)) ? ' tile-reveal' : '';
+      // Bloodstain check
+      let stainKey = x+','+y;
+      let stainCls = '';
+      if (G.bloodstains && G.bloodstains.has(stainKey)) {
+        stainCls = ' tile-stained';
+      }
+      // Floor decoration (walls get no decoration)
+      let decoCls = '';
+      if (!isWall && vis && !stainCls) {
+        let d = DECO_TYPES[tileHash(x+3, y+7) % 3]; // only decorative types
+        if (d) decoCls = ' tile-deco-'+d;
+      }
+      // Choose symbol
+      let sym = isWall ? WALL_SYMS[tileHash(x+1, y+5)] : FLOOR_SYMS[tileHash(x+2, y+3)];
+      h+=`<div class="tile ${baseCls} ${varCls}${fog}${reveal}${stainCls}${decoCls}" style="${s}">${sym}</div>`;
     }
   }
   mapEl.innerHTML=h;
@@ -2790,6 +3811,8 @@ function move(dx,dy){
     return;
   }
 
+  // Leave a trail glow on the tile we're leaving
+  if (typeof spawnPlayerTrail === 'function') spawnPlayerTrail(G.player.x, G.player.y);
   G.player.x=nx;G.player.y=ny;
   computeVision();
 
@@ -2861,13 +3884,11 @@ function pickupItem(id, opts={}){
     addLog(`Picked up ${it.name} — stored in bag`,'log-item');
     floatText(`+BAG`,G.player.x,G.player.y,'#fbbf24');
     SFX.pickup();
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: G.player.x, y: G.player.y, color: '#fbbf24', text: 'loot' });
     fireTip('firstPotion');
   } else {
     it.carried=true;it.x=undefined;it.y=undefined;
     addLog(`Picked up ${it.name}`,'log-item');
     SFX.pickup();
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: G.player.x, y: G.player.y, color: '#fbbf24', text: 'loot' });
     autoEquip(it);
     fireTip('firstItem');
   }
@@ -3225,6 +4246,8 @@ function descend(){
   if(typeof flushDeathBatch === 'function') flushDeathBatch();
   G.player.hp=round1(Math.min(G.player.maxHp,G.player.hp+10));
   G.player.poisonedTurns=0;
+  // Coordinated floor transition effect
+  if (typeof coordFloorTransition === 'function') coordFloorTransition();
   buildFloor();
 }
 
@@ -3274,24 +4297,29 @@ function attackEnemy(id,multiplier=1,opts={}){
     multiplier *= 2;
     isCrit = true;
     addLog('Critical Hit!', 'log-combat');
+    if (typeof spawnCritBurst === 'function') spawnCritBurst(en.x, en.y);
   }
   if(en.dodge && Math.random() < en.dodge) {
     addLog(`${en.name} agilely dodged your attack!`, 'log-combat');
-    floatText('DODGED', en.x, en.y, '#fbbf24');
-    popText('💨', en.x, en.y);
+    if (typeof spawnDodgeEffect === 'function') spawnDodgeEffect(en.x, en.y, '#fbbf24');
+    else { floatText('DODGED', en.x, en.y, '#fbbf24'); popText('💨', en.x, en.y); }
     SFX.hit();
   } else {
     let dmg=round1(Math.max(1,gatk()-en.def+rand(3)));
     if(multiplier>1){dmg=round1(dmg*multiplier);SFX.bash();}else{SFX.hit();}
     en.hp=round1(en.hp-dmg);
     if (typeof setEntityAnimation === 'function') setEntityAnimation(`enemy:${en.id}`, 'hurt', 220);
-    if (typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#f87171', text: 'hit' });
     addDamageDealt(dmg);
+    // Enhanced hit visual
+    if (typeof spawnCombatRipple === 'function') spawnCombatRipple(en.x, en.y, '#f87171');
+    if (typeof enemyHitFlash === 'function') enemyHitFlash(en.id);
     let atkSym = G.player.weapon ? G.player.weapon.sym : '🗡️';
     if(atkSym === '🏹') atkSym = '🎯';
     if(atkSym === '🪄') atkSym = '💥';
     popText(atkSym, en.x, en.y);
     floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171');
+    // Crit visual supplementary
+    if (isCrit && typeof spawnCritText === 'function') spawnCritText(en.x, en.y, '⚡CRIT!');
     let multTag='';
     if(isSneak && isCrit) multTag=' (SNEAK CRIT!)';
     else if(isSneak) multTag=' (SNEAK!)';
@@ -3302,13 +4330,16 @@ function attackEnemy(id,multiplier=1,opts={}){
       let heal = Math.floor(dmg / 2);
       if(heal > 0) {
         G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + heal));
-        floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
+        if (typeof spawnHealEffect === 'function') spawnHealEffect(G.player.x, G.player.y, `+${fmt1(heal)} HP`, '#ef4444');
+        else floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
+        if (typeof coordScreenFlash === 'function') coordScreenFlash('heal');
       }
     }
     if(en.enrage && en.hp <= en.maxHp / 2 && en.color !== '#dc2626') {
       en.color = '#dc2626';
       popText('💢', en.x, en.y);
       floatText('ENRAGED', en.x, en.y, '#dc2626');
+      if (typeof spawnStatusEffect === 'function') spawnStatusEffect(en.x, en.y, '💢', '#ef4444');
     }
   }
 
@@ -3316,6 +4347,7 @@ function attackEnemy(id,multiplier=1,opts={}){
     if(en.reviveTurns > 0) {
       addLog(`You shattered the bones!`, 'log-combat');
       popText('💥', en.x, en.y);
+      if (typeof spawnDeathExplosion === 'function') spawnDeathExplosion(en.x, en.y, '#94a3b8');
       killEnemy(en, false);
       return;
     } else if(en.revive) {
@@ -3328,6 +4360,9 @@ function attackEnemy(id,multiplier=1,opts={}){
       addLog(`The Skeleton collapsed into a pile of bones!`, 'log-combat');
       floatText('COLLAPSED', en.x, en.y, '#94a3b8');
       popText('🦴', en.x, en.y);
+      if (typeof spawnDeathBurst === 'function') spawnDeathBurst(en.x, en.y, '#94a3b8');
+      advanceTurn();
+      return;
     } else {
       killEnemy(en, false);
       return;
@@ -3353,13 +4388,15 @@ function attackEnemy(id,multiplier=1,opts={}){
   let dodgeChance = playerDodgeChance();
   if(dodgeChance > 0 && ch(dodgeChance)) {
     addLog(`Dodged ${en.name}'s attack!`, 'log-info');
-    popText('💨', G.player.x, G.player.y);
+    if (typeof spawnDodgeEffect === 'function') spawnDodgeEffect(G.player.x, G.player.y, '#60a5fa');
+    else popText('💨', G.player.x, G.player.y);
     advanceTurn();
   } else {
     checkEmergencyPotion(en, edm, ()=>{
       G.player.hp=round1(Math.max(0,G.player.hp-edm));
       popText('🩸', G.player.x, G.player.y);
       floatText(`-${fmt1(edm)}`,G.player.x,G.player.y,'#60a5fa');
+      if (typeof spawnCombatRipple === 'function') spawnCombatRipple(G.player.x, G.player.y, '#60a5fa');
       addLog(`${en.name} hits you for ${fmt1(edm)}`,'log-combat');
       SFX.damage();shakeMap();flashDamage();
       
@@ -3367,13 +4404,15 @@ function attackEnemy(id,multiplier=1,opts={}){
         let heal = Math.floor(edm * en.vampiric);
         if(heal > 0) {
           en.hp = round1(Math.min(en.maxHp, en.hp + heal));
-          floatText(`+${fmt1(heal)}`, en.x, en.y, '#4ade80');
+          if (typeof spawnHealEffect === 'function') spawnHealEffect(en.x, en.y, `+${fmt1(heal)}`, '#4ade80');
+          else floatText(`+${fmt1(heal)}`, en.x, en.y, '#4ade80');
         }
       }
       if(en.freezeChance && Math.random() < en.freezeChance) {
         G.player.rootedTurns = 2;
         addLog(`The ${en.name} froze you!`, 'log-combat');
-        floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
+        if (typeof spawnStatusApplied === 'function') spawnStatusApplied(G.player.x, G.player.y, 'frozen');
+        else floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
       }
 
       advanceTurn();
@@ -3392,14 +4431,15 @@ function playerDodgeChance() {
 }
 
 function emitPixedDeathFx(en) {
-  if (typeof setEntityAnimation === 'function') setEntityAnimation(`enemy:${en.id}`, 'death', 420);
-  if (typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#d7b46a', text: 'loot' });
+  // Death visuals handled by legacy fx (ripples, skull, bloodstain).
 }
 
 function killEnemy(en, skipAdvanceTurn) {
   if(en.isPet) {
     addLog(`${en.name} crumbled to dust.`, 'log-dead');
     emitPixedDeathFx(en);
+    if (typeof spawnDeathBurst === 'function') spawnDeathBurst(en.x, en.y, en.color || '#a78bfa');
+    if (typeof spawnBloodstain === 'function') spawnBloodstain(en.x, en.y);
     en.dying = true;
     _deathBatch.push({en, skipAdvanceTurn});
     if(!_deathTimer) {
@@ -3415,15 +4455,27 @@ function killEnemy(en, skipAdvanceTurn) {
   if(getStat('vampirism') > 0) {
     let heal = getStat('vampirism');
     G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + heal));
-    floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
+    if (typeof spawnHealEffect === 'function') spawnHealEffect(G.player.x, G.player.y, `+${fmt1(heal)} HP`);
+    else floatText(`+${fmt1(heal)} HP`, G.player.x, G.player.y, '#4ade80');
   }
   if(G.player.class === 'necromancer') {
     G.player.hp = round1(Math.min(G.player.maxHp, G.player.hp + 2));
-    floatText('+2 HP', G.player.x, G.player.y, '#4ade80');
+    if (typeof spawnHealEffect === 'function') spawnHealEffect(G.player.x, G.player.y, '+2 HP');
+    else floatText('+2 HP', G.player.x, G.player.y, '#4ade80');
   }
 
   addLog(`${en.name} slain! +${xpDrop} XP  +${goldDrop}💰`, 'log-dead');
   floatText(`+${goldDrop}💰`,en.x,en.y,'#fbbf24');
+  // Death explosion
+  if (typeof spawnDeathExplosion === 'function') {
+    if (en.boss) {
+      for(let i = 0; i < 5; i++) setTimeout(() => spawnDeathExplosion(en.x, en.y, '#fbbf24'), i * 150);
+    } else {
+      spawnDeathExplosion(en.x, en.y, en.color || '#f87171');
+    }
+  }
+  // Bloodstain on the tile
+  if (typeof spawnBloodstain === 'function') spawnBloodstain(en.x, en.y);
   SFX.enemyDeath();
   fireTip('firstGold');
   emitPixedDeathFx(en);
@@ -3444,7 +4496,9 @@ function flushDeathBatch() {
   _deathBatch.forEach(d => {
     if(d.en.raiseCorpseTarget && !d.en.boss && !d.en.isPet) {
       addLog(`${d.en.name} rises to fight for you!`, 'log-combat');
+      if (typeof spawnDeathBurst === 'function') spawnDeathBurst(d.en.x, d.en.y, '#a78bfa');
       popText('🧟', d.en.x, d.en.y);
+      if (typeof spawnCombatRipple === 'function') spawnCombatRipple(d.en.x, d.en.y, '#a78bfa');
       let petBaseName = d.en.name === 'Bones' ? 'Skeleton' : d.en.name;
       d.en.name = `Pet ${petBaseName}`;
       d.en.isPet = true;
@@ -3499,6 +4553,7 @@ function checkLevelUp(){
     }
     addLog(`LEVEL UP! Now level ${G.player.lvl}!`,'log-level');
     floatText('LVL UP!',G.player.x,G.player.y,'#c084fc');
+    if (typeof coordLevelUpFlash === 'function') coordLevelUpFlash();
     SFX.levelUp();fireTip('firstLevelUp');
     leveled = true;
   }
@@ -3527,6 +4582,7 @@ function advanceTurn(opts={}){
     let pdmg = Math.max(1, Math.floor(G.player.maxHp * 0.05));
     G.player.hp = round1(G.player.hp - pdmg);
     addLog(`Poison damage: -${fmt1(pdmg)} HP`, 'log-combat');
+    if (typeof spawnStatusEffect === 'function') spawnStatusEffect(G.player.x, G.player.y, '☠️', '#a855f7');
     floatText(`-${fmt1(pdmg)} HP`, G.player.x, G.player.y, '#a855f7');
     flashDamage();
     SFX.hit();
@@ -3583,6 +4639,8 @@ function processEnemyTurns(index) {
     e.stunnedTurns = 5;
     e.hp = round1(e.hp - 5);
     floatText(`-5`, e.x, e.y, '#f87171');
+    if (typeof spawnCombatRipple === 'function') spawnCombatRipple(e.x, e.y, '#d1d5db');
+    if (typeof spawnStatusApplied === 'function') spawnStatusApplied(e.x, e.y, 'stunned');
     addLog(`${e.name} stepped on a Bear Trap!`, 'log-combat');
     if(e.hp<=0) killEnemy(e, true);
     return processEnemyTurns(index + 1);
@@ -3687,13 +4745,15 @@ function processEnemyTurns(index) {
           let dChance = playerDodgeChance();
           if(dChance > 0 && ch(dChance)) {
             addLog(`Dodged ${e.name}'s attack!`, 'log-info');
-            popText('💨', G.player.x, G.player.y);
+            if (typeof spawnDodgeEffect === 'function') spawnDodgeEffect(G.player.x, G.player.y, '#60a5fa');
+            else popText('💨', G.player.x, G.player.y);
             return processEnemyTurns(index + 1);
           } else {
             checkEmergencyPotion(e, edm, ()=>{
               G.player.hp=round1(Math.max(0,G.player.hp-edm));
               addLog(`${e.name} attacks! -${fmt1(edm)} HP`,'log-combat');
               SFX.damage();shakeMap();flashDamage();
+              if (typeof spawnCombatRipple === 'function') spawnCombatRipple(G.player.x, G.player.y, '#f87171');
               popText('🩸', G.player.x, G.player.y);
               floatText(`-${fmt1(edm)}`,G.player.x,G.player.y,'#f87171');
               
@@ -3701,15 +4761,16 @@ function processEnemyTurns(index) {
                 let heal = Math.floor(edm * e.vampiric);
                 if(heal > 0) {
                   e.hp = round1(Math.min(e.maxHp, e.hp + heal));
-                  floatText(`+${fmt1(heal)}`, e.x, e.y, '#4ade80');
+                  if (typeof spawnHealEffect === 'function') spawnHealEffect(e.x, e.y, `+${fmt1(heal)}`, '#4ade80');
+                  else floatText(`+${fmt1(heal)}`, e.x, e.y, '#4ade80');
                   popText('🦇', e.x, e.y);
                 }
               }
               if(e.freezeChance && Math.random() < e.freezeChance) {
                 G.player.rootedTurns = 2;
                 addLog(`The ${e.name} froze you!`, 'log-combat');
-                floatText('FROZEN', G.player.x, G.player.y, '#3b82f6');
-                popText('❄️', G.player.x, G.player.y);
+                if (typeof spawnStatusApplied === 'function') spawnStatusApplied(G.player.x, G.player.y, 'frozen');
+                else { floatText('FROZEN', G.player.x, G.player.y, '#3b82f6'); popText('❄️', G.player.x, G.player.y); }
               }
 
               if(G.player.hp<=0){G.gameOver=true;showDeath();return;}
@@ -3721,7 +4782,8 @@ function processEnemyTurns(index) {
         } else {
           if(target.dodge && Math.random() < target.dodge) {
             addLog(`${target.name} dodged ${e.name}'s attack!`, 'log-info');
-            popText('💨', target.x, target.y);
+            if (typeof spawnDodgeEffect === 'function') spawnDodgeEffect(target.x, target.y, '#a78bfa');
+            else popText('💨', target.x, target.y);
             return processEnemyTurns(index + 1);
           }
 
@@ -3732,6 +4794,7 @@ function processEnemyTurns(index) {
           target.hp = round1(target.hp - edm);
           addLog(`${e.name} attacks ${target.name}! -${fmt1(edm)} HP`, 'log-combat');
           SFX.damage();
+          if (typeof spawnCombatRipple === 'function') spawnCombatRipple(target.x, target.y, '#f87171');
           popText('🩸', target.x, target.y);
           floatText(`-${fmt1(edm)}`, target.x, target.y, '#f87171');
 
@@ -3739,7 +4802,8 @@ function processEnemyTurns(index) {
             let heal = Math.floor(edm * e.vampiric);
             if(heal > 0) {
               e.hp = round1(Math.min(e.maxHp, e.hp + heal));
-              floatText(`+${fmt1(heal)}`, e.x, e.y, '#4ade80');
+              if (typeof spawnHealEffect === 'function') spawnHealEffect(e.x, e.y, `+${fmt1(heal)}`, '#4ade80');
+              else floatText(`+${fmt1(heal)}`, e.x, e.y, '#4ade80');
               popText('🦇', e.x, e.y);
             }
           }
@@ -3770,15 +4834,15 @@ function doAbility1(){
     if(t.length) {
       G.ability1Cooldown = 5;
       let en = t[0];
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(en.x, en.y, 'BASH');
       attackEnemy(en.id,1.5);
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fb923c', text: 'BASH' });
     }
     else addLog('No nearby enemies to Bash','log-info');
   }
   else if(p.class === 'rogue') {
     p.freeMoves = 2; G.ability1Cooldown = 3;
     addLog('Dashed! You have 2 free moves.', 'log-info'); updateActBtns();
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: p.x, y: p.y, color: '#a3a3a3', text: 'DASH' });
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'DASH');
   }
   else if(p.class === 'mage') {
     let t=visEnemies.sort((a,b)=>(Math.abs(a.x-p.x)+Math.abs(a.y-p.y))-(Math.abs(b.x-p.x)+Math.abs(b.y-p.y)));
@@ -3788,11 +4852,12 @@ function doAbility1(){
         if(!e.dying && Math.abs(e.x-target.x)<=1 && Math.abs(e.y-target.y)<=1) {
           let dmg = round1(Math.max(1, gatk() - e.def + rand(3))); e.hp = round1(e.hp - dmg);
           floatText(`-${fmt1(dmg)}`,e.x,e.y,'#f87171'); addDamageDealt(dmg);
+          if (typeof spawnCombatRipple === 'function') spawnCombatRipple(e.x, e.y, '#fb923c');
           if(e.hp <= 0) hits.push(e);
         }
       });
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(target.x, target.y, 'FIREBALL');
       SFX.bash(); addLog(`Fireball hit!`, 'log-combat');
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.fireball', x: target.x, y: target.y, color: '#fb923c', text: 'FIRE' });
       if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
       else advanceTurn();
     } else addLog('No visible enemies to Fireball', 'log-info');
@@ -3803,9 +4868,10 @@ function doAbility1(){
       G.ability1Cooldown = 5;
       let en = t[0];
       en.stunnedTurns = 1;
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(en.x, en.y, 'SMITE');
+      if (typeof spawnStatusApplied === 'function') spawnStatusApplied(en.x, en.y, 'stunned');
       attackEnemy(en.id, 1);
       addLog(`Smited ${en.name}! They are stunned.`, 'log-combat');
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fde68a', text: 'SMITE' });
     } else addLog('No nearby enemies to Smite','log-info');
   }
   else if(p.class === 'ranger') {
@@ -3827,17 +4893,18 @@ function doAbility1(){
       let dx = t[0].sx, dy = t[0].sy;
       let cx = p.x + dx, cy = p.y + dy;
       let hits = [];
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(target.x, target.y, 'PIERCING_SHOT');
       while(cx>=0&&cx<MAP_W&&cy>=0&&cy<MAP_H&&G.map[cy][cx] !== TILE.WALL) {
         let e = G.enemies.find(e => e.x === cx && e.y === cy && !e.dying);
         if(e) {
           let dmg = round1(Math.max(1, gatk() - e.def + rand(3))); e.hp = round1(e.hp - dmg);
           floatText(`-${fmt1(dmg)}`,e.x,e.y,'#f87171'); addDamageDealt(dmg);
+          if (typeof spawnCombatRipple === 'function') spawnCombatRipple(e.x, e.y, '#bbf7d0');
           if(e.hp <= 0) hits.push(e);
         }
         cx += dx; cy += dy;
       }
       SFX.bash(); addLog('Piercing Shot fired!', 'log-combat');
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: target.x, y: target.y, color: '#bbf7d0', text: 'SHOT' });
       if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
       else advanceTurn();
     } else addLog('No visible enemies in line for Piercing Shot','log-info');
@@ -3847,13 +4914,14 @@ function doAbility1(){
     if(!targets.length){addLog('No adjacent enemies to Cleave','log-info');return;}
     G.ability1Cooldown = 4;
     let hits = [];
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'CLEAVE');
     targets.forEach(e => {
         let dmg = round1(Math.max(1, gatk() - e.def + rand(3))); e.hp = round1(e.hp - dmg);
         floatText(`-${fmt1(dmg)}`,e.x,e.y,'#f87171'); addDamageDealt(dmg);
+        if (typeof spawnCombatRipple === 'function') spawnCombatRipple(e.x, e.y, '#fca5a5');
         if(e.hp <= 0) hits.push(e);
     });
     SFX.bash(); addLog('Cleave!', 'log-combat');
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: p.x, y: p.y, color: '#fca5a5', text: 'CLEAVE' });
     if(hits.length > 0) hits.forEach((en, i) => killEnemy(en, i < hits.length - 1));
     else advanceTurn();
   }
@@ -3864,10 +4932,13 @@ function doAbility1(){
       let en = t[0];
       let dmg = round1(Math.max(1, gatk() - en.def + rand(3)));
       en.hp = round1(en.hp - dmg); floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171'); addDamageDealt(dmg);
+      if (typeof spawnCombatRipple === 'function') spawnCombatRipple(en.x, en.y, '#c4b5fd');
       let heal = dmg;
-      p.hp = round1(Math.min(p.maxHp, p.hp + heal)); floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
+      p.hp = round1(Math.min(p.maxHp, p.hp + heal));
+      if (typeof spawnHealEffect === 'function') spawnHealEffect(p.x, p.y, `+${fmt1(heal)} HP`, '#c4b5fd');
+      else floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(en.x, en.y, 'SIPHON');
       SFX.bash(); addLog(`Siphoned ${fmt1(dmg)} life from ${en.name}!`, 'log-combat');
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.heal', x: p.x, y: p.y, color: '#c4b5fd', text: 'SIPHON' });
       if(en.hp <= 0) killEnemy(en, false);
       else advanceTurn();
     } else addLog('No nearby enemies to Siphon','log-info');
@@ -3877,6 +4948,7 @@ function doAbility1(){
     if(t.length) {
       G.ability1Cooldown = 3;
       let en = t[0];
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(en.x, en.y, 'PUSH_KICK');
       let dx = Math.sign(en.x - p.x), dy = Math.sign(en.y - p.y);
       let nx = en.x + dx, ny = en.y + dy;
       let dmg = round1(Math.max(1, gatk() - en.def + rand(3)));
@@ -3884,11 +4956,11 @@ function doAbility1(){
         en.x = nx; en.y = ny;
       } else {
         dmg = round1(dmg * 2);
+        if (typeof spawnCombatRipple === 'function') spawnCombatRipple(en.x, en.y, '#fed7aa');
         addLog('Slammed into a wall!', 'log-combat');
       }
       en.hp = round1(en.hp - dmg); floatText(`-${fmt1(dmg)}`,en.x,en.y,'#f87171'); addDamageDealt(dmg);
       SFX.bash(); addLog(`Push Kick hit ${en.name} for ${fmt1(dmg)}!`, 'log-combat');
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fed7aa', text: 'KICK' });
       if(en.hp <= 0) killEnemy(en, false);
       else advanceTurn();
     } else addLog('No adjacent enemies to Push Kick','log-info');
@@ -3902,12 +4974,12 @@ function doAbility2(){
 
   if(p.class === 'warrior') {
     p.shieldWallTurns = 3; G.ability2Cooldown = 10;
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.heal', x: p.x, y: p.y, color: '#60a5fa', text: 'SHIELD' });
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'SHIELD_WALL');
     addLog('Shield Wall active! Damage reduced by 40% for 3 turns.', 'log-info'); advanceTurn();
   }
   else if(p.class === 'rogue') {
     p.vanishTurns = 3; G.ability2Cooldown = 10;
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.poison', x: p.x, y: p.y, color: '#a3a3a3', text: 'VANISH' });
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'VANISH');
     addLog('Vanished! You are invisible for 3 turns.', 'log-info'); advanceTurn();
   }
   else if(p.class === 'mage') {
@@ -3930,16 +5002,17 @@ function doAbility2(){
       }
       let t = safeTiles[rand(safeTiles.length)];
       p.x = t.x; p.y = t.y; G.ability2Cooldown = 8;
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: p.x, y: p.y, color: '#93c5fd', text: 'BLINK' });
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'BLINK');
       addLog('Blinked to a safe location!', 'log-combat'); advanceTurn();
     } else addLog('No safe visible tile to Blink to', 'log-info');
   }
   else if(p.class === 'paladin') {
     let heal = Math.floor(p.maxHp * 0.2);
     p.hp = round1(Math.min(p.maxHp, p.hp + heal));
-    floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
+    if (typeof spawnHealEffect === 'function') spawnHealEffect(p.x, p.y, `+${fmt1(heal)} HP`, '#4ade80');
+    else floatText(`+${fmt1(heal)} HP`, p.x, p.y, '#4ade80');
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'LAY_ON_HANDS');
     G.ability2Cooldown = 15;
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.heal', x: p.x, y: p.y, color: '#4ade80', text: 'HEAL' });
     addLog('Lay on Hands: Healed!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'ranger') {
@@ -3963,12 +5036,12 @@ function doAbility2(){
       }
     }
     G.ability2Cooldown = 10;
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'environment.trapBear', x: p.x, y: p.y, color: '#d1d5db', text: 'TRAP' });
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'BEAR_TRAP');
     addLog('Dropped a Bear Trap and jumped back!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'barbarian') {
     p.bloodlustTurns = 3; G.ability2Cooldown = 12;
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: p.x, y: p.y, color: '#ef4444', text: 'BLOOD' });
+    if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(p.x, p.y, 'BLOODLUST');
     addLog('Bloodlust! Deal damage to heal, but take 15% more damage!', 'log-combat'); advanceTurn();
   }
   else if(p.class === 'necromancer') {
@@ -3978,7 +5051,7 @@ function doAbility2(){
       t[0].raiseCorpseTarget = true;
       t[0].raiseCorpseTurns = 3;
       G.ability2Cooldown = 8;
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.poison', x: t[0].x, y: t[0].y, color: '#a855f7', text: 'RAISE' });
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(t[0].x, t[0].y, 'RAISE_DEAD');
       addLog(`Marked ${t[0].name} for Raise Dead!`, 'log-combat'); advanceTurn();
     } else addLog('No visible enemies to target', 'log-info');
   }
@@ -3990,7 +5063,7 @@ function doAbility2(){
       p.rootedTurns = 2;
       let en = t[0];
       addLog('Flurry of Blows! You are rooted.', 'log-combat');
-      if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.hit', x: en.x, y: en.y, color: '#fed7aa', text: 'FLURRY' });
+      if (typeof spawnClassAbilityEffect === 'function') spawnClassAbilityEffect(en.x, en.y, 'FLURRY');
       for(let i = 0; i < 3; i++) {
         if(en.dying || en.hp <= 0) break;
         let mult = 1;
@@ -4056,6 +5129,8 @@ function doAbility2(){
             addLog(`The Skeleton collapsed into a pile of bones!`, 'log-combat');
             floatText('COLLAPSED', en.x, en.y, '#94a3b8');
             popText('🦴', en.x, en.y);
+            advanceTurn();
+            return;
           } else {
             killEnemy(en, false);
             return;
@@ -4145,7 +5220,6 @@ function generateShopStock(){
 
   // 4-6 weapons scaled to floor
   let wepsFilter = weaponCandidates.filter(w=>!usedNames.has(w.name));
-  console.error('[JS] weps len: ' + wepsFilter.length + ' arms len: ' + armorCandidates.filter(a=>!usedNames.has(a.name)).length);
   let weps=shuffle(wepsFilter);
   let numWeps = Math.min(weps.length, rr(4,6));
   for(let i=0; i<numWeps; i++) {
@@ -4655,23 +5729,30 @@ function initGame(playerClass = 'warrior', hardMode = false){
     log:[],turn:0,
     ability1Cooldown:0, ability2Cooldown:0,
     gameOver:false,won:false,
+    bloodstains:new Set(),
   };
+  G._prevVisible = new Set();
   if(!G.hardMode) {
     let potion = POTIONS.find(item => item.name === 'Health Potion');
     if(potion) G.items.push({...potion, id:`starter-potion-${playerClass}`, carried:true, x:undefined, y:undefined});
   }
   resetTips();
   buildFloor();
+  // Start ambient dungeon effects & visual theme coordinator
+  if (typeof ensureCoordinatorDOM === 'function') ensureCoordinatorDOM();
+  if (typeof initThemeCoordinator === 'function') initThemeCoordinator();
+  if (typeof startDungeonAmbient === 'function') startDungeonAmbient();
 }
 
 function buildFloor(){
-  console.error('[JS] RNG start buildFloor: ' + (Math.rCount||0));
   let{map,rooms}=generateMap();
-  console.error('[JS] RNG after generateMap: ' + (Math.rCount||0));
   G.map=map;G.rooms=rooms;G.enemies=[];G.shops=[];G.traps=[];G.currentShop=null;
   G.visible = new Set();
   G.seen = new Set();
   G.items=G.items.filter(i=>i.carried);
+  G.bloodstains = new Set();
+  G._prevVisible = new Set();
+  if (typeof setFloorTheme === 'function') setFloorTheme(G.floor);
   
   if(G.floor === FLOORS) {
     map = Array(MAP_H).fill(0).map(()=>Array(MAP_W).fill(TILE.WALL));
@@ -4719,14 +5800,10 @@ function buildFloor(){
       map[sr.cy][sr.cx]=TILE.SHOP;
     }
   }
-  console.error('[JS] RNG after shops: ' + (Math.rCount||0));
-
   map[stairsRoom.cy][stairsRoom.cx] = TILE.STAIRS;
 
   computeVision();
   const startVisible = new Set(G.visible);
-
-  console.error('[JS_ROOMS] ' + JSON.stringify(G.rooms.map(r => r.type)));
 
   for(let i=1;i<rooms.length;i++){
     let r=rooms[i];
@@ -4756,8 +5833,6 @@ function buildFloor(){
       ne = baseEnemies;
       if(ch(.65)) guaranteedItems = 1;
     }
-    console.error('[JS] Room ' + i + ' type=' + r.type + ' ne=' + ne + ' guaranteedItems=' + guaranteedItems + ' (RNG: ' + (Math.rCount||0) + ')');
-
     let enemyProfile = getFloorEnemyProfile(G.floor);
     for(let e=0;e<ne;e++){
       let tier=rr(enemyProfile.tierMin, enemyProfile.tierMax);
@@ -5023,6 +6098,7 @@ async function startGame(playerClass = 'warrior', hardMode = false){
 
 function showDeath(){
   if (typeof stopActivePath === 'function') stopActivePath();
+  if (typeof shutdownCoordinator === 'function') shutdownCoordinator();
   SFX.playerDeath();
   let p=G.player,o=document.createElement('div');
   o.className='overlay';
@@ -5045,6 +6121,7 @@ function showDeath(){
 
 function showVictory(){
   if (typeof stopActivePath === 'function') stopActivePath();
+  if (typeof shutdownCoordinator === 'function') shutdownCoordinator();
   let p=G.player,o=document.createElement('div');
   o.className='overlay';
   let diffMult = G.hardMode ? 1.5 : 1.0;

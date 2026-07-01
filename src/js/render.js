@@ -95,12 +95,35 @@ const gdef=()=>{
   return round1(G.player.def + armDef);
 };
 
+// Seeded tile variation hash for deterministic variety
+function tileHash(x, y) {
+  return ((x * 7 + y * 13 + (x ^ y) * 3) >>> 0) % 4;
+}
+
 function render(){
+  // Track newly visible tiles for reveal animation
+  if (typeof G._prevVisible === 'undefined') G._prevVisible = new Set();
+  const newlyVisible = new Set();
+  if (G.visible) {
+    for (const k of G.visible) {
+      if (!G._prevVisible.has(k)) newlyVisible.add(k);
+    }
+  }
+  G._prevVisible = new Set(G.visible);
+
   if (typeof advanceAnimations === 'function') advanceAnimations();
-  if (typeof renderPixedScene === 'function') {
+
+  // Use WebGL 3D renderer if initialized, otherwise fall back to Canvas 2D/DOM
+  if (typeof ThreeScene !== 'undefined' && ThreeScene.isRunning && ThreeScene.renderer) {
+    ThreeScene.updateVisibility();
+    ThreeScene.updatePlayerPosition();
+    ThreeScene.updateEnemies();
+    ThreeScene.updateItems();
+    // ThreeScene handles its own frame rendering via requestAnimationFrame
+  } else if (typeof renderPixedScene === 'function') {
     renderPixedScene();
   } else {
-    renderLegacyMap();
+    renderLegacyMap(newlyVisible);
   }
   drawMinimap();
   updateHUD();
@@ -108,20 +131,32 @@ function render(){
   updateActBtns();
 }
 
-function renderLegacyMap(){
+function renderLegacyMap(newlyVisible){
+  if (!G.bloodstains) G.bloodstains = new Set();
   const mapEl=document.getElementById('map');
   const cs=getCellSize();
   mapEl.style.gridTemplateColumns=`repeat(${MAP_W},${cs}px)`;
   mapEl.style.fontSize=`${cs*.72}px`;
-  const CH={[TILE.WALL]:'█',[TILE.FLOOR]:'·',[TILE.STAIRS]:'>',[TILE.SHOP]:'$',[TILE.LOCKED_DOOR]:'🔒',[TILE.SECRET_DOOR]:'█'};
+  // Wall symbols by density for variation
+  const WALL_SYMS=['█','▓','▒','░'];
+  // Floor symbols with subtle variation
+  const FLOOR_SYMS=['·','∙','⋅',' '];
+  const TRAP_SYM={spike:'^',gas:'*',bear:'!'};
+  const TRAP_CLS={spike:'tile-trap-spike',gas:'tile-trap-gas',bear:'tile-trap-bear'};
+  const DECO_TYPES=['crack','moss','rune',''];
   let h='';
   for(let y=0;y<MAP_H;y++){
     for(let x=0;x<MAP_W;x++){
       let k=y*MAP_W+x,vis=G.visible.has(k),seen=G.seen.has(k);
-      let s=`width:${cs}px;height:${cs}px;`;
+      let s=`width:${cs}px;height:${cs}px;position:relative;`;
       if(!seen){h+=`<div class="tile tile-dark" style="${s}"></div>`;continue;}
       let t=G.map[y][x];
-      if(x===G.player.x&&y===G.player.y){h+=`<div class="tile tile-player" style="${s}">@</div>`;continue;}
+      // Player tile with torch glow
+      if(x===G.player.x&&y===G.player.y){
+        h+=`<div class="tile tile-player" style="${s}">@<div class="player-glow"></div></div>`;
+        continue;
+      }
+      // ----- ENEMIES -----
       let en=vis?G.enemies.find(e=>e.x===x&&e.y===y):null;
       if(en){
         let maxRange = (G.player.class === 'ranger' && G.player.weapon && G.player.weapon.sym === '🏹') ? 3 : 2;
@@ -140,6 +175,7 @@ function renderLegacyMap(){
           ${en.sym.toUpperCase()}</div>`;
         continue;
       }
+      // ----- ITEMS -----
       let it=vis?G.items.find(i=>!i.carried&&i.x===x&&i.y===y):null;
       if(it){
         let safeName = it.name.replace(/'/g,"\\'").replace(/"/g,"&quot;");
@@ -152,23 +188,60 @@ function renderLegacyMap(){
           onclick="tilePickup('${it.id}')">${it.sym}</div>`;
         continue;
       }
+      // ----- TRAPS -----
       let trap=seen&&G.traps?G.traps.find(t=>t.x===x&&t.y===y):null;
       if(trap && (trap.triggered || trap.revealed)){
-        let trapSym = trap.type === 'spike' ? '^' : trap.type === 'gas' ? '*' : '!';
+        let trapSym = TRAP_SYM[trap.type] || '!';
         let trapColor = trap.type === 'spike' ? 'var(--orange)' : trap.type === 'gas' ? 'var(--green)' : 'var(--red)';
         let opacity = trap.triggered ? '1' : '0.5';
-        h+=`<div class="tile tile-trap" style="${s}color:${trapColor};text-shadow:0 0 5px ${trapColor};opacity:${opacity}"
+        let trapCls = TRAP_CLS[trap.type] || '';
+        h+=`<div class="tile tile-trap ${trapCls}" style="${s}color:${trapColor};text-shadow:0 0 5px ${trapColor};opacity:${opacity}"
             onmouseenter="showTip(event,'${trap.type.toUpperCase()} TRAP (Revealed)')"
             onmouseleave="hideTip()">${trapSym}</div>`;continue;
       }
+      // ----- STAIRS -----
       if(t===TILE.STAIRS&&seen){
         h+=`<div class="tile tile-stairs" style="${s}" onclick="descend()" ontouchend="event.preventDefault();descend()">></div>`;continue;
       }
+      // ----- SHOP -----
       if(t===TILE.SHOP&&seen){
         h+=`<div class="tile tile-shop" style="${s}" onclick="openShop()" ontouchend="event.preventDefault();openShop()">$</div>`;continue;
       }
-      let sc=(seen&&!vis)?' tile-seen':'';
-      h+=`<div class="tile ${(t===TILE.WALL||t===TILE.SECRET_DOOR)?'tile-wall':'tile-floor'}${sc}" style="${s}">${CH[t]||' '}</div>`;
+      // ----- DOORS -----
+      if(t===TILE.LOCKED_DOOR){
+        h+=`<div class="tile tile-locked-door" style="${s}" onclick="bump()" ontouchend="event.preventDefault();bump()">🔒</div>`;continue;
+      }
+      if(t===TILE.SECRET_DOOR){
+        h+=`<div class="tile tile-secret-door" style="${s}">█</div>`;continue;
+      }
+      // ----- FLOOR / WALL TILES -----
+      let isWall = (t===TILE.WALL);
+      // Determine base tile class
+      let baseCls = isWall ? 'tile-wall' : 'tile-floor';
+      // Add variation based on seeded hash
+      let hval = tileHash(x, y);
+      let varCls = isWall
+        ? ['tile-wall-heavy','tile-wall-medium','tile-wall-light','tile-wall-outer'][hval]
+        : ['tile-floor-var-a','tile-floor-var-b','tile-floor-var-c','tile-floor-var-a'][hval];
+      // Seen but not visible: fog overlay
+      let fog = (seen&&!vis) ? ' tile-fog' : '';
+      // Reveal animation for newly visible tiles
+      let reveal = (newlyVisible && newlyVisible.has(k)) ? ' tile-reveal' : '';
+      // Bloodstain check
+      let stainKey = x+','+y;
+      let stainCls = '';
+      if (G.bloodstains && G.bloodstains.has(stainKey)) {
+        stainCls = ' tile-stained';
+      }
+      // Floor decoration (walls get no decoration)
+      let decoCls = '';
+      if (!isWall && vis && !stainCls) {
+        let d = DECO_TYPES[tileHash(x+3, y+7) % 3]; // only decorative types
+        if (d) decoCls = ' tile-deco-'+d;
+      }
+      // Choose symbol
+      let sym = isWall ? WALL_SYMS[tileHash(x+1, y+5)] : FLOOR_SYMS[tileHash(x+2, y+3)];
+      h+=`<div class="tile ${baseCls} ${varCls}${fog}${reveal}${stainCls}${decoCls}" style="${s}">${sym}</div>`;
     }
   }
   mapEl.innerHTML=h;

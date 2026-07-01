@@ -16,13 +16,11 @@ function pickupItem(id, opts={}){
     addLog(`Picked up ${it.name} — stored in bag`,'log-item');
     floatText(`+BAG`,G.player.x,G.player.y,'#fbbf24');
     SFX.pickup();
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: G.player.x, y: G.player.y, color: '#fbbf24', text: 'loot' });
     fireTip('firstPotion');
   } else {
     it.carried=true;it.x=undefined;it.y=undefined;
     addLog(`Picked up ${it.name}`,'log-item');
     SFX.pickup();
-    if(typeof spawnPixedFx === 'function') spawnPixedFx({ key: 'fx.levelUp', x: G.player.x, y: G.player.y, color: '#fbbf24', text: 'loot' });
     autoEquip(it);
     fireTip('firstItem');
   }
@@ -380,5 +378,13 @@ function descend(){
   if(typeof flushDeathBatch === 'function') flushDeathBatch();
   G.player.hp=round1(Math.min(G.player.maxHp,G.player.hp+10));
   G.player.poisonedTurns=0;
+  // Coordinated floor transition effect
+  if (typeof coordFloorTransition === 'function') coordFloorTransition();
   buildFloor();
+  // Rebuild 3D map geometry for the new floor
+  if (typeof ThreeScene !== 'undefined' && ThreeScene.renderer) {
+    ThreeScene.buildMapFromGrid();
+    ThreeScene._lastEnemyKey = null;
+    ThreeScene._lastItemKey = null;
+  }
 }
